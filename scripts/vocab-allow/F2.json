@@ -1,0 +1,46 @@
+[
+  {
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "avant": "Ex: Labo Central",
+    "apres": "Ex: Labo 1",
+    "type": "exemple",
+    "justification": "Exemple de saisie neutre et construit (spec §3 règle 6, guide E26) : « Labo Central » donnerait « Cuisine centrale Central » en Hôtellerie. Deux placeholders identiques : modale du labo et étape 1 de l'assistant « Créer mon business »."
+  },
+  {
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "avant": "Ex: Point de vente Tunis",
+    "apres": "Ex: Activité 1",
+    "type": "exemple",
+    "justification": "Exemple de saisie neutre et construit avec le terme du domaine (spec §3 règle 6, guide §5 bis, ligne F2) : « Point de vente Tunis » est propre à un commerce ; un compte Hôtellerie lira « Ex: Service 1 ». Deux placeholders identiques : modale de l'activité et étape 2 de l'assistant."
+  },
+  {
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "avant": "Nom de l'activité (ex: Restaurant A) ⟦<span>⟧",
+    "apres": "Nom de l'activité (ex: Activité A) ⟦<span>⟧",
+    "type": "exemple",
+    "justification": "Écart venu du socle, à reprendre par F2 (guide §7) : la clé client.entreprise.activity_nom de fr.json (gelé) rend l'exemple neutre « [[Nom:activite]] A » à la place de « Restaurant A », propre à la restauration. ActivitesPage affiche cette clé par t(), appel inchangé."
+  },
+  {
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "discriminant",
+    "justification": "Valeur technique du type de composant ('activite' | 'labo') passée à composantsActifs(user?.domaine?.composants, 'labo') et comparée à c.typeTechnique : identifiant venu de l'API, jamais affiché."
+  },
+  {
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "avant": "Nom du labo requis",
+    "apres": "Nom du labo requis",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « requis » s'accorde avec « Nom » (« Nom … requis »), pas avec le terme rendu par voc.du('labo') ; l'outil ne sait pas rattacher le participe à son antécédent. Rendu Hôtellerie juste : « Nom de la cuisine centrale requis ». Deux messages identiques (setLaboError, setBizError)."
+  },
+  {
+    "fichier": "src/components/client/GerantsPage.tsx",
+    "avant": "Activités & labos assignés ⟦<span>⟧",
+    "apres": "Activités & labos assignés ⟦<span>⟧",
+    "type": "provisoire",
+    "mode": "accords",
+    "justification": "« assignés » s'accorde avec DEUX termes coordonnés (activités et labos) : masculin pluriel sauf si les deux termes sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué (argument non littéral) : le participe reste au masculin, comme le prescrit le guide pour deux termes coordonnés. Besoin décrit dans scripts/vocab-besoins/F2.json."
+  }
+]

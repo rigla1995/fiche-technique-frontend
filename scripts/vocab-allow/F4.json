@@ -1,0 +1,58 @@
+[
+  {
+    "fichier": "src/components/client/PortionsModal.tsx",
+    "avant": "✓ Appro enregistrée",
+    "apres": "✓ Appro enregistré",
+    "type": "faute-corrigee",
+    "justification": "« Appro » (approvisionnement) est masculin dans le lexique et dans le reste de l'application (« un appro », « 5 derniers appros ») : l'accord féminin d'origine était une faute, corrigée par voc.acc (décision S4, exemple E30 du guide)."
+  },
+  {
+    "fichier": "src/components/client/StockLaboPage.tsx",
+    "avant": "Portions personnalisées pour cette appro",
+    "apres": "Portions personnalisées pour cet appro",
+    "type": "faute-corrigee",
+    "justification": "« cette appro » accordait « appro » au féminin alors que le terme est masculin (« un appro », « Premier appro » dans ce même fichier) : voc.ce('appro', false, 'court') rend « cet appro » (décision S4 : accord par le moteur)."
+  },
+  {
+    "fichier": "src/components/client/StockLaboPage.tsx",
+    "avant": "⚠️ Appro existante — ⟦·⟧",
+    "apres": "⚠️ Appro existant — ⟦·⟧",
+    "type": "faute-corrigee",
+    "justification": "« Appro existante » accordait « appro » au féminin alors que la phrase suivante de la même fenêtre dit « Tu as déjà un appro » : l'accord passe par voc.acc, au masculin par défaut (décision S4 : accord par le moteur)."
+  },
+  {
+    "fichier": "src/components/client/PortionsModal.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "discriminant",
+    "justification": "Valeur par défaut de la prop technique theme ('labo' | 'activite'), qui sert d'index dans la table de couleurs THEMES : identifiant, jamais affiché."
+  },
+  {
+    "fichier": "src/components/client/StockLaboPage.tsx",
+    "avant": "⟦?ingredients|stock⟧",
+    "apres": "⟦?ingredients|stock⟧",
+    "type": "discriminant",
+    "justification": "Valeur de l'onglet lue dans le paramètre d'URL ?tab= et comparée ensuite (tab === 'stock', tab === 'ingredients') : clé technique, jamais affichée."
+  },
+  {
+    "fichier": "src/components/client/StockLaboPage.tsx",
+    "avant": "PT",
+    "apres": "PT",
+    "type": "discriminant",
+    "justification": "Valeur d'API du champ typeAppro comparée (h.typeAppro === 'PT') pour choisir le badge ; le texte du badge lui-même sort de voc.Court('pt'). Jamais affichée."
+  },
+  {
+    "fichier": "src/components/client/LaboHistoriqueApproPage.tsx",
+    "avant": "PT",
+    "apres": "PT",
+    "type": "discriminant",
+    "justification": "Valeur d'API du champ typeAppro comparée (r.typeAppro === 'PT') dans typeCategory pour classer la ligne ; le libellé affiché sort de voc.Court('pt'). Jamais affichée."
+  },
+  {
+    "fichier": "src/components/client/LaboHistoriqueApproPage.tsx",
+    "avant": "vente",
+    "apres": "vente",
+    "type": "discriminant",
+    "justification": "Clé technique de l'option du filtre de types (['vente', voc.Nom('vente')]), comparée à la valeur rendue par typeCategory : seul le second élément du couple est affiché, et il sort de voc."
+  }
+]

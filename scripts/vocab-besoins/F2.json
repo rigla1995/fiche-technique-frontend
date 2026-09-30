@@ -1,0 +1,20 @@
+[
+  {
+    "besoin": "methode",
+    "demande": "Accord d'un participe ou d'un adjectif avec DEUX termes coordonnés (« X & Y assignés ») : féminin seulement si les deux termes sont féminins. Soit une méthode du moteur (par exemple voc.acc2(k1, k2, masc, fem)), soit l'outil de preuve qui accepte un voc.acc imbriqué en 3e argument — voc.acc('activite', 'assignés', voc.acc('labo', 'assignés', 'assignées')) rend déjà la bonne forme à l'exécution, mais vocab-check le refuse (« ERREUR voc.acc : argument n° 3 non littéral »).",
+    "fichier": "src/components/client/GerantsPage.tsx",
+    "ligne": 302,
+    "texte": "Activités & labos assignés ⟦<span>⟧",
+    "ecriture_souhaitee": "`{voc.Pl('activite')} &amp; {voc.pl('labo')} {voc.acc2('activite', 'labo', 'assignés', 'assignées')}`",
+    "raison": "Avec un lexique où les deux termes sont féminins (« Activité » gardée, labo renommé « Cuisine centrale » ou « Usine »), l'écran affiche « Activités & cuisines centrales assignés » au lieu de « assignées ». Le texte est juste par défaut et en Hôtellerie (« Services & cuisines centrales assignés », masculin + féminin)."
+  },
+  {
+    "besoin": "forme",
+    "demande": "Capitales sur la forme COURTE d'un terme (voc.MAJ n'a pas d'argument de casse ; une méthode de chaîne sur un appel voc est interdite) — ou décision S5 de remplacer l'exemple par une référence neutre sans terme (« Ex: REF-001 », comme le guide §5 bis le prescrit au lot F6). Relevé par l'intégrateur de la vague 1 ; aucune entrée provisoire : le texte est écrit comme le guide §5 bis le prescrit et l'identité est conservée.",
+    "fichier": "src/components/client/ActivitesPage.tsx",
+    "ligne": 1141,
+    "texte": "Ex: LABO-001",
+    "ecriture_souhaitee": "`Ex: ${voc.MAJ('labo', false, 'court')}-001` (« Ex: CUISINE-001 », « Ex: SITE-001 »)",
+    "raison": "`Ex: ${voc.MAJ('labo')}-001` rend « Ex: CUISINE CENTRALE-001 » en Hôtellerie et « Ex: SITE DE PRODUCTION-001 » en Céramique : un exemple de référence avec des espaces. Deux placeholders (l. 1141 et l. 1308)."
+  }
+]

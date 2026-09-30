@@ -1,0 +1,37 @@
+[
+  {
+    "fichier": "src/components/client/StockPage.tsx",
+    "avant": "⚠️ Appro existante — ⟦·⟧",
+    "apres": "⚠️ Appro existant — ⟦·⟧",
+    "type": "faute-corrigee",
+    "justification": "« Appro » (approvisionnement) est masculin dans le lexique et dans le reste du fichier (« un appro », « appro manuel ») : l'accord féminin d'origine était une faute, le moteur accorde par voc.acc('appro', 'existant', 'existante') (décision S4, exemple E30 du guide)."
+  },
+  {
+    "fichier": "src/components/client/StockPage.tsx",
+    "avant": "⟦?⟦·⟧|⟦?vente|manuel⟧⟧",
+    "apres": "⟦?⟦·⟧|⟦?vente|manuel⟧⟧",
+    "type": "discriminant",
+    "justification": "Valeur technique de typeAppro reconstruite dans fetchHistory pour l'historique d'un PT ('vente' si la quantité est négative, sinon 'manuel') : elle n'est que comparée (=== 'vente') et sert de classe CSS du badge, jamais affichée — le libellé du badge, lui, passe par voc."
+  },
+  {
+    "fichier": "src/components/client/StockPage.tsx",
+    "avant": "PT",
+    "apres": "PT",
+    "type": "discriminant",
+    "justification": "Valeur d'API de typeAppro comparée par h.typeAppro === 'PT' (2 comparaisons : classe CSS du badge et choix du libellé) : chaîne technique jamais affichée (guide, piège 10) ; le libellé affiché est voc.Court('pt')."
+  },
+  {
+    "fichier": "src/components/client/HistoriqueApproPage.tsx",
+    "avant": "⟦?transfert|⟦?vente|⟦?pt|manuel⟧⟧⟧",
+    "apres": "⟦?transfert|⟦?vente|⟦?pt|manuel⟧⟧⟧",
+    "type": "discriminant",
+    "justification": "Valeurs rendues par typeCategory() : clés techniques du filtre « Type d'appro » comparées à selectedTypes.has(...) (les mêmes que celles de TypeApproFilter), jamais affichées."
+  },
+  {
+    "fichier": "src/components/client/HistoriqueApproPage.tsx",
+    "avant": "PT",
+    "apres": "PT",
+    "type": "discriminant",
+    "justification": "Valeur d'API de typeAppro comparée par === 'PT' (3 comparaisons : typeCategory, classe CSS du badge, choix du libellé) : chaîne technique jamais affichée (guide, piège 10) ; le libellé affiché est voc.Court('pt')."
+  }
+]

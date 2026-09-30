@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { CSSProperties } from 'react';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 export interface PreviewLine {
   nom: string;
@@ -54,6 +55,7 @@ export interface ComposantManquant {
 
 export function ProductionAlertPanel({ productions, manquants }: { productions: ProductionSaisie[]; manquants: ComposantManquant[] }) {
   const [minimized, setMinimized] = useState(false);
+  const voc = useVocabulaire();
   if (manquants.length === 0) return <div style={SLOT_STYLE} />;
 
   if (minimized) {
@@ -159,7 +161,7 @@ export function ProductionAlertPanel({ productions, manquants }: { productions: 
         {/* Footer */}
         <div style={{ padding: '9px 14px', background: '#fef2f2', borderTop: '2px solid #fecaca', flexShrink: 0 }}>
           <span style={{ fontSize: '0.70rem', color: '#991b1b', lineHeight: 1.5 }}>
-            Complétez le stock des composants (appro, transfert ou production du sous-produit). L'aperçu de saisie s'affichera quand tout sera couvert.
+            Complétez {voc.le('stock')} des composants ({voc.court('appro')}, {voc.nom('transfert')} ou production du sous-produit). L'aperçu de saisie s'affichera quand tout sera couvert.
           </span>
         </div>
       </div>
@@ -169,6 +171,7 @@ export function ProductionAlertPanel({ productions, manquants }: { productions: 
 
 export default function ApproPreviewPanel({ lines }: Props) {
   const [minimized, setMinimized] = useState(false);
+  const voc = useVocabulaire();
   const visible = lines.length > 0;
   const grandTTC = lines.reduce((s, l) => s + l.totalTTC, 0);
   const hasTva = lines.some((l) => l.tva != null && l.tva > 0);
@@ -219,7 +222,7 @@ export default function ApproPreviewPanel({ lines }: Props) {
             <line x1="9" y1="16" x2="13" y2="16"/>
           </svg>
           <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>
-            {lines.length} article{lines.length > 1 ? 's' : ''}
+            {voc.n('article', lines.length)}
           </span>
           <span style={{ fontSize: '0.68rem', opacity: 0.8 }}>·</span>
           <span style={{ fontSize: '0.78rem', fontWeight: 800 }}>{fmtDT(grandTTC)} DT</span>
@@ -268,7 +271,7 @@ export default function ApproPreviewPanel({ lines }: Props) {
               Aperçu saisie
             </span>
             <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>
-              {lines.length} article{lines.length > 1 ? 's' : ''}
+              {voc.n('article', lines.length)}
             </span>
           </div>
           {/* Minimize button */}
@@ -303,7 +306,7 @@ export default function ApproPreviewPanel({ lines }: Props) {
             <thead>
               <tr style={{ background: '#f8fafc' }}>
                 <th style={{ padding: '7px 14px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
-                  Article
+                  {voc.Nom('article')}
                 </th>
                 <th style={{ padding: '7px 10px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', borderBottom: '1px solid #e2e8f0', whiteSpace: 'nowrap' }}>
                   Qté

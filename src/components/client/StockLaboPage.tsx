@@ -3,6 +3,7 @@ import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { usePerteTypes } from '../../utils/perteTypes';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
@@ -104,6 +105,7 @@ interface Fournisseur { id: number; nom: string }
 
 export default function StockLaboPage() {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { canWrite, user } = useAuth();
   const isGerantLabo = user?.role === 'gerant';
   const [searchParams] = useSearchParams();
@@ -411,7 +413,7 @@ export default function StockLaboPage() {
     } catch (err: unknown) {
       const d = (err as { response?: { data?: { message?: string; disponible?: number; demande?: number } } })?.response?.data;
       if (d?.disponible !== undefined) {
-        setPerteErrMsg(`Stock insuffisant — disponible : ${d.disponible} | demandé : ${d.demande}`);
+        setPerteErrMsg(`${voc.Nom('stock')} ${voc.acc('stock', 'insuffisant', 'insuffisante')} — disponible : ${d.disponible} | demandé : ${d.demande}`);
       } else {
         setPerteErrMsg(d?.message || 'Erreur lors de l\'enregistrement');
       }
@@ -661,7 +663,7 @@ export default function StockLaboPage() {
       };
     });
 
-  if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
+  if (!laboId) return <div className="page"><p className="text-muted">{voc.Nom('labo')} introuvable.</p></div>;
 
   return (
     <div className="page">
@@ -686,12 +688,12 @@ export default function StockLaboPage() {
       }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🏭</div>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>{voc.icon('labo')}</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-              Stock Labo{labo ? ` — ${labo.nom}` : ''}</h1>
+              {voc.Nom('stock')} {voc.Court('labo')}{labo ? ` — ${labo.nom}` : ''}</h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            Gérez les stocks et approvisionnements de vos laboratoires
+            Gérez {voc.le('stock', true)} et {voc.pl('appro')} de {voc.votre('labo_long', true)}
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -722,10 +724,10 @@ export default function StockLaboPage() {
                 fontWeight: laboId === String(l.id) ? 700 : 400,
               }}
             >
-              🏭 {l.nom}
+              {voc.icon('labo')} {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('labo')}</span>
         </div>
       )}
 
@@ -747,24 +749,24 @@ export default function StockLaboPage() {
                 {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="🧂 Article">
+            <FilterField label={`🧂 ${voc.Nom('article')}`}>
               <FilterSelect value={sFilterIngId} disabled={!sFilterCat} onChange={(e) => setSFilterIngId(e.target.value)}>
-                <option value="">— Tous —</option>
+                <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
                 {stockInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
               </FilterSelect>
             </FilterField>
             <FilterField label="🔍 Nom">
               <FilterInput type="text" placeholder="Rechercher…" value={sFilterNom} onChange={(e) => setSFilterNom(e.target.value)} />
             </FilterField>
-            <FilterField label="🚚 Fournisseur">
+            <FilterField label={`🚚 ${voc.Nom('fournisseur')}`}>
               {hasFournisseurs ? (
                 <FilterSelect value={sFilterFournisseur} onChange={(e) => setSFilterFournisseur(e.target.value)}>
-                  <option value="">— Tous —</option>
+                  <option value="">— {voc.acc('fournisseur', 'Tous', 'Toutes')} —</option>
                   {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
                 </FilterSelect>
               ) : (
                 <FilterSelect disabled style={{ border: '2px solid #f97316', background: '#fff7ed', color: '#9a3412', fontStyle: 'italic' }}>
-                  <option>⚠ Aucun fournisseur</option>
+                  <option>⚠ {voc.Aucun('fournisseur')}</option>
                 </FilterSelect>
               )}
             </FilterField>
@@ -800,18 +802,18 @@ export default function StockLaboPage() {
             border: '1.5px solid #7e22ce', boxShadow: '0 2px 10px rgba(126,34,206,0.10)',
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, paddingBottom: 10, borderBottom: '1px solid #d8b4fe' }}>
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>Approvisionnement</span>
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#7e22ce' }}>{voc.Nom('appro')}</span>
               {readyCount > 0 && (
                 <span style={{ background: '#7e22ce', color: '#fff', borderRadius: 20, padding: '1px 9px', fontSize: '0.72rem', fontWeight: 700 }}>{readyCount}</span>
               )}
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
               <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date d'appro <span style={{ color: '#ef4444' }}>*</span></label>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date {voc.de('appro', false, 'court')} <span style={{ color: '#ef4444' }}>*</span></label>
                 <input type="date" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600, maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
               </div>
               <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Fournisseur</label>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>{voc.Nom('fournisseur')}</label>
                 {hasFournisseurs ? (
                   <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)} disabled={hasPTQuantity}>
                     <option value="">— Sélectionner —</option>
@@ -819,7 +821,7 @@ export default function StockLaboPage() {
                   </select>
                 ) : (
                   <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', maxWidth: 240, color: '#9a3412', fontStyle: 'italic', border: '2px solid #f97316', background: '#fff7ed' }} disabled>
-                    <option>⚠ Aucun fournisseur</option>
+                    <option>⚠ {voc.Aucun('fournisseur')}</option>
                   </select>
                 )}
               </div>
@@ -844,7 +846,7 @@ export default function StockLaboPage() {
             <p className="text-muted">{t('common.loading')}</p>
           ) : visibleStock.length === 0 ? (
             <div className="empty-state">
-              <span className="empty-icon">🏭</span>
+              <span className="empty-icon">{voc.icon('labo')}</span>
               <p style={{ color: 'var(--text-muted)' }}>{t('client.labo.empty_stock')}</p>
             </div>
           ) : Object.keys(stockGroups).length === 0 ? (
@@ -875,8 +877,8 @@ export default function StockLaboPage() {
                             <thead style={{ background: '#f5f3ff', color: '#3b0764' }}>
                               <tr style={{ borderBottom: '1px solid #d8b4fe' }}>
                                 {[
-                                  { label: 'Article', minWidth: 180 },
-                                  { label: 'Stock Actuel', minWidth: 110 },
+                                  { label: voc.Nom('article'), minWidth: 180 },
+                                  { label: `${voc.Nom('stock')} ${voc.acc('stock', 'Actuel', 'Actuelle')}`, minWidth: 110 },
                                   { label: 'Coût Total', minWidth: 100 },
                                   { label: 'Quantité', minWidth: 90 },
                                   { label: 'Prix', minWidth: 100 },
@@ -890,8 +892,8 @@ export default function StockLaboPage() {
                               </tr>
                               <tr style={{ borderBottom: '2px solid #7e22ce' }}>
                                 {[
-                                  { sub: 'Hist.Appro · Unité' },
-                                  { sub: 'Pertes · PT · Transfert' },
+                                  { sub: `Hist.${voc.Court('appro')} · Unité` },
+                                  { sub: `${voc.Court('perte', true)} · ${voc.Court('pt')} · ${voc.Court('transfert')}` },
                                   { sub: 'HT · TTC' },
                                   { sub: 'Nouvelle' },
                                   { sub: 'Unité' },
@@ -917,10 +919,10 @@ export default function StockLaboPage() {
                                     <tr style={{ borderBottom: r.isPT ? '2px solid #ddd6fe' : '1px solid #f1f5f9', ...(r.isPT ? { background: '#f5f3ff' } : {}) }}>
                                       <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                                         <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>
-                                          {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>PT</span>}
+                                          {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>{voc.Court('pt')}</span>}
                                           {r.nom}
                                           {r.isPT && r.origine === 'labo' && r.type === 'vendable' && (
-                                            <span title="Produit valorisé composé — fabriqué au labo puis transféré vers les activités (vendu en valorisé)."
+                                            <span title={`${voc.Nom('produit_valorise')} ${voc.acc('produit_valorise', 'composé', 'composée')} — ${voc.acc('produit_valorise', 'fabriqué', 'fabriquée')} ${voc.au('labo')} puis ${voc.acc('produit_valorise', 'transféré', 'transférée')} vers ${voc.le('activite', true)} (${voc.acc('produit_valorise', 'vendu', 'vendue')} en valorisé).`}
                                               style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap', marginLeft: 6 }}>
                                               ◆ Composé valorisé
                                             </span>
@@ -928,7 +930,7 @@ export default function StockLaboPage() {
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, justifyContent: 'center' }}>
                                           <span style={{ fontSize: '0.7rem', background: '#f5f3ff', color: '#7e22ce', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{r.unite}</span>
-                                          <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title="5 derniers appros"
+                                          <button className="btn btn-ghost btn-sm" onClick={() => toggleHistory(r.ingredientId)} title={`5 ${voc.acc('appro', 'derniers', 'dernières')} ${voc.court('appro', true)}`}
                                             style={{ fontSize: '0.7rem', color: '#0891b2', background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 3 }}>
                                             {rs.historyOpen ? '📋 ▲' : '📋 Historique'}
                                           </button>
@@ -942,11 +944,11 @@ export default function StockLaboPage() {
                                           {r.quantite !== null ? r.quantite.toFixed(3) : '—'}
                                         </span>
                                         {/* Ventilation par défaut — même lecture que le stock activité (transferts en négatif) */}
-                                        <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ appro {parseFloat(((r as any).approDepuisInv ?? 0).toFixed(3))}</div>
+                                        <div style={{ fontSize: '0.67rem', color: '#16a34a', fontWeight: 600, marginTop: 2 }}>↑ {voc.court('appro')} {parseFloat(((r as any).approDepuisInv ?? 0).toFixed(3))}</div>
                                         <div style={{ fontSize: '0.67rem', color: '#0891b2', fontWeight: 600, marginTop: 1 }}>⇄ transf {(r.transfertsDepuisInv ?? 0) > 0 ? `-${parseFloat((r.transfertsDepuisInv as number).toFixed(3))}` : 0}</div>
-                                        <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ pertes {(r.pertesDepuisInv ?? 0) > 0 ? `-${parseFloat((r.pertesDepuisInv as number).toFixed(3))}` : 0}</div>
+                                        <div style={{ fontSize: '0.67rem', color: '#dc2626', fontWeight: 500, marginTop: 1 }}>↘ {voc.court('perte', true)} {(r.pertesDepuisInv ?? 0) > 0 ? `-${parseFloat((r.pertesDepuisInv as number).toFixed(3))}` : 0}</div>
                                         {r.ptUsageDepuisInv != null && r.ptUsageDepuisInv > 0 && (
-                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>PT -{parseFloat(r.ptUsageDepuisInv.toFixed(3))}</div>
+                                          <div style={{ fontSize: '0.68rem', color: '#7c3aed', fontWeight: 500, marginTop: 1 }}>{voc.Court('pt')} -{parseFloat(r.ptUsageDepuisInv.toFixed(3))}</div>
                                         )}
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle', whiteSpace: 'nowrap' }}>
@@ -980,9 +982,9 @@ export default function StockLaboPage() {
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         {r.isPT ? (
                                           r.prixPartiel ? (
-                                            <span title="Prix indisponible : certains composants de la recette n'ont pas encore de prix (PMP)." style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 800, cursor: 'help' }}>—&nbsp;⚠️</span>
+                                            <span title={`Prix indisponible : certains composants ${voc.du('recette')} n'ont pas encore de prix (PMP).`} style={{ fontSize: '0.82rem', color: '#d97706', fontWeight: 800, cursor: 'help' }}>—&nbsp;⚠️</span>
                                           ) : (
-                                          <span title="Calculé automatiquement depuis les prix des articles du labo">
+                                          <span title={`Calculé automatiquement depuis les prix ${voc.du('article', true)} ${voc.du('labo')}`}>
                                             {r.prixCalcule != null && r.prixCalcule > 0 ? (
                                               <span style={{ fontSize: '0.88rem', color: '#7c3aed', fontWeight: 600 }}>{r.prixCalcule.toFixed(3)}</span>
                                             ) : r.prixUnitaire != null ? (
@@ -1021,14 +1023,14 @@ export default function StockLaboPage() {
                                             <button
                                               className="perte-btn"
                                               onClick={() => { setPerteModal({ ingredientId: r.ingredientId, nom: r.nom, quantite: r.quantite ?? null }); setPerteQty(''); setPerteType(perteTypeDefaut); setPerteErrMsg(''); const d = todayStr(); setPerteDate(d); setPerteDateMin(null); setPerteDateMax(null); fetchPerteDateRange(r.ingredientId).then(() => fetchPertePrix(r.ingredientId, d)); }}
-                                              title="Enregistrer une perte"
+                                              title={`Enregistrer ${voc.un('perte')}`}
                                               disabled={!canWrite}
-                                            >📉 Perte</button>
+                                            >📉 {voc.Court('perte')}</button>
                                           </div>
                                           {/* Row 2 — Personnaliser (PT only) */}
                                           {r.isPT && r.produitId && canWrite && (
                                             <div style={{ display: 'flex', gap: 5, alignItems: 'center', justifyContent: 'center' }}>
-                                              <button className="btn btn-ghost btn-sm" title="Portions personnalisées pour cette appro" onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️ Personnaliser</button>
+                                              <button className="btn btn-ghost btn-sm" title={`${voc.Pl('portion')} ${voc.acc('portion', 'personnalisés', 'personnalisées')} pour ${voc.ce('appro', false, 'court')}`} onClick={() => setPortionsModal({ produitId: r.produitId!, nom: r.nom })}>⚙️ Personnaliser</button>
                                             </div>
                                           )}
                                         </div>
@@ -1051,7 +1053,7 @@ export default function StockLaboPage() {
                                                   <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix HT</th>
                                                   <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>TVA%</th>
                                                   <th style={{ textAlign: 'right', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Prix TTC</th>
-                                                  <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Fournisseur</th>
+                                                  <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>{voc.Nom('fournisseur')}</th>
                                                   <th style={{ textAlign: 'left', color: 'var(--text-muted)', fontWeight: 600, paddingBottom: 4 }}>Réf Facture</th>
                                                 </tr>
                                               </thead>
@@ -1060,12 +1062,12 @@ export default function StockLaboPage() {
                                                   <tr key={i}>
                                                     <td style={{ color: 'var(--primary)', fontWeight: 600 }}>{fmtDate(h.dateAppro)}</td>
                                                     <td>
-                                                      {h.typeAppro === 'manuel' && <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>Manuel</span>}
-                                                      {h.typeAppro === 'transfert' && h.sens === 'entree' && <span style={{ background: '#ecfeff', color: '#0e7490', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>↙ Reçu{h.contrepartieNom ? ` ← ${h.contrepartieNom}` : ''}</span>}
-                                                      {h.typeAppro === 'transfert' && h.sens !== 'entree' && <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{h.sens === 'sortie' ? `↗ Transf.${h.contrepartieNom ? ` → ${h.contrepartieNom}` : ''}` : 'Transfert'}</span>}
-                                                      {h.typeAppro === 'PT' && <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>🔄 PT</span>}
-                                                      {h.typeAppro === 'perte' && <span style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>🗑️ Perte</span>}
-                                                      {h.typeAppro === 'vente' && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>💰 Vente</span>}
+                                                      {h.typeAppro === 'manuel' && <span style={{ background: '#dcfce7', color: '#15803d', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>{voc.acc('appro', 'Manuel', 'Manuelle')}</span>}
+                                                      {h.typeAppro === 'transfert' && h.sens === 'entree' && <span style={{ background: '#ecfeff', color: '#0e7490', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>↙ {voc.acc('transfert', 'Reçu', 'Reçue')}{h.contrepartieNom ? ` ← ${h.contrepartieNom}` : ''}</span>}
+                                                      {h.typeAppro === 'transfert' && h.sens !== 'entree' && <span style={{ background: '#e0f2fe', color: '#0369a1', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{h.sens === 'sortie' ? `↗ Transf.${h.contrepartieNom ? ` → ${h.contrepartieNom}` : ''}` : voc.Court('transfert')}</span>}
+                                                      {h.typeAppro === 'PT' && <span style={{ background: '#f3e8ff', color: '#7c3aed', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>🔄 {voc.Court('pt')}</span>}
+                                                      {h.typeAppro === 'perte' && <span style={{ background: '#fee2e2', color: '#b91c1c', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>{voc.icon('perte')} {voc.Court('perte')}</span>}
+                                                      {h.typeAppro === 'vente' && <span style={{ background: '#fef3c7', color: '#b45309', borderRadius: 5, padding: '1px 7px', fontSize: '0.7rem', fontWeight: 700 }}>💰 {voc.Court('vente')}</span>}
                                                       {!h.typeAppro && '—'}
                                                     </td>
                                                     <td style={{ textAlign: 'right' }}>{h.quantite ?? '—'}</td>
@@ -1122,13 +1124,13 @@ export default function StockLaboPage() {
                 {allIngCats.map((c) => <option key={c} value={c}>{c}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="🧂 Article">
+            <FilterField label={`🧂 ${voc.Nom('article')}`}>
               <FilterSelect value={iFilterIngId} disabled={!iFilterCat} onChange={(e) => setIFilterIngId(e.target.value)}>
-                <option value="">— Tous —</option>
+                <option value="">— {voc.acc('article', 'Tous', 'Toutes')} —</option>
                 {ingInCat.map((i) => <option key={i.ingredientId} value={String(i.ingredientId)}>{i.nom}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="🔍 Nom article">
+            <FilterField label={`🔍 Nom ${voc.nom('article')}`}>
               <FilterInput type="text" placeholder="Rechercher…" value={iFilterNom} onChange={(e) => setIFilterNom(e.target.value)} />
             </FilterField>
           </HistoryFilterBar>
@@ -1138,12 +1140,12 @@ export default function StockLaboPage() {
           ) : (assignments?.ingredients ?? []).length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🧂</span>
-              <p style={{ color: 'var(--text-muted)' }}>Aucun article assigné à ce labo.</p>
+              <p style={{ color: 'var(--text-muted)' }}>{voc.Aucun('article')} {voc.acc('article', 'assigné', 'assignée')} à {voc.ce('labo')}.</p>
             </div>
           ) : activites.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">🔗</span>
-              <p style={{ color: 'var(--text-muted)' }}>Aucune activité liée à ce labo.</p>
+              <p style={{ color: 'var(--text-muted)' }}>{voc.Aucun('activite')} {voc.acc('activite', 'lié', 'liée')} à {voc.ce('labo')}.</p>
             </div>
           ) : (() => {
             const sorted = Object.entries(ingGroups).sort(([a], [b]) => a.localeCompare(b));
@@ -1222,7 +1224,7 @@ export default function StockLaboPage() {
         <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #dc2626, #b91c1c)', borderBottom: 'none' }}>
-              <h2 style={{ color: '#fff', margin: 0 }}>📉 Déclarer une perte — {perteModal.nom}</h2>
+              <h2 style={{ color: '#fff', margin: 0 }}>📉 Déclarer {voc.un('perte')} — {perteModal.nom}</h2>
               <button className="modal-close" onClick={() => setPerteModal(null)} style={{ color: '#fff' }}>✕</button>
             </div>
             <div className="modal-body">
@@ -1232,10 +1234,10 @@ export default function StockLaboPage() {
                 <>
                   <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 8, padding: '14px 16px', textAlign: 'center', marginBottom: 16 }}>
                     <p style={{ margin: 0, color: '#92400e', fontWeight: 600, fontSize: '0.9rem' }}>
-                      Aucun approvisionnement enregistré pour cet article cette année.
+                      {voc.Aucun('appro')} {voc.acc('appro', 'enregistré', 'enregistrée')} pour {voc.ce('article')} cette année.
                     </p>
                     <p style={{ margin: '6px 0 0', color: '#b45309', fontSize: '0.8rem' }}>
-                      Enregistrez d'abord un appro avant de déclarer une perte.
+                      Enregistrez d'abord {voc.un('appro', false, 'court')} avant de déclarer {voc.un('perte')}.
                     </p>
                   </div>
                   <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
@@ -1246,7 +1248,7 @@ export default function StockLaboPage() {
                 <>
                   {perteModal?.quantite !== null && perteModal?.quantite !== undefined && (
                     <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 6, padding: '6px 12px', display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <span style={{ fontSize: '0.8rem', color: '#14532d', fontWeight: 600 }}>Stock disponible</span>
+                      <span style={{ fontSize: '0.8rem', color: '#14532d', fontWeight: 600 }}>{voc.Nom('stock')} disponible</span>
                       <span style={{ fontWeight: 700, color: perteModal.quantite <= 0 ? '#dc2626' : perteModal.quantite < 5 ? '#d97706' : '#15803d' }}>
                         {perteModal.quantite.toFixed(3)}
                       </span>
@@ -1263,27 +1265,27 @@ export default function StockLaboPage() {
                   />
                   {perteModal?.quantite !== null && perteModal?.quantite !== undefined && perteQty && parseFloat(perteQty) > perteModal.quantite && (
                     <p style={{ color: '#dc2626', fontSize: '0.78rem', margin: '0 0 10px', fontWeight: 600 }}>
-                      ⚠ Dépasse le stock disponible ({perteModal.quantite.toFixed(3)})
+                      ⚠ Dépasse {voc.le('stock')} disponible ({perteModal.quantite.toFixed(3)})
                     </p>
                   )}
                   {!perteQty || parseFloat(perteQty) <= (perteModal?.quantite ?? Infinity) ? <div style={{ marginBottom: 12 }} /> : null}
-                  <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Type de perte</label>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Type {voc.de('perte')}</label>
                   <select className="input" style={{ width: '100%', fontSize: '0.9rem', marginBottom: 16 }} value={perteType} onChange={(e) => setPerteType(e.target.value)}>
                     {perteTypes.map((t) => <option key={t.code} value={t.code}>{t.label}</option>)}
                   </select>
-                  <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date de perte</label>
+                  <label style={{ ...LABEL, display: 'block', marginBottom: 6 }}>Date {voc.de('perte')}</label>
                   <input className="input" type="date" style={{ width: '100%', fontSize: '0.9rem' }}
                     min={perteDateMin || undefined} max={todayStr()} value={perteDate}
                     onChange={(e) => { setPerteDate(e.target.value); if (perteModal) fetchPertePrix(perteModal.ingredientId, e.target.value); }} />
                   {perteDateMin && (
                     <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3, marginBottom: 12 }}>
-                      Premier appro : {perteDateMin.split('-').reverse().join('/')}
+                      {voc.acc('appro', 'Premier', 'Première')} {voc.court('appro')} : {perteDateMin.split('-').reverse().join('/')}
                     </p>
                   )}
                   {perteModal && perteModal.ingredientId >= 0 && (
                     <div style={{ marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, padding: '7px 12px', display: 'flex', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire appro</span>
+                        <span style={{ fontSize: '0.8rem', color: '#7f1d1d', fontWeight: 600 }}>Prix unitaire {voc.court('appro')}</span>
                         <span style={{ fontWeight: 700, color: '#991b1b' }}>
                           {pertePrixLoading ? '…' : pertePrix != null ? `${pertePrix.toFixed(3)} DT` : '—'}
                         </span>
@@ -1311,7 +1313,7 @@ export default function StockLaboPage() {
                         (perteModal?.quantite !== null && perteModal?.quantite !== undefined && parseFloat(perteQty) > perteModal.quantite)
                       }
                     >
-                      {perteSaving ? '…' : 'Enregistrer la perte'}
+                      {perteSaving ? '…' : `Enregistrer ${voc.le('perte')}`}
                     </button>
                   </div>
                 </>
@@ -1338,17 +1340,17 @@ export default function StockLaboPage() {
         <div className="modal-overlay">
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="modal-header" style={{ background: '#7c3aed', color: '#fff' }}>
-              <h2 style={{ margin: 0, fontSize: '1rem' }}>⚠️ Appro existante — {ptConfirm.nom}</h2>
+              <h2 style={{ margin: 0, fontSize: '1rem' }}>⚠️ {voc.Court('appro')} {voc.acc('appro', 'existant', 'existante')} — {ptConfirm.nom}</h2>
               <button className="modal-close" onClick={() => setPtConfirm(null)} style={{ color: '#fff' }}>✕</button>
             </div>
             <div className="modal-body">
               <p style={{ marginBottom: 12 }}>
-                Tu as déjà un appro à cette date (<strong>{fmtDate(ptConfirm.dateAppro)}</strong>) avec la quantité{' '}
+                Tu as déjà {voc.un('appro', false, 'court')} à cette date (<strong>{fmtDate(ptConfirm.dateAppro)}</strong>) avec la quantité{' '}
                 <strong>{ptConfirm.existingQty.toFixed(3)}</strong>.
               </p>
               <p style={{ marginBottom: 20 }}>
                 Es-tu sûr d'ajouter <strong>{ptConfirm.newQty.toFixed(3)}</strong> ?{' '}
-                Car ça te fait un total d'appro de{' '}
+                Car ça te fait un total {voc.de('appro', false, 'court')} de{' '}
                 <strong style={{ color: '#7c3aed', fontSize: '1.05rem' }}>
                   {ptConfirm.existingQty.toFixed(3)} + {ptConfirm.newQty.toFixed(3)} = {(ptConfirm.existingQty + ptConfirm.newQty).toFixed(3)}
                 </strong>

@@ -1,0 +1,20 @@
+[
+  {
+    "besoin": "autre",
+    "demande": "Icône de l'Espace Produits et du menu « Produits Vendables » de la barre latérale : l'emoji 🍔 (burger) est écrit en dur et n'est l'icône par défaut d'aucune clé (espace_produits = 💎, produit_vendable = 🛒, produit = sans icône). À décider en S5 : aligner l'icône par défaut du lexique sur 🍔 (identité conservée, puis voc.icon), ou remplacer le burger par l'icône de la clé (changement visible pour un compte restauration).",
+    "fichier": "src/components/common/Sidebar.tsx",
+    "ligne": 587,
+    "texte": "🍔",
+    "ecriture_souhaitee": "icon={voc.icon('espace_produits')} (l. 587) et <span className=\"link-icon\">{voc.icon('produit_vendable')}</span> (l. 606)",
+    "raison": "Spec §3 règle 7 : voc.icon(k) seulement là où l'emoji affiché est déjà l'icône par défaut de la clé ; ici il ne l'est pas, l'icône reste donc en dur. Un compte Hôtellerie ou Céramique garde un burger devant « Espace Produits » et devant « Prestations Vendues » / « Produits Finis ». Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Icône du menu « Articles » du Référentiel dans la barre latérale : l'emoji 🧂 (salière) est écrit en dur alors que l'icône par défaut de la clé article est 📦 (🧂 est l'icône par défaut de produit_utilisable, dont le menu affiche 🧪). À décider en S5 : aligner le lexique ou la barre latérale.",
+    "fichier": "src/components/common/Sidebar.tsx",
+    "ligne": 461,
+    "texte": "🧂",
+    "ecriture_souhaitee": "icon={voc.icon('article')}",
+    "raison": "Spec §3 règle 7 : l'emoji affiché n'est pas l'icône par défaut de la clé, il reste donc en dur. Un compte Céramique garde une salière devant « Matières premières », un compte Hôtellerie devant « Fournitures ». Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  }
+]
