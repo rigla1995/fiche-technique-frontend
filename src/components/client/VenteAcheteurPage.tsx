@@ -4,6 +4,7 @@ import api from '../../api/client';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import Pagination from '../common/Pagination';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -39,6 +40,7 @@ const fmtDate = (d: string) => { if (!d) return '—'; const [y, m, j] = d.split
 
 export default function VenteAcheteurPage() {
   const navigate = useNavigate();
+  const voc = useVocabulaire();
   const [acheteurs, setAcheteurs] = useState<Acheteur[]>([]);
   const [labos, setLabos] = useState<Labo[]>([]);
   const [offres, setOffres] = useState<Offre[]>([]);
@@ -114,8 +116,8 @@ export default function VenteAcheteurPage() {
 
   const submit = async () => {
     setError(''); setManquants([]); setSuccess(null);
-    if (!acheteurId) { setError('Choisissez un acheteur'); return; }
-    if (!laboId) { setError('Choisissez un labo'); return; }
+    if (!acheteurId) { setError(`Choisissez ${voc.un('acheteur')}`); return; }
+    if (!laboId) { setError(`Choisissez ${voc.un('labo')}`); return; }
     if (lignesActives.length === 0) { setError('Saisissez au moins une quantité'); return; }
     if (remise !== '' && !Number.isFinite(parseNum(remise))) { setError('Remise invalide (0 à 100)'); return; }
     const ligneInvalide = lignesActives.find(({ l }) => l.prix !== '' && !(Number.isFinite(parseNum(l.prix)) && parseNum(l.prix) >= 0));
@@ -144,7 +146,7 @@ export default function VenteAcheteurPage() {
       const resp = (e as { response?: { status?: number; data?: { message?: string; manquants?: Manquant[] } } })?.response;
       if (resp?.status === 422 && resp.data?.manquants) {
         setManquants(resp.data.manquants);
-        setError('Stock labo insuffisant pour valider cette vente :');
+        setError(`${voc.Nom('stock')} ${voc.compl('labo')} ${voc.acc('stock', 'insuffisant', 'insuffisante')} pour valider ${voc.ce('vente')} :`);
       } else {
         setError(resp?.data?.message ?? 'Erreur lors de l\'enregistrement');
       }
@@ -197,10 +199,10 @@ export default function VenteAcheteurPage() {
         <div style={{ flex: '1 1 300px', minWidth: 240 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧾</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Nouvelle Vente Acheteur</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{voc.Nouveau('vente', false, 'Nom')} {voc.Court('acheteur')}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Vente depuis le stock labo — le stock est déduit et la facture générée automatiquement
+            {voc.Nom('vente')} depuis {voc.le('stock')} {voc.compl('labo')} — {voc.le('stock')} est {voc.acc('stock', 'déduit', 'déduite')} et la facture générée automatiquement
           </p>
         </div>
         <GuideButton section="acheteurs-ventes" />
@@ -210,7 +212,7 @@ export default function VenteAcheteurPage() {
         <div style={{ background: '#dcfce7', border: '1px solid #86efac', borderRadius: 12, padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '1.3rem' }}>✅</span>
           <div style={{ flex: 1, color: '#166534', fontWeight: 600, fontSize: '0.9rem' }}>
-            Vente enregistrée — facture <strong>{success.numero}</strong> ({fmt(success.montantTtc)})
+            {voc.Nom('vente')} {voc.acc('vente', 'enregistré', 'enregistrée')} — facture <strong>{success.numero}</strong> ({fmt(success.montantTtc)})
           </div>
           <button onClick={() => ouvrirFacture(success.factureId)}
             style={{ background: '#166534', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
@@ -218,7 +220,7 @@ export default function VenteAcheteurPage() {
           </button>
           <button onClick={() => navigate('/client/acheteurs/commandes')}
             style={{ background: 'none', color: '#166534', border: '1px solid #86efac', borderRadius: 8, padding: '8px 16px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer' }}>
-            Voir les ventes
+            Voir {voc.le('vente', true)}
           </button>
         </div>
       )}
@@ -255,7 +257,7 @@ export default function VenteAcheteurPage() {
           <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>💲</div>
           <div style={{ fontWeight: 800, color: CD, marginBottom: 8 }}>Aucune offre active</div>
           <div style={{ fontSize: '0.86rem', color: '#5b21b6' }}>
-            Configurez d'abord vos <Link to="/client/acheteurs/tarifs" style={{ color: C, fontWeight: 700 }}>Tarifs Acheteurs</Link> (prix + toggle « Proposé »).
+            Configurez d'abord vos <Link to="/client/acheteurs/tarifs" style={{ color: C, fontWeight: 700 }}>Tarifs {voc.Court('acheteur', true)}</Link> (prix + toggle « Proposé »).
           </div>
         </div>
       ) : (
@@ -265,7 +267,7 @@ export default function VenteAcheteurPage() {
             subtitle={`${offresFiltrees.length} article${offresFiltrees.length > 1 ? 's' : ''} · ${lignesActives.length} ligne${lignesActives.length > 1 ? 's' : ''} saisie${lignesActives.length > 1 ? 's' : ''}`}
             onReset={(search.trim() || catFilter) ? () => { setSearch(''); setCatFilter(''); } : undefined}>
             <FilterField label="🔍 Recherche">
-              <FilterInput value={search} onChange={e => setSearch(e.target.value)} placeholder="Nom de l'article ou du produit…" />
+              <FilterInput value={search} onChange={e => setSearch(e.target.value)} placeholder={`Nom ${voc.du('article')} ou ${voc.du('produit')}…`} />
             </FilterField>
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={catFilter} onChange={e => setCatFilter(e.target.value)}>
@@ -278,18 +280,18 @@ export default function VenteAcheteurPage() {
           {/* Bloc de saisie de la vente (sous les filtres) */}
           <div className="card" style={{ padding: '16px 20px', marginBottom: 16 }}>
             <div style={{ fontSize: '0.78rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 12 }}>
-              🧾 Informations de la vente
+              🧾 Informations {voc.du('vente')}
             </div>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div>
-                <label style={lblStyle}>Acheteur *</label>
+                <label style={lblStyle}>{voc.Nom('acheteur')} *</label>
                 <select value={acheteurId} onChange={e => setAcheteurId(e.target.value)} style={{ ...inp, minWidth: 200 }}>
                   <option value="">— Choisir —</option>
                   {acheteurs.map(a => <option key={a.id} value={a.id}>{a.nom}{a.entreprise ? ` (${a.entreprise})` : ''}</option>)}
                 </select>
               </div>
               <div>
-                <label style={lblStyle}>Labo source *</label>
+                <label style={lblStyle}>{voc.Court('labo')} source *</label>
                 <select value={laboId} onChange={e => setLaboId(e.target.value)} style={{ ...inp, minWidth: 160 }}>
                   <option value="">— Choisir —</option>
                   {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
@@ -321,9 +323,9 @@ export default function VenteAcheteurPage() {
                 Timbre fiscal (1.000 DT)
               </label>
               <button onClick={submit} disabled={saving || !champsValides}
-                title={!champsValides ? 'Renseignez l\'acheteur, le labo et au moins une quantité' : undefined}
+                title={!champsValides ? `Renseignez ${voc.le('acheteur')}, ${voc.le('labo')} et au moins une quantité` : undefined}
                 style={{ marginLeft: 'auto', padding: '11px 24px', borderRadius: 10, border: 'none', background: champsValides && !saving ? `linear-gradient(135deg, ${CD}, ${C})` : '#cbd5e1', color: '#fff', fontWeight: 800, fontSize: '0.88rem', cursor: champsValides && !saving ? 'pointer' : 'not-allowed', boxShadow: champsValides && !saving ? '0 4px 14px rgba(109,40,217,0.3)' : 'none' }}>
-                {saving ? 'Enregistrement…' : '✅ Valider la vente'}
+                {saving ? 'Enregistrement…' : `✅ Valider ${voc.le('vente')}`}
               </button>
             </div>
           </div>
@@ -346,7 +348,7 @@ export default function VenteAcheteurPage() {
                       </span>
                       {nbSaisies > 0 && (
                         <span style={{ marginLeft: 'auto', fontSize: '0.72rem', fontWeight: 700, background: '#ede9fe', color: CD, borderRadius: 20, padding: '2px 10px' }}>
-                          🧺 {nbSaisies} dans la vente
+                          🧺 {nbSaisies} dans {voc.le('vente')}
                         </span>
                       )}
                     </div>
@@ -354,8 +356,8 @@ export default function VenteAcheteurPage() {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                         <thead>
                           <tr style={{ background: '#faf9ff', borderBottom: `1px solid ${CB}` }}>
-                            {['Article / Produit', 'Tarif', 'Quantité', 'Prix HT', 'Total HT'].map(h => (
-                              <th key={h} style={{ textAlign: h === 'Article / Produit' ? 'left' : 'center', padding: '9px 14px', color: CD, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
+                            {[`${voc.Nom('article')} / ${voc.Nom('produit')}`, 'Tarif', 'Quantité', 'Prix HT', 'Total HT'].map(h => (
+                              <th key={h} style={{ textAlign: h === `${voc.Nom('article')} / ${voc.Nom('produit')}` ? 'left' : 'center', padding: '9px 14px', color: CD, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
                             ))}
                           </tr>
                         </thead>
@@ -392,7 +394,7 @@ export default function VenteAcheteurPage() {
                                 <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                                   <input value={l.prix} onChange={e => setLigne(k, { prix: e.target.value })}
                                     placeholder={prixDefautHt(o).toFixed(3)}
-                                    title={enPromo ? `Prix HT promo (−${o.promoPct} %) — modifiable pour cette vente` : 'Prix HT (modifiable pour cette vente)'}
+                                    title={enPromo ? `Prix HT promo (−${o.promoPct} %) — modifiable pour ${voc.ce('vente')}` : `Prix HT (modifiable pour ${voc.ce('vente')})`}
                                     style={{ ...inp, width: 88, textAlign: 'right' }} />
                                 </td>
                                 <td style={{ padding: '9px 14px', textAlign: 'right', fontWeight: 800, color: total > 0 ? CD : '#cbd5e1', whiteSpace: 'nowrap' }}>
@@ -424,20 +426,20 @@ export default function VenteAcheteurPage() {
               et les totaux au fil de la saisie. */}
           <div style={{ position: 'fixed', bottom: 18, right: 24, zIndex: 90, background: '#fff', border: `1.5px solid ${CB}`, borderRadius: 14, boxShadow: '0 12px 36px rgba(76,29,149,0.22)', padding: '14px 18px', minWidth: 300, maxWidth: 340 }}>
             <div style={{ fontSize: '0.72rem', fontWeight: 800, color: CD, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-              👁️ Aperçu de la vente
+              👁️ Aperçu {voc.du('vente')}
             </div>
             {/* Date et état ont toujours une valeur : le bloc est rendu sans condition
                 (acheteur/labo/promotion s'y ajoutent dès qu'ils sont renseignés) */}
             <div style={{ display: 'grid', gap: 3, fontSize: '0.78rem', color: '#475569', marginBottom: 8, paddingBottom: 8, borderBottom: '1px dashed #e2e8f0' }}>
               {acheteurChoisi && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <span>👤 Acheteur</span>
+                    <span>👤 {voc.Nom('acheteur')}</span>
                     <strong style={{ color: '#1e293b', textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{acheteurChoisi.nom}</strong>
                   </div>
                 )}
                 {laboChoisi && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                    <span>🧪 Labo source</span><strong style={{ color: '#1e293b' }}>{laboChoisi.nom}</strong>
+                    <span>🧪 {voc.Court('labo')} source</span><strong style={{ color: '#1e293b' }}>{laboChoisi.nom}</strong>
                   </div>
                 )}
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>

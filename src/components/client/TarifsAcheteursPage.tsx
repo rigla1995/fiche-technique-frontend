@@ -4,6 +4,7 @@ import api from '../../api/client';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import Pagination from '../common/Pagination';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -69,6 +70,7 @@ const ttcPromoOf = (e: EditState) => {
 const cellInp: React.CSSProperties = { width: 76, padding: '6px 8px', borderRadius: 8, border: '1px solid #e2e8f0', fontSize: '0.82rem', fontFamily: 'inherit', textAlign: 'right' };
 
 export default function TarifsAcheteursPage() {
+  const voc = useVocabulaire();
   const [articles, setArticles] = useState<OffreRow[]>([]);
   const [produits, setProduits] = useState<OffreRow[]>([]);
   const [tab, setTab] = useState<'articles' | 'produits'>('articles');
@@ -206,10 +208,10 @@ export default function TarifsAcheteursPage() {
         <div style={{ flex: '1 1 300px', minWidth: 240, maxWidth: 640 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💲</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Tarifs Acheteurs</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Tarifs {voc.Court('acheteur', true)}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Prix HT (+ TVA) des articles et produits proposés à vos acheteurs — TTC calculé, promo affichée prix barré.
+            Prix HT (+ TVA) {voc.du('article', true)} et {voc.pl('produit')} proposés à {voc.votre('acheteur', true)} — TTC calculé, promo affichée prix barré.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -235,7 +237,7 @@ export default function TarifsAcheteursPage() {
         {(['articles', 'produits'] as const).map(t => (
           <button key={t} onClick={() => { setTab(t); setCatFilter(''); }}
             style={{ padding: '9px 18px', borderRadius: 10, border: `1.5px solid ${tab === t ? C : '#e2e8f0'}`, background: tab === t ? CL : '#fff', color: tab === t ? CD : '#475569', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer' }}>
-            {t === 'articles' ? `🧂 Articles (${articles.length})` : `🍱 Produits (${produits.length})`}
+            {t === 'articles' ? `🧂 ${voc.Pl('article')} (${articles.length})` : `🍱 ${voc.Pl('produit')} (${produits.length})`}
           </button>
         ))}
       </div>
@@ -252,7 +254,7 @@ export default function TarifsAcheteursPage() {
           </button>
         }>
         <FilterField label="🔍 Recherche">
-          <FilterInput value={search} onChange={e => setSearch(e.target.value)} placeholder={tab === 'articles' ? 'Nom de l\'article…' : 'Nom du produit…'} />
+          <FilterInput value={search} onChange={e => setSearch(e.target.value)} placeholder={`Nom ${voc.du(tab === 'articles' ? 'article' : 'produit')}…`} />
         </FilterField>
         <FilterField label="🏷️ Catégorie">
           <FilterSelect value={catFilter} onChange={e => setCatFilter(e.target.value)}>
@@ -275,12 +277,12 @@ export default function TarifsAcheteursPage() {
         <div style={{ background: CL, border: `2px dashed ${CB}`, borderRadius: 16, padding: '40px 28px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>{tab === 'articles' ? '🧂' : '🍱'}</div>
           <div style={{ fontWeight: 800, color: CD, marginBottom: 8 }}>
-            {tab === 'articles' ? 'Aucun article commandable' : 'Aucun produit proposable'}
+            {tab === 'articles' ? `${voc.Aucun('article')} commandable` : `${voc.Aucun('produit')} proposable`}
           </div>
           <div style={{ fontSize: '0.86rem', color: '#5b21b6', maxWidth: 460, margin: '0 auto', lineHeight: 1.6 }}>
             {tab === 'articles'
-              ? <>Activez le toggle <strong>Commandable</strong> sur les articles concernés dans <Link to="/client/referentiel/articles" style={{ color: C, fontWeight: 700 }}>Référentiel → Articles</Link> : ils apparaîtront ici.</>
-              : <>Créez des produits composés d'origine labo, ou rattachez vos produits utilisables à un labo : ils apparaîtront ici.</>}
+              ? <>Activez le toggle <strong>Commandable</strong> sur {voc.le('article', true)} {voc.acc('article', 'concernés', 'concernées')} dans <Link to="/client/referentiel/articles" style={{ color: C, fontWeight: 700 }}>{voc.Nom('referentiel')} → {voc.Pl('article')}</Link> : {voc.acc('article', 'ils', 'elles')} apparaîtront ici.</>
+              : <>Créez {voc.un('produit_compose', true)} d'origine {voc.nom('labo')}, ou rattachez {voc.votre('produit_utilisable', true)} à {voc.un('labo')} : ils apparaîtront ici.</>}
           </div>
         </div>
       ) : filtered.length === 0 ? (
@@ -315,8 +317,8 @@ export default function TarifsAcheteursPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
                     <thead>
                       <tr style={{ background: '#faf9ff', borderBottom: `1px solid ${CB}` }}>
-                        {[tab === 'articles' ? 'Article' : 'Produit', 'Prix unité HT', 'TVA %', 'Promo %', 'Promo active', 'Prix TTC', 'Proposé'].map(h => (
-                          <th key={h} style={{ textAlign: h === 'Article' || h === 'Produit' ? 'left' : 'center', padding: '8px 14px', color: CD, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
+                        {[voc.Nom(tab === 'articles' ? 'article' : 'produit'), 'Prix unité HT', 'TVA %', 'Promo %', 'Promo active', 'Prix TTC', 'Proposé'].map(h => (
+                          <th key={h} style={{ textAlign: h === voc.Nom('article') || h === voc.Nom('produit') ? 'left' : 'center', padding: '8px 14px', color: CD, fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -354,13 +356,13 @@ export default function TarifsAcheteursPage() {
                             <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                               <input value={e.promo} onChange={ev => setField(k, 'promo', ev.target.value)} placeholder="0"
                                 aria-invalid={promoKo}
-                                title={promoKo ? 'Taux invalide : saisissez une valeur entre 0,01 et 100' : 'Remise en % appliquée au prix de vente acheteur'}
+                                title={promoKo ? 'Taux invalide : saisissez une valeur entre 0,01 et 100' : `Remise en % appliquée au prix de vente ${voc.compl('acheteur')}`}
                                 style={{ ...cellInp, width: 52, borderColor: promoKo ? '#dc2626' : pctPromo > 0 ? '#f59e0b' : '#e2e8f0', background: promoKo ? '#fef2f2' : '#fff' }} />
                               {promoKo && <div style={{ fontSize: '0.66rem', color: '#b91c1c', fontWeight: 700, marginTop: 3 }}>0,01 à 100</div>}
                             </td>
                             <td style={{ padding: '9px 14px', textAlign: 'center' }}>
                               <button onClick={() => (promoPossible || e.promoOn) ? setField(k, 'promoOn', !e.promoOn) : undefined}
-                                title={!promoPossible && !e.promoOn ? 'Renseignez un prix HT > 0 et un taux de promo > 0' : 'Appliquer cette promotion à vos acheteurs'}
+                                title={!promoPossible && !e.promoOn ? 'Renseignez un prix HT > 0 et un taux de promo > 0' : `Appliquer cette promotion à ${voc.votre('acheteur', true)}`}
                                 style={{ background: 'none', border: 'none', cursor: promoPossible || e.promoOn ? 'pointer' : 'not-allowed', padding: 0, opacity: promoPossible || e.promoOn ? 1 : 0.45 }}>
                                 <div style={{ width: 36, height: 20, borderRadius: 10, position: 'relative', background: e.promoOn ? '#f59e0b' : '#cbd5e1', transition: 'background 0.2s', margin: '0 auto' }}>
                                   <div style={{ position: 'absolute', top: 2, left: e.promoOn ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.18)', transition: 'left 0.2s' }} />

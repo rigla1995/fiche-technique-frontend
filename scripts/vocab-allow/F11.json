@@ -1,0 +1,208 @@
+[
+  {
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "avant": "articles",
+    "apres": "articles",
+    "type": "discriminant",
+    "justification": "Clé technique de l'onglet actif (état `tab` : useState<'articles' | 'produits'>('articles'), et liste des deux clés parcourue pour dessiner les boutons d'onglet). Elle n'est que comparée (tab === 'articles', key React) et jamais affichée : le libellé de l'onglet passe par voc.Pl('article'). Deux unités : la valeur initiale de l'état et le 1er élément de la liste des clés."
+  },
+  {
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "avant": "produits",
+    "apres": "produits",
+    "type": "discriminant",
+    "justification": "Clé technique du second onglet (2e élément de la liste ['articles', 'produits'] parcourue pour dessiner les boutons d'onglet) : elle n'est que comparée et sert de key React, jamais affichée ; le libellé de l'onglet passe par voc.Pl('produit')."
+  },
+  {
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "avant": "Prix HT (+ TVA) des articles et produits proposés à vos acheteurs — TTC calculé, promo affichée prix barré.",
+    "apres": "Prix HT (+ TVA) des articles et produits proposés à vos acheteurs — TTC calculé, promo affichée prix barré.",
+    "type": "provisoire",
+    "mode": "accords",
+    "justification": "« proposés » s'accorde avec DEUX termes coordonnés (articles et produits) : masculin pluriel sauf si les deux termes sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué (argument non littéral, vérifié sur ce fichier) : le participe reste au masculin, comme le guide le prescrit pour deux termes coordonnés. Rendu juste par défaut, en Hôtellerie (« des fournitures et produits proposés ») et en Céramique ; faux seulement si les deux termes deviennent féminins (miroir : « des denrées et inventions proposés »). Besoin décrit dans scripts/vocab-besoins/F11.json."
+  },
+  {
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "avant": "Créez des produits composés d'origine labo, ou rattachez vos produits utilisables à un labo : ils apparaîtront ici.",
+    "apres": "Créez des produits composés d'origine labo, ou rattachez vos produits utilisables à un labo : ils apparaîtront ici.",
+    "type": "provisoire",
+    "mode": "accords",
+    "justification": "Le pronom « ils » ne reprend pas le terme que l'outil cite (voc.un('labo')) mais DEUX termes coordonnés (produits composés ou produits utilisables) : masculin pluriel sauf si les deux sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué : le pronom reste au masculin, comme le guide le prescrit pour deux termes coordonnés. Rendu juste par défaut, en Hôtellerie (« des produits composés … vos consommables … : ils ») et en Céramique ; faux seulement si les deux termes deviennent féminins. Besoin décrit dans scripts/vocab-besoins/F11.json."
+  },
+  {
+    "fichier": "src/components/client/CommandesAcheteursPage.tsx",
+    "avant": "⟦·⟧ · commandée le ⟦·⟧ — le stock est déduit et la facture générée au traitement. Marquez-la directement « Livrée » si elle est déjà chez l'acheteur.",
+    "apres": "⟦·⟧ · commandée le ⟦·⟧ — le stock est déduit et la facture générée au traitement. Marquez-la directement « Livrée » si elle est déjà chez l'acheteur.",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « elle » reprend « la commande » (mot hors lexique, sujet de « commandée le … » et de « Marquez-la »), pas le terme rendu par voc.le('stock') ; l'outil ne sait pas rattacher le pronom à son antécédent. L'accord avec le stock, lui, passe par voc.acc('stock', 'déduit', 'déduite'). Rendu miroir juste : « l'armoire est déduite … si elle est déjà chez la cliente »."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Fabriqué par votre fournisseur",
+    "apres": "Fabriqué par votre fournisseur",
+    "type": "homonyme",
+    "justification": "Portail acheteur : « votre fournisseur » est le VENDEUR vu par l'acheteur (le client LabFlow qui publie le catalogue), pas la clé « fournisseur » du lexique (celui auprès de qui le compte s'approvisionne). Décision S4 du guide. Infobulle du badge « Maison »."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Choisissez vos quantités puis envoyez votre commande : votre fournisseur la prépare et l'expédie.",
+    "apres": "Choisissez vos quantités puis envoyez votre commande : votre fournisseur la prépare et l'expédie.",
+    "type": "homonyme",
+    "justification": "Portail acheteur : « votre fournisseur » est le VENDEUR vu par l'acheteur, pas la clé « fournisseur » du lexique (décision S4 du guide). Sous-titre du catalogue ; aucun autre terme du lexique dans la phrase."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Commande envoyée ! Votre fournisseur va la traiter — suivez son statut dans « Mes commandes ».",
+    "apres": "Commande envoyée ! Votre fournisseur va la traiter — suivez son statut dans « Mes commandes ».",
+    "type": "homonyme",
+    "justification": "Portail acheteur : « Votre fournisseur » est le VENDEUR vu par l'acheteur, pas la clé « fournisseur » du lexique (décision S4 du guide). Message de confirmation d'envoi ; aucun autre terme du lexique dans la phrase."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Contactez votre fournisseur.",
+    "apres": "Contactez votre fournisseur.",
+    "type": "homonyme",
+    "justification": "Portail acheteur : « votre fournisseur » est le VENDEUR vu par l'acheteur, pas la clé « fournisseur » du lexique (décision S4 du guide). Message affiché quand le portail de commande n'est pas actif."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Votre fournisseur n'a pas encore publié son catalogue.",
+    "apres": "Votre fournisseur n'a pas encore publié son catalogue.",
+    "type": "homonyme",
+    "justification": "Portail acheteur : « Votre fournisseur » est le VENDEUR vu par l'acheteur, pas la clé « fournisseur » du lexique (décision S4 du guide). Message de l'état vide du catalogue."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Note pour le fournisseur (optionnel)",
+    "apres": "Note pour le fournisseur (optionnel)",
+    "type": "homonyme",
+    "justification": "Portail acheteur : « le fournisseur » est le VENDEUR à qui l'acheteur adresse sa commande, pas la clé « fournisseur » du lexique (décision S4 du guide). Placeholder du champ de note du panier : ce n'est pas un exemple de saisie."
+  },
+  {
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "avant": "⟦·⟧ ⟦article|articles@>1⟧ · ⟦·⟧ ⟦proposé|proposés@≠1⟧",
+    "apres": "⟦·⟧ ⟦article|articles@>1⟧ · ⟦·⟧ ⟦proposé|proposés@≠1⟧",
+    "type": "homonyme",
+    "justification": "Compteur de l'en-tête de section, commun aux onglets Articles et Produits des Tarifs : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'onglet Produits afficherait « 3 fournitures · 2 proposées » sous une liste de produits. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "avant": "⟦?Renseignez un prix unitaire HT > 0 pour proposer cet article|⟦·⟧⟧",
+    "apres": "⟦?Renseignez un prix unitaire HT > 0 pour proposer cet article|⟦·⟧⟧",
+    "type": "homonyme",
+    "justification": "Infobulle du toggle « Proposé », commune aux onglets Articles et Produits des Tarifs : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'onglet Produits dirait « pour proposer cette fourniture » devant un produit. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/client/CommandesAcheteursPage.tsx",
+    "avant": "Article",
+    "apres": "Article",
+    "type": "homonyme",
+    "justification": "En-tête de la 1re colonne du tableau des lignes de la fenêtre « Traiter » (lignes d'une commande : articles et produits mêlés) : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, un compte Hôtellerie lirait « fourniture » et un compte Céramique « matière première » au-dessus de lignes qui sont aussi des produits. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/client/VenteAcheteurPage.tsx",
+    "avant": "Article",
+    "apres": "Article",
+    "type": "homonyme",
+    "justification": "En-tête de la 1re colonne du tableau des manquants (stock insuffisant : articles et produits mêlés) : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, un compte Hôtellerie lirait « fourniture » et un compte Céramique « matière première » au-dessus de lignes qui sont aussi des produits. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/client/VenteAcheteurPage.tsx",
+    "avant": "⟦·⟧ ⟦article|articles@>1⟧ · ⟦·⟧ ⟦ligne|lignes@>1⟧ ⟦saisie|saisies@>1⟧",
+    "apres": "⟦·⟧ ⟦article|articles@>1⟧ · ⟦·⟧ ⟦ligne|lignes@>1⟧ ⟦saisie|saisies@>1⟧",
+    "type": "homonyme",
+    "justification": "Compteur du catalogue filtré (offres : articles et produits mêlés) : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, un compte Hôtellerie lirait « fourniture » et un compte Céramique « matière première » au-dessus de lignes qui sont aussi des produits. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/client/VenteAcheteurPage.tsx",
+    "avant": "⟦·⟧ ⟦article|articles@>1⟧",
+    "apres": "⟦·⟧ ⟦article|articles@>1⟧",
+    "type": "homonyme",
+    "justification": "Compteur d'une catégorie du catalogue (offres : articles et produits mêlés) : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, un compte Hôtellerie lirait « fourniture » et un compte Céramique « matière première » au-dessus de lignes qui sont aussi des produits. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Aucun article proposé pour le moment",
+    "apres": "Aucun article proposé pour le moment",
+    "type": "homonyme",
+    "justification": "Portail acheteur, état vide du catalogue : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "🔍 Rechercher un article…",
+    "apres": "🔍 Rechercher un article…",
+    "type": "homonyme",
+    "justification": "Portail acheteur, champ de recherche du catalogue (ce n'est pas un exemple de saisie) : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "N'afficher que les articles que vous avez déjà commandés",
+    "apres": "N'afficher que les articles que vous avez déjà commandés",
+    "type": "homonyme",
+    "justification": "Portail acheteur, infobulle du filtre « Déjà commandés » : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "⟦·⟧ ⟦article|articles@≠1⟧",
+    "apres": "⟦·⟧ ⟦article|articles@≠1⟧",
+    "type": "homonyme",
+    "justification": "Portail acheteur, compteur du catalogue filtré : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "💡 Dès votre première commande, chaque article affichera ce que vous aviez pris la dernière fois — un tap suffira pour le reprendre.",
+    "apres": "💡 Dès votre première commande, chaque article affichera ce que vous aviez pris la dernière fois — un tap suffira pour le reprendre.",
+    "type": "homonyme",
+    "justification": "Portail acheteur, astuce de première visite : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "Aucun article ne correspond à vos filtres.",
+    "apres": "Aucun article ne correspond à vos filtres.",
+    "type": "homonyme",
+    "justification": "Portail acheteur, résultat de recherche vide : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "⟦·⟧ ⟦article|articles@>1⟧",
+    "apres": "⟦·⟧ ⟦article|articles@>1⟧",
+    "type": "homonyme",
+    "justification": "Portail acheteur, compteur d'une catégorie du catalogue : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "⟦·⟧ : articles précédents",
+    "apres": "⟦·⟧ : articles précédents",
+    "type": "homonyme",
+    "justification": "Portail acheteur, libellé d'accessibilité de la pagination d'une catégorie : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "⟦·⟧ : articles suivants",
+    "apres": "⟦·⟧ : articles suivants",
+    "type": "homonyme",
+    "justification": "Portail acheteur, libellé d'accessibilité de la pagination d'une catégorie : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "avant": "(⟦·⟧ ⟦article|articles@>1⟧)",
+    "apres": "(⟦·⟧ ⟦article|articles@>1⟧)",
+    "type": "homonyme",
+    "justification": "Portail acheteur, compteur du panier : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailCommandesPage.tsx",
+    "avant": "Articles",
+    "apres": "Articles",
+    "type": "homonyme",
+    "justification": "Portail acheteur, colonne « Articles » de la liste « Mes commandes » (nombre de lignes de la commande) : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  },
+  {
+    "fichier": "src/components/portail/PortailCommandesPage.tsx",
+    "avant": "Article",
+    "apres": "Article",
+    "type": "homonyme",
+    "justification": "Portail acheteur, en-tête de la 1re colonne du détail d'une commande et littéral auquel cet en-tête est comparé pour l'alignement (deux unités) : « article » désigne ici une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas la clé « article » du lexique (la matière du référentiel). Par voc, l'acheteur d'un compte Céramique lirait « matière première » et celui d'un compte Hôtellerie « fourniture » devant un catalogue qui mêle articles et produits ; l'acheteur est un tiers, pour qui « article » est le mot courant du commerce. Même décision que le compteur « n/N articles » de ConfigurationVentePage (F7.json) et que VentesPage (F10.json) ; clé dédiée demandée dans scripts/vocab-besoins/F11.json (décision S5). Texte rendu à l'écriture d'origine par l'intégrateur de la vague 3."
+  }
+]

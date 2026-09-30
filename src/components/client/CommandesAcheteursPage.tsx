@@ -7,6 +7,8 @@ import CommandeStepper from '../common/CommandeStepper';
 import { useConfirm } from '../common/ConfirmDialog';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import Pagination from '../common/Pagination';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { nomOnglet } from '../../vocab/excel';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -77,6 +79,7 @@ interface LaboOpt { id: number; nom: string }
 
 export default function CommandesAcheteursPage() {
   const { prompt } = useConfirm();
+  const voc = useVocabulaire();
   const [searchParams] = useSearchParams();
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [acheteurs, setAcheteurs] = useState<AcheteurOpt[]>([]);
@@ -163,22 +166,22 @@ export default function CommandesAcheteursPage() {
     try {
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
-      const ws = wb.addWorksheet('Ventes Acheteurs');
+      const ws = wb.addWorksheet(nomOnglet(`${voc.Pl('vente')} ${voc.Court('acheteur', true)}`));
       const COLS = 14;
       const periode = from || to ? `Période ${from ? fmtDate(from) : '…'} → ${to ? fmtDate(to) : '…'}` : 'Toutes dates';
       const headerIdx = await brandHeader(wb, ws, {
-        titre: 'Ventes & commandes acheteurs',
+        titre: `${voc.Pl('vente')} & commandes ${voc.compl('acheteur', true)}`,
         sousTitre: 'Suivi des commandes — expéditions, livraisons et facturation',
         meta: `${periode} · ${commandes.length} ligne(s) · exporté le ${new Date().toLocaleDateString('fr-FR')}`,
         colCount: COLS,
       });
       headerRow(ws, headerIdx,
-        ['Date', 'Acheteur', 'Entreprise', 'Labo', 'Source', 'Statut', 'Expédiée le', 'Livrée le', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation'],
+        ['Date', voc.Nom('acheteur'), 'Entreprise', voc.Court('labo'), 'Source', 'Statut', 'Expédiée le', 'Livrée le', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation'],
         { widths: [12, 22, 18, 15, 13, 12, 12, 12, 8, 10, 14, 13, 15, 24] });
       commandes.forEach((c, i) => {
         const row = ws.addRow([
           fmtDate(c.dateCommande), c.acheteurNom, c.acheteurEntreprise || '', c.laboNom || '',
-          c.source === 'portail' ? 'Portail' : 'Vente directe',
+          c.source === 'portail' ? 'Portail' : `${voc.Nom('vente')} ${voc.acc('vente', 'direct', 'directe')}`,
           badgeOf(c.statut).label.replace(/^\S+\s/, ''),
           c.dateExpedition ? fmtDate(c.dateExpedition) : '', c.dateLivraison ? fmtDate(c.dateLivraison) : '',
           c.nbLignes, c.remisePct, c.totalBrutTtc,
@@ -226,7 +229,7 @@ export default function CommandesAcheteursPage() {
   };
 
   const expedier = async () => {
-    if (!expCmd || !expLaboId) { setExpErr('Choisissez le labo source'); return; }
+    if (!expCmd || !expLaboId) { setExpErr(`Choisissez ${voc.le('labo')} source`); return; }
     const remise = expRemise === '' ? 0 : Number(String(expRemise).replace(',', '.'));
     if (!Number.isFinite(remise) || remise < 0 || remise > 100) { setExpErr('Remise invalide (0 à 100)'); return; }
     if (expLignes.length === 0) { setExpErr('Lignes non chargées — fermez et rouvrez la commande'); return; }
@@ -254,7 +257,7 @@ export default function CommandesAcheteursPage() {
       const resp = (e as { response?: { status?: number; data?: { message?: string; manquants?: Manquant[] } } })?.response;
       if (resp?.status === 422 && resp.data?.manquants) {
         setExpManquants(resp.data.manquants);
-        setExpErr('Stock labo insuffisant :');
+        setExpErr(`${voc.Nom('stock')} ${voc.compl('labo')} ${voc.acc('stock', 'insuffisant', 'insuffisante')} :`);
       } else {
         setExpErr(resp?.data?.message ?? 'Erreur lors du traitement');
       }
@@ -299,8 +302,8 @@ export default function CommandesAcheteursPage() {
       message: enAttente
         // Aucun email n'est envoyé à l'acheteur (décision produit 2026-07-20) :
         // il retrouve le motif dans « Mes commandes » sur son portail.
-        ? `Commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom}.${c.source === 'portail' ? '\n\nLe motif s\'affichera à l\'acheteur dans « Mes commandes » sur son portail (aucun email envoyé).' : ''}`
-        : `Commande du ${fmtDate(c.dateCommande)} à ${c.acheteurNom}.\n\nLe stock sera réintégré et la facture ${c.factureNumero || ''} supprimée.`,
+        ? `Commande du ${fmtDate(c.dateCommande)} de ${c.acheteurNom}.${c.source === 'portail' ? `\n\nLe motif s'affichera ${voc.au('acheteur')} dans « Mes commandes » sur son portail (aucun email envoyé).` : ''}`
+        : `Commande du ${fmtDate(c.dateCommande)} à ${c.acheteurNom}.\n\n${voc.Le('stock')} sera ${voc.acc('stock', 'réintégré', 'réintégrée')} et la facture ${c.factureNumero || ''} supprimée.`,
       inputLabel: 'Motif (optionnel)',
       multiline: true,
       tone: 'danger',
@@ -341,10 +344,10 @@ export default function CommandesAcheteursPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📦</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ventes Acheteurs</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>{voc.Pl('vente')} {voc.Court('acheteur', true)}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            En attente → expédiée (stock déduit + facture) → livrée — historique complet par commande
+            En attente → expédiée ({voc.nom('stock')} {voc.acc('stock', 'déduit', 'déduite')} + facture) → livrée — historique complet par commande
           </p>
         </div>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0 }}>
@@ -361,12 +364,12 @@ export default function CommandesAcheteursPage() {
 
       {/* Bloc filtres (composant partagé) — période en premier, puis les autres filtres */}
       <HistoryFilterBar accent={C} accentDark={CD}
-        subtitle={`${commandes.length} vente${commandes.length > 1 ? 's' : ''}${selectedIds.size > 0 ? ` · ${selectedIds.size} sélectionnée${selectedIds.size > 1 ? 's' : ''} (surbrillance export)` : ''}`}
+        subtitle={`${voc.n('vente', commandes.length)}${selectedIds.size > 0 ? ` · ${selectedIds.size} ${voc.acc('vente', 'sélectionné', 'sélectionnée', selectedIds.size)} (surbrillance export)` : ''}`}
         onReset={(statut || acheteurId || source || from || to) ? () => { setStatut(''); setAcheteurId(''); setSource(''); setFrom(''); setTo(''); } : undefined}
         onExportExcel={exportExcel} excelDisabled={exporting || commandes.length === 0} excelLabel="Exporter"
         actions={
           <Link to="/client/acheteurs/vente" style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 16px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', boxShadow: '0 4px 14px rgba(109,40,217,0.3)' }}>
-            ➕ Nouvelle vente
+            ➕ {voc.Nouveau('vente')}
           </Link>
         }>
         <FilterField label="📅 Période — du">
@@ -384,18 +387,18 @@ export default function CommandesAcheteursPage() {
             <option value="annulee">Annulées</option>
           </FilterSelect>
         </FilterField>
-        <FilterField label="🤝 Acheteur">
+        <FilterField label={`${voc.icon('acheteur')} ${voc.Nom('acheteur')}`}>
           <FilterSelect value={acheteurId} onChange={e => setAcheteurId(e.target.value)}>
-            <option value="">— Tous —</option>
+            <option value="">— {voc.acc('acheteur', 'Tous', 'Toutes')} —</option>
             {acheteurs.map(a => <option key={a.id} value={a.id}>{a.nom}</option>)}
-            <option value="supprimes">🗑️ Acheteurs supprimés</option>
+            <option value="supprimes">{`🗑️ ${voc.Pl('acheteur')} ${voc.acc('acheteur', 'supprimés', 'supprimées')}`}</option>
           </FilterSelect>
         </FilterField>
         <FilterField label="🛒 Type de vente">
           <FilterSelect value={source} onChange={e => setSource(e.target.value)}>
             <option value="">— Tous —</option>
-            <option value="client">🖊️ Vente manuelle</option>
-            <option value="portail">🌐 Portail acheteur</option>
+            <option value="client">{`🖊️ ${voc.Nom('vente')} ${voc.acc('vente', 'manuel', 'manuelle')}`}</option>
+            <option value="portail">{`🌐 Portail ${voc.court('acheteur')}`}</option>
           </FilterSelect>
         </FilterField>
       </HistoryFilterBar>
@@ -407,9 +410,9 @@ export default function CommandesAcheteursPage() {
         ) : commandes.length === 0 ? (
           <div style={{ padding: 48, textAlign: 'center' }}>
             <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>📦</div>
-            <div style={{ fontWeight: 700, color: '#334155', marginBottom: 6 }}>Aucune vente</div>
+            <div style={{ fontWeight: 700, color: '#334155', marginBottom: 6 }}>{voc.Aucun('vente')}</div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              Enregistrez votre première vente depuis <Link to="/client/acheteurs/vente" style={{ color: C, fontWeight: 700 }}>Nouvelle Vente</Link>.
+              Enregistrez {voc.acc('vente', 'votre premier', 'votre première')} {voc.nom('vente')} depuis <Link to="/client/acheteurs/vente" style={{ color: C, fontWeight: 700 }}>{voc.Nouveau('vente', false, 'Nom')}</Link>.
             </div>
           </div>
         ) : (
@@ -422,7 +425,7 @@ export default function CommandesAcheteursPage() {
                       title="Tout sélectionner (surbrillance dans l'export Excel)"
                       style={{ accentColor: C, cursor: 'pointer' }} />
                   </th>
-                  {['Date', 'Acheteur', 'Labo', 'Type', 'Total TTC', 'Statut', 'Actions'].map(h => (
+                  {['Date', voc.Nom('acheteur'), voc.Court('labo'), 'Type', 'Total TTC', 'Statut', 'Actions'].map(h => (
                     <th key={h} style={{ textAlign: 'left', padding: '10px 14px', color: CD, fontSize: '0.74rem', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{h}</th>
                   ))}
                 </tr>
@@ -465,7 +468,7 @@ export default function CommandesAcheteursPage() {
                       <td style={{ padding: '9px 14px' }}>
                         {/* 4 actions sur 2 lignes : Détail / Traiter · Facture / Annuler */}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4, minWidth: 172 }}>
-                          <button onClick={() => openDetail(c.id)} title="Voir le détail de la vente"
+                          <button onClick={() => openDetail(c.id)} title={`Voir le détail ${voc.du('vente')}`}
                             style={miniBtn('#f8fafc', '#cbd5e1', '#475569')}>👁️ Détail</button>
                           <button
                             onClick={() => {
@@ -473,7 +476,7 @@ export default function CommandesAcheteursPage() {
                               else if (c.statut === 'expediee') { setLivCmd(c); setLivErr(''); setLivDate(today()); }
                             }}
                             disabled={!traitable}
-                            title={c.statut === 'en_attente' ? 'Traiter : expédier ou livrer directement (stock déduit + facture)'
+                            title={c.statut === 'en_attente' ? `Traiter : expédier ou livrer directement (${voc.nom('stock')} ${voc.acc('stock', 'déduit', 'déduite')} + facture)`
                               : c.statut === 'expediee' ? 'Marquer comme livrée'
                               : 'Commande déjà traitée'}
                             style={miniBtn('#dbeafe', '#93c5fd', '#1d4ed8', !traitable)}>
@@ -485,7 +488,7 @@ export default function CommandesAcheteursPage() {
                           <button onClick={() => annuler(c)} disabled={c.statut === 'annulee' || busyId === c.id}
                             title={c.statut === 'annulee' ? 'Commande déjà annulée'
                               : c.statut === 'en_attente' ? 'Refuser la commande'
-                              : 'Annuler (réintègre le stock, supprime la facture)'}
+                              : `Annuler (réintègre ${voc.le('stock')}, supprime la facture)`}
                             style={miniBtn('#fef2f2', '#fecaca', '#b91c1c', c.statut === 'annulee' || busyId === c.id)}>
                             {busyId === c.id ? '…' : '↩️ Annuler'}
                           </button>
@@ -510,8 +513,8 @@ export default function CommandesAcheteursPage() {
               <button onClick={() => setExpCmd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 14 }}>
-              {expCmd.acheteurNom} · commandée le {fmtDate(expCmd.dateCommande)} — le stock est déduit et la facture générée au traitement.
-              Marquez-la directement « Livrée » si elle est déjà chez l'acheteur.
+              {expCmd.acheteurNom} · commandée le {fmtDate(expCmd.dateCommande)} — {voc.le('stock')} est {voc.acc('stock', 'déduit', 'déduite')} et la facture générée au traitement.
+              Marquez-la directement « Livrée » si elle est déjà chez {voc.le('acheteur')}.
             </div>
 
             {/* Quantités ajustables + retrait de lignes */}
@@ -567,7 +570,7 @@ export default function CommandesAcheteursPage() {
 
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
               <div style={{ flex: 1, minWidth: 180 }}>
-                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Labo source (stock déduit) *</label>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>{voc.Court('labo')} source ({voc.nom('stock')} {voc.acc('stock', 'déduit', 'déduite')}) *</label>
                 <select value={expLaboId} onChange={e => setExpLaboId(e.target.value)} style={{ ...inp, width: '100%', boxSizing: 'border-box' }}>
                   <option value="">— Choisir —</option>
                   {labos.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
@@ -666,7 +669,7 @@ export default function CommandesAcheteursPage() {
               <button onClick={() => setDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
             </div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14 }}>
-              {detail.laboNom ? `Labo : ${detail.laboNom} · ` : ''}{badgeOf(detail.statut).label}
+              {detail.laboNom ? `${voc.Court('labo')} : ${detail.laboNom} · ` : ''}{badgeOf(detail.statut).label}
               {detail.dateExpedition ? ` · Expédiée le ${fmtDate(detail.dateExpedition)}` : ''}
               {detail.dateLivraison ? ` · Livrée le ${fmtDate(detail.dateLivraison)}` : ''}
               {detail.motifAnnulation ? ` · Motif : ${detail.motifAnnulation}` : ''}

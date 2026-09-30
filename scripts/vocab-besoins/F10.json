@@ -1,0 +1,20 @@
+[
+  {
+    "besoin": "autre",
+    "demande": "Décision S5 : harmoniser le nom de l'objet inventorié dans la page de saisie d'inventaire. Le tableau principal, son filtre, ses compteurs et la fenêtre de confirmation disent « Ingrédient » (clé ingredient, gardée pour l'identité) alors que le panneau « Aperçu saisie » de la MÊME page, l'historique des inventaires, les historiques de pertes et les pages de stock disent « Article » (clé article) pour le même objet. Même incohérence de l'existant que celle relevée pour l'historique des transferts (F5.json). Aucune entrée provisoire : le texte passe par voc (clé ingredient) et l'identité est conservée.",
+    "fichier": "src/components/client/InventairePage.tsx",
+    "ligne": 333,
+    "texte": "Ingrédient",
+    "ecriture_souhaitee": "clé article aux 9 sites de la clé ingredient (l. 228 tuile, 240 « Saisis », 294 filtre, 296 « — Tous — », 321 chargement, 326 liste vide, 333 colonne, 354-355 compteur de catégorie, 477 confirmation) — écart visible pour un compte restauration : « Ingrédient(s) » devient « Article(s) » (entrée allow faute-corrigee en mode identite)",
+    "raison": "En Hôtellerie et en Céramique, la page affiche « Composant » dans le tableau et « Fourniture » ou « Matière première » dans l'aperçu de la saisie, pour les mêmes lignes. L'écriture actuelle reproduit une incohérence de l'existant ; la corriger change l'écran d'un compte restauration, ce que le balayage ne décide pas seul."
+  },
+  {
+    "besoin": "cle",
+    "demande": "Décision S5, commune avec le besoin « n/N articles » de F7.json (ConfigurationVentePage) : nommer la ligne du catalogue de vente. Dans VentesPage, « Article » (en-tête de la 1ʳᵉ colonne du tableau de saisie et du tableau d'historique), « articles vendus » (confirmation d'annulation) et « Aucun article vendable configuré » (valeur par défaut, jamais affichée) désignent l'« article vendable » du code (produit, supplément ou article valorisé), pas la clé article (la matière du référentiel). Admis en homonyme dans F10.json, laissés en dur. À trancher : une clé dédiée (par exemple article_vente : « Article » / « Articles », m, élision), ou un libellé qui suit l'onglet (produit, supplément, produit valorisé).",
+    "fichier": "src/components/client/VentesPage.tsx",
+    "ligne": 280,
+    "texte": "Article",
+    "ecriture_souhaitee": "`voc.Nom('article_vente')` (l. 280 et 716), `${voc.Le('stock')} ${voc.du('article_vente', true)} ${voc.acc('article_vente', 'vendus', 'vendues')} sera ${voc.acc('stock', 'réintégré', 'réintégrée')}.` (l. 503), `${voc.Aucun('article_vente')} vendable ${voc.acc('article_vente', 'configuré', 'configurée')}` (l. 206)",
+    "raison": "Laissé en dur, un compte Hôtellerie ou Céramique lit « Article », mot que son vocabulaire a remplacé (« Fourniture », « Matière première ») ; passé par la clé article, il lirait « Fourniture » au-dessus d'une liste de prestations vendues. Aucune des deux écritures sans écart n'est juste."
+  }
+]

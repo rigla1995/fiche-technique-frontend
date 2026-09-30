@@ -4,6 +4,7 @@ import type { Famille } from '../../types';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -13,6 +14,7 @@ const emptyRow = (): FamRow => ({ nom: '', consommable: true, vendable: true });
 
 export default function ReferentielFamillesPage() {
   const { alerte } = useConfirm();
+  const voc = useVocabulaire();
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -100,7 +102,7 @@ export default function ReferentielFamillesPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Familles</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {familles.length === 0 ? 'Groupez vos catégories par famille : Viandes, Épicerie, Boissons…' : 'Familles pour organiser vos catégories et articles'}
+            {familles.length === 0 ? 'Groupez vos catégories par famille : Viandes, Épicerie, Boissons…' : `Familles pour organiser vos catégories et ${voc.pl('article')}`}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -130,7 +132,7 @@ export default function ReferentielFamillesPage() {
         <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🗂️</div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune famille définie</h3>
-          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 380, marginInline: 'auto' }}>Les familles regroupent vos catégories d'articles : Viandes, Épicerie, Boissons…</p>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 380, marginInline: 'auto' }}>Les familles regroupent vos catégories {voc.de('article', true)} : Viandes, Épicerie, Boissons…</p>
           <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première famille</button>
         </div>
       ) : filtered.length === 0 ? (
@@ -171,7 +173,7 @@ export default function ReferentielFamillesPage() {
                       const verrou = nbCat > 0;
                       return (
                         <button className="btn btn-danger btn-sm" disabled={verrou}
-                          title={verrou ? `Contient ${nbCat} catégorie${nbCat > 1 ? 's' : ''}${(f.nbArticles ?? 0) > 0 ? ` et ${f.nbArticles} article${(f.nbArticles ?? 0) > 1 ? 's' : ''}` : ''} — veuillez les supprimer (ou changer leur famille) avant` : undefined}
+                          title={verrou ? `Contient ${nbCat} catégorie${nbCat > 1 ? 's' : ''}${(f.nbArticles ?? 0) > 0 ? ` et ${f.nbArticles} ${voc.nom('article', (f.nbArticles ?? 0) > 1)}` : ''} — veuillez les supprimer (ou changer leur famille) avant` : undefined}
                           onClick={() => !verrou && setDeleteId(f.id)}
                           style={verrou ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                       );
@@ -205,7 +207,7 @@ export default function ReferentielFamillesPage() {
                   <input
                     className="input" style={{ flex: 1 }}
                     autoFocus={i === 0}
-                    placeholder="Ex: Produits laitiers"
+                    placeholder="Ex: Famille A"
                     value={row.nom}
                     onChange={e => updateRow(i, 'nom', e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
@@ -253,7 +255,7 @@ export default function ReferentielFamillesPage() {
               {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={editNom} placeholder="Ex: Produits laitiers" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+                <input className="input" autoFocus value={editNom} placeholder="Ex: Famille A" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
               </div>
               <div className="form-group">
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>

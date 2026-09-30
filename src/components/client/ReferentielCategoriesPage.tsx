@@ -4,6 +4,7 @@ import type { Category, Famille } from '../../types';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -13,6 +14,7 @@ const emptyRow = (): CatRow => ({ nom: '', familleId: '' });
 
 export default function ReferentielCategoriesPage() {
   const { alerte } = useConfirm();
+  const voc = useVocabulaire();
   const [categories, setCategories] = useState<Category[]>([]);
   const [familles, setFamilles] = useState<Famille[]>([]);
   const [loading, setLoading] = useState(true);
@@ -107,7 +109,7 @@ export default function ReferentielCategoriesPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Catégories</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {categories.length === 0 ? 'Organisez vos articles par catégorie au sein de chaque famille' : 'Catégories pour classer vos articles dans votre référentiel'}
+            {categories.length === 0 ? `Organisez ${voc.votre('article', true)} par catégorie au sein de chaque famille` : `Catégories pour classer ${voc.votre('article', true)} dans ${voc.votre('referentiel')}`}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -145,7 +147,7 @@ export default function ReferentielCategoriesPage() {
         <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>🏷️</div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune catégorie définie</h3>
-          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 400, marginInline: 'auto' }}>Les catégories organisent vos articles au sein des familles.</p>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 20px', maxWidth: 400, marginInline: 'auto' }}>Les catégories organisent {voc.votre('article', true)} au sein des familles.</p>
           <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première catégorie</button>
         </div>
       ) : filtered.length === 0 ? (
@@ -172,7 +174,7 @@ export default function ReferentielCategoriesPage() {
                       const verrou = nb > 0;
                       return (
                         <button className="btn btn-danger btn-sm" disabled={verrou}
-                          title={verrou ? `Assignée à ${nb} article${nb > 1 ? 's' : ''} — veuillez les supprimer (ou changer leur catégorie) avant` : undefined}
+                          title={verrou ? `Assignée à ${voc.n('article', nb)} — veuillez les supprimer (ou changer leur catégorie) avant` : undefined}
                           onClick={() => !verrou && setDeleteId(c.id)}
                           style={verrou ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                       );
@@ -205,7 +207,7 @@ export default function ReferentielCategoriesPage() {
                   <input
                     className="input" style={{ flex: 2 }}
                     autoFocus={i === 0}
-                    placeholder="Ex: Viandes"
+                    placeholder="Ex: Catégorie A"
                     value={row.nom}
                     onChange={e => updateRow(i, 'nom', e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
@@ -243,7 +245,7 @@ export default function ReferentielCategoriesPage() {
               {editError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{editError}</div>}
               <div className="form-group">
                 <label>Nom *</label>
-                <input className="input" autoFocus value={editNom} placeholder="Ex: Viandes & Volailles" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+                <input className="input" autoFocus value={editNom} placeholder="Ex: Catégorie A" onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
               </div>
               {familles.length > 0 && (
                 <div className="form-group">
@@ -272,7 +274,7 @@ export default function ReferentielCategoriesPage() {
             <div className="modal-body" style={{ padding: '28px 24px' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
               <h3 style={{ margin: '0 0 10px' }}>Supprimer cette catégorie ?</h3>
-              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>Les articles liés perdront leur catégorie.</p>
+              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>{voc.Le('article', true)} {voc.acc('article', 'liés', 'liées')} perdront leur catégorie.</p>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>Annuler</button>
                 <button className="btn btn-danger" onClick={() => handleDelete(deleteId!)}>Supprimer</button>

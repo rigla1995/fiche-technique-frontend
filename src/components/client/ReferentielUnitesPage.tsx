@@ -4,12 +4,14 @@ import type { Unit } from '../../types';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
 export default function ReferentielUnitesPage() {
   const { alerte } = useConfirm();
+  const voc = useVocabulaire();
   const [units, setUnits] = useState<Unit[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,7 +82,7 @@ export default function ReferentielUnitesPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Unités de mesure</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            {units.length === 0 ? 'Définissez vos unités de mesure : kg, L, g, pièce, portion…' : 'Unités utilisées pour quantifier vos articles et stocks'}
+            {units.length === 0 ? 'Définissez vos unités de mesure : kg, L, g, pièce, portion…' : `Unités utilisées pour quantifier ${voc.votre('article', true)} et ${voc.pl('stock')}`}
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -110,7 +112,7 @@ export default function ReferentielUnitesPage() {
         <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#dcfce7)', border: '2px dashed #86efac', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>📏</div>
           <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#14532d', margin: '0 0 8px' }}>Aucune unité définie</h3>
-          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 380, marginInline: 'auto' }}>Les unités de mesure définissent la quantité de vos articles : kg, L, g, pièce, portion…</p>
+          <p style={{ color: '#166534', fontSize: '0.88rem', margin: '0 0 24px', maxWidth: 380, marginInline: 'auto' }}>Les unités de mesure définissent la quantité de {voc.votre('article', true)} : kg, L, g, pièce, portion…</p>
           <button onClick={openCreate} style={{ background: 'linear-gradient(135deg,#15803d,#16a34a)', color: '#fff', border: 'none', borderRadius: 10, padding: '11px 28px', fontWeight: 700, fontSize: '0.92rem', cursor: 'pointer' }}>+ Créer la première unité</button>
         </div>
       ) : filtered.length === 0 ? (
@@ -135,7 +137,7 @@ export default function ReferentielUnitesPage() {
                       const verrou = nb > 0;
                       return (
                         <button className="btn btn-danger btn-sm" disabled={verrou}
-                          title={verrou ? `Assignée à ${nb} article${nb > 1 ? 's' : ''} — veuillez les supprimer (ou changer leur unité) avant` : undefined}
+                          title={verrou ? `Assignée à ${voc.n('article', nb)} — veuillez les supprimer (ou changer leur unité) avant` : undefined}
                           onClick={() => !verrou && setDeleteId(u.id)}
                           style={verrou ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                       );
@@ -216,7 +218,7 @@ export default function ReferentielUnitesPage() {
             <div className="modal-body" style={{ padding: '28px 24px' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
               <h3 style={{ margin: '0 0 10px' }}>Supprimer cette unité ?</h3>
-              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>Les articles liés perdront leur unité.</p>
+              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>{voc.Le('article', true)} {voc.acc('article', 'liés', 'liées')} perdront leur unité.</p>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>Annuler</button>
                 <button className="btn btn-danger" onClick={() => handleDelete(deleteId!)}>Supprimer</button>

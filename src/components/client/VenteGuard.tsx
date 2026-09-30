@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import api from '../../api/client';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const C = '#b45309';
 const CD = '#78350f';
@@ -12,6 +13,7 @@ const CB = '#fcd34d';
 type VenteSummary = { hasActivitesVente?: boolean };
 
 export default function VenteGuard() {
+  const voc = useVocabulaire();
   const [status, setStatus] = useState<'loading' | 'active' | 'inactive' | 'no_vente'>('loading');
   const [hasPending, setHasPending] = useState(false);
   const [requesting, setRequesting] = useState(false);
@@ -63,9 +65,9 @@ export default function VenteGuard() {
           boxShadow: '0 8px 32px rgba(180,83,9,0.28)', textAlign: 'center',
         }}>
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>🛒</div>
-          <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module Vente</h1>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module {voc.Court('vente')}</h1>
           <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.92rem' }}>
-            Ce module permet de gérer votre catalogue vendable, vos prestataires de livraison et vos ventes.
+            Ce module permet de gérer votre catalogue vendable, {voc.votre('prestataire', true)} de livraison et {voc.votre('vente', true)}.
           </p>
         </div>
 
@@ -74,16 +76,16 @@ export default function VenteGuard() {
             ℹ️
           </div>
           <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: C, marginBottom: 10 }}>
-            Aucune de vos activités ne vend
+            {voc.acc('activite', 'Aucun', 'Aucune')} de {voc.votre('activite', true)} ne vend
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 0 }}>
-            Le module Vente est actif, mais aucune de vos activités n'est configurée comme activité vendeuse
-            (Housekeeping, Spa, économat…). L'Espace Vente s'ouvrira dès qu'une activité vendeuse existera
+            Le module {voc.Court('vente')} est actif, mais {voc.acc('activite', 'aucun', 'aucune')} de {voc.votre('activite', true)} n'est {voc.acc('activite', 'configuré', 'configurée')} comme {voc.nom('activite')} {voc.acc('activite', 'vendeur', 'vendeuse')}{' '}
+            (Housekeeping, Spa, économat…). {voc.Le('espace_vente', false, 'Nom')} s'ouvrira dès qu'{voc.un('activite')} {voc.acc('activite', 'vendeur', 'vendeuse')} existera
             dans votre compte.
           </p>
           <div style={{ marginTop: 20, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             Consultez vos unités dans{' '}
-            <Link to="/client/activites" style={{ color: C, fontWeight: 600 }}>Activités</Link>.
+            <Link to="/client/activites" style={{ color: C, fontWeight: 600 }}>{voc.Pl('activite')}</Link>.
           </div>
         </div>
       </div>
@@ -98,9 +100,9 @@ export default function VenteGuard() {
         boxShadow: '0 8px 32px rgba(180,83,9,0.28)', textAlign: 'center',
       }}>
         <div style={{ fontSize: '3rem', marginBottom: 12 }}>🛒</div>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module Vente</h1>
+        <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module {voc.Court('vente')}</h1>
         <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.92rem' }}>
-          Ce module permet de gérer votre catalogue vendable, vos prestataires de livraison et vos ventes.
+          Ce module permet de gérer votre catalogue vendable, {voc.votre('prestataire', true)} de livraison et {voc.votre('vente', true)}.
         </p>
       </div>
 
@@ -109,10 +111,10 @@ export default function VenteGuard() {
           🔒
         </div>
         <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: C, marginBottom: 10 }}>
-          Module Vente non activé
+          Module {voc.Court('vente')} non activé
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.6, marginBottom: 24 }}>
-          Ce module est disponible en option. Envoyez une demande d'activation à l'administrateur et votre espace vente sera activé sous 24h.
+          Ce module est disponible en option. Envoyez une demande d'activation à l'administrateur et {voc.votre('espace_vente')} sera {voc.acc('espace_vente', 'activé', 'activée')} sous 24h.
         </p>
 
         {(hasPending || requested) ? (

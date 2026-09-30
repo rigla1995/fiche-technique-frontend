@@ -1,0 +1,38 @@
+[
+  {
+    "besoin": "methode",
+    "demande": "Accord d'un participe avec DEUX termes coordonnés (« des X et Y proposés ») : féminin seulement si les deux termes sont féminins. Même besoin que ceux des lots F2 (GerantsPage) et F6 (ProductList) : une méthode du moteur (par exemple voc.acc2(k1, k2, masc, fem)), ou l'outil de preuve qui accepte un voc.acc imbriqué en 3e argument (refus vérifié sur ce fichier : « ERREUR voc.acc : argument n° 3 non littéral »).",
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "ligne": 214,
+    "texte": "Prix HT (+ TVA) des articles et produits proposés à vos acheteurs — TTC calculé, promo affichée prix barré.",
+    "ecriture_souhaitee": "`Prix HT (+ TVA) {voc.du('article', true)} et {voc.pl('produit')} {voc.acc2('article', 'produit', 'proposés', 'proposées')} à {voc.votre('acheteur', true)} — …`",
+    "raison": "Le participe reste au masculin (guide : deux termes coordonnés). Juste par défaut, en Hôtellerie (« des fournitures et produits proposés », féminin + masculin) et en Céramique ; faux si « article » ET « produit » deviennent féminins (lexique miroir : « des denrées et inventions proposés »)."
+  },
+  {
+    "besoin": "methode",
+    "demande": "Même besoin que l'entrée précédente, pour un PRONOM de reprise : « ils / elles » qui reprend deux termes coordonnés (produits composés ou produits utilisables) — féminin seulement si les deux termes sont féminins.",
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "ligne": 285,
+    "texte": "Créez des produits composés d'origine labo, ou rattachez vos produits utilisables à un labo : ils apparaîtront ici.",
+    "ecriture_souhaitee": "`… à {voc.un('labo')} : {voc.acc2('produit_compose', 'produit_utilisable', 'ils', 'elles')} apparaîtront ici.`",
+    "raison": "Le pronom reste « ils ». Juste par défaut, en Hôtellerie (« des produits composés d'origine cuisine centrale, ou … vos consommables à une cuisine centrale : ils ») et en Céramique ; faux si les deux termes deviennent féminins (miroir : « des inventions composées …, vos inventions utiles … : ils »). Un accord de proximité (voc.acc('produit_utilisable', 'ils', 'elles')) a été écarté : il serait faux dès que seul le second terme est féminin."
+  },
+  {
+    "besoin": "cle",
+    "demande": "Décision S5, commune avec les besoins « n/N articles » de F7.json (ConfigurationVentePage) et « article_vente » de F10.json (VentesPage) : dans l'Espace Acheteurs et sur le portail acheteur, « article » désigne une LIGNE DU CATALOGUE DE VENTE B2B (OffreCatalogue / Offre : articleType 'ingredient' OU 'produit'), pas seulement l'article du référentiel. Ces textes sont laissés en dur et admis en homonyme dans F11.json (18 entrées, 19 unités) : l'intégrateur de la vague 3 les a rendus à l'écriture d'origine, le balayeur les avait passés par la clé article. À trancher : une clé dédiée (par exemple article_catalogue : Article / Articles, m, élision) que chaque domaine renomme à part, ou des compteurs qui suivent le type de la ligne.",
+    "fichier": "src/components/portail/PortailAcheteurPage.tsx",
+    "ligne": 495,
+    "texte": "(⟦·⟧ ⟦article|articles@>1⟧)",
+    "ecriture_souhaitee": "`({voc.n('article_catalogue', lignesPanier.length)})` — et la même clé aux autres sites : PortailAcheteurPage l. 365, 372, 382, 393, 400, 406, 441, 447, 450 ; PortailCommandesPage l. 105, 173 (et la comparaison l. 174) ; VenteAcheteurPage l. 233, 267, 346 ; CommandesAcheteursPage l. 529. Dans TarifsAcheteursPage, le compteur de section (l. 306) et l'infobulle « pour proposer cet article » (l. 385) sont communs aux onglets Articles et Produits : `voc.n(tab === 'articles' ? 'article' : 'produit', items.length)` et `voc.ce(tab === 'articles' ? 'article' : 'produit')` seraient justes, au prix d'un écart visible pour un compte restauration dans l'onglet Produits (« 3 produits », « ce produit »).",
+    "raison": "Laissé en dur, le mot « article » reste affiché à des comptes dont le vocabulaire l'a remplacé (« fourniture », « matière première ») — mais il y garde son sens courant de ligne de catalogue, et l'acheteur du portail est un tiers. Passé par la clé article, un acheteur d'un compte Céramique lirait « Rechercher une matière première… » et « Mon panier (3 matières premières) » devant un catalogue de produits finis, un acheteur d'un compte Hôtellerie « 3 fournitures » devant des préparations, et l'onglet Produits des Tarifs afficherait « 3 fournitures · 2 proposées » sous une liste de produits. Là où le texte oppose les deux types (onglets « Articles » / « Produits », « Article / Produit », « Nom de l'article ou du produit… », « des articles et produits proposés »), « article » est bien la clé du lexique et passe par voc."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Icônes écrites en dur qui ne sont pas l'icône par défaut de la clé qu'elles accompagnent, dans l'Espace Acheteurs : 🧂 (salière) devant l'onglet « Articles » et sur l'état vide des Tarifs (défaut de article : 📦) ; 🍱 devant l'onglet « Produits » (produit : sans icône) ; 👤 devant « Acheteur » dans l'aperçu de la vente (défaut de acheteur : 🤝, 👤 est celui de gérant) ; 🧪 devant « Labo source » (défaut de labo : 🏭). À décider en S5 avec les icônes relevées par F1, F6 et F8 : aligner le lexique ou les écrans.",
+    "fichier": "src/components/client/TarifsAcheteursPage.tsx",
+    "ligne": 240,
+    "texte": "⟦?🧂 Articles|🍱 Produits⟧ (⟦·⟧)",
+    "ecriture_souhaitee": "`${voc.icon('article')} ${voc.Pl('article')} (${articles.length})` (TarifsAcheteursPage l. 240 et l. 278) ; `{voc.icon('acheteur')} {voc.Nom('acheteur')}` (VenteAcheteurPage l. 436) ; `{voc.icon('labo')} {voc.Court('labo')} source` (VenteAcheteurPage l. 442)",
+    "raison": "Spec §3 règle 7 : voc.icon(k) seulement là où l'emoji affiché est déjà l'icône par défaut de la clé ; ici il ne l'est pas, l'icône reste donc en dur. Un compte Céramique garde une salière devant « Matières premières » et un tube à essai devant « Site source ». Là où l'emoji EST l'icône par défaut (🤝 du filtre « Acheteur » de CommandesAcheteursPage), voc.icon est employé. Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  }
+]

@@ -1,21 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import type { Abonnement, AbonnementConfig, Promotion, DomaineProfil } from '../../types';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 import GuideButton from './GuideButton';
 
 // Lignes de capacité de « Votre configuration » : MENU du domaine (composants actifs) avec la
 // quantité souscrite (0 = « Non inclus », comme les 4 lignes historiques), complété par les
 // composants souscrits hors menu, puis par les types manquants (libellés identité).
 type LigneCapacite = { key: string; label: string; nb: number; icon: string; palier?: boolean };
-const ICONE_TYPE: Record<string, string> = { activite: '📍', labo: '🏭', gerant: '👤', acheteurs: '🤝' };
-const IDENTITE: { type: 'activite' | 'labo' | 'gerant' | 'acheteurs'; label: string; nbKey: keyof AbonnementConfig }[] = [
-  { type: 'activite', label: 'Activité', nbKey: 'nbActivites' },
-  { type: 'labo', label: 'Labo', nbKey: 'nbLabos' },
-  { type: 'gerant', label: 'Gérant', nbKey: 'nbGerants' },
-  { type: 'acheteurs', label: 'Base acheteurs', nbKey: 'nbAcheteurs' },
+const iconeType = (voc: Vocab): Record<string, string> => ({ activite: '📍', labo: voc.icon('labo'), gerant: voc.icon('gerant'), acheteurs: voc.icon('acheteur') });
+const identite = (voc: Vocab): { type: 'activite' | 'labo' | 'gerant' | 'acheteurs'; label: string; nbKey: keyof AbonnementConfig }[] => [
+  { type: 'activite', label: voc.Nom('activite'), nbKey: 'nbActivites' },
+  { type: 'labo', label: voc.Nom('labo'), nbKey: 'nbLabos' },
+  { type: 'gerant', label: voc.Nom('gerant'), nbKey: 'nbGerants' },
+  { type: 'acheteurs', label: `Base ${voc.court('acheteur', true)}`, nbKey: 'nbAcheteurs' },
 ];
-function lignesCapacite(config: AbonnementConfig, domaine: DomaineProfil | null | undefined): LigneCapacite[] {
+function lignesCapacite(config: AbonnementConfig, domaine: DomaineProfil | null | undefined, voc: Vocab): LigneCapacite[] {
+  const ICONE_TYPE = iconeType(voc);
   const souscrits = config.composants || [];
   const menu = (domaine?.composants || []).filter((c) => c.actif !== false).slice().sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || (a.id ?? 0) - (b.id ?? 0));
   const items: { code: string; libelle: string; libellePluriel?: string | null; icone?: string | null; typeTechnique: string; nb: number }[] = [
@@ -30,7 +33,7 @@ function lignesCapacite(config: AbonnementConfig, domaine: DomaineProfil | null 
     palier: c.typeTechnique === 'acheteurs',
   }));
   // Types absents du menu ET du détail (ex. domaine sans composant gérant) : ligne identité
-  for (const t of IDENTITE) {
+  for (const t of identite(voc)) {
     if (items.some((c) => c.typeTechnique === t.type)) continue;
     lignes.push({ key: t.type, label: t.label, nb: Number(config[t.nbKey] ?? 0) || 0, icon: ICONE_TYPE[t.type], palier: t.type === 'acheteurs' });
   }
@@ -108,6 +111,8 @@ export default function MonAbonnementPage() {
       .catch(() => { /* repli : composants souscrits + libellés identité */ });
   }, [user?.domaine]);
   const domaineProfil: DomaineProfil | null = user?.domaine ?? domaineFetched;
+  const voc = useVocabulaire();
+  const lignesConfig = useMemo(() => (abo?.config ? lignesCapacite(abo.config, domaineProfil, voc) : []), [abo, domaineProfil, voc]);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -232,7 +237,7 @@ export default function MonAbonnementPage() {
               )}
               {/* Lignes de capacité : menu du domaine (0 = « Non inclus ») + composants souscrits, repli identité */}
               {(() => {
-                const lignes = lignesCapacite(config, domaineProfil);
+                const lignes = lignesConfig;
                 return lignes.map(({ key, label, nb, icon, palier }) => (
                   <div key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f3f4f6' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -243,7 +248,7 @@ export default function MonAbonnementPage() {
                       // Base acheteurs (option B2B) — palier du carnet quand l'option est active
                       nb > 0
                         ? <span style={{ fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: 20, background: '#f5f3ff', color: '#6d28d9' }}>
-                            jusqu'à {breakdown?.acheteurs?.palier ?? nb} acheteurs
+                            jusqu'à {breakdown?.acheteurs?.palier ?? nb} {voc.pl('acheteur')}
                           </span>
                         : <span style={{ fontSize: '0.75rem', color: '#9ca3af', fontStyle: 'italic' }}>Non incluse</span>
                     ) : (
@@ -317,9 +322,9 @@ export default function MonAbonnementPage() {
                 {breakdown ? (
                   <div style={{ background: '#f8fafc', borderRadius: 10, padding: '12px 16px' }}>
                     {[
-                      { icon: '📍', label: `Activité${breakdown.activite.nb > 1 ? 's' : ''}`, nb: breakdown.activite.nb, total: breakdown.activite.total, unit: null },
-                      { icon: '🏭', label: `Labo${breakdown.labo.nb > 1 ? 's' : ''}`,          nb: breakdown.labo.nb,     total: breakdown.labo.total,     unit: breakdown.prixLaboSup },
-                      { icon: '👤', label: `Gérant${breakdown.gerant.nb > 1 ? 's' : ''}`,      nb: breakdown.gerant.nb,   total: breakdown.gerant.total,   unit: breakdown.prixGerantSup },
+                      { icon: '📍', label: voc.Nom('activite', breakdown.activite.nb), nb: breakdown.activite.nb, total: breakdown.activite.total, unit: null },
+                      { icon: voc.icon('labo'), label: voc.Nom('labo', breakdown.labo.nb),          nb: breakdown.labo.nb,     total: breakdown.labo.total,     unit: breakdown.prixLaboSup },
+                      { icon: voc.icon('gerant'), label: voc.Nom('gerant', breakdown.gerant.nb),      nb: breakdown.gerant.nb,   total: breakdown.gerant.total,   unit: breakdown.prixGerantSup },
                     ].map(({ icon, label, nb, total, unit }) => (
                       <div key={label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
                         <span style={{ color: nb > 0 ? '#374151' : '#9ca3af' }}>
@@ -334,7 +339,7 @@ export default function MonAbonnementPage() {
                     {breakdown.acheteurs && breakdown.acheteurs.total > 0 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.84rem', marginBottom: 8, paddingBottom: 8, borderBottom: '1px solid #f1f5f9' }}>
                         <span style={{ color: '#374151' }}>
-                          🤝 Option Acheteurs (palier jusqu'à {breakdown.acheteurs.palier})
+                          {voc.icon('acheteur')} Option {voc.Court('acheteur', true)} (palier jusqu'à {breakdown.acheteurs.palier})
                         </span>
                         <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.acheteurs.total.toFixed(2)} DT</span>
                       </div>

@@ -5,6 +5,8 @@ import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 import type { Activite } from '../../types';
 
 const apiMsg = (e: unknown, fallback = 'Erreur serveur') =>
@@ -120,11 +122,11 @@ const VPCtx = createContext<VPCtxType>(null!);
 
 interface ExpandedRow { vente: Vente; ligne: VenteLigne | null; }
 
-function getLigneBadge(l: VenteLigne | null): { label: string; bg: string; color: string; border: string } | null {
+function getLigneBadge(l: VenteLigne | null, voc: Vocab): { label: string; bg: string; color: string; border: string } | null {
   if (!l) return null;
   if (l.article_type === 'ingredient') return { label: '💎 Valorisé', bg: '#f0fdf4', color: '#166534', border: '#86efac' };
-  if (l.is_supplement) return { label: '🧂 Supplément', bg: '#fef3c7', color: '#92400e', border: '#fcd34d' };
-  return { label: '🛍️ Produit', bg: CL, color: CD, border: CB };
+  if (l.is_supplement) return { label: `🧂 ${voc.Nom('supplement')}`, bg: '#fef3c7', color: '#92400e', border: '#fcd34d' };
+  return { label: `🛍️ ${voc.Nom('produit')}`, bg: CL, color: CD, border: CB };
 }
 
 function ligneSortPriority(l: VenteLigne | null): number {
@@ -209,6 +211,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
   emptyIcon?: string;
   emptyMsg?: string;
 }) {
+  const voc = useVocabulaire();
   const { activePrests, prixPrestataires, qtes, dateVente, setDateVente, saving, saveError, saveSuccess, handleSubmit } = useContext(VPCtx);
   const [filterNom, setFilterNom] = useState('');
 
@@ -250,23 +253,23 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
       </div>
       <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap' as const, alignItems: 'flex-end', background: '#fafafa' }}>
         <div style={{ position: 'relative' as const, flex: '1 1 180px', minWidth: 140 }}>
-          <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: 3, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Nom produit</label>
+          <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: 3, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Nom {voc.court('produit')}</label>
           <span style={{ position: 'absolute' as const, left: 9, bottom: 9, fontSize: '0.78rem', pointerEvents: 'none' as const }}>🔍</span>
           <input type="text" placeholder="Rechercher…" value={filterNom}
             onChange={e => { setFilterNom(e.target.value); setPage(0); }}
             style={{ width: '100%', paddingLeft: 28, paddingRight: 8, paddingTop: 7, paddingBottom: 7, borderRadius: 8, border: `1.5px solid ${filterNom ? C : CB}`, background: filterNom ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', boxSizing: 'border-box' as const }} />
         </div>
         <div>
-          <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: 3, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Date de vente</label>
+          <label style={{ fontSize: '0.7rem', fontWeight: 700, display: 'block', marginBottom: 3, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.04em' }}>Date {voc.de('vente')}</label>
           <input type="date" value={dateVente} onChange={e => setDateVente(e.target.value)}
             style={{ padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, background: CL, color: CD, fontWeight: 600, outline: 'none', fontSize: '0.83rem' }} />
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', flexDirection: 'column' as const, alignItems: 'flex-end', gap: 4 }}>
           {saveError && <div style={{ color: '#dc2626', fontSize: '0.78rem', fontWeight: 600 }}>{saveError}</div>}
-          {saveSuccess && <div style={{ color: '#166534', fontSize: '0.78rem', fontWeight: 600 }}>✓ Ventes enregistrées !</div>}
+          {saveSuccess && <div style={{ color: '#166534', fontSize: '0.78rem', fontWeight: 600 }}>✓ {voc.Pl('vente')} {voc.acc('vente', 'enregistrés', 'enregistrées')} !</div>}
           <button onClick={handleSubmit} disabled={saving}
             style={{ padding: '8px 20px', borderRadius: 9, border: 'none', background: saving ? '#d1d5db' : `linear-gradient(135deg, ${CD} 0%, ${C} 100%)`, color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '0.88rem', boxShadow: saving ? 'none' : `0 3px 10px ${C}44`, whiteSpace: 'nowrap' as const }}>
-            {saving ? 'Enregistrement…' : '✓ Confirmer les ventes'}
+            {saving ? 'Enregistrement…' : `✓ Confirmer ${voc.le('vente', true)}`}
           </button>
         </div>
       </div>
@@ -332,6 +335,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
 
 export default function VentesPage() {
   const { user } = useAuth();
+  const voc = useVocabulaire();
   const { confirm, alerte } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
@@ -495,10 +499,10 @@ export default function VentesPage() {
 
   const handleAnnuler = async (id: string) => {
     const ok = await confirm({
-      title: 'Annuler cette vente ?',
-      message: 'Le stock des articles vendus sera réintégré.',
+      title: `Annuler ${voc.ce('vente')} ?`,
+      message: `${voc.Le('stock')} des articles vendus sera ${voc.acc('stock', 'réintégré', 'réintégrée')}.`,
       tone: 'danger',
-      confirmLabel: 'Oui, annuler la vente',
+      confirmLabel: `Oui, annuler ${voc.le('vente')}`,
       cancelLabel: 'Retour',
     });
     if (!ok) return;
@@ -575,11 +579,11 @@ export default function VentesPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💰</div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>
-                Ventes Activités{selectedActivite ? ` — ${selectedActivite.nom}` : ''}
+                {voc.Pl('vente')} {voc.Court('activite', true)}{selectedActivite ? ` — ${selectedActivite.nom}` : ''}
               <HelpButton section="saisie-ventes" variant="solid" size={18} tip="Aide" /></h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-              Saisissez vos ventes directes et via prestataires
+              Saisissez {voc.votre('vente', true)} {voc.acc('vente', 'directs', 'directes')} et via {voc.pl('prestataire')}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -613,15 +617,15 @@ export default function VentesPage() {
         )}
 
         {!selectedActiviteId ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>{voc.Aucun('activite')} disponible</div>
         ) : (
           <>
             {/* Tabs — no horizontal scroll */}
             <div style={{ display: 'flex', gap: 4, borderBottom: `2px solid ${CB}`, marginBottom: 24, flexWrap: 'wrap' }}>
               {([
-                ['saisie_produits',    '📝 Saisie des ventes produits'],
-                ['saisie_supplements', '🧂 Saisie des ventes suppléments'],
-                ['saisie_valorises',   '💎 Saisie des ventes valorisées'],
+                ['saisie_produits',    `📝 Saisie ${voc.du('vente', true)} ${voc.court('produit', true)}`],
+                ['saisie_supplements', `🧂 Saisie ${voc.du('vente', true)} ${voc.court('supplement', true)}`],
+                ['saisie_valorises',   `💎 Saisie ${voc.du('vente', true)} ${voc.acc('vente', 'valorisés', 'valorisées')}`],
                 ['historique',         '📋 Historique'],
               ] as const).map(([tab, label]) => (
                 <button key={tab} onClick={() => setActiveTab(tab)}
@@ -642,22 +646,22 @@ export default function VentesPage() {
             {/* ── SAISIE PRODUITS ── */}
             {!loading && activeTab === 'saisie_produits' && (
               <SaisieTable subset={produits} page={prodPage} setPage={setProdPage}
-                label="🛍️ Produits vendables"
-                emptyIcon="🛍️" emptyMsg="Aucun produit vendable configuré pour cette activité" />
+                label={`🛍️ ${voc.Pl('produit_vendable')}`}
+                emptyIcon="🛍️" emptyMsg={`${voc.Aucun('produit_vendable')} ${voc.acc('produit_vendable', 'configuré', 'configurée')} pour ${voc.ce('activite')}`} />
             )}
 
             {/* ── SAISIE SUPPLEMENTS ── */}
             {!loading && activeTab === 'saisie_supplements' && (
               <SaisieTable subset={supplements} page={suppPage} setPage={setSuppPage}
-                label="🧂 Suppléments vendables"
-                emptyIcon="🧂" emptyMsg="Aucun supplément vendable configuré pour cette activité" />
+                label={`🧂 ${voc.Pl('supplement')} vendables`}
+                emptyIcon="🧂" emptyMsg={`${voc.Aucun('supplement')} vendable ${voc.acc('supplement', 'configuré', 'configurée')} pour ${voc.ce('activite')}`} />
             )}
 
             {/* ── SAISIE VALORISES ── */}
             {!loading && activeTab === 'saisie_valorises' && (
               <SaisieTable subset={valoriseArticles} page={valPage} setPage={setValPage}
-                label="💎 Ventes Valorisées"
-                emptyIcon="💎" emptyMsg="Aucun produit valorisé actif pour cette activité" />
+                label={`💎 ${voc.Pl('vente')} ${voc.acc('vente', 'Valorisés', 'Valorisées')}`}
+                emptyIcon="💎" emptyMsg={`${voc.Aucun('produit_valorise')} ${voc.acc('produit_valorise', 'actif', 'active')} pour ${voc.ce('activite')}`} />
             )}
 
             {/* ── HISTORIQUE ── */}
@@ -676,21 +680,21 @@ export default function VentesPage() {
                   <FilterSelect value={histType} onChange={e => { setHistType(e.target.value as typeof histType); setHistPage(0); }}>
                     <option value="all">Tous types vente</option>
                     <option value="directe">Directe</option>
-                    <option value="prestataire">Prestataire</option>
+                    <option value="prestataire">{voc.Nom('prestataire')}</option>
                   </FilterSelect>
                 </FilterField>
-                <FilterField label="📦 Type produit">
+                <FilterField label={`📦 Type ${voc.court('produit')}`}>
                   <FilterSelect value={histTypeProduit} onChange={e => { setHistTypeProduit(e.target.value as typeof histTypeProduit); setHistPage(0); }}>
-                    <option value="all">Tous types produit</option>
-                    <option value="produit">🛍️ Produit</option>
-                    <option value="supplement">🧂 Supplément</option>
+                    <option value="all">Tous types {voc.court('produit')}</option>
+                    <option value="produit">🛍️ {voc.Nom('produit')}</option>
+                    <option value="supplement">🧂 {voc.Nom('supplement')}</option>
                     <option value="valorise">💎 Valorisé</option>
                   </FilterSelect>
                 </FilterField>
                 {activePrests.length > 0 && (
-                  <FilterField label="🚚 Prestataire">
+                  <FilterField label={`🚚 ${voc.Nom('prestataire')}`}>
                     <FilterSelect value={histPrestaId} onChange={e => setHistPrestaId(e.target.value)}>
-                      <option value="">Tous prestataires</option>
+                      <option value="">{voc.Tous('prestataire', '')}</option>
                       {activePrests.map(ap => <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>)}
                     </FilterSelect>
                   </FilterField>
@@ -701,7 +705,7 @@ export default function VentesPage() {
                 {allExpandedRows.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-muted)' }}>
                     <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>💸</div>
-                    {ventes.length === 0 ? 'Aucune vente enregistrée' : 'Aucun résultat pour ces filtres'}
+                    {ventes.length === 0 ? `${voc.Aucun('vente')} ${voc.acc('vente', 'enregistré', 'enregistrée')}` : 'Aucun résultat pour ces filtres'}
                   </div>
                 ) : (
                   <>
@@ -710,7 +714,7 @@ export default function VentesPage() {
                         <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
                           <th style={{ padding: '8px 12px', width: 36 }}></th>
                           <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Article</th>
-                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Type produit</th>
+                          <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>Type {voc.court('produit')}</th>
                           <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type vente</th>
                           <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Quantité</th>
                           <th style={{ padding: '11px 16px', textAlign: 'right', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>CA</th>
@@ -722,7 +726,7 @@ export default function VentesPage() {
                         {histExpandedRows.map(({ vente: v, ligne }, rowIdx) => {
                           const isSel = selectedVenteIds.has(v.id);
                           const rowBg = isSel ? '#FF6B00' : (rowIdx % 2 === 0 ? '#fff' : '#fffdf7');
-                          const badge = getLigneBadge(ligne);
+                          const badge = getLigneBadge(ligne, voc);
                           const ligneQte = ligne ? parseFloat(String(ligne.quantite)) || 0 : 0;
                           const prixU = ligne?.prix_unitaire || 0;
                           const ligneCa = ligne ? ligneQte * prixU : v.total_ca;
@@ -751,7 +755,7 @@ export default function VentesPage() {
                                 )}
                               </td>
                               <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.88rem', color: isSel ? '#fff' : undefined }}>
-                                {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || 'Prestataire'}`}
+                                {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || voc.Nom('prestataire')}`}
                               </td>
                               <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: isSel ? '#fff' : CD }}>
                                 {ligneQte > 0 ? (ligneQte % 1 === 0 ? ligneQte.toFixed(0) : ligneQte.toFixed(3)) : '—'}
@@ -795,15 +799,15 @@ export default function VentesPage() {
         <div className="modal-overlay" onClick={() => setConfirmOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
             <div className="modal-header" style={{ background: `linear-gradient(135deg, ${CD}, ${C})`, borderBottom: 'none' }}>
-              <h2 style={{ color: '#fff', margin: 0, fontSize: '1.05rem' }}>⚠️ Confirmer la vente</h2>
+              <h2 style={{ color: '#fff', margin: 0, fontSize: '1.05rem' }}>⚠️ Confirmer {voc.le('vente')}</h2>
               <button className="modal-close" onClick={() => setConfirmOpen(false)} style={{ color: '#fff' }}>✕</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ background: '#fff7ed', border: `1.5px solid ${CB}`, borderRadius: 10, padding: '14px 16px', fontSize: '0.9rem', color: CD, lineHeight: 1.6 }}>
-                <div style={{ fontWeight: 800, marginBottom: 6, fontSize: '0.95rem', color: C }}>Cette vente est définitive.</div>
+                <div style={{ fontWeight: 800, marginBottom: 6, fontSize: '0.95rem', color: C }}>{voc.Ce('vente')} est {voc.acc('vente', 'définitif', 'définitive')}.</div>
                 <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.85rem' }}>
-                  <li>Elle <strong>ne pourra pas être annulée</strong> après confirmation.</li>
-                  <li>Elle <strong>impactera directement votre stock activité</strong> en déduisant les quantités vendues.</li>
+                  <li>{voc.acc('vente', 'Il', 'Elle')} <strong>ne pourra pas être {voc.acc('vente', 'annulé', 'annulée')}</strong> après confirmation.</li>
+                  <li>{voc.acc('vente', 'Il', 'Elle')} <strong>impactera directement {voc.votre('stock')} {voc.compl('activite')}</strong> en déduisant les quantités vendues.</li>
                 </ul>
               </div>
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>

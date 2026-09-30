@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -13,6 +14,7 @@ interface ImportDetail { row: number; nom: string; status: 'ok' | 'warning' | 'e
 interface ImportResult { processed: number; stats: { crees: number; comptes: number; invitations: number }; errors: number; details: ImportDetail[] }
 
 export default function AcheteursImportPage() {
+  const voc = useVocabulaire();
   const [creerComptes, setCreerComptes] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -56,10 +58,10 @@ export default function AcheteursImportPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📥</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ajout Dynamique — Acheteurs</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ajout Dynamique — {voc.Pl('acheteur')}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Importez votre carnet d'acheteurs en masse depuis un fichier Excel
+            Importez votre carnet {voc.de('acheteur', true)} en masse depuis un fichier Excel
           </p>
         </div>
         <Link to="/client/acheteurs" style={{ color: '#fff', fontSize: '0.85rem', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.14)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: 10, padding: '9px 16px' }}>
@@ -94,7 +96,7 @@ export default function AcheteursImportPage() {
           </div>
         </button>
         <div style={{ fontSize: '0.84rem', color: creerComptes ? CD : '#334155', lineHeight: 1.55 }}>
-          <strong>Créer les comptes portail</strong> — chaque acheteur importé avec un email recevra une
+          <strong>Créer les comptes portail</strong> — chaque {voc.nom('acheteur')} {voc.acc('acheteur', 'importé', 'importée')} avec un email recevra une
           invitation pour activer son compte et accéder au futur portail de commande. Sans cette option,
           seules les fiches sont créées (vous pourrez inviter plus tard depuis le carnet).
         </div>
@@ -106,7 +108,7 @@ export default function AcheteursImportPage() {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: CL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>2️⃣</div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a' }}>Uploadez votre fichier rempli</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Limite : 500 lignes par fichier — l'import doit tenir dans votre quota d'acheteurs</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Limite : 500 lignes par fichier — l'import doit tenir dans votre quota {voc.de('acheteur', true)}</div>
           </div>
         </div>
         <div
@@ -140,7 +142,7 @@ export default function AcheteursImportPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
             <span style={{ fontSize: '1.4rem' }}>{result.errors > 0 ? '⚠️' : '✅'}</span>
             <div style={{ fontWeight: 800, fontSize: '1rem' }}>
-              {result.processed} acheteur{result.processed > 1 ? 's' : ''} importé{result.processed > 1 ? 's' : ''}
+              {voc.n('acheteur', result.processed)} {voc.acc('acheteur', 'importé', 'importée', result.processed)}
               {result.stats?.invitations ? ` · ${result.stats.invitations} invitation${result.stats.invitations > 1 ? 's' : ''} envoyée${result.stats.invitations > 1 ? 's' : ''}` : ''}
               {result.errors > 0 ? ` · ${result.errors} ligne${result.errors > 1 ? 's' : ''} en erreur` : ''}
             </div>

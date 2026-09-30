@@ -1,0 +1,146 @@
+[
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": null,
+    "apres": "/admin/clients/⟦·⟧",
+    "type": "discriminant",
+    "justification": "URL technique, jamais affichée : appel GET /admin/clients/:id ajouté pour lire le domaine (domaineId) du CLIENT de la demande, afin que l'avenant PDF soit rédigé dans son vocabulaire (spec §2.3, AvenantPdfParams.lexique). Aucun texte visible de l'écran admin ne change."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": null,
+    "apres": "/api/domaines/⟦·⟧",
+    "type": "discriminant",
+    "justification": "URL technique, jamais affichée : appel GET /api/domaines/:id ajouté pour lire le lexique résolu du domaine du client de la demande, passé à generateAvenantPdf (spec §2.3). Aucun texte visible de l'écran admin ne change."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": "gérant",
+    "apres": "gérant",
+    "type": "homonyme",
+    "justification": "Espace admin (invariant I4) : pastille « gérant » de la fenêtre de détail d'une demande, lue par l'administrateur LabFlow. L'écran admin garde le vocabulaire LabFlow ; seul le point d'appel de l'avenant PDF change dans ce fichier (spec §2.3)."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": "⟦·⟧ ⟦activité|activités@≠1⟧⟦? · ⟦·⟧ ⟦labo|labos@≠1⟧|⟧⟦? · ⟦·⟧ ⟦gérant|gérants@≠1⟧|⟧⟦<span>⟧",
+    "apres": "⟦·⟧ ⟦activité|activités@≠1⟧⟦? · ⟦·⟧ ⟦labo|labos@≠1⟧|⟧⟦? · ⟦·⟧ ⟦gérant|gérants@≠1⟧|⟧⟦<span>⟧",
+    "type": "homonyme",
+    "justification": "Espace admin (invariant I4) : ligne « Abonnement actuel » de la fenêtre de détail, lue par l'administrateur LabFlow (compteurs techniques de l'abonnement). L'écran admin garde le vocabulaire LabFlow."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": "⟦?+⟦·⟧ ⟦activité|activités@>1⟧|⟧",
+    "apres": "⟦?+⟦·⟧ ⟦activité|activités@>1⟧|⟧",
+    "type": "homonyme",
+    "justification": "Espace admin (invariant I4) : bloc « Ajout demandé » de la fenêtre de détail, lu par l'administrateur LabFlow. L'écran admin garde le vocabulaire LabFlow ; le même ajout, dans l'avenant PDF remis au client, passe par le vocabulaire du client."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": "⟦?+⟦·⟧ ⟦labo|labos@>1⟧|⟧",
+    "apres": "⟦?+⟦·⟧ ⟦labo|labos@>1⟧|⟧",
+    "type": "homonyme",
+    "justification": "Espace admin (invariant I4) : bloc « Ajout demandé » de la fenêtre de détail, lu par l'administrateur LabFlow. L'écran admin garde le vocabulaire LabFlow ; le même ajout, dans l'avenant PDF remis au client, passe par le vocabulaire du client."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": "⟦?+⟦·⟧ ⟦gérant|gérants@>1⟧|⟧",
+    "apres": "⟦?+⟦·⟧ ⟦gérant|gérants@>1⟧|⟧",
+    "type": "homonyme",
+    "justification": "Espace admin (invariant I4) : bloc « Ajout demandé » de la fenêtre de détail, lu par l'administrateur LabFlow. L'écran admin garde le vocabulaire LabFlow ; le même ajout, dans l'avenant PDF remis au client, passe par le vocabulaire du client."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": "⟦?Option Acheteurs → palier jusqu'à ⟦·⟧ acheteurs|⟧",
+    "apres": "⟦?Option Acheteurs → palier jusqu'à ⟦·⟧ acheteurs|⟧",
+    "type": "homonyme",
+    "justification": "Espace admin (invariant I4) : bloc « Ajout demandé » de la fenêtre de détail, lu par l'administrateur LabFlow. L'écran admin garde le vocabulaire LabFlow ; la même ligne, dans l'avenant PDF remis au client, passe par le vocabulaire du client."
+  },
+  {
+    "fichier": "src/components/admin/AdminSupportPage.tsx",
+    "avant": "⟦·⟧⟦? (gérant)|⟧",
+    "apres": "⟦·⟧⟦? (gérant)|⟧",
+    "type": "homonyme",
+    "justification": "Espace admin (invariant I4) : auteur d'une demande dans la liste des demandes d'un client, suivi de « (gérant) » quand ce n'est pas le titulaire ; lu par l'administrateur LabFlow. L'écran admin garde le vocabulaire LabFlow."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "PRESTATAIRE",
+    "apres": "PRESTATAIRE",
+    "type": "homonyme",
+    "justification": "Bloc de signature de l'avenant : « PRESTATAIRE » désigne la partie au contrat qui fournit le service (LabFlow), en face de « CLIENT ». Ce n'est pas la clé « prestataire » du lexique (prestataire de livraison d'une activité, « Intermédiaire » en Céramique) : par voc, le contrat d'un compte Céramique serait signé par l'« INTERMÉDIAIRE »."
+  },
+  {
+    "fichier": "src/components/client/FormuleGuard.tsx",
+    "avant": "Labo",
+    "apres": "Labo",
+    "type": "formule",
+    "justification": "Nom commercial de la base tarifaire « Labo » (tarification Basique / Premium / Labo), écrit en gras à côté des formules « Activité Basique » et « Activité Premium » déjà admises : nom figé, le même pour tous les secteurs (spec §3 règle 4, guide §7). Le terme du domaine, dans la même phrase (« sans labo »), passe par voc."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "activité",
+    "apres": "activité",
+    "type": "formule",
+    "justification": "Nom du supplément TARIFAIRE dans le bandeau de promotion (« Supplément activité gratuit », « sur le supplément activité ») : ligne de prix de l'abonnement, dont le titre « Supplément Activité » est admis dans _global.json. Nom figé (spec §3 règle 4, guide §7 : « activité » du supplément tarifaire)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "formule",
+    "justification": "Nom du supplément TARIFAIRE dans le bandeau de promotion (« Supplément labo gratuit », « sur le supplément labo ») : ligne de prix de l'abonnement, dont le titre « Supplément Labo » est admis dans _global.json. Nom figé (spec §3 règle 4, guide §7)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "gérant",
+    "apres": "gérant",
+    "type": "formule",
+    "justification": "Nom du supplément TARIFAIRE dans le bandeau de promotion (« Supplément gérant gratuit », « sur le supplément gérant ») : ligne de prix de l'abonnement, dont le titre « Supplément Gérant » est admis dans _global.json. Nom figé (spec §3 règle 4, guide §7)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "⟦?Supplément ⟦·⟧ gratuit|⟦?⟦·⟧% de réduction sur le supplément ⟦·⟧|⟦?Prix fixe ⟦·⟧ DT sur le supplément ⟦·⟧|Promotion active⟧⟧⟧ · ⟦?Jusqu'au ⟦·⟧|Permanente⟧",
+    "apres": "⟦?Supplément ⟦·⟧ gratuit|⟦?⟦·⟧% de réduction sur le supplément ⟦·⟧|⟦?Prix fixe ⟦·⟧ DT sur le supplément ⟦·⟧|Promotion active⟧⟧⟧ · ⟦?Jusqu'au ⟦·⟧|Permanente⟧",
+    "type": "formule",
+    "justification": "« Supplément » est ici le supplément TARIFAIRE de l'abonnement (promotion sur le prix d'une activité, d'un labo ou d'un gérant ajouté), homonyme de la clé « supplement » (extra vendu avec un produit, « Option » en Céramique) : nom figé, comme « Supplément Activité / Labo / Gérant » de _global.json (spec §3 règle 4)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "Indiquez au moins un supplément",
+    "apres": "Indiquez au moins un supplément",
+    "type": "formule",
+    "justification": "Message de la demande « Ajout de capacité » envoyée sans aucun ajout : « supplément » y désigne le supplément TARIFAIRE de l'abonnement (activité, labo, gérant ou palier ajouté ; type de demande 'supplement'), homonyme de la clé « supplement » (extra vendu avec un produit). Par voc, un compte Céramique lirait « Indiquez au moins une option »."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": "Module Acheteurs non activé",
+    "apres": "Module Acheteurs non activé",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « activé » s'accorde avec « Module » (« Module … non activé »), pas avec le terme rendu par voc.Court('acheteur', true) ; l'outil ne sait pas rattacher le participe à son antécédent. Rendu Hôtellerie juste : « Module Clients professionnels non activé »."
+  },
+  {
+    "fichier": "src/components/client/VenteGuard.tsx",
+    "avant": "Module Vente non activé",
+    "apres": "Module Vente non activé",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « activé » s'accorde avec « Module » (« Module … non activé »), pas avec le terme rendu par voc.Court('vente') ; l'outil ne sait pas rattacher le participe à son antécédent. Rendu miroir juste : « Module Abr-Encaissement non activé »."
+  },
+  {
+    "fichier": "src/components/client/VenteGuard.tsx",
+    "avant": "Le module Vente est actif, mais aucune de vos activités n'est configurée comme activité vendeuse (Housekeeping, Spa, économat…). L'Espace Vente s'ouvrira dès qu'une activité vendeuse existera dans votre compte.",
+    "apres": "Le module Vente est actif, mais aucune de vos activités n'est configurée comme activité vendeuse (Housekeeping, Spa, économat…). L'Espace Vente s'ouvrira dès qu'une activité vendeuse existera dans votre compte.",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « actif » s'accorde avec « module » (« Le module … est actif »), pas avec le terme rendu par voc.Court('vente') ; l'outil ne sait pas rattacher l'adjectif à son antécédent. Tous les accords avec « activité » de la même phrase (aucune, configurée, vendeuse) passent par voc.acc ; rendu Hôtellerie : « … mais aucun de vos services n'est configuré comme service vendeur … »."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "Base : mensualité actuelle (option Acheteurs incluse le cas échéant)",
+    "apres": "Base : mensualité actuelle (option Acheteurs incluse le cas échéant)",
+    "type": "non-repliable",
+    "mode": "accords",
+    "justification": "Signalement à tort : « incluse » s'accorde avec « option » (« option … incluse »), pas avec le terme rendu par voc.Court('acheteur', true) ; l'outil ne sait pas rattacher le participe à son antécédent. Rendu Hôtellerie juste : « option Clients professionnels incluse le cas échéant »."
+  }
+]

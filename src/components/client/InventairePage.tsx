@@ -4,6 +4,7 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (iso: string | null | undefined) => {
@@ -29,6 +30,7 @@ interface Activite { id: number; nom: string }
 
 export default function InventairePage() {
   const { canWrite } = useAuth();
+  const voc = useVocabulaire();
   // Multi-affectations : sélecteur d'activité affiché (périmètre filtré côté backend).
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -95,7 +97,7 @@ export default function InventairePage() {
       if (laboId) {
         url = `/api/labo/${laboId}/inventaire`;
         const laboRes = await api.get(`/api/labo/${laboId}`);
-        setContextNom(laboRes.data?.nom || 'Labo');
+        setContextNom(laboRes.data?.nom || voc.Nom('labo'));
       } else {
         url = `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
         const act = activites.find((a) => a.id === effectiveActiviteId);
@@ -111,6 +113,8 @@ export default function InventairePage() {
       setOpenCategories(new Set());
     } catch { setErrorMsg('Erreur lors du chargement.'); }
     setLoading(false);
+  // voc hors dépendances : un changement de lexique ne doit pas recharger l'inventaire.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [laboId, effectiveActiviteId, activites]);
 
   useEffect(() => { loadStock(); }, [loadStock]);
@@ -171,7 +175,7 @@ export default function InventairePage() {
         ? `/api/labo/${laboId}/inventaire`
         : `/api/stock/entreprise/${effectiveActiviteId}/inventaire`;
       await api.post(url, { dateInventaire: date, entries });
-      setSuccessMsg('Inventaire enregistré avec succès.');
+      setSuccessMsg(`${voc.Nom('inventaire')} ${voc.acc('inventaire', 'enregistré', 'enregistrée')} avec succès.`);
       setTimeout(() => setSuccessMsg(''), 4000);
       loadStock();
     } catch { setErrorMsg('Erreur lors de la sauvegarde.'); }
@@ -204,10 +208,10 @@ export default function InventairePage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>🔢</div>
             <div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
-                Inventaire{contextNom ? ` — ${contextNom}` : ''}
+                {voc.Nom('inventaire')}{contextNom ? ` — ${contextNom}` : ''}
               <HelpButton section="inventaire" variant="solid" size={18} tip="Aide" /></h1>
               <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                Saisissez les quantités réelles pour mettre à jour les stocks
+                Saisissez les quantités réelles pour mettre à jour {voc.le('stock', true)}
               </p>
             </div>
           </div>
@@ -216,12 +220,12 @@ export default function InventairePage() {
           {isLaboMode && laboId ? (
             <Link to={`/client/labo/inventaire/historique?laboId=${laboId}`}
               style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1.5px solid rgba(255,255,255,0.4)', borderRadius: 10, padding: '8px 18px', color: '#fff', fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              📋 Historique Inventaires
+              📋 Historique {voc.Court('inventaire', true)}
             </Link>
           ) : rows.length > 0 ? (
             <div style={{ background: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{rows.length}</div>
-              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ingrédients</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{voc.Pl('ingredient')}</div>
             </div>
           ) : null}
           {alarmTotal > 0 && (
@@ -233,7 +237,7 @@ export default function InventairePage() {
           {filledCount > 0 && (
             <div style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 12, padding: '10px 18px', textAlign: 'center' }}>
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', lineHeight: 1 }}>{filledCount}</div>
-              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Saisis</div>
+              <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.75)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{voc.acc('ingredient', 'Saisis', 'Saisies')}</div>
             </div>
           )}
         </div>
@@ -248,7 +252,7 @@ export default function InventairePage() {
               🏭 {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('labo')}</span>
         </div>
       )}
 
@@ -261,7 +265,7 @@ export default function InventairePage() {
               🏪 {a.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner l'activité</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('activite')}</span>
         </div>
       )}
 
@@ -287,13 +291,13 @@ export default function InventairePage() {
                 {categories.map((c) => <option key={c} value={c}>{c}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="🧂 Ingrédient">
+            <FilterField label={`🧂 ${voc.Nom('ingredient')}`}>
               <FilterSelect value={filterIngredient} disabled={!filterCategory} onChange={(e) => setFilterIngredient(e.target.value)}>
-                <option value="">— Tous —</option>
+                <option value="">— {voc.acc('ingredient', 'Tous', 'Toutes')} —</option>
                 {ingredientsInCat.map((r) => <option key={r.ingredientId} value={String(r.ingredientId)}>{r.nom}</option>)}
               </FilterSelect>
             </FilterField>
-            <FilterField label="📅 Date inventaire">
+            <FilterField label={`📅 Date ${voc.court('inventaire')}`}>
               <FilterInput type="date" value={date} max={todayStr()} onChange={(e) => setDate(e.target.value)} />
             </FilterField>
           </HistoryFilterBar>
@@ -314,20 +318,20 @@ export default function InventairePage() {
           {loading ? (
             <div style={{ textAlign: 'center', padding: '60px 0' }}>
               <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚙️</div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Chargement des ingrédients...</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Chargement {voc.du('ingredient', true)}...</p>
             </div>
           ) : filteredRows.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '60px 0', background: 'var(--surface)', borderRadius: 14, border: '1px dashed var(--border)' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: 10 }}>📦</div>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>Aucun ingrédient trouvé.</p>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 500 }}>{voc.Aucun('ingredient')} {voc.acc('ingredient', 'trouvé', 'trouvée')}.</p>
             </div>
           ) : (
             <div style={{ background: 'var(--surface)', borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border)', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ background: isLaboMode ? 'linear-gradient(90deg, #faf5ff, #ede9fe)' : 'linear-gradient(90deg, #eff6ff, #dbeafe)', borderBottom: `2px solid ${themeBorder}` }}>
-                    <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>Ingrédient</th>
-                    <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', width: 120 }}>Stock actuel</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>{voc.Nom('ingredient')}</th>
+                    <th style={{ padding: '10px 16px', textAlign: 'right', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', width: 120 }}>{voc.Nom('stock')} {voc.acc('stock', 'actuel', 'actuelle')}</th>
                     <th style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.68rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', width: 160 }}>Qté réelle</th>
                   </tr>
                 </thead>
@@ -347,8 +351,8 @@ export default function InventairePage() {
                             </span>
                             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷 {cat}</span>
                             <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: 8 }}>
-                              {catRows.length} ingrédient{catRows.length > 1 ? 's' : ''}
-                              {filledInCat > 0 && <span style={{ color: themeColor, fontWeight: 700 }}> · {filledInCat} saisi{filledInCat > 1 ? 's' : ''}</span>}
+                              {voc.n('ingredient', catRows.length)}
+                              {filledInCat > 0 && <span style={{ color: themeColor, fontWeight: 700 }}> · {filledInCat} {voc.acc('ingredient', 'saisi', 'saisie', filledInCat)}</span>}
                               {alarmInCat > 0 && <span style={{ color: '#d97706', fontWeight: 700 }}> · ⚠ {alarmInCat}</span>}
                             </span>
                           </td>
@@ -374,7 +378,7 @@ export default function InventairePage() {
                                 <td style={{ padding: '11px 16px' }}>
                                   <div style={{ fontWeight: 700, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6, color: alarm ? '#92400e' : 'var(--text)' }}>
                                     {alarm && <span style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 5, padding: '1px 5px', fontSize: '0.67rem', fontWeight: 800, color: '#d97706' }}>⚠ DATE</span>}
-                                    {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 5px', fontSize: '0.67rem', fontWeight: 800, color: '#7c3aed' }}>PT</span>}
+                                    {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 5px', fontSize: '0.67rem', fontWeight: 800, color: '#7c3aed' }}>{voc.Court('pt')}</span>}
                                     {r.nom}
                                   </div>
                                   <div style={{ fontSize: '0.71rem', marginTop: 4, display: 'flex', gap: 7, alignItems: 'center' }}>
@@ -417,7 +421,7 @@ export default function InventairePage() {
                                 <tr key={`${r.ingredientId}-hist`}>
                                   <td colSpan={3} style={{ padding: '0 16px 12px 32px', background: '#f8fafc', borderBottom: '1px solid var(--border)' }}>
                                     {r.recentInventaires.length === 0 ? (
-                                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '8px 0' }}>Aucun inventaire enregistré</p>
+                                      <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontStyle: 'italic', margin: '8px 0' }}>{voc.Aucun('inventaire')} {voc.acc('inventaire', 'enregistré', 'enregistrée')}</p>
                                     ) : (
                                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, paddingTop: 10 }}>
                                         {r.recentInventaires.map((inv) => {
@@ -467,16 +471,16 @@ export default function InventairePage() {
                 padding: '22px 28px',
               }}>
                 <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>
-                  {hasReplacements ? '🚨 Remplacement détecté' : '📋 Confirmer l\'inventaire'}
+                  {hasReplacements ? '🚨 Remplacement détecté' : `📋 Confirmer ${voc.le('inventaire')}`}
                 </div>
                 <div style={{ fontSize: '0.84rem', color: 'rgba(255,255,255,0.82)', marginTop: 5 }}>
-                  Date : <strong>{fmtDate(date)}</strong> · {confirmPopup.entries.length} ingrédient(s)
+                  Date : <strong>{fmtDate(date)}</strong> · {confirmPopup.entries.length} {voc.nomS('ingredient')}
                   {hasReplacements && <> · <strong style={{ color: '#fca5a5' }}>{replacements.length} remplacement(s)</strong></>}
                 </div>
               </div>
               <div style={{ padding: '22px 28px' }}>
                 <div style={{ background: '#fef3c7', border: '1.5px solid #fde68a', borderRadius: 11, padding: '12px 16px', marginBottom: 18, fontSize: '0.84rem', color: '#92400e', lineHeight: 1.6 }}>
-                  ⚠️ <strong>Important :</strong> Cet inventaire <strong>ne peut pas être supprimé</strong>, seulement modifié. Il recalcule le stock à partir du <strong>{fmtDate(date)}</strong>.
+                  ⚠️ <strong>Important :</strong> {voc.Ce('inventaire')} <strong>ne peut pas être {voc.acc('inventaire', 'supprimé', 'supprimée')}</strong>, seulement {voc.acc('inventaire', 'modifié', 'modifiée')}. {voc.acc('inventaire', 'Il', 'Elle')} recalcule {voc.le('stock')} à partir du <strong>{fmtDate(date)}</strong>.
                 </div>
 
                 {hasReplacements && (
@@ -507,7 +511,7 @@ export default function InventairePage() {
                 {newEntries.length > 0 && (
                   <div style={{ marginBottom: 18 }}>
                     {hasReplacements && (
-                      <div style={{ fontSize: '0.67rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>✨ Nouveaux</div>
+                      <div style={{ fontSize: '0.67rem', fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 7 }}>✨ {voc.acc('ingredient', 'Nouveaux', 'Nouvelles')}</div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 180, overflowY: 'auto' }}>
                       {newEntries.map((e) => (
@@ -551,7 +555,7 @@ export default function InventairePage() {
           {invPreviewMinimized ? (
             <button onClick={() => setInvPreviewMinimized(false)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: 'linear-gradient(135deg,#1e40af,#2563eb)', border: 'none', borderRadius: 30, cursor: 'pointer', boxShadow: '0 4px 16px rgba(37,99,235,0.35)', color: '#fff' }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
-              <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{invPreviewLines.length} article{invPreviewLines.length > 1 ? 's' : ''}</span>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700 }}>{voc.n('article', invPreviewLines.length)}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
             </button>
           ) : (
@@ -560,7 +564,7 @@ export default function InventairePage() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
                   <span style={{ fontSize: '0.70rem', fontWeight: 800, color: '#fff', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Aperçu saisie</span>
-                  <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>{invPreviewLines.length} article{invPreviewLines.length > 1 ? 's' : ''}</span>
+                  <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.75)', background: 'rgba(255,255,255,0.15)', padding: '2px 8px', borderRadius: 20, fontWeight: 600 }}>{voc.n('article', invPreviewLines.length)}</span>
                 </div>
                 <button onClick={() => setInvPreviewMinimized(true)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 6, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, padding: 0, color: '#fff' }}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -570,8 +574,8 @@ export default function InventairePage() {
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ background: '#f8fafc' }}>
-                      <th style={{ padding: '7px 14px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>Article</th>
-                      <th style={{ padding: '7px 10px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Stock</th>
+                      <th style={{ padding: '7px 14px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'left', borderBottom: '1px solid #e2e8f0' }}>{voc.Nom('article')}</th>
+                      <th style={{ padding: '7px 10px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>{voc.Nom('stock')}</th>
                       <th style={{ padding: '7px 14px', fontSize: '0.62rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right', borderBottom: '1px solid #e2e8f0' }}>Qté réelle</th>
                     </tr>
                   </thead>
@@ -598,7 +602,7 @@ export default function InventairePage() {
                 </table>
               </div>
               <div style={{ padding: '8px 14px', background: '#f1f5f9', borderTop: '2px solid #e2e8f0', fontSize: '0.72rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {invPreviewLines.length} article{invPreviewLines.length > 1 ? 's' : ''} inventoriés
+                {voc.n('article', invPreviewLines.length)} {voc.acc('article', 'inventoriés', 'inventoriées')}
               </div>
             </div>
           )}

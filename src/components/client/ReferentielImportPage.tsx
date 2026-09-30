@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
@@ -23,6 +24,7 @@ interface ImportResult {
 }
 
 export default function ReferentielImportPage() {
+  const voc = useVocabulaire();
   const [downloading, setDownloading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -100,7 +102,7 @@ export default function ReferentielImportPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Ajout Dynamique</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Importez vos articles, unités, catégories et familles en masse depuis un fichier Excel
+            Importez {voc.votre('article', true)}, unités, catégories et familles en masse depuis un fichier Excel
           </p>
         </div>
         <GuideButton section="referentiel-import" />
@@ -110,10 +112,10 @@ export default function ReferentielImportPage() {
       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14, padding: '14px 18px', marginBottom: 20 }}>
         <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>🔗</span>
         <div style={{ fontSize: '0.84rem', color: '#1e3a8a', lineHeight: 1.55 }}>
-          <strong>Gestion de stock automatique</strong> — chaque nouvel article importé (ou article existant
-          encore sans affectation) est assigné en gestion de stock à l'ensemble de vos activités et labos ;
-          les articles déjà affectés conservent leur configuration. Vous pouvez le modifier à tout moment
-          depuis la fiche de l'article (Référentiel → Articles).
+          <strong>Gestion {voc.de('stock')} automatique</strong> — chaque {voc.nouveau('article')} {voc.acc('article', 'importé', 'importée')} (ou {voc.nom('article')} {voc.acc('article', 'existant', 'existante')}{' '}
+          encore sans affectation) est {voc.acc('article', 'assigné', 'assignée')} en gestion {voc.de('stock')} à l'ensemble de {voc.votre('activite', true)} et {voc.pl('labo')} ;{' '}
+          {voc.le('article', true)} déjà {voc.acc('article', 'affectés', 'affectées')} conservent leur configuration. Vous pouvez le modifier à tout moment
+          depuis la fiche {voc.du('article')} ({voc.Nom('referentiel')} → {voc.Pl('article')}).
         </div>
       </div>
 
@@ -123,7 +125,7 @@ export default function ReferentielImportPage() {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>1️⃣</div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a' }}>Téléchargez le modèle</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Fichier Excel avec les colonnes : Article / Unité / Catégorie / Famille</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Fichier Excel avec les colonnes : {voc.Nom('article')} / Unité / Catégorie / Famille</div>
           </div>
         </div>
         <button
@@ -134,7 +136,7 @@ export default function ReferentielImportPage() {
           {downloading ? '⏳ Téléchargement…' : '📄 Télécharger modele_referentiel.xlsx'}
         </button>
         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '10px 0 0' }}>
-          Remplissez chaque ligne avec un article. Les colonnes Unité, Catégorie et Famille créent automatiquement les données manquantes dans votre référentiel.
+          Remplissez chaque ligne avec {voc.un('article')}. Les colonnes Unité, Catégorie et Famille créent automatiquement les données manquantes dans {voc.votre('referentiel')}.
         </p>
       </div>
 
@@ -218,26 +220,26 @@ export default function ReferentielImportPage() {
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 20 }}>
             {([
-              { label: 'Articles', value: result.stats.articles, icon: '🧂' },
-              { label: 'Auto-affectés', value: result.stats.autoAssigned ?? 0, icon: '🔗', isInfo: true },
+              { label: voc.Pl('article'), value: result.stats.articles, icon: '🧂', estArticle: true },
+              { label: `Auto-${voc.acc('article', 'affectés', 'affectées')}`, value: result.stats.autoAssigned ?? 0, icon: '🔗', isInfo: true },
               { label: 'Catégories', value: result.stats.categories, icon: '🏷️' },
               { label: 'Familles', value: result.stats.familles, icon: '🗂️' },
               { label: 'Unités', value: result.stats.unites, icon: '📏' },
               { label: 'Erreurs', value: result.errors, icon: '❌', isError: true },
-            ] as { label: string; value: number; icon: string; isError?: boolean; isInfo?: boolean }[]).map(s => (
+            ] as { label: string; value: number; icon: string; isError?: boolean; isInfo?: boolean; estArticle?: boolean }[]).map(s => (
               <div key={s.label} style={{ background: s.isError && s.value > 0 ? '#fff7ed' : s.isInfo && s.value > 0 ? '#eff6ff' : '#f0fdf4', borderRadius: 12, padding: '12px 16px', textAlign: 'center', border: `1px solid ${s.isError && s.value > 0 ? '#fed7aa' : s.isInfo && s.value > 0 ? '#bfdbfe' : '#bbf7d0'}` }}>
                 <div style={{ fontSize: '1.4rem', marginBottom: 4 }}>{s.icon}</div>
                 <div style={{ fontSize: '1.5rem', fontWeight: 900, color: s.isError && s.value > 0 ? '#c2410c' : s.isInfo && s.value > 0 ? '#1d4ed8' : '#15803d', lineHeight: 1 }}>{s.value}</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>{s.isInfo ? 'article' + (s.value !== 1 ? 's' : '') : 'créé' + (s.value !== 1 ? 's' : '')}</div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>{s.isInfo ? voc.nom('article', s.value !== 1) : s.estArticle ? voc.acc('article', 'créé', 'créée', s.value !== 1) : 'créé' + (s.value !== 1 ? 's' : '')}</div>
                 <div style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', marginTop: 1 }}>{s.label}</div>
               </div>
             ))}
           </div>
 
           <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 20px' }}>
-            🔗 Les nouveaux articles (et les existants sans affectation) sont gérés en stock dans toutes
-            vos activités et labos ; les articles déjà affectés conservent leur configuration —
-            modifiable à tout moment depuis la fiche de l'article (Référentiel → Articles).
+            🔗 {voc.acc('article', 'Les nouveaux', 'Les nouvelles')} {voc.pl('article')} (et {voc.acc('article', 'les existants', 'les existantes')} sans affectation) sont {voc.acc('article', 'gérés', 'gérées')} en {voc.nom('stock')} dans {voc.tous('activite', 'vos')}{' '}
+            et {voc.pl('labo')} ; {voc.le('article', true)} déjà {voc.acc('article', 'affectés', 'affectées')} conservent leur configuration —
+            modifiable à tout moment depuis la fiche {voc.du('article')} ({voc.Nom('referentiel')} → {voc.Pl('article')}).
           </p>
 
           {/* Details table */}
@@ -247,7 +249,7 @@ export default function ReferentielImportPage() {
                 <thead>
                   <tr>
                     <th style={{ width: 50 }}>Ligne</th>
-                    <th>Article</th>
+                    <th>{voc.Nom('article')}</th>
                     <th>Créé</th>
                     <th>Existant</th>
                     <th style={{ width: 90, textAlign: 'center' }}>Affectation</th>
@@ -271,7 +273,7 @@ export default function ReferentielImportPage() {
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         {d.autoAssigned
-                          ? <span title="Article existant non affecté — assigné automatiquement" style={{ color: '#1d4ed8', fontWeight: 700, fontSize: '0.75rem', cursor: 'help' }}>🔗 auto</span>
+                          ? <span title={`${voc.Nom('article')} ${voc.acc('article', 'existant', 'existante')} non ${voc.acc('article', 'affecté', 'affectée')} — ${voc.acc('article', 'assigné', 'assignée')} automatiquement`} style={{ color: '#1d4ed8', fontWeight: 700, fontSize: '0.75rem', cursor: 'help' }}>🔗 auto</span>
                           : <span style={{ color: 'var(--text-muted)' }}>—</span>}
                       </td>
                       <td style={{ textAlign: 'center' }}>
