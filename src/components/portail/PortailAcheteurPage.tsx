@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import PortailShell from './PortailShell';
 import { isUnitePiece } from '../../utils/unitesArticles';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 
 // Portail acheteur — catalogue de commande. Tout article proposé est
 // commandable (aucune notion de disponibilité côté acheteur) : le vendeur
@@ -102,6 +104,7 @@ function ArticleCard({ o, p, onSet, onStep }: {
   onSet: (v: string) => void;
   onStep: (delta: number) => void;
 }) {
+  const voc = useVocabulaire();
   const [pc1, pc2] = paletteOf(o.categorie);
   const qte = parseNum(p.quantite) || 0;
   const h = o.histo;
@@ -133,7 +136,7 @@ function ArticleCard({ o, p, onSet, onStep }: {
               </span>
             )}
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {o.categorieProduit || o.categorie}
+              {o.categorieProduit || libelleCategoriePt(voc, o.categorie)}
             </span>
           </div>
         </div>
@@ -229,6 +232,7 @@ function ArticleCard({ o, p, onSet, onStep }: {
 
 export default function PortailAcheteurPage() {
   const navigate = useNavigate();
+  const voc = useVocabulaire();
   const [vendeur, setVendeur] = useState('');
   const [offres, setOffres] = useState<OffreCatalogue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -374,7 +378,7 @@ export default function PortailAcheteurPage() {
             <select value={catFilter} onChange={e => { setCatFilter(e.target.value); resetPage(); }}
               style={{ padding: '9px 10px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.84rem', fontFamily: 'inherit', maxWidth: 220 }}>
               <option value="">Toutes les catégories</option>
-              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+              {categories.map(c => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
             </select>
             {nbHabituels > 0 && (
               <button type="button" onClick={() => { setHabitOnly(v => !v); resetPage(); }}
@@ -437,7 +441,7 @@ export default function PortailAcheteurPage() {
                   <div key={cat} style={{ marginBottom: 22 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9, margin: '0 0 12px' }}>
                       <span style={{ width: 10, height: 10, borderRadius: '50%', background: `linear-gradient(135deg, ${pc1}, ${pc2})`, flexShrink: 0 }} />
-                      <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.98rem' }}>{cat}</span>
+                      <span style={{ fontWeight: 800, color: '#1e293b', fontSize: '0.98rem' }}>{libelleCategoriePt(voc, cat)}</span>
                       <span style={{ fontSize: '0.7rem', color: pc1, fontWeight: 800, background: `${pc1}14`, borderRadius: 20, padding: '2px 9px' }}>
                         {items.length} article{items.length > 1 ? 's' : ''}
                       </span>

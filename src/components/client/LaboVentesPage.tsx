@@ -7,6 +7,7 @@ import { useConfirm } from '../common/ConfirmDialog';
 import type { Labo } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Vocab } from '../../vocab/vocab';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
@@ -232,7 +233,7 @@ export default function LaboVentesPage() {
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={filterCategorie} onChange={e => handleCategorieChange(e.target.value)}>
                 <option value="">Toutes</option>
-                {categorieOptions.map(c => <option key={c} value={c}>{c}</option>)}
+                {categorieOptions.map(c => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
               </FilterSelect>
             </FilterField>
             <FilterField label={`${voc.icon('article')} ${voc.Nom('article')}`}>

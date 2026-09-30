@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { usePerteTypes } from '../../utils/perteTypes';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
@@ -746,7 +747,7 @@ export default function StockLaboPage() {
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={sFilterCat} onChange={(e) => { setSFilterCat(e.target.value); setSFilterIngId(''); }}>
                 <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-                {allStockCats.map((c) => <option key={c} value={c}>{c}</option>)}
+                {allStockCats.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
               </FilterSelect>
             </FilterField>
             <FilterField label={`🧂 ${voc.Nom('article')}`}>
@@ -867,7 +868,7 @@ export default function StockLaboPage() {
                   return (
                     <div key={cat} style={{ marginBottom: 12 }}>
                       <button onClick={toggle} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', width: '100%', textAlign: 'left', borderLeft: '4px solid #2563eb', borderBottom: '1px solid var(--border)', marginBottom: isOpen ? 10 : 0, borderRadius: isOpen ? '4px 4px 0 0' : 4 }}>
-                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {libelleCategoriePt(voc, cat)}</span>
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({rows.length})</span>
                         <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                       </button>

@@ -5,6 +5,7 @@ import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 
 const todayStr = () => new Date().toISOString().slice(0, 10);
 const fmtDate = (iso: string | null | undefined) => {
@@ -288,7 +289,7 @@ export default function InventairePage() {
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={filterCategory} onChange={(e) => { setFilterCategory(e.target.value); setFilterIngredient(''); }}>
                 <option value="">— Toutes —</option>
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                {categories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
               </FilterSelect>
             </FilterField>
             <FilterField label={`🧂 ${voc.Nom('article_ingredient')}`}>
@@ -349,7 +350,7 @@ export default function InventairePage() {
                             <span style={{ fontSize: '0.72rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em', marginRight: 6 }}>
                               {isOpen ? '▼' : '▶'}
                             </span>
-                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷 {cat}</span>
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: themeColor, textTransform: 'uppercase', letterSpacing: '0.07em' }}>🏷 {libelleCategoriePt(voc, cat)}</span>
                             <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500, marginLeft: 8 }}>
                               {voc.n('article_ingredient', catRows.length)}
                               {filledInCat > 0 && <span style={{ color: themeColor, fontWeight: 700 }}> · {filledInCat} {voc.acc('article_ingredient', 'saisi', 'saisie', filledInCat)}</span>}

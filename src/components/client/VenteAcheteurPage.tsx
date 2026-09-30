@@ -5,6 +5,7 @@ import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import Pagination from '../common/Pagination';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -272,7 +273,7 @@ export default function VenteAcheteurPage() {
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={catFilter} onChange={e => setCatFilter(e.target.value)}>
                 <option value="">— Toutes —</option>
-                {categories.map(c => <option key={c} value={c}>{c}</option>)}
+                {categories.map(c => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
               </FilterSelect>
             </FilterField>
           </HistoryFilterBar>
@@ -342,7 +343,7 @@ export default function VenteAcheteurPage() {
                 return (
                   <div key={cat} className="card" style={{ padding: 0, overflow: 'hidden', marginBottom: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: CL, borderBottom: `2px solid ${CB}` }}>
-                      <span style={{ fontWeight: 800, color: CD, fontSize: '0.92rem' }}>{cat}</span>
+                      <span style={{ fontWeight: 800, color: CD, fontSize: '0.92rem' }}>{libelleCategoriePt(voc, cat)}</span>
                       <span style={{ fontSize: '0.76rem', color: '#7c3aed', fontWeight: 600 }}>
                         {items.length} article{items.length > 1 ? 's' : ''}
                       </span>

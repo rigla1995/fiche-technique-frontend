@@ -6,6 +6,7 @@ import TypeApproFilter from '../common/TypeApproFilter';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Vocab } from '../../vocab/vocab';
 import type { Labo } from '../../types';
 
@@ -532,7 +533,7 @@ export default function LaboHistoriqueApproPage() {
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {libelleCategoriePt(voc, r.categorieNom)}</div>
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#7e22ce', display: 'inline-block', whiteSpace: 'nowrap' }}>

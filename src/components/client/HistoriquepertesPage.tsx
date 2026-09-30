@@ -5,6 +5,7 @@ import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { perteLabel, perteTypesAvec, usePerteTypes } from '../../utils/perteTypes';
 import type { Activite, HistoriquePerteEntry } from '../../types';
 
@@ -442,7 +443,7 @@ export default function HistoriquepertesPage() {
                     <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{entry.activiteNom ?? '—'}</td>
                     <td>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem' }}>{entry.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.uniteNom} · {entry.categorieNom ?? '—'}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{entry.uniteNom} · {entry.categorieNom != null ? libelleCategoriePt(voc, entry.categorieNom) : '—'}</div>
                     </td>
                     <td style={{ fontWeight: 600, color: '#1e40af', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{fmtDate(entry.datePerte)}</td>
                     <td>

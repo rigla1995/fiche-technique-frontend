@@ -5,6 +5,7 @@ import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../com
 import GuideButton from './GuideButton';
 import type { Destination } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -357,7 +358,7 @@ export default function LaboFacturesApproPage() {
                                   <div style={{ fontWeight: 600 }}>{l.ingredientNom}</div>
                                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{l.uniteNom}</div>
                                 </td>
-                                <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{l.categorieNom}</td>
+                                <td style={{ padding: '8px 12px', color: 'var(--text-muted)', fontSize: '0.78rem' }}>{libelleCategoriePt(voc, l.categorieNom)}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#0f766e' }}>{l.quantite ?? '—'}</td>
                                 <td style={{ padding: '8px 12px', textAlign: 'right' }}>{l.prixUnitaire != null ? l.prixUnitaire.toFixed(3) : '—'}</td>
                                 {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', color: '#0369a1' }}>{l.tauxTva != null ? `${l.tauxTva}%` : '—'}</td>}

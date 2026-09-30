@@ -6,6 +6,7 @@ import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Destination, Transfert } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Vocab } from '../../vocab/vocab';
 
 const currentYear = new Date().getFullYear();
@@ -268,7 +269,7 @@ export default function TransferHistoriquePage() {
         <FilterField label="🏷️ Catégorie">
           <FilterSelect value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setPage(1); }}>
             <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            {allCategories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
           </FilterSelect>
         </FilterField>
       </HistoryFilterBar>
@@ -332,7 +333,7 @@ export default function TransferHistoriquePage() {
                       </td>
                       <td style={{ padding: '8px 10px' }}>
                         <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {libelleCategoriePt(voc, r.categorieNom)}</div>
                       </td>
                       <td style={{ padding: '8px 10px' }}>
                         <span style={{ background: '#faf5ff', border: '1px solid #d8b4fe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#7e22ce', whiteSpace: 'nowrap' }}>
@@ -417,7 +418,7 @@ export default function TransferHistoriquePage() {
                     ['Date', fmtDate(editTarget.dateTransfert)],
                     [rowDestLabel(editTarget), destCell(voc, editTarget)],
                     [voc.Nom('article_ingredient'), editTarget.ingredientNom],
-                    ['Catégorie', editTarget.categorieNom],
+                    ['Catégorie', libelleCategoriePt(voc, editTarget.categorieNom)],
                     ['Ancienne quantité', `${editTarget.quantite % 1 === 0 ? editTarget.quantite.toFixed(0) : editTarget.quantite} ${editTarget.uniteNom}`],
                   ].map(([label, value]) => (
                     <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -533,7 +534,7 @@ export default function TransferHistoriquePage() {
                     ['Date', fmtDate(detailPopup.dateTransfert)],
                     [rowDestLabel(detailPopup), destCell(voc, detailPopup)],
                     [voc.Nom('article_ingredient'), detailPopup.ingredientNom],
-                    ['Catégorie', detailPopup.categorieNom],
+                    ['Catégorie', libelleCategoriePt(voc, detailPopup.categorieNom)],
                     ['Quantité', `${detailPopup.quantite % 1 === 0 ? detailPopup.quantite.toFixed(0) : detailPopup.quantite} ${detailPopup.uniteNom}`],
                   ].map(([label, value]) => (
                     <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>

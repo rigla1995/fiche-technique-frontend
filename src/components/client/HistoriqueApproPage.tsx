@@ -7,6 +7,7 @@ import TypeApproFilter from '../common/TypeApproFilter';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Activite, HistoriqueApproEntry } from '../../types';
 
 const currentYear = new Date().getFullYear();
@@ -551,7 +552,7 @@ export default function HistoriqueApproPage() {
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {r.categorieNom}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {libelleCategoriePt(voc, r.categorieNom)}</div>
                     </td>
                     <td style={{ padding: '8px 10px' }}>
                       <span style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 6, padding: '2px 8px', fontWeight: 700, fontSize: '0.8rem', color: '#1e40af', display: 'inline-block', whiteSpace: 'nowrap' }}>

@@ -4,6 +4,7 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Labo } from '../../types';
 import { perteLabel, usePerteTypes } from '../../utils/perteTypes';
 
@@ -267,7 +268,7 @@ export default function LaboHistoriquepertesPage() {
                     </td>
                     <td style={{ padding: '10px 14px' }}>
                       <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.ingredientNom}</div>
-                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.uniteNom}{e.categorieNom ? ` · ${e.categorieNom}` : ''}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.uniteNom}{e.categorieNom ? ` · ${libelleCategoriePt(voc, e.categorieNom)}` : ''}</div>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: '0.85rem' }}>{fmtDate(e.datePerte)}</td>
                     <td style={{ padding: '10px 14px' }}>

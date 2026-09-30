@@ -8,6 +8,7 @@ import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
 import GuideButton from './GuideButton';
 import type { Destination, Transfert } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 
 // Une ligne de transfert = exactement UNE destination : activité (flux historique) OU labo rattaché (lot 1b).
 type TransferLineBody = { activiteId?: number; laboDestId?: number; ingredientId: number; quantite: number; prixUnitaire: number };
@@ -663,7 +664,7 @@ export default function TransferPage() {
           <FilterField label="🏷️ Catégorie">
             <FilterSelect value={filterCategorie} onChange={(e) => { setFilterCategorie(e.target.value); setFilterIngredientId(''); }}>
               <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-              {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              {allCategories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
             </FilterSelect>
           </FilterField>
           <FilterField label={`🧂 ${voc.Nom('article')}`}>
@@ -781,7 +782,7 @@ export default function TransferPage() {
             return (
               <div key={cat} style={{ marginBottom: 8 }}>
                 <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', width: '100%', textAlign: 'left', borderBottom: '2px solid var(--border)', marginBottom: isOpen ? 10 : 0 }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {libelleCategoriePt(voc, cat)}</span>
                   <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({rows.length})</span>
                   <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
                 </button>

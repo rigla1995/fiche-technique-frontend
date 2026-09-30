@@ -5,6 +5,7 @@ import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { useNotifications } from '../../context/NotificationContext';
 
 const PAGE_SIZE = 10;
@@ -292,7 +293,7 @@ export default function HistoriqueInventairePage() {
             <FilterField label="🏷️ Catégorie">
               <FilterSelect value={filterCategorie} onChange={(e) => setFilterCategorie(e.target.value)}>
                 <option value="">Toutes</option>
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                {categories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
               </FilterSelect>
             </FilterField>
             <FilterField label={`🧂 ${voc.Nom('article')}`}>
@@ -356,7 +357,7 @@ export default function HistoriqueInventairePage() {
                             {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 6px', fontSize: '0.68rem', fontWeight: 800, color: '#7c3aed', marginRight: 6 }}>{voc.Court('pt')}</span>}
                             {r.ingredientNom}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.unite} · {r.categorie}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.unite} · {libelleCategoriePt(voc, r.categorie)}</div>
                         </td>
                         <td style={{ padding: '10px 14px' }}>
                           <span style={{ background: themeLight, border: `1px solid ${themeBorder}`, borderRadius: 7, padding: '3px 10px', fontWeight: 700, fontSize: '0.82rem', color: themeColor, whiteSpace: 'nowrap' }}>

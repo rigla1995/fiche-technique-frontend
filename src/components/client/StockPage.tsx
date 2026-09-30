@@ -5,6 +5,7 @@ import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { usePerteTypes } from '../../utils/perteTypes';
 import PortionsModal from './PortionsModal';
 import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal';
@@ -1076,7 +1077,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         return (
           <div key={cat} style={{ marginBottom: 8 }}>
             <button onClick={() => toggleCat(cat)} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', width: '100%', textAlign: 'left', borderLeft: '4px solid #2563eb', borderBottom: '1px solid var(--border)', marginBottom: isOpen ? 10 : 0, borderRadius: isOpen ? '4px 4px 0 0' : 4 }}>
-              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {cat}</span>
+              <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.06em' }}>🏷️ {libelleCategoriePt(voc, cat)}</span>
               <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({items.length})</span>
               <span style={{ marginLeft: 'auto', fontSize: '0.8rem', color: 'var(--text-muted)' }}>{isOpen ? '▼' : '▶'}</span>
             </button>
@@ -1459,7 +1460,7 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
         <FilterField label="🏷️ Catégorie">
           <FilterSelect value={categoryFilter} onChange={(e) => { setCategoryFilter(e.target.value); setIngredientFilter(''); }}>
             <option value="">{t('client.catalogue_franchise.all_categories')}</option>
-            {allCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+            {allCategories.map((c) => <option key={c} value={c}>{libelleCategoriePt(voc, c)}</option>)}
           </FilterSelect>
         </FilterField>
         <FilterField label={`🧂 ${voc.Nom('article')}`}>

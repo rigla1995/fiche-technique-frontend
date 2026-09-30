@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Vocab } from '../../vocab/vocab';
 import { nomOnglet } from '../../vocab/excel';
+import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import { perteLabel, usePerteTypes } from '../../utils/perteTypes';
 import MultiSelectFilter from '../common/MultiSelectFilter';
 import type { MultiSelectOption } from '../common/MultiSelectFilter';
@@ -580,7 +581,7 @@ function AchatsTab({ data }: { data: any }) {
   const k = data.kpis ?? {};
   const alerteCols: ColonneDef<any>[] = [
     { key: 'article', label: voc.Nom('article'), align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
-    { key: 'categorie', label: 'Catégorie', align: 'left' },
+    { key: 'categorie', label: 'Catégorie', align: 'left', fmt: (v) => libelleCategoriePt(voc, String(v)) },
     { key: 'quantite', label: voc.Nom('stock'), fmt: (v) => <strong style={{ color: Number(v) <= 0 ? '#dc2626' : '#d97706' }}>{fmtNum(Number(v))}</strong> },
     { key: 'seuil', label: 'Seuil', fmt: (v) => fmtNum(Number(v)) },
   ];
@@ -598,7 +599,7 @@ function AchatsTab({ data }: { data: any }) {
       <div style={{ height: 14 }} />
       <div style={twoCols}>
         <ChartCard title="Achats par catégorie" height="auto">
-          <HBarList rows={data.achats_par_categorie ?? []} labelKey="categorie" color="#2563eb" max={12} />
+          <HBarList rows={(data.achats_par_categorie ?? []).map((r: any) => ({ ...r, categorie: libelleCategoriePt(voc, String(r.categorie)) }))} labelKey="categorie" color="#2563eb" max={12} />
         </ChartCard>
         <ChartCard title={`Achats par ${voc.nom('fournisseur')}`} height="auto">
           <HBarList rows={data.achats_par_fournisseur ?? []} labelKey="fournisseur" color="#0d9488" max={12} />
@@ -606,7 +607,7 @@ function AchatsTab({ data }: { data: any }) {
       </div>
       <div style={twoCols}>
         <ChartCard title={`Valeur ${voc.du('stock')} par catégorie`} height={280}>
-          <DonutChart data={data.stock_par_categorie ?? []} nameKey="categorie" />
+          <DonutChart data={(data.stock_par_categorie ?? []).map((r: any) => ({ ...r, categorie: libelleCategoriePt(voc, String(r.categorie)) }))} nameKey="categorie" />
         </ChartCard>
         <ChartCard title={`Alertes de seuil (${(data.alertes_stock ?? []).length})`} height="auto">
           <SortableTable rows={data.alertes_stock ?? []} colonnes={alerteCols} defaultSort="quantite" maxHeight={280} />
@@ -652,7 +653,7 @@ function PertesTab({ data }: { data: any }) {
       </div>
       <div style={twoCols}>
         <ChartCard title="Par catégorie" height="auto">
-          <HBarList rows={data.par_categorie ?? []} labelKey="categorie" color="#f59e0b" max={10} />
+          <HBarList rows={(data.par_categorie ?? []).map((r: any) => ({ ...r, categorie: libelleCategoriePt(voc, String(r.categorie)) }))} labelKey="categorie" color="#f59e0b" max={10} />
         </ChartCard>
         <ChartCard title={`${voc.Pl('article')} les plus ${voc.acc('article', 'perdus', 'perdues')}`} height="auto">
           <HBarList rows={data.top_articles ?? []} labelKey="article" color="#ef4444" max={10} />
