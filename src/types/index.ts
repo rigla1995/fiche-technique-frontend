@@ -336,13 +336,29 @@ export interface Composant {
   actif: boolean;
 }
 
-/** Entrée de lexique : singulier, pluriel, genre, élision, icône. */
+/** Forme courte ou sigle d'un terme (« PT », « Appro ») ; `el` absent → élision de l'entrée. */
+export interface LexiqueFormeCourte {
+  sg: string;
+  pl: string;
+  el?: boolean;
+}
+
+/**
+ * Entrée de lexique (v2, lot 2) : singulier, pluriel, genre, élision, icône, forme courte,
+ * apposition. `derive_de` / `mode` / `gabarit` décrivent une clé dérivée : ils viennent du
+ * lexique par défaut (src/vocab/lexiqueDefaut.ts) et ne sont pas surchargeables par un domaine.
+ */
 export interface LexiqueEntree {
   sg: string;
   pl: string;
   g: 'm' | 'f';
   el: boolean;
   icon?: string;
+  court?: LexiqueFormeCourte;
+  appo?: boolean;
+  derive_de?: string;
+  mode?: 'copie' | 'pluriel_titre' | 'gabarit';
+  gabarit?: string;
 }
 
 /** Profil résolu d'un domaine d'activité (composants + lexique + règles). */

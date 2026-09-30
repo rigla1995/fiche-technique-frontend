@@ -1,0 +1,166 @@
+# vocab-accords.txt — GÉNÉRÉ par `node scripts/vocab-check.mjs accords` (ne pas éditer).
+# Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
+# lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
+# À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
+# 53 unité(s), 1 fichier(s).
+
+src/i18n/locales/fr.json
+  common.portion (l. 12)
+    défaut : Portion
+    miroir : Échantillon
+  nav.activites (l. 21)
+    défaut : Mes activités
+    miroir : Mes locaux
+  nav.stock_activite (l. 22)
+    défaut : Stock Activités
+    miroir : Armoire Abr-Locaux
+  client.products.edit (l. 44)
+    défaut : Modifier le produit
+    miroir : Modifier l'invention
+  client.products.delete_confirm (l. 45)
+    défaut : Supprimer ce produit ?
+    miroir : Supprimer cette invention ?
+  client.products.name (l. 46)
+    défaut : Nom du produit
+    miroir : Nom de l'invention
+  client.products.ingredients_section (l. 47)
+    défaut : Ingrédients
+    miroir : Matières
+  client.products.subproducts_section (l. 48)
+    défaut : Produits utilisables
+    miroir : Inventions utiles
+  client.products.add_ingredient (l. 49)
+    défaut : Ajouter un ingrédient
+    miroir : Ajouter une matière
+  client.products.add_subproduct (l. 50)
+    défaut : Ajouter un produit utilisable
+    miroir : Ajouter une invention utile
+  client.products.select_ingredient (l. 51)
+    défaut : Sélectionner un ingrédient
+    miroir : Sélectionner une matière
+  client.products.select_product (l. 52)
+    défaut : Sélectionner un produit
+    miroir : Sélectionner une invention
+  client.products.portion_pieces (l. 53)
+    défaut : Portion (pièces)
+    miroir : Échantillon (pièces)
+  client.products.portion_grams (l. 54)
+    défaut : Portion (unité)
+    miroir : Échantillon (unité)
+  client.products.popup_col_ingredient (l. 56)
+    défaut : Article
+    miroir : Denrée
+  client.products.ingredients_empty (l. 59)
+    défaut : Choisissez une catégorie ci-dessous pour ajouter des ingrédients.
+    miroir : Choisissez une catégorie ci-dessous pour ajouter des matières.
+  client.products.subproducts_empty (l. 60)
+    défaut : Aucun produit utilisable ajouté.
+    miroir : Aucune invention utile ajoutée.
+  client.products.tab_vendable (l. 64)
+    défaut : Produits vendables
+    miroir : Inventions vendues
+  client.products.tab_utilisable (l. 65)
+    défaut : Produits utilisables
+    miroir : Inventions utiles
+  client.products.saved_success (l. 66)
+    défaut : Produit enregistré avec succès !
+    miroir : Invention enregistrée avec succès !
+  client.products.create_another (l. 67)
+    défaut : Créer un autre produit
+    miroir : Créer une autre invention
+  client.products.add_vendable (l. 69)
+    défaut : Nouveau produit vendable
+    miroir : Nouvelle invention vendue
+  client.products.add_utilisable (l. 70)
+    défaut : Nouveau produit utilisable
+    miroir : Nouvelle invention utile
+  client.fiche_technique.no_ingredients (l. 74)
+    défaut : Ce produit n'a pas d'ingrédients
+    miroir : Cette invention n'a pas de matières
+  client.fiche_technique.generate (l. 77)
+    défaut : Générer FT Excel
+    miroir : Générer ET Excel
+  client.entreprise.add_activity (l. 89)
+    défaut : Ajouter une activité
+    miroir : Ajouter un local
+  client.entreprise.edit_activity (l. 90)
+    défaut : Modifier l'activité
+    miroir : Modifier le local
+  client.entreprise.activity_nom (l. 92)
+    défaut : Nom de l'activité (ex: Activité A)
+    miroir : Nom du local (ex: Local A)
+  client.entreprise.activity_name_exists (l. 94)
+    défaut : Une activité distincte "{{name}}" existe déjà.
+    miroir : Un local distinct "{{name}}" existe déjà.
+  client.entreprise.manage_ingredients (l. 95)
+    défaut : Ingrédients
+    miroir : Matières
+  client.entreprise.activity_created (l. 96)
+    défaut : Activité créée.
+    miroir : Local créé.
+  client.entreprise.activity_updated (l. 97)
+    défaut : Activité mise à jour.
+    miroir : Local mis à jour.
+  client.entreprise.labo (l. 98)
+    défaut : Labo
+    miroir : Usine
+  client.entreprise.delete_activity_warning (l. 101)
+    défaut : Supprimer l'activité
+    miroir : Supprimer le local
+  client.stock.no_activities (l. 107)
+    défaut : Créez au moins une activité dans « Mes activités » pour gérer le stock entreprise.
+    miroir : Créez au moins un local dans « Mes locaux » pour gérer l'armoire entreprise.
+  client.stock.ingredient (l. 108)
+    défaut : Ingrédient
+    miroir : Matière
+  client.stock.date_appro (l. 110)
+    défaut : Date d'appro
+    miroir : Date d'abr-rentrée
+  client.stock.empty_stock (l. 111)
+    défaut : Aucun ingrédient sélectionné.
+    miroir : Aucune matière sélectionnée.
+  client.stock.search_ingredient (l. 112)
+    défaut : Rechercher un ingrédient...
+    miroir : Rechercher une matière...
+  client.stock.no_history (l. 114)
+    défaut : Aucun approvisionnement enregistré.
+    miroir : Aucune rentrée enregistrée.
+  client.historique_appro.title (l. 117)
+    défaut : Historique Approvisionnement
+    miroir : Historique Rentrée
+  client.historique_appro.all_ingredients (l. 119)
+    défaut : Tous les ingrédients
+    miroir : Toutes les matières
+  client.historique_appro.no_results (l. 120)
+    défaut : Aucun approvisionnement trouvé pour ces critères.
+    miroir : Aucune rentrée trouvée pour ces critères.
+  client.labo.stock_title (l. 124)
+    défaut : Stock Labo
+    miroir : Armoire Abr-Usine
+  client.labo.transfer_title (l. 126)
+    défaut : Transfert vers activités
+    miroir : Expédition vers locaux
+  client.labo.transfer_overstock (l. 127)
+    défaut : Stock insuffisant pour {{nom}} (disponible: {{disponible}})
+    miroir : Armoire insuffisante pour {{nom}} (disponible: {{disponible}})
+  client.labo.transfer_success (l. 128)
+    défaut : Transfert effectué avec succès.
+    miroir : Expédition effectuée avec succès.
+  client.labo.transfers_history (l. 129)
+    défaut : Historique Transferts
+    miroir : Historique Abr-Expéditions
+  client.labo.labo_stock (l. 130)
+    défaut : Stock Actuel
+    miroir : Armoire Actuelle
+  client.labo.empty_stock (l. 131)
+    défaut : Aucun ingrédient sélectionné pour ce labo.
+    miroir : Aucune matière sélectionnée pour cette usine.
+  client.labo.filter_activite (l. 132)
+    défaut : Activité
+    miroir : Local
+  client.labo.all_activites (l. 133)
+    défaut : Toutes les activités
+    miroir : Tous les locaux
+  client.labo.col_activite (l. 134)
+    défaut : Activité
+    miroir : Local

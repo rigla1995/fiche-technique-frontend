@@ -1,0 +1,87 @@
+[
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "super_admin",
+    "type": "discriminant",
+    "justification": "Rôle comparé dans lexiqueDuCompte (admin et boss gardent le vocabulaire par défaut, spec §2.3) : identifiant technique, jamais affiché."
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "boss",
+    "type": "discriminant",
+    "justification": "Rôle comparé dans lexiqueDuCompte (admin et boss gardent le vocabulaire par défaut, spec §2.3) : identifiant technique, jamais affiché."
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "visible",
+    "type": "discriminant",
+    "justification": "Valeur de document.visibilityState testée au retour sur l'onglet (spec §2.3, relecture de /auth/me) : jamais affichée."
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "visibilitychange",
+    "type": "discriminant",
+    "justification": "Nom de l'événement du navigateur, écouté puis retiré (2 occurrences) pour relire /auth/me au retour sur l'onglet (spec §2.3) : jamais affiché.",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "⟦?⟦·⟧|⟧/auth/me",
+    "type": "discriminant",
+    "justification": "URL de la relecture silencieuse de /auth/me au retour sur l'onglet (spec §2.3) : adresse technique, jamais affichée."
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "Bearer ⟦·⟧",
+    "type": "discriminant",
+    "justification": "En-tête Authorization de la relecture silencieuse de /auth/me (spec §2.3) : valeur technique, jamais affichée."
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "token",
+    "type": "discriminant",
+    "justification": "Clé de localStorage relue pour ignorer une réponse de /auth/me arrivée après un changement de session : identifiant technique."
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "user",
+    "type": "discriminant",
+    "justification": "Clé de localStorage où la relecture de /auth/me range le compte, comme les autres rafraîchissements du fichier : identifiant technique."
+  },
+  {
+    "fichier": "src/i18n/index.ts",
+    "avant": null,
+    "apres": "added",
+    "type": "discriminant",
+    "justification": "Option react.bindI18nStore de react-i18next (les écrans se re-rendent quand le paquet de ressources est remplacé, spec §2.3) : jamais affichée."
+  },
+  {
+    "fichier": "src/i18n/index.ts",
+    "avant": null,
+    "apres": "fr",
+    "type": "discriminant",
+    "justification": "Code de langue passé à i18n.addResourceBundle dans appliquerVocabulaireI18n (spec §2.3) : identifiant technique."
+  },
+  {
+    "fichier": "src/i18n/index.ts",
+    "avant": null,
+    "apres": "translation",
+    "type": "discriminant",
+    "justification": "Espace de noms i18next passé à i18n.addResourceBundle dans appliquerVocabulaireI18n (spec §2.3) : identifiant technique."
+  },
+  {
+    "fichier": "src/i18n/locales/fr.json",
+    "avant": "Nom de l'activité (ex: Restaurant A)",
+    "apres": "Nom de l'activité (ex: Activité A)",
+    "type": "exemple",
+    "justification": "Exemple neutre et construit (spec §3 règle 6) : « Restaurant A » était propre à la restauration (« Nom du service (ex: Restaurant A) » en Hôtellerie). La valeur « Nom [[du:activite]] (ex: [[Nom:activite]] A) » rend « Activité A » par défaut, « Service A » en Hôtellerie."
+  }
+]

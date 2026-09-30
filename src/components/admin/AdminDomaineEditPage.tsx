@@ -2,6 +2,9 @@ import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
 import type { DomaineProfil, Composant, LexiqueEntree, ComposantTypeTechnique, TarifsConfig as TarifsConfigData } from '../../types';
+import { LEXIQUE_DEFAUT, LEXIQUE_CLES } from '../../vocab/lexiqueDefaut';
+import type { EntreeLexique, Lexique } from '../../vocab/lexiqueDefaut';
+import { resoudreLexique } from '../../vocab/vocab';
 import { useConfirm } from '../common/ConfirmDialog';
 import { PERTE_CODE_RE, normaliseCodesPerte } from '../../utils/perteTypes';
 import { TarifField, TarifSectionHeader } from './TarifsConfig';
@@ -17,46 +20,73 @@ const ACCENT_DARK = '#78350f';
 type Tab = 'composants' | 'lexique' | 'regles' | 'grille';
 type ApiErr = { response?: { status?: number; data?: { message?: string; code?: string; composants?: unknown[]; clientsImpactes?: number } } };
 
-// ── Lexique : clés, libellés et valeurs par défaut (= termes actuels de l'app) ──
-// Le serveur renvoie le lexique RÉSOLU (défauts + écarts) ; cette table permet
-// d'afficher le défaut en placeholder et de n'envoyer que les écarts au PUT.
-const LEXIQUE_DEFS: { cle: string; label: string; def: LexiqueEntree }[] = [
-  { cle: 'activite', label: 'Unité de vente (activité)', def: { sg: 'Activité', pl: 'Activités', g: 'f', el: true, icon: '🏪' } },
-  { cle: 'labo', label: 'Unité de production (labo)', def: { sg: 'Labo', pl: 'Labos', g: 'm', el: false, icon: '🏭' } },
-  { cle: 'produit_vendable', label: 'Produit vendable', def: { sg: 'Produit vendable', pl: 'Produits vendables', g: 'm', el: false, icon: '🛒' } },
-  { cle: 'produit_utilisable', label: 'Produit utilisable', def: { sg: 'Produit utilisable', pl: 'Produits utilisables', g: 'm', el: false, icon: '🧂' } },
-  { cle: 'produit_valorise', label: 'Produit valorisé', def: { sg: 'Produit valorisé', pl: 'Produits valorisés', g: 'm', el: false, icon: '💎' } },
-  { cle: 'article', label: 'Article (référentiel)', def: { sg: 'Article', pl: 'Articles', g: 'm', el: true, icon: '📦' } },
-  { cle: 'ingredient', label: 'Ingrédient (composant de recette)', def: { sg: 'Ingrédient', pl: 'Ingrédients', g: 'm', el: true, icon: '🥕' } },
-  { cle: 'recette', label: 'Recette', def: { sg: 'Recette', pl: 'Recettes', g: 'f', el: false, icon: '📖' } },
-  { cle: 'fiche_technique', label: 'Fiche technique', def: { sg: 'Fiche technique', pl: 'Fiches techniques', g: 'f', el: false, icon: '📋' } },
-  { cle: 'portion', label: 'Portion', def: { sg: 'Portion', pl: 'Portions', g: 'f', el: false, icon: '🍽️' } },
-  { cle: 'food_cost', label: 'Food cost', def: { sg: 'Food cost', pl: 'Food costs', g: 'm', el: false, icon: '📊' } },
-  { cle: 'cout_matiere', label: 'Coût matière', def: { sg: 'Coût matière', pl: 'Coûts matière', g: 'm', el: false, icon: '💰' } },
-  { cle: 'marge', label: 'Marge', def: { sg: 'Marge', pl: 'Marges', g: 'f', el: false, icon: '📈' } },
-  { cle: 'transfert', label: 'Transfert (labo → activité)', def: { sg: 'Transfert', pl: 'Transferts', g: 'm', el: false, icon: '🚚' } },
-  { cle: 'appro', label: 'Approvisionnement', def: { sg: 'Approvisionnement', pl: 'Approvisionnements', g: 'm', el: true, icon: '📥' } },
-  { cle: 'perte', label: 'Perte', def: { sg: 'Perte', pl: 'Pertes', g: 'f', el: false, icon: '🗑️' } },
-  { cle: 'inventaire', label: 'Inventaire', def: { sg: 'Inventaire', pl: 'Inventaires', g: 'm', el: true, icon: '📝' } },
-  { cle: 'vente', label: 'Vente', def: { sg: 'Vente', pl: 'Ventes', g: 'f', el: false, icon: '💵' } },
-  { cle: 'acheteur', label: 'Acheteur (B2B)', def: { sg: 'Acheteur', pl: 'Acheteurs', g: 'm', el: true, icon: '🤝' } },
-  { cle: 'gerant', label: 'Gérant', def: { sg: 'Gérant', pl: 'Gérants', g: 'm', el: false, icon: '👤' } },
-  { cle: 'fournisseur', label: 'Fournisseur', def: { sg: 'Fournisseur', pl: 'Fournisseurs', g: 'm', el: false, icon: '🏬' } },
-  { cle: 'depot', label: 'Dépôt (compte sans activité)', def: { sg: 'Dépôt', pl: 'Dépôts', g: 'm', el: false, icon: '🏗️' } },
-  { cle: 'pt', label: 'Produit transformé (PT)', def: { sg: 'Produit transformé', pl: 'Produits transformés', g: 'm', el: false, icon: '🍲' } },
-  { cle: 'stock', label: 'Stock', def: { sg: 'Stock', pl: 'Stocks', g: 'm', el: false, icon: '📦' } },
-  { cle: 'prestataire', label: 'Prestataire (livraison / commission)', def: { sg: 'Prestataire', pl: 'Prestataires', g: 'm', el: false, icon: '🛵' } },
-  { cle: 'supplement', label: 'Supplément', def: { sg: 'Supplément', pl: 'Suppléments', g: 'm', el: false, icon: '➕' } },
-  { cle: 'espace_activites', label: 'Espace Activités (menu)', def: { sg: 'Espace Activités', pl: 'Espaces Activités', g: 'm', el: true, icon: '🏪' } },
-  { cle: 'espace_labo', label: 'Espace Labo (menu)', def: { sg: 'Espace Labo', pl: 'Espaces Labo', g: 'm', el: true, icon: '🏭' } },
-  { cle: 'espace_vente', label: 'Espace Vente (menu)', def: { sg: 'Espace Vente', pl: 'Espaces Vente', g: 'm', el: true, icon: '💵' } },
-  { cle: 'espace_acheteurs', label: 'Espace Acheteurs (menu)', def: { sg: 'Espace Acheteurs', pl: 'Espaces Acheteurs', g: 'm', el: true, icon: '🤝' } },
-  { cle: 'espace_produits', label: 'Espace Produit (menu)', def: { sg: 'Espace Produit', pl: 'Espaces Produit', g: 'm', el: true, icon: '💎' } },
-  { cle: 'referentiel', label: 'Référentiel', def: { sg: 'Référentiel', pl: 'Référentiels', g: 'm', el: false, icon: '📚' } },
-];
+// ── Lexique v2 (lot 2) ───────────────────────────────────────────────────────
+// Défauts, formes courtes et clés dérivées viennent de src/vocab/lexiqueDefaut.ts (source
+// unique, partagée avec le serveur). Cette table ne porte que les LIBELLÉS des lignes, en
+// vocabulaire LabFlow (page admin). Le serveur renvoie le lexique RÉSOLU (`lexique`) et les
+// écarts STOCKÉS (`lexiqueEcarts`) : l'onglet édite les écarts et les renvoie tels quels au PUT.
+const DEF: Lexique = LEXIQUE_DEFAUT;
+const LEXIQUE_LABELS: Record<string, string> = {
+  activite: 'Unité de vente (activité)',
+  labo: 'Unité de production (labo)',
+  produit_vendable: 'Produit vendable',
+  produit_utilisable: 'Produit utilisable',
+  produit_valorise: 'Produit valorisé',
+  article: 'Article (référentiel)',
+  ingredient: 'Ingrédient (composant de recette)',
+  recette: 'Recette',
+  fiche_technique: 'Fiche technique',
+  portion: 'Portion',
+  food_cost: 'Food cost',
+  cout_matiere: 'Coût matière',
+  marge: 'Marge',
+  transfert: 'Transfert (labo → activité)',
+  appro: 'Approvisionnement',
+  perte: 'Perte',
+  inventaire: 'Inventaire',
+  vente: 'Vente',
+  acheteur: 'Acheteur (B2B)',
+  gerant: 'Gérant',
+  fournisseur: 'Fournisseur',
+  depot: 'Dépôt (compte sans activité)',
+  pt: 'Produit transformé (PT)',
+  stock: 'Stock',
+  prestataire: 'Prestataire (livraison / commission)',
+  supplement: 'Supplément',
+  espace_activites: 'Espace Activités (menu)',
+  espace_labo: 'Espace Labo (menu)',
+  espace_vente: 'Espace Vente (menu)',
+  espace_acheteurs: 'Espace Acheteurs (menu)',
+  espace_produits: 'Espace Produit (menu)',
+  referentiel: 'Référentiel',
+  produit: 'Produit (terme générique)',
+  produit_compose: 'Produit composé',
+  labo_long: 'Labo, forme longue (laboratoire)',
+  labo_desc: 'Labo, description (laboratoire de production)',
+  activite_desc: 'Activité, description (point de vente)',
+  cat_pt_utilisable: 'Catégorie « PT utilisables » (titre)',
+  cat_pt_valorise: 'Catégorie « produits composés valorisés » (titre)',
+  cat_pt_vendable: 'Catégorie « PT vendables » (titre)',
+};
+/** Ordre d'affichage : chaque clé simple, suivie des clés dérivées dont elle est le parent. */
+const ORDRE_CLES: string[] = LEXIQUE_CLES
+  .filter((k) => !DEF[k].derive_de)
+  .flatMap((k) => [k, ...LEXIQUE_CLES.filter((d) => DEF[d].derive_de === k)]);
+const ENTREE_VIDE: EntreeLexique = { sg: '', pl: '', g: 'm', el: false };
+// Mêmes bornes que la validation du serveur (src/utils/lexiqueValidation.js, spec §1.4).
+const LEXIQUE_MAX = { forme: 60, courte: 20, icone: 8 };
+// Le domaine par défaut est la référence de LabFlow : son lexique est le lexique par défaut, le serveur refuse tout écart.
+const SLUG_DOMAINE_DEFAUT = 'restauration';
 
-/** Ligne de lexique éditée : sg/pl/icon = écart saisi ('' = défaut) ; g/el = valeur effective. */
-interface LexiqueRow { sg: string; pl: string; icon: string; g: 'm' | 'f'; el: boolean }
+type LexiqueEcarts = Record<string, Partial<EntreeLexique>>;
+type ProfilAdmin = DomaineProfil & { lexiqueEcarts?: LexiqueEcarts; tarifs?: TarifsConfigData };
+
+/**
+ * Ligne de lexique éditée = l'ÉCART saisi pour la clé. Texte vide = valeur héritée (affichée en
+ * gris) ; g / el à null = hérités. `courtEl` et `appo` ne sont pas éditables ici : ils sont
+ * conservés tels que le serveur les a renvoyés.
+ */
+interface LexiqueRow { sg: string; pl: string; courtSg: string; courtPl: string; icon: string; g: 'm' | 'f' | null; el: boolean | null; courtEl?: boolean; appo?: boolean }
 type LexiqueState = Record<string, LexiqueRow>;
 
 // ── Règles : 8 clés, défaut = comportement actuel ───────────────────────────
@@ -145,37 +175,112 @@ function rowsToPayload(rows: ComposantRow[]): Composant[] {
   }));
 }
 
-function toLexiqueState(resolu: Record<string, LexiqueEntree> | undefined): LexiqueState {
+function toLexiqueState(ecarts: LexiqueEcarts | undefined): LexiqueState {
   const state: LexiqueState = {};
-  const src = resolu || {};
-  const defOf = (cle: string): LexiqueEntree => LEXIQUE_DEFS.find((d) => d.cle === cle)?.def || { sg: '', pl: '', g: 'm', el: false, icon: '' };
-  const cles = [...LEXIQUE_DEFS.map((d) => d.cle), ...Object.keys(src).filter((k) => !LEXIQUE_DEFS.some((d) => d.cle === k))];
+  const src = ecarts || {};
+  const cles = [...ORDRE_CLES, ...Object.keys(src).filter((k) => !DEF[k])];
   for (const cle of cles) {
-    const def = defOf(cle);
-    const r = src[cle] || def;
+    const e = src[cle] || {};
     state[cle] = {
-      sg: r.sg && r.sg !== def.sg ? r.sg : '',
-      pl: r.pl && r.pl !== def.pl ? r.pl : '',
-      icon: r.icon && r.icon !== (def.icon || '') ? r.icon : '',
-      g: r.g === 'f' ? 'f' : 'm',
-      el: !!r.el,
+      sg: e.sg ?? '',
+      pl: e.pl ?? '',
+      courtSg: e.court?.sg ?? '',
+      courtPl: e.court?.pl ?? '',
+      icon: e.icon ?? '',
+      g: e.g === 'm' || e.g === 'f' ? e.g : null,
+      el: typeof e.el === 'boolean' ? e.el : null,
+      ...(typeof e.court?.el === 'boolean' ? { courtEl: e.court.el } : {}),
+      ...(typeof e.appo === 'boolean' ? { appo: e.appo } : {}),
     };
   }
   return state;
 }
 
-/** Écarts par rapport aux défauts : seuls les champs modifiés sont envoyés. */
-function lexiqueEcarts(state: LexiqueState): Record<string, Partial<LexiqueEntree>> {
-  const out: Record<string, Partial<LexiqueEntree>> = {};
-  for (const [cle, row] of Object.entries(state)) {
-    const def = LEXIQUE_DEFS.find((d) => d.cle === cle)?.def || { sg: '', pl: '', g: 'm', el: false, icon: '' };
-    const e: Partial<LexiqueEntree> = {};
-    if (row.sg.trim()) e.sg = row.sg.trim();
-    if (row.pl.trim()) e.pl = row.pl.trim();
-    if (row.icon.trim()) e.icon = row.icon.trim();
-    if (row.g !== def.g) e.g = row.g;
-    if (row.el !== def.el) e.el = row.el;
+/**
+ * Compatibilité : serveur qui ne renvoie pas encore `lexiqueEcarts` (déploiement en cours).
+ * Écarts reconstitués à partir du lexique résolu, pour les clés simples seulement (une clé
+ * dérivée résolue ne dit pas si elle est surchargée ou si elle suit son parent).
+ */
+function ecartsDepuisResolu(resolu: Record<string, LexiqueEntree> | undefined): LexiqueEcarts {
+  const out: LexiqueEcarts = {};
+  for (const [cle, r] of Object.entries(resolu || {})) {
+    const d = DEF[cle];
+    if (!d) { out[cle] = r; continue; }
+    if (d.derive_de) continue;
+    const e: Partial<EntreeLexique> = {};
+    if (r.sg && r.sg !== d.sg) {
+      e.sg = r.sg; e.pl = r.pl; e.g = r.g; e.el = r.el;
+      if (r.court) e.court = r.court;
+    } else {
+      if (r.pl && r.pl !== d.pl) e.pl = r.pl;
+      if (r.g && r.g !== d.g) e.g = r.g;
+      if (typeof r.el === 'boolean' && r.el !== d.el) e.el = r.el;
+      if (r.court && JSON.stringify(r.court) !== JSON.stringify(d.court)) e.court = r.court;
+    }
+    if (r.icon && r.icon !== (d.icon || '')) e.icon = r.icon;
     if (Object.keys(e).length) out[cle] = e;
+  }
+  return out;
+}
+
+/**
+ * Écart d'une ligne, tel qu'envoyé au PUT. Si le singulier est surchargé, le genre et l'élision
+ * affichés partent avec lui (le serveur exige aussi le pluriel : il répond 400 s'il manque).
+ * Sinon, seuls les champs qui diffèrent de la valeur héritée sont envoyés.
+ */
+function ecartDeLigne(row: LexiqueRow, herite: EntreeLexique): Partial<EntreeLexique> | null {
+  const e: Partial<EntreeLexique> = {};
+  const gHerite = herite.g ?? 'm';
+  const elHerite = herite.el ?? false;
+  const sg = row.sg.trim();
+  const pl = row.pl.trim();
+  if (sg) {
+    e.sg = sg;
+    if (pl) e.pl = pl;
+    e.g = row.g ?? gHerite;
+    e.el = row.el ?? elHerite;
+  } else {
+    if (pl) e.pl = pl;
+    if (row.g != null && row.g !== gHerite) e.g = row.g;
+    if (row.el != null && row.el !== elHerite) e.el = row.el;
+  }
+  if (row.icon.trim()) e.icon = row.icon.trim();
+  const courtSg = row.courtSg.trim();
+  const courtPl = row.courtPl.trim();
+  if (courtSg || courtPl) {
+    e.court = { sg: courtSg, ...(courtPl ? { pl: courtPl } : {}), ...(row.courtEl != null ? { el: row.courtEl } : {}) };
+  }
+  if (row.appo != null) e.appo = row.appo;
+  return Object.keys(e).length ? e : null;
+}
+
+/**
+ * Valeur HÉRITÉE de chaque clé = ce qu'elle vaut quand sa ligne est vide : le défaut pour une clé
+ * simple ; pour une clé dérivée, ce que lui donne son parent (même résolution que le serveur).
+ */
+function lexiqueHerite(state: LexiqueState): Record<string, EntreeLexique> {
+  const simples: LexiqueEcarts = {};
+  for (const [cle, row] of Object.entries(state)) {
+    const d = DEF[cle];
+    if (!d || d.derive_de) continue;
+    const e = ecartDeLigne(row, d);
+    if (e) simples[cle] = e;
+  }
+  const resolu = resoudreLexique(DEF, simples);
+  const out: Record<string, EntreeLexique> = {};
+  for (const cle of Object.keys(state)) {
+    const d = DEF[cle];
+    out[cle] = !d ? ENTREE_VIDE : d.derive_de ? resolu[cle] : d;
+  }
+  return out;
+}
+
+/** Écarts par rapport aux valeurs héritées : seuls les champs modifiés sont envoyés. */
+function lexiqueEcarts(state: LexiqueState, herite: Record<string, EntreeLexique> = lexiqueHerite(state)): LexiqueEcarts {
+  const out: LexiqueEcarts = {};
+  for (const [cle, row] of Object.entries(state)) {
+    const e = ecartDeLigne(row, herite[cle] || ENTREE_VIDE);
+    if (e) out[cle] = e;
   }
   return out;
 }
@@ -233,7 +338,7 @@ export default function AdminDomaineEditPage() {
   const navigate = useNavigate();
   const { confirm, alerte } = useConfirm();
 
-  const [profil, setProfil] = useState<DomaineProfil | null>(null);
+  const [profil, setProfil] = useState<ProfilAdmin | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [tab, setTab] = useState<Tab>('composants');
@@ -257,13 +362,13 @@ export default function AdminDomaineEditPage() {
   const [tSaving, setTSaving] = useState<Record<string, boolean>>({});
   const [tSaved, setTSaved] = useState<Record<string, boolean>>({});
 
-  const applyProfil = useCallback((p: DomaineProfil) => {
+  const applyProfil = useCallback((p: ProfilAdmin) => {
     setProfil(p);
     setNom(p.nom || '');
     setSlug(p.slug || '');
     setDescription(p.description || '');
     const r = toRows(p.composants || []);
-    const l = toLexiqueState(p.lexique);
+    const l = toLexiqueState(p.lexiqueEcarts ?? ecartsDepuisResolu(p.lexique));
     const g = toReglesState(p.regles);
     setRows(r); setLexique(l); setRegles(g);
     setSnap({
@@ -286,7 +391,7 @@ export default function AdminDomaineEditPage() {
     setLoading(true);
     try {
       const { data } = await api.get(`/api/domaines/${domaineId}`);
-      const p = data as DomaineProfil & { tarifs?: TarifsConfigData };
+      const p = data as ProfilAdmin;
       // nbClients : porté par le détail, sinon par la liste
       if (p.nbClients == null) {
         try {
@@ -309,13 +414,18 @@ export default function AdminDomaineEditPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // ── Lexique : valeurs héritées (placeholders) et écarts à enregistrer ──
+  const herite = useMemo(() => lexiqueHerite(lexique), [lexique]);
+  const ecarts = useMemo(() => lexiqueEcarts(lexique, herite), [lexique, herite]);
+  const nbEcarts = Object.keys(ecarts).length;
+
   // ── Dirty par section ──
   const dirty = useMemo(() => ({
     identite: JSON.stringify({ nom, slug, description }) !== snap.identite,
     composants: JSON.stringify(rowsToPayload(rows)) !== snap.composants,
-    lexique: JSON.stringify(lexiqueEcarts(lexique)) !== snap.lexique,
+    lexique: JSON.stringify(ecarts) !== snap.lexique,
     regles: JSON.stringify(reglesPayload(regles)) !== snap.regles,
-  }), [nom, slug, description, rows, lexique, regles, snap]);
+  }), [nom, slug, description, rows, ecarts, regles, snap]);
   const anyDirty = dirty.identite || dirty.composants || dirty.lexique || dirty.regles;
 
   const nbClients = profil?.nbClients ?? 0;
@@ -351,7 +461,7 @@ export default function AdminDomaineEditPage() {
     const payload: Record<string, unknown> = {};
     if (dirty.identite) { payload.nom = nom.trim(); payload.slug = slug.trim() || undefined; payload.description = description.trim() || null; }
     if (dirty.composants) payload.composants = rowsToPayload(rows);
-    if (dirty.lexique) payload.lexique = lexiqueEcarts(lexique);
+    if (dirty.lexique) payload.lexique = ecarts;
     if (dirty.regles) payload.regles = reglesPayload(regles);
     setSaving(true);
     try {
@@ -379,6 +489,12 @@ export default function AdminDomaineEditPage() {
         return;
       }
       if (r?.status === 409) { alerte({ title: 'Conflit', message: r.data?.message || 'Un domaine porte déjà ce nom ou ce slug.', tone: 'danger' }); return; }
+      // Validation du lexique par le serveur (400 + code LEXIQUE_*) : entrée incomplète, caractère interdit…
+      if (r?.status === 400 && r.data?.code?.startsWith('LEXIQUE_')) {
+        setTab('lexique');
+        alerte({ title: 'Lexique invalide', message: r.data.message || 'Une entrée du lexique est invalide.', tone: 'danger' });
+        return;
+      }
       alerte({ title: 'Enregistrement impossible', message: r?.data?.message || "Erreur lors de l'enregistrement du profil.", tone: 'danger' });
     } finally { setSaving(false); }
   };
@@ -490,7 +606,7 @@ export default function AdminDomaineEditPage() {
 
   const tabs: { key: Tab; label: string; badge?: number; dirty?: boolean }[] = [
     { key: 'composants', label: '🧩 Composants', badge: rows.length, dirty: dirty.composants },
-    { key: 'lexique', label: '📝 Lexique', badge: Object.keys(lexiqueEcarts(lexique)).length, dirty: dirty.lexique },
+    { key: 'lexique', label: '📝 Lexique', badge: nbEcarts, dirty: dirty.lexique },
     { key: 'regles', label: '⚖️ Règles', dirty: dirty.regles },
     { key: 'grille', label: '💰 Grille tarifaire', badge: nbSurcharges },
   ];
@@ -628,42 +744,55 @@ export default function AdminDomaineEditPage() {
           <div style={cardHead}>
             <div>
               <div style={{ fontWeight: 800, color: 'var(--text)' }}>Vocabulaire du domaine</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Champ vide = terme par défaut (affiché en gris). Seuls les écarts sont enregistrés. Élision = le mot commence par une voyelle (l'activité, d'activité).</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Champ vide = terme par défaut (affiché en gris). Seuls les écarts sont enregistrés. Élision = le mot commence par une voyelle (l'activité, d'activité). Si le singulier est modifié, le pluriel, le genre et l'élision doivent être renseignés. Forme courte = sigle ou abréviation des libellés courts (PT, Appro, FT). Une clé « ↳ » suit son parent tant que son singulier est vide (seule son icône se change à part).</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Caractères refusés : {'[ ] | * \\ ` { } $'}, retour à la ligne et tabulation. {LEXIQUE_MAX.forme} caractères au plus ({LEXIQUE_MAX.courte} pour la forme courte).</div>
+              {profil?.slug === SLUG_DOMAINE_DEFAUT && (
+                <div style={{ fontSize: '0.78rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', marginTop: 6 }}>Domaine par défaut : son lexique est le vocabulaire de référence de LabFlow, il ne se modifie pas. Pour un autre vocabulaire, créez un domaine.</div>
+              )}
             </div>
-            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{Object.keys(lexiqueEcarts(lexique)).length} écart{Object.keys(lexiqueEcarts(lexique)).length !== 1 ? 's' : ''}</span>
+            <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{nbEcarts} écart{nbEcarts !== 1 ? 's' : ''}</span>
           </div>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 900 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 1180 }}>
               <thead>
                 <tr style={{ background: '#fffbeb' }}>
-                  {['Clé', 'Singulier', 'Pluriel', 'Genre', 'Élision', 'Icône', ''].map((h, i) => <th key={i} style={th}>{h}</th>)}
+                  {['Clé', 'Singulier', 'Pluriel', 'Forme courte (sing.)', 'Forme courte (plur.)', 'Genre', 'Élision', 'Icône', ''].map((h, i) => <th key={i} style={th}>{h}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {Object.keys(lexique).map((cle) => {
-                  const def = LEXIQUE_DEFS.find((d) => d.cle === cle);
                   const row = lexique[cle];
-                  const d = def?.def || { sg: '', pl: '', g: 'm' as const, el: false, icon: '' };
-                  const modifie = !!(row.sg || row.pl || row.icon || row.g !== d.g || row.el !== d.el);
+                  const parent = DEF[cle]?.derive_de;
+                  const h = herite[cle] || ENTREE_VIDE;
+                  // Forme courte héritée : seulement tant que le singulier n'est pas surchargé
+                  const courtHerite = row.sg.trim() ? undefined : h.court;
+                  const gHerite = h.g ?? 'm';
+                  const elHerite = h.el ?? false;
+                  const modifie = !!ecarts[cle];
+                  // Clé dérivée sans singulier propre : elle suit son parent, genre et élision compris
+                  const suitParent = !!parent && !row.sg.trim();
                   const set = (patch: Partial<LexiqueRow>) => setLexique((prev) => ({ ...prev, [cle]: { ...prev[cle], ...patch } }));
                   return (
                     <tr key={cle} style={{ borderBottom: '1px solid var(--border)', background: modifie ? '#fffbeb55' : undefined }}>
-                      <td style={td}>
-                        <div style={{ fontWeight: 700, color: 'var(--text)' }}>{def?.label || cle}</div>
+                      <td style={{ ...td, paddingLeft: parent ? 28 : 10 }}>
+                        <div style={{ fontWeight: parent ? 600 : 700, color: 'var(--text)' }}>{parent ? '↳ ' : ''}{LEXIQUE_LABELS[cle] || cle}</div>
                         <code style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{cle}</code>
+                        {parent && <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 1 }}>suit “{parent}” si vide</div>}
                       </td>
-                      <td style={td}><input value={row.sg} placeholder={d.sg || '—'} onChange={(e) => set({ sg: e.target.value })} style={{ ...cell, width: 190, borderColor: row.sg ? ACCENT : undefined }} /></td>
-                      <td style={td}><input value={row.pl} placeholder={d.pl || '—'} onChange={(e) => set({ pl: e.target.value })} style={{ ...cell, width: 190, borderColor: row.pl ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.sg} maxLength={LEXIQUE_MAX.forme} placeholder={h.sg || '—'} onChange={(e) => set({ sg: e.target.value })} style={{ ...cell, width: 190, borderColor: row.sg ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.pl} maxLength={LEXIQUE_MAX.forme} placeholder={h.pl || '—'} onChange={(e) => set({ pl: e.target.value })} style={{ ...cell, width: 190, borderColor: row.pl ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.courtSg} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.sg || '—'} onChange={(e) => set({ courtSg: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtSg ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.courtPl} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.pl || courtHerite?.sg || '—'} onChange={(e) => set({ courtPl: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtPl ? ACCENT : undefined }} /></td>
                       <td style={td}>
-                        <select value={row.g} onChange={(e) => set({ g: e.target.value === 'f' ? 'f' : 'm' })} style={{ ...cell, width: 110, cursor: 'pointer', borderColor: row.g !== d.g ? ACCENT : undefined }}>
+                        <select value={row.g ?? gHerite} disabled={suitParent} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ g: e.target.value === 'f' ? 'f' : 'm' })} style={{ ...cell, width: 110, cursor: suitParent ? 'not-allowed' : 'pointer', opacity: suitParent ? 0.6 : 1, borderColor: row.g != null && row.g !== gHerite ? ACCENT : undefined }}>
                           <option value="m">masculin</option>
                           <option value="f">féminin</option>
                         </select>
                       </td>
-                      <td style={{ ...td, textAlign: 'center' }}><input type="checkbox" checked={row.el} onChange={(e) => set({ el: e.target.checked })} /></td>
-                      <td style={td}><input value={row.icon} placeholder={d.icon || '—'} onChange={(e) => set({ icon: e.target.value })} style={{ ...cell, width: 60, textAlign: 'center', borderColor: row.icon ? ACCENT : undefined }} /></td>
+                      <td style={{ ...td, textAlign: 'center' }}><input type="checkbox" checked={row.el ?? elHerite} disabled={suitParent} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ el: e.target.checked })} /></td>
+                      <td style={td}><input value={row.icon} maxLength={LEXIQUE_MAX.icone} placeholder={h.icon || '—'} onChange={(e) => set({ icon: e.target.value })} style={{ ...cell, width: 60, textAlign: 'center', borderColor: row.icon ? ACCENT : undefined }} /></td>
                       <td style={{ ...td, textAlign: 'right' }}>
-                        <button onClick={() => set({ sg: '', pl: '', icon: '', g: d.g, el: d.el })} disabled={!modifie} title="Réinitialiser (valeurs par défaut)" style={{ ...iconBtn, opacity: modifie ? 1 : 0.35, cursor: modifie ? 'pointer' : 'default' }}>↺</button>
+                        <button onClick={() => set({ sg: '', pl: '', courtSg: '', courtPl: '', icon: '', g: null, el: null, courtEl: undefined, appo: undefined })} disabled={!modifie} title={parent ? `Réinitialiser (suit « ${parent} »)` : 'Réinitialiser (valeurs par défaut)'} style={{ ...iconBtn, opacity: modifie ? 1 : 0.35, cursor: modifie ? 'pointer' : 'default' }}>↺</button>
                       </td>
                     </tr>
                   );
