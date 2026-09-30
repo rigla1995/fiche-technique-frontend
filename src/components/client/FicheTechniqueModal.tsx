@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 
 interface ManualPriceEntry {
   ingredientId: number;
@@ -64,10 +66,11 @@ interface Props {
 }
 
 const ctxKey = (c: FtContext) => `${c.type}:${c.id}`;
-const ctxIcon = (c: FtContext) => (c.type === 'labo' ? '🏭' : '🏪');
+const ctxIcon = (voc: Vocab, c: FtContext) => voc.icon(c.type === 'labo' ? 'labo' : 'activite');
 
 export default function FicheTechniqueModal({ productId, productName, hasIngredients, fallbackActId, onClose }: Props) {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
 
   // Contextes + recette du produit
   const [ftCtx, setFtCtx] = useState<FtContextesResponse | null>(null);
@@ -369,7 +372,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
         <div className="modal" style={{ maxWidth: 640 }} onClick={(e) => e.stopPropagation()}>
           <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px', borderRadius: '12px 12px 0 0', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
-              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>📄 Fiche Technique</div>
+              <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 2 }}>📄 {voc.Titre('fiche_technique')}</div>
               <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', fontWeight: 600 }}>{productName}</div>
             </div>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
@@ -399,18 +402,18 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
               <div style={chipBtn(mode === 'stock', !hasIngredients)} onClick={() => { if (hasIngredients) setMode('stock'); }}>
                 <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'stock' ? 'var(--primary)' : 'var(--text)' }}>
-                  📦 FT Stock
+                  {voc.icon('stock')} {voc.Court('fiche_technique')} {voc.Court('stock')}
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {!hasIngredients ? 'Aucun article' : 'Prix issus de vos approvisionnements'}
+                  {!hasIngredients ? voc.Aucun('article') : `Prix issus de ${voc.votre('appro', true)}`}
                 </div>
               </div>
               <div style={chipBtn(mode === 'manual', !hasIngredients)} onClick={() => { if (hasIngredients) setMode('manual'); }}>
                 <div style={{ fontWeight: 700, marginBottom: 4, color: mode === 'manual' ? 'var(--primary)' : 'var(--text)' }}>
-                  ✏️ FT Manuel
+                  ✏️ {voc.Court('fiche_technique')} Manuel
                 </div>
                 <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                  {!hasIngredients ? 'Aucun article' : 'Prix saisis manuellement'}
+                  {!hasIngredients ? voc.Aucun('article') : 'Prix saisis manuellement'}
                 </div>
               </div>
             </div>
@@ -421,7 +424,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                 <div style={sectionLabel}>Base de prix</div>
                 {!ftCtxLoading && contexts.length === 0 ? (
                   <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 8, padding: '8px 12px' }}>
-                    Assignez ce produit à une activité ou un labo pour générer une FT Stock
+                    Assignez {voc.ce('produit')} à {voc.un('activite')} ou {voc.un('labo')} pour générer {voc.un('fiche_technique', false, 'Court')} {voc.Court('stock')}
                   </div>
                 ) : (
                   <>
@@ -439,25 +442,25 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                               return next;
                             })}
                           >
-                            {ctxIcon(c)} {c.nom}
+                            {ctxIcon(voc, c)} {c.nom}
                           </button>
                         );
                       })}
                     </div>
                     {ftCtx?.limiteTransferts && (
                       <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 8 }}>
-                        Produit fabriqué au labo — bases labo uniquement (côté activité, approvisionnement par transfert)
+                        {voc.Nom('produit')} {voc.acc('produit', 'fabriqué', 'fabriquée')} {voc.au('labo')} — bases {voc.compl('labo')} uniquement (côté {voc.nom('activite')}, {voc.nom('appro')} par {voc.nom('transfert')})
                       </div>
                     )}
                     <div style={{ ...sectionLabel, marginTop: 14 }}>Méthode</div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                       <button
-                        title="DP — Dernier Prix : prix du dernier approvisionnement"
+                        title={`DP — Dernier Prix : prix ${voc.acc('appro', 'du dernier', 'de la dernière')} ${voc.nom('appro')}`}
                         onClick={() => { if (!stockPricingDp || stockPricingMp) setStockPricingDp((v) => !v); }}
                         style={{ padding: '5px 12px', borderRadius: 6, border: '2px solid', borderColor: stockPricingDp ? '#2563eb' : '#d1d5db', background: stockPricingDp ? '#dbeafe' : 'transparent', color: stockPricingDp ? '#1d4ed8' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.12s' }}
                       >Dernier Prix (DP)</button>
                       <button
-                        title="PMP — Prix Moyen Pondéré : moyenne pondérée de vos prix d'approvisionnement"
+                        title={`PMP — Prix Moyen Pondéré : moyenne pondérée de vos prix ${voc.de('appro')}`}
                         onClick={() => { if (!stockPricingMp || stockPricingDp) setStockPricingMp((v) => !v); }}
                         style={{ padding: '5px 12px', borderRadius: 6, border: '2px solid', borderColor: stockPricingMp ? '#7c3aed' : '#d1d5db', background: stockPricingMp ? '#ede9fe' : 'transparent', color: stockPricingMp ? '#6d28d9' : 'var(--text-muted)', fontWeight: 700, fontSize: '0.75rem', cursor: 'pointer', transition: 'all 0.12s' }}
                       >PMP — Prix Moyen Pondéré</button>
@@ -478,7 +481,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                         const key = ctxKey(c);
                         return (
                           <button key={key} style={ctxChip(manualKey === key)} onClick={() => setManualKey(key)}>
-                            {ctxIcon(c)} {c.nom}
+                            {ctxIcon(voc, c)} {c.nom}
                           </button>
                         );
                       })}
@@ -506,7 +509,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                 )}
                 {!allManualPricesFilled && manualPrices.length > 0 && !manualLoading && (
                   <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: 6 }}>
-                    ⚠ Saisissez tous les prix pour générer la Fiche technique
+                    ⚠ Saisissez tous les prix pour générer {voc.le('fiche_technique', false, 'Nom')}
                   </div>
                 )}
               </div>
@@ -536,7 +539,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                               const line = costLines[`${key}|${m}`];
                               return (
                                 <div key={`${key}|${m}`} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', flexWrap: 'wrap' }}>
-                                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>{ctxIcon(c)} {c.nom}</span>
+                                  <span style={{ fontWeight: 600, color: 'var(--text)' }}>{ctxIcon(voc, c)} {c.nom}</span>
                                   <span style={{ color: 'var(--text-muted)' }}>·</span>
                                   <span style={{ fontWeight: 700, color: m === 'dp' ? '#1d4ed8' : '#6d28d9' }}>{m === 'dp' ? 'Dernier Prix' : 'PMP'}</span>
                                   <span style={{ color: 'var(--text-muted)' }}>=</span>
@@ -552,7 +555,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                                   )}
                                   {incomplete && (
                                     <span style={{ fontSize: '0.68rem', fontWeight: 600, color: '#b45309', background: '#fef3c7', borderRadius: 10, padding: '1px 7px' }}>
-                                      ⚠ {check.missingCount} article(s) sans appro — coût partiel
+                                      ⚠ {check.missingCount} {voc.nomS('article')} sans {voc.court('appro')} — coût partiel
                                     </span>
                                   )}
                                 </div>
@@ -629,10 +632,10 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
               {/* Header */}
               <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
                 <div>
-                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', marginBottom: 2 }}>✏️ Prix Articles</div>
+                  <div style={{ color: '#fff', fontWeight: 800, fontSize: '0.95rem', marginBottom: 2 }}>✏️ Prix {voc.Court('article', true)}</div>
                   <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.78rem', fontWeight: 600 }}>
                     {productName}
-                    {manualCtx ? ` — ${ctxIcon(manualCtx)} ${manualCtx.nom}` : ''}
+                    {manualCtx ? ` — ${ctxIcon(voc, manualCtx)} ${manualCtx.nom}` : ''}
                   </div>
                 </div>
                 <button onClick={() => { setShowManualPopup(false); setManualSearch(''); }} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1, flexShrink: 0 }}>×</button>
@@ -642,7 +645,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                 {/* Search */}
                 <input
                   className="input"
-                  placeholder="🔍 Rechercher un article…"
+                  placeholder={`🔍 Rechercher ${voc.un('article')}…`}
                   value={manualSearch}
                   onChange={(e) => setManualSearch(e.target.value)}
                   style={{ fontSize: '0.82rem' }}
@@ -651,8 +654,8 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
 
                 {/* Article count */}
                 <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                  {visibleCount} article{visibleCount !== 1 ? 's' : ''}
-                  {manualSearch && ` — filtrés sur "${manualSearch}"`}
+                  {visibleCount} {voc.nom('article', visibleCount !== 1)}
+                  {manualSearch && ` — ${voc.acc('article', 'filtrés', 'filtrées')} sur "${manualSearch}"`}
                 </div>
 
                 {/* Scrollable list */}
@@ -661,7 +664,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: '0.85rem' }}>⏳ {t('common.loading')}</div>
                   )}
                   {!manualLoading && visibleCount === 0 && (
-                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: '0.85rem' }}>Aucun article trouvé</div>
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '40px 0', fontSize: '0.85rem' }}>{voc.Aucun('article')} {voc.acc('article', 'trouvé', 'trouvée')}</div>
                   )}
                   {!manualLoading && filteredItems.map((it, i) => {
                     if (it.type === 'group') {
@@ -718,7 +721,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                 <span style={{ fontSize: '1.6rem', lineHeight: 1 }}>⚠️</span>
                 <div>
                   <div style={{ fontWeight: 700, fontSize: '1rem', color: '#fff' }}>Prix incomplets</div>
-                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>Ces articles ont un prix à 0 — corrigez-les avant d'enregistrer.</div>
+                  <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.85)', marginTop: 2 }}>{voc.Ce('article', true)} ont un prix à 0 — corrigez-les avant d'enregistrer.</div>
                 </div>
               </div>
               <button onClick={() => setShowZeroWarning(false)} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: '1rem', padding: '2px 8px', cursor: 'pointer', lineHeight: 1.4 }}>×</button>

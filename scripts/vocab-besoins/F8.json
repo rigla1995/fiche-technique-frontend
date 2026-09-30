@@ -1,0 +1,38 @@
+[
+  {
+    "besoin": "autre",
+    "demande": "Icône du « Food cost » sur le tableau de bord : l'emoji 🍔 (burger) est écrit en dur devant la tuile « Food cost » (onglets Vue d'ensemble et Ventes) et devant la pastille d'alerte « N produits à food cost > seuil », alors que l'icône par défaut de la clé food_cost est 📊. À décider en S5 : aligner l'icône par défaut du lexique sur 🍔 (identité conservée, puis voc.icon('food_cost')), ou remplacer le burger par l'icône de la clé (changement visible pour un compte restauration).",
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "ligne": 488,
+    "texte": "🍔",
+    "ecriture_souhaitee": "icon={voc.icon('food_cost')} (l. 488 et l. 543) et {voc.icon('food_cost')} {voc.n('produit', a.food_cost_eleve)} à {voc.nom('food_cost')} > {seuil}% (l. 501)",
+    "raison": "Spec §3 règle 7 : voc.icon(k) seulement là où l'emoji affiché est déjà l'icône par défaut de la clé ; ici il ne l'est pas, l'icône reste donc en dur. Un compte Hôtellerie voit un burger devant « Ratio matière », un compte Céramique devant « Taux de coût matière ». Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Icône de l'onglet « Labo » et du filtre « Labos » du tableau de bord : l'emoji 🧪 (tube à essai) est écrit en dur alors que l'icône par défaut de la clé labo est 🏭 (celle qu'affichent la barre latérale et la tuile « Cessions labo→labo » du même écran). À décider en S5 : remplacer 🧪 par voc.icon('labo') (changement visible pour un compte restauration) ou laisser.",
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "ligne": 30,
+    "texte": "🧪",
+    "ecriture_souhaitee": "{ key: 'labo', icon: voc.icon('labo'), label: voc.Court('labo') } (l. 30) et <MultiSelectFilter label={voc.Pl('labo')} icon={voc.icon('labo')} … /> (l. 417)",
+    "raison": "Spec §3 règle 7 : l'emoji affiché n'est pas l'icône par défaut de la clé, il reste donc en dur. Un tube à essai devant « Cuisine » (Hôtellerie) ou « Site » (Céramique) n'évoque plus rien. Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Icônes des filtres « Catégories produits » (🍽️, assiette) et « Catégories articles » (🧂, salière) du tableau de bord : emojis propres à la restauration, écrits en dur, qui ne sont l'icône par défaut ni de produit (sans icône) ni de article (📦). À décider en S5, avec les mêmes icônes de la barre latérale relevées par F1.",
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "ligne": 421,
+    "texte": "🍽️",
+    "ecriture_souhaitee": "icon={voc.icon('produit')} (l. 421, après ajout d'une icône à la clé produit) et icon={voc.icon('article')} (l. 423)",
+    "raison": "Spec §3 règle 7 : l'emoji affiché n'est pas l'icône par défaut de la clé, il reste donc en dur. Un compte Céramique garde une assiette devant « Catégories produits » et une salière devant « Catégories matières premières ». Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Export Excel du tableau de bord : les libellés des indicateurs, les titres de section et les en-têtes de colonnes ne sont pas des textes du front, ils sont fabriqués à l'exécution à partir des CLÉS de la réponse de l'API par human(k) (« marge_brute » → « Marge brute », « food_cost_pct » → « Food cost pct », « nb_transferts » → « Nb transferts », « valeur_stock » → « Valeur stock », « top_articles » → « Top articles »). Il faut soit une table clé d'API → libellé écrite avec voc (à créer dans ce fichier), soit des libellés fournis par le serveur avec req.voc (sous-lot 2b).",
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "ligne": 277,
+    "texte": "human(k)",
+    "ecriture_souhaitee": "row.getCell(1).value = libelleIndicateur(voc, k) ; headerRow(ws, r, keys.map((k) => libelleColonne(voc, k))) — avec une table du type { marge_brute: `${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`, nb_transferts: `Nb ${voc.pl('transfert')}`, … }",
+    "raison": "Aucun littéral à réécrire : le vocabulaire de la restauration vient ici des noms de champs de l'API, que le moteur ne voit pas. Un compte Hôtellerie exporte « Food cost pct », « Nb transferts », « Top articles » alors que l'écran affiche « Ratio matière », « livraisons internes », « Fournitures ». Le nom de l'onglet, le titre et la ligne méta de l'export passent, eux, par voc (libellé de l'onglet, via nomOnglet). Aucune entrée provisoire : le mode residuels ne liste rien (pas de littéral)."
+  }
+]

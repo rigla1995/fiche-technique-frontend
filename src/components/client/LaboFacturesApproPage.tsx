@@ -4,6 +4,7 @@ import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import GuideButton from './GuideButton';
 import type { Destination } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -74,6 +75,7 @@ interface LigneFact {
 }
 
 export default function LaboFacturesApproPage() {
+  const voc = useVocabulaire();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const laboId = searchParams.get('laboId') || '';
@@ -180,9 +182,9 @@ export default function LaboFacturesApproPage() {
   // Émise : la destination (🏪 activité / 🏭 labo) est déjà rendue sur la ligne → pas de suffixe.
   const badgeTransfert = (f: FactureRow): string => {
     const x = f.contrepartieNom ?? f.activiteNom;
-    if (f.sens === 'recue') return `↙ Transfert reçu${x ? ` ← ${x}` : ''}`;
-    if (f.sens === 'emise') return '↗ Transfert émis';
-    return '↗ Transfert';
+    if (f.sens === 'recue') return `↙ ${voc.Court('transfert')} ${voc.acc('transfert', 'reçu', 'reçue')}${x ? ` ← ${x}` : ''}`;
+    if (f.sens === 'emise') return `↗ ${voc.Court('transfert')} ${voc.acc('transfert', 'émis', 'émise')}`;
+    return `↗ ${voc.Court('transfert')}`;
   };
 
   const expandAll = () => {
@@ -200,7 +202,7 @@ export default function LaboFacturesApproPage() {
   };
   const collapseAll = () => setExpandedIds(new Set());
 
-  if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
+  if (!laboId) return <div className="page"><p className="text-muted">{voc.Nom('labo')} introuvable.</p></div>;
 
   return (
     <div className="page">
@@ -214,9 +216,9 @@ export default function LaboFacturesApproPage() {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🧾</div>
-            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Factures Appro — Labo</h1>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Factures {voc.Court('appro')} — {voc.Court('labo')}</h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Consultation des approvisionnements sous forme de factures</p>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Consultation {voc.du('appro', true)} sous forme de factures</p>
         </div>
         <GuideButton section="factures" />
         {allLabos.length > 1 && (
@@ -241,19 +243,19 @@ export default function LaboFacturesApproPage() {
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
         {(destinations.length > 0 || hasLaboFlux) && (
-          <FilterField label={hasLaboFlux ? '🎯 Destination / Origine' : '🏪 Activité'}>
+          <FilterField label={hasLaboFlux ? '🎯 Destination / Origine' : `${voc.icon('activite')} ${voc.Nom('activite')}`}>
             <FilterSelect value={selectedDestKey} onChange={(e) => setSelectedDestKey(e.target.value)}>
-              <option value="">— Toutes —</option>
-              {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{d.type === 'labo' ? `🏭 ${d.nom}` : d.nom}</option>)}
-              {hasLaboFlux && <option value="sens-emise">↗ Transferts émis</option>}
-              {hasLaboFlux && <option value="sens-recue">↙ Transferts reçus (origine : labo source)</option>}
+              <option value="">— {hasLaboFlux ? 'Toutes' : voc.acc('activite', 'Tous', 'Toutes')} —</option>
+              {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{d.type === 'labo' ? `${voc.icon('labo')} ${d.nom}` : d.nom}</option>)}
+              {hasLaboFlux && <option value="sens-emise">↗ {voc.Court('transfert', true)} {voc.acc('transfert', 'émis', 'émises')}</option>}
+              {hasLaboFlux && <option value="sens-recue">↙ {voc.Court('transfert', true)} {voc.acc('transfert', 'reçus', 'reçues')} (origine : {voc.nom('labo')} source)</option>}
             </FilterSelect>
           </FilterField>
         )}
         {fournisseurs.length > 0 && (
-          <FilterField label="🚚 Fournisseur">
+          <FilterField label={`🚚 ${voc.Nom('fournisseur')}`}>
             <FilterSelect value={selectedFournisseurId} onChange={(e) => setSelectedFournisseurId(e.target.value)}>
-              <option value="">— Tous —</option>
+              <option value="">— {voc.acc('fournisseur', 'Tous', 'Toutes')} —</option>
               {fournisseurs.map((f) => <option key={f.id} value={f.id}>{f.nom}</option>)}
             </FilterSelect>
           </FilterField>
@@ -294,14 +296,14 @@ export default function LaboFacturesApproPage() {
                     <span style={{ fontSize: '1.1rem' }}>🧾</span>
                     <div>
                       <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#4c1d95' }}>
-                        {f.fournisseurNom ?? 'Sans fournisseur'}
+                        {f.fournisseurNom ?? `Sans ${voc.nom('fournisseur')}`}
                       </div>
                       <div style={{ fontSize: '0.72rem', color: '#7c3aed', marginTop: 2 }}>
                         {f.refFacture ? `Réf: ${f.refFacture}` : 'Sans réf.'} · {fmtDate(f.dateFacture)}
-                        {f.activiteNom && <> · 🏪 <strong>{f.activiteNom}</strong></>}
-                        {!f.activiteNom && f.sens === 'emise' && f.contrepartieNom && <> · 🏭 <strong>{f.contrepartieNom}</strong></>}
+                        {f.activiteNom && <> · {voc.icon('activite')} <strong>{f.activiteNom}</strong></>}
+                        {!f.activiteNom && f.sens === 'emise' && f.contrepartieNom && <> · {voc.icon('labo')} <strong>{f.contrepartieNom}</strong></>}
                         <span style={{ marginLeft: 8, background: f.typeSource === 'transfert' ? (f.sens === 'recue' ? '#0e7490' : '#6d28d9') : '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
-                          {f.typeSource === 'transfert' ? badgeTransfert(f) : 'Manuel'}
+                          {f.typeSource === 'transfert' ? badgeTransfert(f) : voc.acc('appro', 'Manuel', 'Manuelle')}
                         </span>
                       </div>
                     </div>
@@ -336,10 +338,10 @@ export default function LaboFacturesApproPage() {
                       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
                         <thead>
                           <tr style={{ background: '#faf5ff', borderBottom: '2px solid #c4b5fd' }}>
-                            {(['Article', 'Catégorie', 'Qté', 'Prix HT/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
+                            {([voc.Nom('article'), 'Catégorie', 'Qté', 'Prix HT/u', hasTva ? 'TVA %' : null, hasTva ? 'Prix TTC/u' : null, 'Total HT', hasTva ? 'Total TTC' : null] as (string | null)[])
                               .filter(Boolean)
                               .map((h) => (
-                                <th key={h!} style={{ padding: '8px 12px', fontWeight: 700, textAlign: h === 'Article' || h === 'Catégorie' ? 'left' : 'right', color: '#6d28d9', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
+                                <th key={h!} style={{ padding: '8px 12px', fontWeight: 700, textAlign: h === voc.Nom('article') || h === 'Catégorie' ? 'left' : 'right', color: '#6d28d9', textTransform: 'uppercase', fontSize: '0.65rem', letterSpacing: '0.05em' }}>
                                   {h}
                                 </th>
                               ))}
@@ -369,7 +371,7 @@ export default function LaboFacturesApproPage() {
                         <tfoot>
                           <tr style={{ background: '#faf5ff', borderTop: '2px solid #c4b5fd' }}>
                             <td colSpan={hasTva ? 6 : 4} style={{ padding: '8px 12px', fontWeight: 800, fontSize: '0.72rem', color: '#6d28d9', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                              Sous-total — {lignes.length} article{lignes.length > 1 ? 's' : ''}
+                              Sous-total — {voc.n('article', lignes.length)}
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#6d28d9', fontSize: '0.88rem' }}>{f.montantHT.toFixed(3)} DT</td>
                             {hasTva && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 900, color: '#059669', fontSize: '0.88rem' }}>{f.montantTTC.toFixed(3)} DT</td>}

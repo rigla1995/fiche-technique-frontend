@@ -1,0 +1,118 @@
+[
+  {
+    "fichier": "src/components/client/ProductForm.tsx",
+    "avant": "Ex. Burger, Pizza Margherita…",
+    "apres": "Ex. Produit A, Produit B…",
+    "type": "exemple",
+    "justification": "Exemple de saisie neutre et construit avec le terme du domaine (spec §3 règle 6, guide §5 bis, ligne F6) : « Burger, Pizza Margherita » est propre à la restauration ; un compte Céramique ou Hôtellerie lira « Ex. Produit A, Produit B… » (ou le terme qui remplace « produit » dans son lexique)."
+  },
+  {
+    "fichier": "src/components/client/ProductForm.tsx",
+    "avant": "Ex. BRG-001, REF-42…",
+    "apres": "Ex. REF-001, REF-42…",
+    "type": "exemple",
+    "justification": "Exemple de référence neutre (guide §5 bis, ligne F6) : « BRG-001 » abrège « burger », propre à la restauration ; « REF-001 » vaut pour tous les secteurs, sans terme du lexique."
+  },
+  {
+    "fichier": "src/components/client/ProductForm.tsx",
+    "avant": "Ex. REF-001, REF-42…",
+    "apres": "Ex. REF-001, REF-42…",
+    "type": "exemple",
+    "justification": "Exemple de saisie neutre gardé en dur (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex »."
+  },
+  {
+    "fichier": "src/components/client/ProductForm.tsx",
+    "avant": "portion",
+    "apres": "portion",
+    "type": "discriminant",
+    "justification": "Nom du champ technique de la ligne de saisie, passé à updateIngredientLine(idx, 'portion', …) et updateSubProductLine(idx, 'portion', …) : clé de l'objet IngredientLine / SubProductLine, jamais affichée (les libellés de ces champs sortent de t(), déjà balisés)."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Ex. Burger Classic, Pizza Margherita…",
+    "apres": "Ex. Produit A, Produit B…",
+    "type": "exemple",
+    "justification": "Exemple de saisie neutre et construit avec le terme du domaine (spec §3 règle 6, guide §5 bis, ligne F6) : « Burger Classic, Pizza Margherita » est propre à la restauration ; placeholder du nom à l'étape 2 de l'assistant de création."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Ex. BRG-001",
+    "apres": "Ex. REF-001",
+    "type": "exemple",
+    "justification": "Exemple de référence neutre (guide §5 bis, ligne F6) : « BRG-001 » abrège « burger », propre à la restauration ; « REF-001 » vaut pour tous les secteurs, sans terme du lexique."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Ex. REF-001",
+    "apres": "Ex. REF-001",
+    "type": "exemple",
+    "justification": "Exemple de saisie neutre gardé en dur (guide §5 bis : « référence neutre, sans voc ») : « REF » n'est pas un terme du lexique ; l'unité reste listée [exemple] parce qu'elle commence par « Ex »."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Aucun ⟦?labo|activité⟧ disponible.",
+    "apres": "⟦?Aucun labo|Aucune activité⟧ disponible.",
+    "type": "faute-corrigee",
+    "justification": "« Aucun activité disponible. » était une faute d'accord de l'existant (le déterminant restait au masculin quand la condition rendait « activité ») ; voc.Aucun(isLaboMode ? 'labo' : 'activite') rend « Aucune activité disponible. »."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Aucune activité rattachée à ce(s) labo(s).",
+    "apres": "Aucune activité rattachée à ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos cochés à l'étape 1 (addAffectationIds.length, toujours ≥ 1 à cet endroit) : « ce labo » / « ces labos »."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": null,
+    "apres": "supplement",
+    "type": "discriminant",
+    "occurrences": 1,
+    "justification": "Littéral de comparaison, jamais affiché : dans « Inclure aussi les <strong>…</strong> », le déterminant est séparé du terme par la balise, donc rendu par voc.det (guide E18/E19) ; la clé dépend du même test (vendableSubTab === 'supplement') que le contenu de la balise, et ce test écrit une seconde fois ajoute une unité « supplement » au décompte de l'outil. Le texte affiché est identique (« Inclure aussi les »)."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "produit",
+    "apres": "produit",
+    "type": "discriminant",
+    "justification": "Clé technique du sous-onglet des vendables ('produit' | 'supplement') : valeur initiale de l'état vendableSubTab et premier élément du couple [clé, libellé] de la table des sous-onglets ; seul le libellé est affiché, et il sort de voc. Deux unités."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "⟦?labo|activite⟧",
+    "apres": "⟦?labo|activite⟧",
+    "type": "discriminant",
+    "justification": "Valeur technique de l'origine du produit ('labo' | 'activite'), calculée dans openEditModal à partir de p.origine (valeur d'API) puis passée à setAddOrigine et envoyée au backend : jamais affichée."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "labo",
+    "apres": "labo",
+    "type": "discriminant",
+    "justification": "Clé technique du mode d'approvisionnement ('activite' | 'labo'), premier élément du triplet [clé, libellé, description] du sélecteur de l'étape 1, passée à setAddOrigine : seuls le libellé et la description sont affichés, et ils sortent de voc."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Stock PT, inventaires et pertes de cette activité supprimés",
+    "apres": "Stock PT, inventaires et pertes de cette activité supprimés",
+    "type": "provisoire",
+    "mode": "accords",
+    "justification": "« supprimés » ne s'accorde pas avec le terme qui le précède (voc.ce('activite')) mais avec TROIS termes coordonnés (stock, inventaires et pertes) : masculin pluriel sauf si les trois sont féminins. Le moteur n'a pas d'accord à plusieurs clés et l'outil refuse un voc.acc imbriqué : le participe reste au masculin, comme le guide le prescrit pour des termes coordonnés. Rendu Hôtellerie juste : « Stock Prépa, inventaires et pertes de ce service supprimés ». Besoin décrit dans scripts/vocab-besoins/F6.json."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "⟦?Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l'étape Articles)|Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total⟧.",
+    "apres": "⟦?Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l'étape Articles)|Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total⟧.",
+    "type": "provisoire",
+    "mode": "accords",
+    "justification": "« requis » s'accorde avec DEUX termes coordonnés (articles / produits utilisables) : masculin pluriel sauf si les deux sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué : le participe reste au masculin, comme le guide le prescrit pour deux termes coordonnés. Rendu juste par défaut, en Hôtellerie (« 2 fournitures/consommables requis ») et en Céramique ; faux seulement si les deux termes deviennent féminins. Besoin décrit dans scripts/vocab-besoins/F6.json."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "⟦?⟦?Sélectionnez exactement 1 article ou produit utilisable|Au minimum 2 articles/produits utilisables requis⟧|⟦·⟧⟧",
+    "apres": "⟦?⟦?Sélectionnez exactement 1 article ou produit utilisable|Au minimum 2 articles/produits utilisables requis⟧|⟦·⟧⟧",
+    "type": "provisoire",
+    "mode": "accords",
+    "justification": "Même phrase que l'aide de l'étape 4, en infobulle du bouton « Suivant » : « requis » s'accorde avec DEUX termes coordonnés (articles / produits utilisables), masculin pluriel sauf si les deux sont féminins ; le moteur n'a pas d'accord à deux clés. Le participe reste au masculin (guide : deux termes coordonnés). Besoin décrit dans scripts/vocab-besoins/F6.json."
+  }
+]

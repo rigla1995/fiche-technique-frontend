@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { useConfirm } from '../common/ConfirmDialog';
 import HelpButton from '../common/HelpButton';
 import { isUnitePiece } from '../../utils/unitesArticles';
@@ -21,6 +22,7 @@ interface SubProductLine {
 
 export default function ProductForm() {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const { canWrite, user } = useAuth();
   const { confirm, alerte } = useConfirm();
   const navigate = useNavigate();
@@ -68,7 +70,7 @@ export default function ProductForm() {
   useEffect(() => {
     // For gerant users, synthesize activity from user object
     if (user?.role === 'gerant' && user.gerantActiviteType === 'activite' && user.gerantActiviteId) {
-      const act = { id: user.gerantActiviteId, nom: user.gerantActiviteNom ?? 'Activité', entrepriseId: 0 } as Activite;
+      const act = { id: user.gerantActiviteId, nom: user.gerantActiviteNom ?? voc.Nom('activite'), entrepriseId: 0 } as Activite;
       setAllActivities([act]);
       setSelectedActId(String(act.id));
       return;
@@ -248,7 +250,7 @@ export default function ProductForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (productType === 'vendable' && !categorieProduitId) {
-      await alerte({ title: 'Champ requis', message: 'La catégorie de produit est obligatoire pour un produit vendable.', tone: 'info' });
+      await alerte({ title: 'Champ requis', message: `La catégorie ${voc.de('produit')} est obligatoire pour ${voc.un('produit_vendable')}.`, tone: 'info' });
       return;
     }
     setSaving(true);
@@ -308,7 +310,7 @@ export default function ProductForm() {
         <div style={{ maxWidth: 480, margin: '60px auto', textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'linear-gradient(135deg,#22c55e,#16a34a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', margin: '0 auto 16px' }}>✓</div>
           <h2 style={{ marginBottom: 8, color: '#166534', fontWeight: 700 }}>{t('client.products.saved_success')}</h2>
-          <p style={{ color: 'var(--text-muted)', marginBottom: 28 }}>Le produit <strong>{name}</strong> a été créé avec succès.</p>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 28 }}>{voc.Le('produit')} <strong>{name}</strong> a été {voc.acc('produit', 'créé', 'créée')} avec succès.</p>
           <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
             <button className="btn btn-primary" onClick={() => { setName(''); setRefProduit(''); setIngredientLines([]); setSubProductLines([]); setSavedOk(false); }}>
               + {t('client.products.create_another')}
@@ -332,14 +334,14 @@ export default function ProductForm() {
               {productType === 'vendable' ? t('client.products.add_vendable') : t('client.products.add_utilisable')}
             </h1>
             <p style={{ color: 'var(--text-muted)', marginTop: 4, marginBottom: 0 }}>
-              Sélectionnez l'activité pour ce produit.
+              Sélectionnez {voc.le('activite')} pour {voc.ce('produit')}.
             </p>
           </div>
 
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#eff6ff,#f8faff)' }}>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e40af', marginBottom: 2 }}>🏪 Activité</div>
-              <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>Choisissez l'activité pour ce produit</div>
+              <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#1e40af', marginBottom: 2 }}>{voc.icon('activite')} {voc.Nom('activite')}</div>
+              <div style={{ fontSize: '0.82rem', color: '#6b7280' }}>Choisissez {voc.le('activite')} pour {voc.ce('produit')}</div>
             </div>
             <div style={{ padding: '20px 24px' }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -351,7 +353,7 @@ export default function ProductForm() {
                     <input type="radio" name="act-select" checked={selectedActId === String(a.id)} style={{ accentColor: '#3b82f6' }}
                       onChange={() => setSelectedActId(String(a.id))}
                     />
-                    <div style={{ width: 28, height: 28, borderRadius: 8, background: selectedActId === String(a.id) ? '#3b82f6' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>🏪</div>
+                    <div style={{ width: 28, height: 28, borderRadius: 8, background: selectedActId === String(a.id) ? '#3b82f6' : '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.85rem', flexShrink: 0 }}>{voc.icon('activite')}</div>
                     <span style={{ fontWeight: selectedActId === String(a.id) ? 600 : 400 }}>{a.nom}</span>
                   </label>
                 ))}
@@ -389,7 +391,7 @@ export default function ProductForm() {
           </h1>
           {selectedActId && (
             <div style={{ marginTop: 6, display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.82rem', color: '#1e40af' }}>
-              🏪 {allActivities.find((a) => String(a.id) === selectedActId)?.nom || `Activité #${selectedActId}`}
+              {voc.icon('activite')} {allActivities.find((a) => String(a.id) === selectedActId)?.nom || `${voc.Nom('activite')} #${selectedActId}`}
             </div>
           )}
         </div>
@@ -404,9 +406,9 @@ export default function ProductForm() {
       {hasNoIngredients ? (
         <div style={{ maxWidth: 540, background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 14, padding: '28px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2rem', marginBottom: 12 }}>⚠️</div>
-          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#92400e', marginBottom: 8 }}>Aucun article disponible</div>
+          <div style={{ fontWeight: 700, fontSize: '1rem', color: '#92400e', marginBottom: 8 }}>{voc.Aucun('article')} disponible</div>
           <div style={{ fontSize: '0.88rem', color: '#78350f', lineHeight: 1.5 }}>
-            Aucun article disponible pour cette activité. Créez des articles dans votre référentiel.
+            {voc.Aucun('article')} disponible pour {voc.ce('activite')}. Créez {voc.un('article', true)} dans {voc.votre('referentiel')}.
           </div>
           <button className="btn btn-ghost" style={{ marginTop: 20 }} onClick={() => navigate(buildBackUrl(productType))}>
             ← Retour à la liste
@@ -419,7 +421,7 @@ export default function ProductForm() {
           <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
             <div style={{ padding: '14px 24px', borderBottom: '1px solid var(--border)', background: 'linear-gradient(135deg,#f8fafc,#f1f5f9)', display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1rem' }}>📝</div>
-              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Identité du produit</span>
+              <span style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text)' }}>Identité {voc.du('produit')}</span>
             </div>
             <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
@@ -431,20 +433,20 @@ export default function ProductForm() {
                   className="input"
                   style={{ fontSize: '1rem', fontWeight: 600, maxWidth: 480 }}
                   required
-                  placeholder="Ex. Burger, Pizza Margherita…"
+                  placeholder={`Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…`}
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                 />
               </div>
               <div>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text)' }}>
-                  Réf. Produit
+                  Réf. {voc.Nom('produit')}
                   <span style={{ fontWeight: 400, color: '#6b7280', fontSize: '0.78rem', marginLeft: 6 }}>(optionnel)</span>
                 </label>
                 <input
                   className="input"
                   style={{ maxWidth: 300 }}
-                  placeholder="Ex. BRG-001, REF-42…"
+                  placeholder="Ex. REF-001, REF-42…"
                   value={refProduit}
                   onChange={(e) => setRefProduit(e.target.value)}
                 />
@@ -452,7 +454,7 @@ export default function ProductForm() {
               {productType === 'vendable' && (
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: '0.85rem', marginBottom: 8, color: 'var(--text)' }}>
-                    Catégorie de produit
+                    Catégorie {voc.de('produit')}
                     <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', background: '#fee2e2', borderRadius: 4, padding: '1px 5px' }}>obligatoire</span>
                   </label>
                   <select
@@ -465,7 +467,7 @@ export default function ProductForm() {
                     {categoriesProduit.filter((c) => c.typeProduit === 'vendable').map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   {categoriesProduit.filter((c) => c.typeProduit === 'vendable').length === 0 && (
-                    <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie de type « Produit vendable ». Créez-en dans « Configuration Catégorie » (Espace Produits).</div>
+                    <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie de type « {voc.Nom('produit_vendable')} ». Créez-en dans « Configuration Catégorie » (Espace {voc.Pl('produit')}).</div>
                   )}
                 </div>
               )}
@@ -480,7 +482,7 @@ export default function ProductForm() {
               <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#ef4444', background: '#fee2e2', borderRadius: 4, padding: '1px 5px', marginLeft: 2 }}>min 1</span>
               {filledIngredients.length > 0 && (
                 <span style={{ marginLeft: 'auto', fontSize: '0.78rem', fontWeight: 600, color: '#15803d', background: '#dcfce7', borderRadius: 12, padding: '2px 10px' }}>
-                  {filledIngredients.length} renseigné{filledIngredients.length > 1 ? 's' : ''}
+                  {filledIngredients.length} {voc.acc('ingredient', 'renseigné', 'renseignée', filledIngredients.length)}
                 </span>
               )}
             </div>

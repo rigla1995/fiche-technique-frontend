@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { Product } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 interface NamedRef { id: number; nom: string }
 
@@ -66,6 +67,7 @@ export default function ProductCard({
   onToggleLabo: (id: number) => void;
   canWrite: boolean;
 }) {
+  const voc = useVocabulaire();
   return (
     <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
@@ -79,7 +81,7 @@ export default function ProductCard({
 
       <button
         onClick={onVoir}
-        title="Voir la composition (articles + sous-produits)"
+        title={`Voir la composition (${voc.pl('article')} + sous-produits)`}
         style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '9px 10px', borderRadius: 10, border: '1px solid #c7d2fe', background: '#eef2ff', color: '#4338ca', cursor: 'pointer', fontWeight: 700, fontSize: '0.82rem' }}
       >
         <span style={{ fontSize: '0.95rem', lineHeight: 1 }}>👁</span>
@@ -91,8 +93,8 @@ export default function ProductCard({
         {actions}
       </div>
 
-      <AssignmentBlock label="Activités" items={activities} assignedIds={assignedActiviteIds} togglingId={togglingActiviteId} onToggle={onToggleActivite} canWrite={canWrite} />
-      <AssignmentBlock label="Labos" items={labos} assignedIds={assignedLaboIds} togglingId={togglingLaboId} onToggle={onToggleLabo} canWrite={canWrite} />
+      <AssignmentBlock label={voc.Pl('activite')} items={activities} assignedIds={assignedActiviteIds} togglingId={togglingActiviteId} onToggle={onToggleActivite} canWrite={canWrite} />
+      <AssignmentBlock label={voc.Pl('labo')} items={labos} assignedIds={assignedLaboIds} togglingId={togglingLaboId} onToggle={onToggleLabo} canWrite={canWrite} />
     </div>
   );
 }

@@ -5,6 +5,8 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import type { Destination, Transfert } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { Vocab } from '../../vocab/vocab';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -24,7 +26,7 @@ interface Activite { id: number; nom: string }
 // Destination affichée : destNom (lot 1b) avec repli activiteNom (flux historique).
 const destNomOf = (r: Pick<Transfert, 'activiteNom' | 'destNom'>): string => r.destNom ?? r.activiteNom ?? '—';
 const isLaboDest = (r: Pick<Transfert, 'destType' | 'laboDestId'>): boolean => r.destType === 'labo' || (r.destType == null && r.laboDestId != null);
-const destCell = (r: Transfert): string => (isLaboDest(r) ? `🏭 ${destNomOf(r)}` : destNomOf(r));
+const destCell = (voc: Vocab, r: Transfert): string => (isLaboDest(r) ? `${voc.icon('labo')} ${destNomOf(r)}` : destNomOf(r));
 // Destinations = GET /api/labo/:id.destinations ; repli sur `activites` (rendu identique à avant le lot 1b).
 const destinationsOf = (labo: { activites?: Activite[]; destinations?: Destination[] } | null): Destination[] => {
   if (!labo) return [];
@@ -43,6 +45,7 @@ const apiMsg = (e: unknown, fallback: string) =>
 
 export default function TransferHistoriquePage() {
   const { t } = useTranslation();
+  const voc = useVocabulaire();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const laboId = searchParams.get('laboId') || '';
@@ -189,7 +192,7 @@ export default function TransferHistoriquePage() {
   // Libellés inchangés tant que toutes les destinations sont des activités (comptes restauration).
   const hasLaboDest = destinations.some((d) => d.type === 'labo') || results.some(isLaboDest);
   const colDestLabel = hasLaboDest ? 'Destination' : t('client.labo.col_activite');
-  const rowDestLabel = (r: Transfert) => (isLaboDest(r) ? 'Labo destinataire' : 'Activité');
+  const rowDestLabel = (r: Transfert) => (isLaboDest(r) ? `${voc.Court('labo')} destinataire` : voc.Nom('activite'));
 
   // Client-side filtering
   const allCategories = Array.from(new Set(results.map((r) => r.categorieNom))).sort();
@@ -201,7 +204,7 @@ export default function TransferHistoriquePage() {
   const totalHT = filteredResults.reduce((s, r) => s + r.quantite * (r.prixUnitaire ?? 0), 0);
   const totalTTC = filteredResults.reduce((s, r) => s + r.quantite * (r.prixUnitaireTva ?? 0), 0);
 
-  if (!laboId) return <div className="page"><p className="text-muted">Labo introuvable.</p></div>;
+  if (!laboId) return <div className="page"><p className="text-muted">{voc.Nom('labo')} introuvable.</p></div>;
 
   return (
     <div className="page">
@@ -217,10 +220,10 @@ export default function TransferHistoriquePage() {
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📋</div>
             <div>
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
-                Historique Transfert{labo ? ` — ${labo.nom}` : ''}
+                Historique {voc.Court('transfert')}{labo ? ` — ${labo.nom}` : ''}
               <HelpButton section="transferts" variant="solid" size={18} tip="Aide" /></h1>
               <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                {hasLaboDest ? 'Consultez et exportez l\'historique des transferts vers les activités et labos rattachés' : 'Consultez et exportez l\'historique des transferts vers les activités'}
+                {hasLaboDest ? `Consultez et exportez l'historique ${voc.du('transfert', true)} vers ${voc.le('activite', true)} et ${voc.pl('labo')} ${voc.acc('labo', 'rattachés', 'rattachées')}` : `Consultez et exportez l'historique ${voc.du('transfert', true)} vers ${voc.le('activite', true)}`}
               </p>
             </div>
           </div>
@@ -237,10 +240,10 @@ export default function TransferHistoriquePage() {
           {allLabos.map((l) => (
             <button key={l.id} onClick={() => navigate(`/client/labo/historique-transferts?laboId=${l.id}`)}
               style={{ padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem', border: laboId === String(l.id) ? '1.5px solid #7e22ce' : '1.5px solid var(--border)', background: laboId === String(l.id) ? '#7e22ce' : 'var(--bg)', color: laboId === String(l.id) ? '#fff' : 'var(--text)', fontWeight: laboId === String(l.id) ? 700 : 400 }}>
-              🏭 {l.nom}
+              {voc.icon('labo')} {l.nom}
             </button>
           ))}
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner le labo</span>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', alignSelf: 'center', marginLeft: 4 }}>← sélectionner {voc.le('labo')}</span>
         </div>
       )}
 
@@ -255,10 +258,10 @@ export default function TransferHistoriquePage() {
         <FilterField label="📅 Du"><FilterInput type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} /></FilterField>
         <FilterField label="📅 Au"><FilterInput type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} /></FilterField>
         {destinations.length > 0 && (
-          <FilterField label={hasLaboDest ? '🎯 Destination' : `🏪 ${t('client.labo.filter_activite')}`}>
+          <FilterField label={hasLaboDest ? '🎯 Destination' : `${voc.icon('activite')} ${t('client.labo.filter_activite')}`}>
             <FilterSelect value={filterDestKey} onChange={(e) => setFilterDestKey(e.target.value)}>
               <option value="">{hasLaboDest ? 'Toutes les destinations' : t('client.labo.all_activites')}</option>
-              {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{d.type === 'labo' ? `🏭 ${d.nom}` : d.nom}</option>)}
+              {destinations.map((d) => <option key={d.destKey} value={d.destKey}>{d.type === 'labo' ? `${voc.icon('labo')} ${d.nom}` : d.nom}</option>)}
             </FilterSelect>
           </FilterField>
         )}
@@ -289,7 +292,7 @@ export default function TransferHistoriquePage() {
             <>
             {selectedIds.size > 0 && (
               <div style={{ marginBottom: 8, fontSize: '0.82rem', color: '#7e22ce', fontWeight: 700 }}>
-                {selectedIds.size} sélectionné{selectedIds.size > 1 ? 's' : ''}
+                {selectedIds.size} {voc.acc('transfert', 'sélectionné', 'sélectionnée', selectedIds.size)}
               </div>
             )}
             <div className="card" style={{ overflowX: 'auto' }}>
@@ -309,7 +312,7 @@ export default function TransferHistoriquePage() {
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                     <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                    {(['Ingrédient', 'Date', colDestLabel] as const).map((label) => (
+                    {([voc.Nom('ingredient'), 'Date', colDestLabel] as const).map((label) => (
                       <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                     ))}
                     {([t('client.historique_appro.col_qty'), 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
@@ -336,7 +339,7 @@ export default function TransferHistoriquePage() {
                           {fmtDate(r.dateTransfert)}
                         </span>
                       </td>
-                      <td style={{ fontWeight: 600, padding: '8px 10px', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={isLaboDest(r) ? 'Cession interne vers un labo rattaché' : undefined}>{destCell(r)}</td>
+                      <td style={{ fontWeight: 600, padding: '8px 10px', fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={isLaboDest(r) ? `Cession interne vers ${voc.un('labo')} ${voc.acc('labo', 'rattaché', 'rattachée')}` : undefined}>{destCell(voc, r)}</td>
                       <td style={{ textAlign: 'right', fontWeight: 800, color: '#10b981', padding: '8px 10px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
                         {r.quantite % 1 === 0 ? r.quantite.toFixed(0) : r.quantite}
                       </td>
@@ -368,7 +371,7 @@ export default function TransferHistoriquePage() {
                 <tfoot>
                   <tr style={{ background: '#f5f3ff', borderTop: '2px solid #7e22ce' }}>
                     <td colSpan={4} style={{ padding: '9px 10px', fontSize: '0.76rem', fontWeight: 800, color: '#3b0764', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Total — {filteredResults.length} transfert{filteredResults.length > 1 ? 's' : ''}
+                      Total — {voc.n('transfert', filteredResults.length)}
                     </td>
                     <td></td>
                     <td style={{ textAlign: 'right', padding: '9px 10px', fontWeight: 800, color: '#1d4ed8', fontSize: '0.84rem', whiteSpace: 'nowrap' }}>
@@ -384,7 +387,7 @@ export default function TransferHistoriquePage() {
               </table>
               {/* Pagination */}
               <div style={{ padding: '8px 14px', fontSize: '0.78rem', color: 'var(--text-muted)', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span>{filteredResults.length} transfert{filteredResults.length > 1 ? 's' : ''}</span>
+                <span>{voc.n('transfert', filteredResults.length)}</span>
                 {totalPages > 1 && (
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <button className="btn btn-ghost btn-sm" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))} style={{ padding: '3px 10px', fontWeight: 700 }}>‹</button>
@@ -404,7 +407,7 @@ export default function TransferHistoriquePage() {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #1e3a8a, #2563eb)', color: '#fff' }}>
-              <h2 style={{ color: '#fff', margin: 0 }}>✏️ Modifier le transfert</h2>
+              <h2 style={{ color: '#fff', margin: 0 }}>✏️ Modifier {voc.le('transfert')}</h2>
               <button className="modal-close" style={{ color: '#fff' }} onClick={() => setEditTarget(null)}>✕</button>
             </div>
             <div className="modal-body">
@@ -412,8 +415,8 @@ export default function TransferHistoriquePage() {
                 <tbody>
                   {[
                     ['Date', fmtDate(editTarget.dateTransfert)],
-                    [rowDestLabel(editTarget), destCell(editTarget)],
-                    ['Ingrédient', editTarget.ingredientNom],
+                    [rowDestLabel(editTarget), destCell(voc, editTarget)],
+                    [voc.Nom('ingredient'), editTarget.ingredientNom],
                     ['Catégorie', editTarget.categorieNom],
                     ['Ancienne quantité', `${editTarget.quantite % 1 === 0 ? editTarget.quantite.toFixed(0) : editTarget.quantite} ${editTarget.uniteNom}`],
                   ].map(([label, value]) => (
@@ -437,7 +440,7 @@ export default function TransferHistoriquePage() {
               </div>
               <div style={{ background: '#eff6ff', borderRadius: 10, padding: '12px 16px', borderLeft: '4px solid #2563eb' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                  <span style={{ fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 700 }}>{editPrixSource === 'pmp' ? 'Prix de référence (PMP HT à la date du transfert)' : 'Prix unitaire (dernier appro)'}</span>
+                  <span style={{ fontSize: '0.78rem', color: '#1d4ed8', fontWeight: 700 }}>{editPrixSource === 'pmp' ? `Prix de référence (PMP HT à la date ${voc.du('transfert')})` : `Prix unitaire (${voc.acc('appro', 'dernier', 'dernière')} ${voc.court('appro')})`}</span>
                   <span style={{ fontWeight: 800, color: '#1d4ed8' }}>
                     {editPrixLoading ? '…' : editPrix !== null ? `${editPrix.toFixed(3)} DT` : '—'}
                   </span>
@@ -473,22 +476,22 @@ export default function TransferHistoriquePage() {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7f1d1d, #dc2626)', color: '#fff' }}>
-              <h2 style={{ color: '#fff', margin: 0 }}>🗑️ Supprimer le transfert</h2>
+              <h2 style={{ color: '#fff', margin: 0 }}>🗑️ Supprimer {voc.le('transfert')}</h2>
               <button className="modal-close" style={{ color: '#fff' }} onClick={() => setDeleteTarget(null)}>✕</button>
             </div>
             <div className="modal-body">
               <div style={{ background: '#fef2f2', borderRadius: 10, padding: '14px 16px', borderLeft: '4px solid #dc2626', marginBottom: 18 }}>
-                <p style={{ fontWeight: 800, color: '#991b1b', fontSize: '0.88rem', margin: '0 0 6px' }}>⚠️ Attention — impact sur les stocks</p>
+                <p style={{ fontWeight: 800, color: '#991b1b', fontSize: '0.88rem', margin: '0 0 6px' }}>⚠️ Attention — impact sur {voc.le('stock', true)}</p>
                 <p style={{ fontSize: '0.85rem', color: '#7f1d1d', margin: 0, lineHeight: 1.5 }}>
-                  Cette suppression va recalculer le <strong>stock du labo</strong> (la quantité sera restituée) et le <strong>stock {isLaboDest(deleteTarget) ? 'du labo' : "de l'activité"} «{destNomOf(deleteTarget)}»</strong> (la quantité transférée sera retirée). Cette action est irréversible.
+                  Cette suppression va recalculer {voc.det('stock', 'le')}<strong>{voc.nom('stock')} {voc.du('labo')}</strong> (la quantité sera restituée) et {voc.det('stock', 'le')}<strong>{voc.nom('stock')} {voc.du(isLaboDest(deleteTarget) ? 'labo' : 'activite')} «{destNomOf(deleteTarget)}»</strong> (la quantité transférée sera retirée). Cette action est irréversible.
                 </p>
               </div>
               <table style={{ width: '100%', fontSize: '0.9rem', borderCollapse: 'collapse' }}>
                 <tbody>
                   {[
                     ['Date', fmtDate(deleteTarget.dateTransfert)],
-                    [rowDestLabel(deleteTarget), destCell(deleteTarget)],
-                    ['Ingrédient', deleteTarget.ingredientNom],
+                    [rowDestLabel(deleteTarget), destCell(voc, deleteTarget)],
+                    [voc.Nom('ingredient'), deleteTarget.ingredientNom],
                     ['Quantité', `${deleteTarget.quantite % 1 === 0 ? deleteTarget.quantite.toFixed(0) : deleteTarget.quantite} ${deleteTarget.uniteNom}`],
                   ].map(([label, value]) => (
                     <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -520,7 +523,7 @@ export default function TransferHistoriquePage() {
         <div className="modal-overlay">
           <div className="modal" style={{ maxWidth: 460 }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header modal-header--primary">
-              <h2>📋 Détail du transfert</h2>
+              <h2>📋 Détail {voc.du('transfert')}</h2>
               <button className="modal-close" onClick={() => setDetailPopup(null)}>✕</button>
             </div>
             <div className="modal-body">
@@ -528,8 +531,8 @@ export default function TransferHistoriquePage() {
                 <tbody>
                   {[
                     ['Date', fmtDate(detailPopup.dateTransfert)],
-                    [rowDestLabel(detailPopup), destCell(detailPopup)],
-                    ['Ingrédient', detailPopup.ingredientNom],
+                    [rowDestLabel(detailPopup), destCell(voc, detailPopup)],
+                    [voc.Nom('ingredient'), detailPopup.ingredientNom],
                     ['Catégorie', detailPopup.categorieNom],
                     ['Quantité', `${detailPopup.quantite % 1 === 0 ? detailPopup.quantite.toFixed(0) : detailPopup.quantite} ${detailPopup.uniteNom}`],
                   ].map(([label, value]) => (

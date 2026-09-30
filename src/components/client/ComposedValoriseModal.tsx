@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { CategorieProduit, ActiviteIngredient } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 interface Labo { id: number; nom: string; }
 interface Act { id: number; nom: string; laboId?: number | null; }
@@ -17,6 +18,7 @@ interface Props {
 // wizard à étapes (Affectation labo → Identité → Articles → Produits Utilisables → Récap).
 // Le produit est fabriqué au labo, transféré vers les activités cochées (PT), vendu tel quel (valorisé).
 export default function ComposedValoriseModal({ categories, editProductId, onClose, onCreated }: Props) {
+  const voc = useVocabulaire();
   type Step = 1 | 2 | 3 | 4 | 5 | 6;
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState('');
@@ -110,8 +112,8 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
   };
 
   const STEPS = [
-    { n: 1, label: 'Affectation' }, { n: 2, label: 'Identité' }, { n: 3, label: 'Articles' },
-    { n: 4, label: 'Produits Utilisables' }, { n: 5, label: 'Récap' },
+    { n: 1, label: 'Affectation' }, { n: 2, label: 'Identité' }, { n: 3, label: voc.Pl('article') },
+    { n: 4, label: voc.Titre('produit_utilisable', true) }, { n: 5, label: 'Récap' },
   ];
   const lbl: React.CSSProperties = { display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#3730a3', marginBottom: 5 };
   const nextBtn = (enabled: boolean, to: Step) => (
@@ -126,7 +128,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
       <div className="modal" style={{ maxWidth: 600, width: '95vw', maxHeight: '92vh', overflow: 'auto' }} onClick={(e) => e.stopPropagation()}>
         <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', padding: '18px 22px 14px', borderRadius: '12px 12px 0 0' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 12 }}>💎 {editProductId ? 'Modifier' : 'Nouveau'} produit valorisé composé</div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem', marginBottom: 12 }}>{voc.icon('produit_valorise')} {editProductId ? `Modifier ${voc.nom('produit_valorise')}` : voc.Nouveau('produit_valorise')} {voc.acc('produit_valorise', 'composé', 'composée')}</div>
             <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 900, fontSize: '1.1rem', cursor: 'pointer', padding: '2px 9px', lineHeight: 1 }}>×</button>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -143,22 +145,22 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
           {/* Step 1 — Affectation (labo + activités liées cochables) */}
           {step === 1 && (
             <>
-              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>Fabriqué au labo, transféré vers les activités cochées, vendu tel quel (valorisé).</div>
+              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>{voc.acc('produit_valorise', 'Fabriqué', 'Fabriquée')} {voc.au('labo')}, {voc.acc('produit_valorise', 'transféré', 'transférée')} vers {voc.le('activite', true)} {voc.acc('activite', 'cochés', 'cochées')}, {voc.acc('produit_valorise', 'vendu tel quel (valorisé)', 'vendue telle quelle (valorisée)')}.</div>
               <div>
-                <label style={lbl}>Labo(s) de fabrication <span style={{ color: '#ef4444' }}>*</span></label>
-                {labos.length === 0 ? <div style={{ fontSize: '0.82rem', color: '#b45309' }}>Aucun labo disponible.</div> : (
+                <label style={lbl}>{voc.NomS('labo')} de fabrication <span style={{ color: '#ef4444' }}>*</span></label>
+                {labos.length === 0 ? <div style={{ fontSize: '0.82rem', color: '#b45309' }}>{voc.Aucun('labo')} disponible.</div> : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {labos.map((l) => { const on = selectedLabos.includes(l.id); return (
                       <button type="button" key={l.id} onClick={() => toggleLabo(l.id)}
-                        style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${on ? '#6366f1' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#3730a3' : '#374151', fontWeight: on ? 700 : 500, fontSize: '0.82rem', cursor: 'pointer' }}>🏭 {l.nom}{on ? ' ✓' : ''}</button>
+                        style={{ padding: '6px 12px', borderRadius: 8, border: `1.5px solid ${on ? '#6366f1' : '#e2e8f0'}`, background: on ? '#f0fdf4' : '#fff', color: on ? '#3730a3' : '#374151', fontWeight: on ? 700 : 500, fontSize: '0.82rem', cursor: 'pointer' }}>{voc.icon('labo')} {l.nom}{on ? ' ✓' : ''}</button>
                     ); })}
                   </div>
                 )}
               </div>
               {selectedLabos.length > 0 && (
                 <div>
-                  <label style={lbl}>Activités qui recevront le produit (transfert) — décochez pour exclure</label>
-                  {linkedActivites.length === 0 ? <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Aucune activité rattachée à ce(s) labo(s).</div> : (
+                  <label style={lbl}>{voc.Pl('activite')} qui recevront {voc.le('produit')} ({voc.nom('transfert')}) — décochez pour exclure</label>
+                  {linkedActivites.length === 0 ? <div style={{ fontSize: '0.78rem', color: '#94a3b8' }}>{voc.Aucun('activite')} {voc.acc('activite', 'rattaché', 'rattachée')} à {voc.ce('labo', selectedLabos.length)}.</div> : (
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                       {linkedActivites.map((a) => { const on = checkedActivites.includes(a.id); return (
                         <button type="button" key={a.id} onClick={() => setCheckedActivites((p) => on ? p.filter((x) => x !== a.id) : [...p, a.id])}
@@ -179,7 +181,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
             <>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 200 }}><label style={lbl}>Nom <span style={{ color: '#ef4444' }}>*</span></label>
-                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex. Cookie maison" style={{ width: '100%' }} autoFocus /></div>
+                  <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={`Ex. ${voc.Nom('produit_compose')} A`} style={{ width: '100%' }} autoFocus /></div>
                 <div style={{ width: 140 }}><label style={lbl}>Réf.</label>
                   <input className="input" value={refProduit} onChange={(e) => setRefProduit(e.target.value)} placeholder="REF-001" style={{ width: '100%' }} /></div>
               </div>
@@ -187,7 +189,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
                 <select className="input" value={categorieId} onChange={(e) => setCategorieId(e.target.value)} style={{ width: '100%', maxWidth: 320, borderColor: categorieId ? '#c7d2fe' : '#fca5a5' }}>
                   <option value="">— Sélectionner —</option>{categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
-                {categories.length === 0 && <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie « valorisé ». Créez-en dans Catégories Produits.</div>}
+                {categories.length === 0 && <div style={{ fontSize: '0.76rem', color: '#b45309', marginTop: 4 }}>Aucune catégorie « valorisé ». Créez-en dans Catégories {voc.Court('produit', true)}.</div>}
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6 }}>
                 <button className="btn btn-ghost" onClick={() => setStep(1)}>← Retour</button>{nextBtn(canStep3, 3)}
@@ -198,16 +200,16 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
           {/* Step 3 — Articles */}
           {step === 3 && (
             <>
-              <label style={lbl}>Recette — articles du labo <span style={{ fontWeight: 400, color: '#94a3b8' }}>({validIng.length} avec portion)</span></label>
-              <input className="input" placeholder="🔍 Rechercher un article…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: '100%', fontSize: '0.82rem' }} />
+              <label style={lbl}>{voc.Nom('recette')} — {voc.pl('article')} {voc.du('labo')} <span style={{ fontWeight: 400, color: '#94a3b8' }}>({validIng.length} avec {voc.nom('portion')})</span></label>
+              <input className="input" placeholder={`🔍 Rechercher ${voc.un('article')}…`} value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: '100%', fontSize: '0.82rem' }} />
               <div style={{ maxHeight: 230, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10, padding: 6, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {filteredArticles.length === 0 ? <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0', fontSize: '0.85rem' }}>Aucun article consommable commun aux labos.</div> :
+                {filteredArticles.length === 0 ? <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '20px 0', fontSize: '0.85rem' }}>{voc.Aucun('article')} consommable {voc.acc('article', 'commun', 'commune')} {voc.au('labo', true)}.</div> :
                   filteredArticles.map((ing) => { const sid = String(ing.id); const sel = ingIds.has(sid); const line = ingLines.find((l) => l.id === sid); const valid = sel && parseFloat(line?.portion || '0') > 0; return (
                     <div key={ing.id} onClick={() => toggleIng(sid)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (valid ? '#eef2ff' : '#fef3c7') : 'transparent', cursor: 'pointer' }}>
                       <input type="checkbox" checked={sel} readOnly style={{ accentColor: '#6366f1', width: 15, height: 15, flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#3730a3' : '#374151' }}>{ing.nom}</span>
                       {sel && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                        <input type="number" step="0.001" min="0" placeholder="portion" value={line?.portion || ''} onChange={(e) => setIngPortion(sid, e.target.value)}
+                        <input type="number" step="0.001" min="0" placeholder={voc.nom('portion')} value={line?.portion || ''} onChange={(e) => setIngPortion(sid, e.target.value)}
                           style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${valid ? '#c7d2fe' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{ing.unite}</span></div>}
                     </div>
@@ -222,18 +224,18 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
           {/* Step 4 — Produits Utilisables (PU des labos choisis) */}
           {step === 4 && (
             <>
-              <label style={lbl}>Produits utilisables du/des labo(s) <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optionnel — {validSub.length} sélectionné{validSub.length !== 1 ? 's' : ''})</span></label>
+              <label style={lbl}>{voc.Pl('produit_utilisable')} {voc.du('labo', selectedLabos.length)} <span style={{ fontWeight: 400, color: '#94a3b8' }}>(optionnel — {validSub.length} {voc.acc('produit_utilisable', 'sélectionné', 'sélectionnée', validSub.length !== 1)})</span></label>
               {utilisables.length === 0 ? (
-                <div style={{ padding: 14, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>Aucun produit utilisable disponible pour ce(s) labo(s).</div>
+                <div style={{ padding: 14, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>{voc.Aucun('produit_utilisable')} disponible pour {voc.ce('labo', selectedLabos.length)}.</div>
               ) : (<>
-                <input className="input" placeholder="🔍 Rechercher un PU…" value={subSearch} onChange={(e) => setSubSearch(e.target.value)} style={{ width: '100%', fontSize: '0.82rem' }} />
+                <input className="input" placeholder={`🔍 Rechercher ${voc.un('produit_utilisable', false, 'court')}…`} value={subSearch} onChange={(e) => setSubSearch(e.target.value)} style={{ width: '100%', fontSize: '0.82rem' }} />
                 <div style={{ maxHeight: 210, overflowY: 'auto', border: '1px solid #ede9fe', borderRadius: 10, padding: 6, background: '#faf5ff', display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {filteredUtil.map((u) => { const sid = String(u.id); const sel = subIds.has(sid); const line = subLines.find((l) => l.id === sid); const valid = sel && parseFloat(line?.portion || '0') > 0; return (
                     <div key={u.id} onClick={() => toggleSub(sid)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', borderRadius: 8, background: sel ? (valid ? '#f3e8ff' : '#fef3c7') : 'transparent', cursor: 'pointer' }}>
                       <input type="checkbox" checked={sel} readOnly style={{ accentColor: '#7c3aed', width: 15, height: 15, flexShrink: 0 }} />
                       <span style={{ flex: 1, fontSize: '0.84rem', fontWeight: sel ? 600 : 400, color: sel ? '#5b21b6' : '#374151' }}>🔄 {u.name}</span>
                       {sel && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
-                        <input type="number" step="0.001" min="0" placeholder="portion" value={line?.portion || ''} onChange={(e) => setSubPortion(sid, e.target.value)}
+                        <input type="number" step="0.001" min="0" placeholder={voc.nom('portion')} value={line?.portion || ''} onChange={(e) => setSubPortion(sid, e.target.value)}
                           style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${valid ? '#c4b5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
                         <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>unité</span></div>}
                     </div>
@@ -251,14 +253,14 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
             <>
               <div style={{ background: 'linear-gradient(135deg,#f0fdf4,#e0e7ff)', border: '1.5px solid #c7d2fe', borderRadius: 14, padding: '14px 16px' }}>
                 <div style={{ fontWeight: 800, color: '#3730a3', fontSize: '1.05rem' }}>💎 {name || '—'}</div>
-                <div style={{ fontSize: '0.8rem', color: '#6366f1', marginTop: 2 }}>{categories.find((c) => String(c.id) === categorieId)?.name ?? '—'} · {validIng.length} article(s) · {validSub.length} PU</div>
-                <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 8 }}>🏭 {selectedLabos.map((id) => labos.find((l) => l.id === id)?.nom).filter(Boolean).join(', ')}</div>
-                <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 2 }}>🔄 Reçu par : {checkedActivites.length === 0 ? '— (non distribué)' : checkedActivites.map((id) => activites.find((a) => a.id === id)?.nom).filter(Boolean).join(', ')}</div>
+                <div style={{ fontSize: '0.8rem', color: '#6366f1', marginTop: 2 }}>{categories.find((c) => String(c.id) === categorieId)?.name ?? '—'} · {validIng.length} {voc.nomS('article')} · {validSub.length} {voc.court('produit_utilisable', validSub.length)}</div>
+                <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 8 }}>{voc.icon('labo')} {selectedLabos.map((id) => labos.find((l) => l.id === id)?.nom).filter(Boolean).join(', ')}</div>
+                <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: 2 }}>🔄 {voc.acc('produit_valorise', 'Reçu', 'Reçue')} par : {checkedActivites.length === 0 ? `— (non ${voc.acc('produit_valorise', 'distribué', 'distribuée')})` : checkedActivites.map((id) => activites.find((a) => a.id === id)?.nom).filter(Boolean).join(', ')}</div>
               </div>
               {error && <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 8, padding: '10px 14px', color: '#b91c1c', fontWeight: 700, fontSize: '0.85rem' }}>⛔ {error}</div>}
               <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: 6 }}>
                 <button className="btn btn-ghost" onClick={() => setStep(4)}>← Retour</button>
-                <button className="btn btn-primary" disabled={!canSave || saving} onClick={save}>{saving ? 'Enregistrement…' : (editProductId ? 'Enregistrer ✓' : 'Créer le produit ✓')}</button>
+                <button className="btn btn-primary" disabled={!canSave || saving} onClick={save}>{saving ? 'Enregistrement…' : (editProductId ? 'Enregistrer ✓' : `Créer ${voc.le('produit')} ✓`)}</button>
               </div>
             </>
           )}

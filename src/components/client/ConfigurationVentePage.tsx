@@ -4,6 +4,7 @@ import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import type { Activite } from '../../types';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -222,23 +223,24 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
 
 function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: ProduitRow[]; showPortion: boolean; isSupplement?: boolean }) {
   const { activePrests, prixPrestataires, dirtyCount, handleSaveAll, saving } = useContext(CVCtx);
+  const voc = useVocabulaire();
   const [filterNom, setFilterNom] = useState('');
   const [filterPresta, setFilterPresta] = useState('');
   const [page, setPage] = useState(1);
 
-  const articleLabel = isSupplement ? 'Nom supplément…' : 'Nom produit…';
+  const articleLabel = `Nom ${voc.court(isSupplement ? 'supplement' : 'produit')}…`;
 
   if (tableRows.length === 0) {
     const emptyIcon = isSupplement ? '🧂' : '🛍️';
     const emptyMsg = isSupplement
-      ? "Tu n'as pas de suppléments pour cette activité"
-      : 'Aucun produit vendable assigné à cette activité';
-    const emptyHint = isSupplement ? 'suppléments vendables' : 'produits vendables';
+      ? `Tu n'as pas ${voc.de('supplement', true)} pour ${voc.ce('activite')}`
+      : `${voc.Aucun('produit_vendable')} ${voc.acc('produit_vendable', 'assigné', 'assignée')} à ${voc.ce('activite')}`;
+    const emptyHint = isSupplement ? `${voc.pl('supplement')} vendables` : voc.pl('produit_vendable');
     return (
       <div style={{ textAlign: 'center', padding: '50px 0', color: 'var(--text-muted)' }}>
         <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>{emptyIcon}</div>
         {emptyMsg}
-        <div style={{ fontSize: '0.8rem', marginTop: 6 }}>Créez des {emptyHint} dans <strong>Espace Produit</strong></div>
+        <div style={{ fontSize: '0.8rem', marginTop: 6 }}>Créez {voc.det(isSupplement ? 'supplement' : 'produit_vendable', 'un', true)}{emptyHint} dans <strong>{voc.Nom('espace_produits')}</strong></div>
       </div>
     );
   }
@@ -274,7 +276,7 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
         {activePrests.length > 0 && (
           <select value={filterPresta} onChange={e => setFilterPresta(e.target.value)}
             style={{ flex: '1 1 160px', minWidth: 130, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${filterPresta ? C : CB}`, background: filterPresta ? CL : '#fafafa', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
-            <option value="">Tous prestataires</option>
+            <option value="">{voc.Tous('prestataire', '')}</option>
             {activePrests.map(ap => (
               <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>
             ))}
@@ -307,10 +309,10 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: colCount * 110 }}>
           <thead>
             <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
-              <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
+              <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{voc.Nom('produit')}</th>
               <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendable</th>
               {showPortion && (
-                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Portion</th>
+                <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{voc.Nom('portion')}</th>
               )}
               <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Prix direct</th>
               {activePrests.map(ap => (
@@ -377,6 +379,7 @@ function HistoriqueTab() {
     loadHistorique, handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
     selectedHistIds, toggleSelectHist,
   } = useContext(CVCtx);
+  const voc = useVocabulaire();
   const [page, setPage] = useState(1);
 
   const histTotalPages = Math.max(1, Math.ceil(filteredHist.length / PAGE_SIZE));
@@ -389,7 +392,7 @@ function HistoriqueTab() {
         <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>📋</div>
         <div>
           <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>Historique des prix</div>
-          <div style={{ fontSize: '0.72rem', color: C }}>Toutes les modifications de prix enregistrées pour cette activité</div>
+          <div style={{ fontSize: '0.72rem', color: C }}>Toutes les modifications de prix enregistrées pour {voc.ce('activite')}</div>
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           <button onClick={handleExportHistXls} disabled={exportingHistXls}
@@ -406,16 +409,16 @@ function HistoriqueTab() {
       <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center', background: '#fafafa' }}>
         <div style={{ position: 'relative', flex: '1 1 180px', minWidth: 140 }}>
           <span style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', fontSize: '0.78rem', pointerEvents: 'none' }}>🔍</span>
-          <input type="text" placeholder="Nom produit…" value={histFilterNom}
+          <input type="text" placeholder={`Nom ${voc.court('produit')}…`} value={histFilterNom}
             onChange={e => setHistFilterNom(e.target.value)}
             style={{ width: '100%', paddingLeft: 28, paddingRight: 8, paddingTop: 7, paddingBottom: 7, borderRadius: 8, border: `1.5px solid ${histFilterNom ? C : CB}`, background: histFilterNom ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', boxSizing: 'border-box' }} />
         </div>
         <select value={histFilterType} onChange={e => setHistFilterType(e.target.value as 'all' | 'produit' | 'supplement' | 'valorise')}
           style={{ flex: '0 0 180px', padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${histFilterType !== 'all' ? C : CB}`, background: histFilterType !== 'all' ? CL : '#fff', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
           <option value="all">Tous types</option>
-          <option value="produit">Produits</option>
-          <option value="supplement">Suppléments</option>
-          <option value="valorise">Produits Valorisés</option>
+          <option value="produit">{voc.Pl('produit')}</option>
+          <option value="supplement">{voc.Pl('supplement')}</option>
+          <option value="valorise">{voc.Titre('produit_valorise', true)}</option>
         </select>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, flex: '0 0 auto' }}>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Du</span>
@@ -458,7 +461,7 @@ function HistoriqueTab() {
                 <thead>
                   <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
                     <th style={{ padding: '8px 12px', width: 36 }}></th>
-                    <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Produit</th>
+                    <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{voc.Nom('produit')}</th>
                     <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Type</th>
                     <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Prix enregistré</th>
                     <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Date</th>
@@ -486,7 +489,7 @@ function HistoriqueTab() {
                             color: isSel ? '#fff' : (e.article_type === 'ingredient' ? '#166534' : (e.is_supplement ? '#92400e' : CD)),
                             border: `1px solid ${isSel ? 'rgba(255,255,255,0.4)' : (e.article_type === 'ingredient' ? '#86efac' : (e.is_supplement ? '#fcd34d' : CB))}`,
                           }}>
-                            {e.article_type === 'ingredient' ? '💎 Produit Valorisé' : (e.is_supplement ? '🧂 Supplément' : '🛍️ Produit')}
+                            {e.article_type === 'ingredient' ? `${voc.icon('produit_valorise')} ${voc.Titre('produit_valorise')}` : (e.is_supplement ? `🧂 ${voc.Nom('supplement')}` : `🛍️ ${voc.Nom('produit')}`)}
                           </span>
                         </td>
                         <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem', color: isSel ? '#fff' : C }}>
@@ -534,6 +537,7 @@ function HistoriqueTab() {
 
 export default function ConfigurationVentePage() {
   const { confirm, alerte } = useConfirm();
+  const voc = useVocabulaire();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -753,14 +757,14 @@ export default function ConfigurationVentePage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>💲</div>
-              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Configuration Vente <HelpButton section="configuration-vente" variant="solid" size={18} tip="Aide" /></h1>
+              <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Configuration {voc.Court('vente')} <HelpButton section="configuration-vente" variant="solid" size={18} tip="Aide" /></h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-              Activez les produits vendables et configurez leurs prix de vente
+              Activez {voc.le('produit_vendable', true)} et configurez leurs prix de vente
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Link to="/client/ventes/prestataires" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>🛵 Prestataires</Link>
+            <Link to="/client/ventes/prestataires" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>{voc.icon('prestataire')} {voc.Pl('prestataire')}</Link>
             <Link to="/client/ventes/charges" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>🏗️ Charges</Link>
           </div>
         </div>
@@ -783,19 +787,19 @@ export default function ConfigurationVentePage() {
         )}
 
         {!selectedActiviteId ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>Aucune activité disponible</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>{voc.Aucun('activite')} disponible</div>
         ) : (
           <>
             {activePrests.length === 0 && activeTab !== 'historique' && (
               <div style={{ background: '#fef9c3', border: `1px solid ${CB}`, borderRadius: 10, padding: '10px 16px', fontSize: '0.83rem', color: '#854d0e', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
-                💡 Aucun prestataire actif — les colonnes prestataire n'apparaîtront pas.
-                <Link to="/client/ventes/prestataires" style={{ color: C, fontWeight: 700, marginLeft: 4 }}>Configurer les prestataires →</Link>
+                💡 {voc.Aucun('prestataire')} {voc.acc('prestataire', 'actif', 'active')} — les colonnes {voc.nom('prestataire')} n'apparaîtront pas.
+                <Link to="/client/ventes/prestataires" style={{ color: C, fontWeight: 700, marginLeft: 4 }}>Configurer {voc.le('prestataire', true)} →</Link>
               </div>
             )}
             <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
-              <TabBtn tab="produits" label="🛍️ Vente Produits" count={produitRows.length} />
-              <TabBtn tab="supplements" label="🧂 Ventes Suppléments" count={supplementRows.length} />
-              <TabBtn tab="valorises" label="💎 Ventes Valorisées" count={valoriseRows.length} />
+              <TabBtn tab="produits" label={`🛍️ ${voc.Nom('vente')} ${voc.Court('produit', true)}`} count={produitRows.length} />
+              <TabBtn tab="supplements" label={`🧂 ${voc.Pl('vente')} ${voc.Court('supplement', true)}`} count={supplementRows.length} />
+              <TabBtn tab="valorises" label={`💎 ${voc.Pl('vente')} ${voc.acc('vente', 'Valorisés', 'Valorisées')}`} count={valoriseRows.length} />
               <TabBtn tab="historique" label="📋 Historique config" />
             </div>
 
@@ -804,8 +808,8 @@ export default function ConfigurationVentePage() {
                 <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>🛍️</div>
                   <div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>Produits vendables</div>
-                    <div style={{ fontSize: '0.72rem', color: C }}>Produits de type "Vendable" assignés à cette activité — activez-les et définissez leur prix</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>{voc.Pl('produit_vendable')}</div>
+                    <div style={{ fontSize: '0.72rem', color: C }}>{voc.Pl('produit')} de type "Vendable" {voc.acc('produit', 'assignés', 'assignées')} à {voc.ce('activite')} — activez-les et définissez leur prix</div>
                   </div>
                 </div>
                 <ProduitTable tableRows={produitRows} showPortion={false} />
@@ -817,8 +821,8 @@ export default function ConfigurationVentePage() {
                 <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>🧂</div>
                   <div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>Suppléments vendables</div>
-                    <div style={{ fontSize: '0.72rem', color: C }}>Produits suppléments assignés à cette activité — activez-les et définissez leur prix</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>{voc.Pl('supplement')} vendables</div>
+                    <div style={{ fontSize: '0.72rem', color: C }}>{voc.Pl('produit')} {voc.pl('supplement')} {voc.acc('produit', 'assignés', 'assignées')} à {voc.ce('activite')} — activez-les et définissez leur prix</div>
                   </div>
                 </div>
                 <ProduitTable tableRows={supplementRows} showPortion={false} isSupplement />
@@ -830,8 +834,8 @@ export default function ConfigurationVentePage() {
                 <div style={{ background: `linear-gradient(135deg, ${CD}18 0%, ${C}12 100%)`, borderBottom: `1.5px solid ${CB}`, padding: '14px 22px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ background: C + '22', borderRadius: 8, padding: '6px 8px', fontSize: '1rem' }}>💎</div>
                   <div>
-                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>Ventes Valorisées</div>
-                    <div style={{ fontSize: '0.72rem', color: C }}>Articles valorisés (familles non consommables et vendables) — activez-les et définissez leur prix</div>
+                    <div style={{ fontSize: '0.95rem', fontWeight: 800, color: CD }}>{voc.Pl('vente')} {voc.acc('vente', 'Valorisés', 'Valorisées')}</div>
+                    <div style={{ fontSize: '0.72rem', color: C }}>{voc.Pl('article')} {voc.acc('article', 'valorisés', 'valorisées')} (familles non consommables et vendables) — activez-les et définissez leur prix</div>
                   </div>
                 </div>
                 <ProduitTable tableRows={valoriseRows} showPortion={false} />

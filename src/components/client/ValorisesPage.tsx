@@ -8,6 +8,7 @@ import ProductCard from './ProductCard';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { PRODUCT_THEME } from '../../theme/productTheme';
 
 const HERO = PRODUCT_THEME.heroGradient;
@@ -31,6 +32,7 @@ type StatutFilter = 'all' | 'assigned' | 'unassigned';
 
 export default function ValorisesPage() {
   const { confirm, alerte } = useConfirm();
+  const voc = useVocabulaire();
   const [articles, setArticles] = useState<ArticleValorisable[]>([]);
   const [categories, setCategories] = useState<CategorieProduit[]>([]);
   const [composes, setComposes] = useState<Product[]>([]);
@@ -64,7 +66,7 @@ export default function ValorisesPage() {
         ...prod,
         activites: assigned ? (prod.activites || []).filter((a) => a.id !== activiteId) : [...(prod.activites || []), allActivities.find((a) => a.id === activiteId)!].filter(Boolean),
       }));
-    } catch (e: unknown) { alerte({ title: 'Assignation impossible', message: apiMsg(e, "Erreur lors de l'assignation à l'activité"), tone: 'danger' }); }
+    } catch (e: unknown) { alerte({ title: 'Assignation impossible', message: apiMsg(e, `Erreur lors de l'assignation ${voc.au('activite')}`), tone: 'danger' }); }
     setTogglingActivite(null);
   };
   const toggleLaboAssignment = async (p: Product, laboId: number) => {
@@ -76,7 +78,7 @@ export default function ValorisesPage() {
         ...prod,
         labos: assigned ? (prod.labos || []).filter((l) => l.id !== laboId) : [...(prod.labos || []), allLabos.find((l) => l.id === laboId)!].filter(Boolean),
       }));
-    } catch (e: unknown) { alerte({ title: 'Assignation impossible', message: apiMsg(e, "Erreur lors de l'assignation au labo"), tone: 'danger' }); }
+    } catch (e: unknown) { alerte({ title: 'Assignation impossible', message: apiMsg(e, `Erreur lors de l'assignation ${voc.au('labo')}`), tone: 'danger' }); }
     setTogglingLabo(null);
   };
 
@@ -125,7 +127,7 @@ export default function ValorisesPage() {
   const deleteCompose = async (p: Product) => {
     if (!(await confirm({
       title: `Supprimer « ${p.name} » ?`,
-      message: 'Ce produit valorisé composé sera définitivement supprimé.',
+      message: `${voc.Ce('produit_valorise')} ${voc.acc('produit_valorise', 'composé', 'composée')} sera définitivement ${voc.acc('produit_valorise', 'supprimé', 'supprimée')}.`,
       confirmLabel: 'Supprimer',
       tone: 'danger',
     }))) return;
@@ -214,7 +216,7 @@ export default function ValorisesPage() {
   const composedLocked = formuleBasique && !hasLabos;
   const composedLockedNote = (
     <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
-      Produits composés : formule Premium requise
+      {voc.Pl('produit_compose')} : formule Premium requise
     </span>
   );
 
@@ -227,16 +229,16 @@ export default function ValorisesPage() {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
               <div style={{ background: 'rgba(99,102,241,0.18)', border: '1px solid rgba(99,102,241,0.3)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem', lineHeight: 1 }}>💎</div>
-              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>Produits valorisés</h1>
+              <h1 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.01em' }}>{voc.Pl('produit_valorise')}</h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.55)', fontSize: '0.83rem', margin: 0 }}>
-              Vendus tels quels : articles du référentiel (catégorie à assigner) + produits composés fabriqués au labo
+              {voc.acc('produit_valorise', 'Vendus tels quels', 'Vendues telles quelles')} : {voc.pl('article')} {voc.du('referentiel')} (catégorie à assigner) + {voc.pl('produit_compose')} {voc.acc('produit_compose', 'fabriqués', 'fabriquées')} {voc.au('labo')}
             </p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <div style={{ background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.22)', borderRadius: 14, padding: '10px 20px', textAlign: 'center', minWidth: 80 }}>
               <div style={{ fontSize: '1.8rem', fontWeight: 900, color: '#818cf8', lineHeight: 1 }}>{assignedCount}/{articles.length}</div>
-              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>articles catégorisés</div>
+              <div style={{ fontSize: '0.72rem', color: 'rgba(255,255,255,0.5)', marginTop: 2 }}>{voc.pl('article')} {voc.acc('article', 'catégorisés', 'catégorisées')}</div>
             </div>
             <GuideButton section="articles-valorises" />
           </div>
@@ -247,7 +249,7 @@ export default function ValorisesPage() {
       <div style={{ display: 'flex', gap: 4, borderBottom: '2px solid #e2e8f0', marginBottom: 18 }}>
         {(([
           ...(hasLabos ? [['composes', `🏭 Composés (${composes.length})`]] : []),
-          ['referentiel', `💎 Référentiel (${articles.length})`],
+          ['referentiel', `💎 ${voc.Nom('referentiel')} (${articles.length})`],
         ]) as ['composes' | 'referentiel', string][]).map(([key, label]) => (
           <button key={key} onClick={() => setTab(key)}
             style={{ padding: '9px 20px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.9rem', fontWeight: tab === key ? 700 : 400, color: tab === key ? '#6366f1' : 'var(--text)', borderBottom: tab === key ? '3px solid #6366f1' : '3px solid transparent' }}>
@@ -264,13 +266,13 @@ export default function ValorisesPage() {
         {/* Barre de filtres (composant partagé, mode direct) — bouton d'ajout dans actions */}
         <HistoryFilterBar
           accent="#6366f1" accentDark="#4338ca"
-          subtitle={composes.length > 0 ? `${filteredComposes.length} produit${filteredComposes.length !== 1 ? 's' : ''}` : undefined}
+          subtitle={composes.length > 0 ? `${filteredComposes.length} ${voc.nom('produit', filteredComposes.length !== 1)}` : undefined}
           onReset={resetComposeFilters}
           showReset={hasComposeFilters}
-          actions={composedLocked ? composedLockedNote : <button onClick={() => setShowComposed(true)} style={{ height: 36, background: 'linear-gradient(135deg, #4338ca, #818cf8)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, padding: '0 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>+ Produit valorisé composé</button>}
+          actions={composedLocked ? composedLockedNote : <button onClick={() => setShowComposed(true)} style={{ height: 36, background: 'linear-gradient(135deg, #4338ca, #818cf8)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, padding: '0 18px', cursor: 'pointer', fontSize: '0.85rem', whiteSpace: 'nowrap' }}>+ {voc.Nom('produit_valorise')} {voc.acc('produit_valorise', 'composé', 'composée')}</button>}
         >
           {composes.length > 0 && (<>
-            <FilterField label="🔍 Produit"><FilterInput value={composeSearch} onChange={e => { setComposeSearch(e.target.value); setComposePage(1); }} placeholder="Nom ou réf…" /></FilterField>
+            <FilterField label={`🔍 ${voc.Nom('produit')}`}><FilterInput value={composeSearch} onChange={e => { setComposeSearch(e.target.value); setComposePage(1); }} placeholder="Nom ou réf…" /></FilterField>
             {composeCats.length > 0 && (
               <FilterField label="🏷️ Catégorie">
                 <FilterSelect value={composeCat} onChange={e => { setComposeCat(e.target.value); setComposePage(1); }}>
@@ -285,11 +287,11 @@ export default function ValorisesPage() {
         {composes.length === 0 ? (
           <div style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '40px 32px', textAlign: 'center', color: '#3730a3' }}>
             <div style={{ fontSize: '2.4rem', marginBottom: 10 }}>🏭</div>
-            <div style={{ fontWeight: 800, marginBottom: 6 }}>Aucun produit composé</div>
-            <div style={{ fontSize: '0.88rem' }}>Cliquez sur « + Produit valorisé composé » ci-dessus pour en créer un.</div>
+            <div style={{ fontWeight: 800, marginBottom: 6 }}>{voc.Aucun('produit_compose')}</div>
+            <div style={{ fontSize: '0.88rem' }}>Cliquez sur « + {voc.Nom('produit_valorise')} {voc.acc('produit_valorise', 'composé', 'composée')} » ci-dessus pour en créer {voc.acc('produit_valorise', 'un', 'une')}.</div>
           </div>
         ) : filteredComposes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>Aucun produit composé pour ces filtres.</div>
+          <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>{voc.Aucun('produit_compose')} pour ces filtres.</div>
         ) : (
           <>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 14 }}>
@@ -297,8 +299,8 @@ export default function ValorisesPage() {
                 const nbArt = p.ingredientsCount ?? 0;
                 const nbSub = p.subProductsCount ?? 0;
                 const summaryParts: string[] = [];
-                if (nbArt) summaryParts.push(`${nbArt} article${nbArt > 1 ? 's' : ''}`);
-                if (nbSub) summaryParts.push(`${nbSub} PU`);
+                if (nbArt) summaryParts.push(voc.n('article', nbArt));
+                if (nbSub) summaryParts.push(`${nbSub} ${voc.court('produit_utilisable', nbSub)}`);
                 const togId = (key: string | null) => (key && key.startsWith(`${p.id}-`)) ? Number(key.slice(`${p.id}-`.length)) : null;
                 return (
                   <ProductCard
@@ -316,7 +318,7 @@ export default function ValorisesPage() {
                           <button
                             onClick={() => openFt(p)}
                             disabled={(p.ingredientsCount ?? 0) === 0}
-                            title="Générer la Fiche Technique"
+                            title={`Générer ${voc.le('fiche_technique', false, 'Titre')}`}
                             style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '5px 8px', borderRadius: 7, fontSize: '0.6rem', fontWeight: 600, minWidth: 54, background: '#eef2ff', border: '1px solid #c7d2fe', color: '#4338ca', cursor: (p.ingredientsCount ?? 0) === 0 ? 'not-allowed' : 'pointer', opacity: (p.ingredientsCount ?? 0) === 0 ? 0.5 : 1 }}
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><rect width="24" height="24" rx="3" fill="#217346"/><path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z" fill="#185C37"/><path d="M14 2V8H20L14 2Z" fill="#107C41"/><text x="7" y="18" fill="white" fontSize="8" fontWeight="bold" fontFamily="Arial,sans-serif">XLS</text></svg>
@@ -385,11 +387,11 @@ export default function ValorisesPage() {
       {/* Barre de filtres (composant partagé, mode direct) */}
       <HistoryFilterBar
         accent="#6366f1" accentDark="#4338ca"
-        subtitle={`${filtered.length} article${filtered.length !== 1 ? 's' : ''} · ${groups.length} catégorie${groups.length !== 1 ? 's' : ''}`}
+        subtitle={`${filtered.length} ${voc.nom('article', filtered.length !== 1)} · ${groups.length} catégorie${groups.length !== 1 ? 's' : ''}`}
         onReset={resetFilters}
         showReset={hasFilters}
       >
-        <FilterField label="🔍 Article"><FilterInput value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Nom de l'article…" /></FilterField>
+        <FilterField label={`🔍 ${voc.Nom('article')}`}><FilterInput value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder={`Nom ${voc.du('article')}…`} /></FilterField>
         {familles.length > 0 && (
           <FilterField label="🗂️ Famille">
             <FilterSelect value={filterFamille} onChange={e => { setFilterFamille(e.target.value); setPage(1); }}>
@@ -401,15 +403,15 @@ export default function ValorisesPage() {
         <FilterField label="🏷️ Statut">
           <FilterSelect value={filterStatut} onChange={e => { setFilterStatut(e.target.value as StatutFilter); setPage(1); }}>
             <option value="all">Tous</option>
-            <option value="assigned">Catégorisés</option>
-            <option value="unassigned">Non catégorisés</option>
+            <option value="assigned">{voc.acc('article', 'Catégorisés', 'Catégorisées')}</option>
+            <option value="unassigned">Non {voc.acc('article', 'catégorisés', 'catégorisées')}</option>
           </FilterSelect>
         </FilterField>
       </HistoryFilterBar>
 
       {categories.length === 0 && !loading && (
         <div style={{ background: '#fffbeb', border: '1.5px solid #fcd34d', borderRadius: 12, padding: '12px 16px', marginBottom: 16, fontSize: '0.85rem', color: '#92400e' }}>
-          ⚠️ Aucune catégorie de type « Article valorisé ». Créez-en d'abord dans <strong>Catégories Produits</strong>.
+          ⚠️ Aucune catégorie de type « {voc.Nom('article')} {voc.acc('article', 'valorisé', 'valorisée')} ». Créez-en d'abord dans <strong>Catégories {voc.Court('produit', true)}</strong>.
         </div>
       )}
 
@@ -419,8 +421,8 @@ export default function ValorisesPage() {
       ) : articles.length === 0 ? (
         <div style={{ background: 'linear-gradient(135deg,#eef2ff,#e0e7ff)', border: '2px dashed #c7d2fe', borderRadius: 18, padding: '48px 32px', textAlign: 'center' }}>
           <div style={{ fontSize: '2.8rem', marginBottom: 14 }}>💎</div>
-          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#3730a3', margin: '0 0 8px' }}>Aucun article valorisable</h3>
-          <p style={{ color: '#4338ca', fontSize: '0.88rem', margin: 0, maxWidth: 440, marginInline: 'auto' }}>Les articles valorisables proviennent des familles marquées « vendable » et « non consommable » dans votre référentiel.</p>
+          <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#3730a3', margin: '0 0 8px' }}>{voc.Aucun('article')} valorisable</h3>
+          <p style={{ color: '#4338ca', fontSize: '0.88rem', margin: 0, maxWidth: 440, marginInline: 'auto' }}>{voc.Le('article', true)} valorisables proviennent des familles marquées « vendable » et « non consommable » dans {voc.votre('referentiel')}.</p>
         </div>
       ) : groups.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-muted)' }}>Aucun résultat pour ces filtres.</div>
@@ -437,8 +439,8 @@ export default function ValorisesPage() {
                 <table className="table" style={{ margin: 0 }}>
                   <thead>
                     <tr>
-                      <th>Article</th>
-                      <th style={{ width: 220 }}>Catégorie produit</th>
+                      <th>{voc.Nom('article')}</th>
+                      <th style={{ width: 220 }}>Catégorie {voc.court('produit')}</th>
                     </tr>
                   </thead>
                   <tbody>

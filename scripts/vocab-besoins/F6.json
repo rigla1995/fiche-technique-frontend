@@ -1,0 +1,65 @@
+[
+  {
+    "besoin": "methode",
+    "demande": "Accord d'un participe avec DEUX termes coordonnés (« X/Y requis ») : féminin seulement si les deux termes sont féminins. Même besoin que celui du lot F2 (GerantsPage, « Activités & labos assignés ») : une méthode du moteur (par exemple voc.acc2(k1, k2, masc, fem)), ou l'outil de preuve qui accepte un voc.acc imbriqué en 3e argument.",
+    "fichier": "src/components/client/ProductList.tsx",
+    "ligne": 1121,
+    "texte": "⟦?Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l'étape Articles)|Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total⟧.",
+    "ecriture_souhaitee": "`Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} ${voc.acc2('article', 'produit_utilisable', 'requis', 'requises')} au total.`",
+    "raison": "Avec un lexique où « article » ET « produit utilisable » sont féminins (lexique miroir : « 2 denrées/inventions utiles requis »), il faudrait « requises ». Le texte est juste par défaut, en Hôtellerie (« 2 fournitures/consommables requis », féminin + masculin) et en Céramique (« 2 matières premières/semi-finis requis »)."
+  },
+  {
+    "besoin": "methode",
+    "demande": "Même besoin que l'entrée précédente (accord avec deux termes coordonnés), pour l'infobulle du bouton « Suivant » de l'étape 4 de l'assistant.",
+    "fichier": "src/components/client/ProductList.tsx",
+    "ligne": 1175,
+    "texte": "⟦?⟦?Sélectionnez exactement 1 article ou produit utilisable|Au minimum 2 articles/produits utilisables requis⟧|⟦·⟧⟧",
+    "ecriture_souhaitee": "`Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} ${voc.acc2('article', 'produit_utilisable', 'requis', 'requises')}`",
+    "raison": "Même phrase que l'aide de l'étape 4 : « requis » reste au masculin tant que le moteur n'a pas d'accord à deux clés ; faux seulement si les deux termes deviennent féminins."
+  },
+  {
+    "besoin": "methode",
+    "demande": "Accord d'un participe avec TROIS termes coordonnés (« stock, inventaires et pertes … supprimés ») : féminin seulement si tous les termes sont féminins. Généralisation du besoin précédent (voc.accN([k1, k2, k3], masc, fem), ou voc.acc imbriqué accepté par l'outil).",
+    "fichier": "src/components/client/ProductList.tsx",
+    "ligne": 754,
+    "texte": "Stock PT, inventaires et pertes de cette activité supprimés",
+    "ecriture_souhaitee": "`{voc.Nom('stock')} {voc.Court('pt')}, {voc.pl('inventaire')} et {voc.pl('perte')} de {voc.ce('activite')} {voc.accN(['stock', 'inventaire', 'perte'], 'supprimés', 'supprimées')}`",
+    "raison": "Le participe s'accorde avec la coordination, pas avec « cette activité » qui le précède (d'où le signalement de l'outil). Il reste au masculin : juste par défaut, en Hôtellerie, en Céramique et au miroir (au moins un terme masculin dans chacun) ; faux seulement si stock, inventaire et perte deviennent tous féminins."
+  },
+  {
+    "besoin": "forme",
+    "demande": "Forme « (s) » sur la forme COURTE d'un terme (voc.NomS / voc.nomS n'ont pas d'argument de casse 'Court' / 'court') — ou décision S5 de réécrire ce libellé avec le nombre réel (voc.Court('labo', addAffectationIds.length), écart faute-corrigee). Aucune entrée provisoire : le texte est écrit avec voc.NomS comme la règle 3 le prescrit et l'identité est conservée.",
+    "fichier": "src/components/client/ProductList.tsx",
+    "ligne": 1387,
+    "texte": "⟦?🏭 Labo(s) de fabrication|📍 ⟦?Activités|Stocks activés⟧⟧",
+    "ecriture_souhaitee": "`${voc.icon('labo')} ${voc.NomS('labo', 'Court')} de fabrication` (« Cuisine(s) de fabrication », « Site(s) de fabrication »)",
+    "raison": "Libellé de section du récapitulatif (règle 2 : forme courte dans un libellé). voc.NomS('labo') rend « Cuisine(s) centrale(s) de fabrication » en Hôtellerie et « Site(s) de production de fabrication » en Céramique : juste mais lourd, et redondant en Céramique. Même redondance dans la consigne de l'étape 1 (l. 1232, « Sélectionnez le/les site(s) de production de fabrication ») : la forme courte avec « (s) » la lèverait aussi (« le/les site(s) de fabrication »)."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Icônes propres à la restauration écrites en dur dans l'écran commun des produits : 🍽️ (assiette) pour les produits vendables — en-tête de page (l. 433), sous-onglet « Produits vendables » (l. 465), état vide (l. 535), icône de chaque carte (l. 560), fenêtre « Utilisé dans » vide (l. 711) — et 🍔 (burger) pour l'état « aucun résultat » (l. 551). L'icône par défaut de la clé produit_vendable est 🛒 ; 🍽️ est celle de portion. À décider en S5 : aligner l'icône par défaut de produit_vendable sur 🍽️ (identité conservée, puis voc.icon partout) ou remplacer ces emojis par voc.icon('produit_vendable') (changement visible pour un compte restauration).",
+    "fichier": "src/components/client/ProductList.tsx",
+    "ligne": 465,
+    "texte": "🍽️ Produits vendables",
+    "ecriture_souhaitee": "`${voc.icon('produit_vendable')} ${voc.Pl('produit_vendable')}` (et voc.icon('produit_vendable') aux l. 433, 535, 551, 560, 711)",
+    "raison": "Spec §3 règle 7 : voc.icon(k) seulement là où l'emoji affiché est déjà l'icône par défaut de la clé ; ici il ne l'est pas, l'icône reste donc en dur. Un compte Céramique garde une assiette devant « Produits finis » et un burger sur l'état vide. Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Autres icônes écrites en dur qui ne sont pas l'icône par défaut de la clé qu'elles accompagnent : 🧪 pour les produits utilisables (ProductList l. 433, 535, 551, 560, 742 ; défaut 🧂) ; 📍 pour l'activité (ProductList l. 507, 546, 1387 ; défaut 🏪) ; 🔄 pour les produits transformés (ProductList l. 1370, 1376, RecipeTree l. 38 ; défaut 🍲) ; 🧂 pour un article ou un ingrédient (RecipeTree l. 20, ProductForm l. 480 ; défauts 📦 et 🥕) ; 🔧 pour la carte des produits utilisables (ProductForm l. 551). À décider en S5 : aligner le lexique ou les écrans.",
+    "fichier": "src/components/client/ProductList.tsx",
+    "ligne": 507,
+    "texte": "📍 Activité",
+    "ecriture_souhaitee": "`${voc.icon('activite')} ${voc.Nom('activite')}` (et voc.icon de la clé concernée aux autres sites cités)",
+    "raison": "Spec §3 règle 7 : l'emoji affiché n'est pas l'icône par défaut de la clé, il reste donc en dur ; un domaine qui change l'icône d'une de ces clés ne la verra pas dans ces écrans. Là où l'emoji EST l'icône par défaut (🏭 labo, 🏪 activité dans ProductForm, ➕ supplément, 🛒 vendable, 📦 stock), voc.icon est employé. Aucune entrée provisoire : le mode residuels ne liste pas les icônes."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Décision S5 : le champ de recherche de l'étape 4 de l'assistant de création (liste des produits utilisables) dit « Rechercher un produit transformé… » (clé pt, gardée pour l'identité) alors que le nom de l'étape, son aide et son état vide parlent de produits utilisables. Relevé par l'intégrateur de la vague 2 ; aucune entrée provisoire : le texte passe par voc.un('pt') et l'identité est conservée.",
+    "fichier": "src/components/client/ProductList.tsx",
+    "ligne": 1129,
+    "texte": "🔍 Rechercher un produit transformé…",
+    "ecriture_souhaitee": "`🔍 Rechercher ${voc.un('produit_utilisable')}…` — écart visible pour un compte restauration : « 🔍 Rechercher un produit utilisable… » (entrée allow faute-corrigee en mode identite)",
+    "raison": "Hôtellerie : « Rechercher une préparation… » sous l'étape « Consommables » ; Céramique : « Rechercher un produit fabriqué… » sous l'étape « Semi-finis ». L'incohérence PT / PU existe déjà par défaut, elle devient visible dès que les deux termes divergent."
+  }
+]
