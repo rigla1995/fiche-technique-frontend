@@ -147,7 +147,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
             <>
               <div style={{ fontSize: '0.82rem', color: '#64748b' }}>{voc.acc('produit_valorise', 'Fabriqué', 'Fabriquée')} {voc.au('labo')}, {voc.acc('produit_valorise', 'transféré', 'transférée')} vers {voc.le('activite', true)} {voc.acc('activite', 'cochés', 'cochées')}, {voc.acc('produit_valorise', 'vendu tel quel (valorisé)', 'vendue telle quelle (valorisée)')}.</div>
               <div>
-                <label style={lbl}>{voc.NomS('labo')} de fabrication <span style={{ color: '#ef4444' }}>*</span></label>
+                <label style={lbl}>{voc.NomS('labo', 'Court')} de fabrication <span style={{ color: '#ef4444' }}>*</span></label>
                 {labos.length === 0 ? <div style={{ fontSize: '0.82rem', color: '#b45309' }}>{voc.Aucun('labo')} disponible.</div> : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                     {labos.map((l) => { const on = selectedLabos.includes(l.id); return (

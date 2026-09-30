@@ -517,6 +517,52 @@ test('R9 : voc.det — déterminant séparé du terme par une balise (étape S4)
   ecart(avant, apres.replace('"du"', 'lequel'), { erreur: /voc\.det : argument n° 2 non littéral/ });
 });
 
+test('R9 : extension de l\'étape S5 — voc.accN (termes coordonnés), forme courte de MAJ / nomS / NomS, clé article_ingredient', () => {
+  // accN : le participe accordé avec DEUX termes sort du moteur ; par défaut (activité f + labo m) il reste au masculin.
+  const avant = jsx('<label>Activités &amp; labos assignés</label>');
+  const apres = jsx('<label>{voc.Pl("activite")} &amp; {voc.pl("labo")} {voc.accN(["activite", "labo"], "assignés", "assignées")}</label>');
+  identique(avant, apres);
+  assert.deepEqual(canons(apres), ['Activités & labos assignés']);
+  identique(jsx('<p>Aucune activité ni labo configuré.</p>'), jsx('<p>{voc.Aucun("activite")} ni {voc.nom("labo")} {voc.accN(["activite", "labo"], "configuré", "configurée")}.</p>'));
+  identique('const a = "Ventes et marges calculées";', 'const a = `${voc.Pl("vente")} et ${voc.pl("marge")} ${voc.accN(["vente", "marge"], "calculé", "calculée", true)}`;');
+  // Trois termes, nombre conditionnel : le pluriel suit la règle du test (R4), comme voc.acc.
+  identique(jsx('<li>Stock, inventaires et pertes supprimés</li>'), jsx('<li>{voc.Nom("stock")}, {voc.pl("inventaire")} et {voc.pl("perte")} {voc.accN(["stock", "inventaire", "perte"], "supprimés", "supprimées")}</li>'));
+  assert.deepEqual(canons('const a = voc.accN(["vente", "marge"], "liée", "liée", n);'), ['⟦liée|liées@>1⟧']);
+  // Le mode accords ne signale rien, et le miroir montre l'accord réel (usine f + local m → masculin ; denrée f + invention f → féminin).
+  const u = analyser(apres).unites;
+  assert.deepEqual(u.flatMap((x) => x.accords), []);
+  assert.equal(u[0].miroir, 'Locaux & usines assignés');
+  const deuxF = analyser(jsx('<p>2 {voc.pl("article")}/{voc.pl("produit_utilisable")} {voc.accN(["article", "produit_utilisable"], "requis", "requises")}</p>')).unites;
+  assert.equal(deuxF[0].miroir, '2 denrées/inventions utiles requises');
+  assert.deepEqual(deuxF.flatMap((x) => x.accords), []);
+  // … alors que le participe laissé en dur derrière le second terme reste signalé.
+  assert.deepEqual(signalements(phrase("{voc.Aucun('activite')} ni {voc.nom('labo')} configuré.")), ['configuré/apres nom:labo']);
+  // voc.accN prolonge le groupe, comme voc.acc : le mot en dur qui le suit s'accorde encore avec le terme nommé avant.
+  assert.deepEqual(signalements(phrase("{voc.Pl('vente')} et {voc.pl('marge')} {voc.accN(['vente', 'marge'], 'calculées', 'calculées')} manuelles")), ['manuelles/apres pl:marge']);
+  // DOIT échouer : mauvais accord, liste non littérale, une seule clé (c'est voc.acc), clé inconnue, forme non littérale.
+  ecart(avant, apres.replace('"assignés", "assignées"', '"assignées", "assignés"'), { moins: 'Activités & labos assignés', plus: 'Activités & labos assignées' });
+  ecart(avant, apres.replace('["activite", "labo"]', 'cles'), { erreur: /voc\.accN : le 1er argument est une liste d'au moins deux clés littérales/ });
+  ecart(avant, apres.replace('["activite", "labo"]', '"activite"'), { erreur: /voc\.accN : le 1er argument est une liste/ });
+  ecart(avant, apres.replace('["activite", "labo"]', '["activite"]'), { erreur: /au moins deux clés littérales/ });
+  ecart(avant, apres.replace('["activite", "labo"]', '["activite", cle]'), { erreur: /au moins deux clés littérales/ });
+  ecart(avant, apres.replace('["activite", "labo"]', '["activite", "laboratoire"]'), { erreur: /clé de lexique inconnue/ });
+  ecart(avant, apres.replace('"assignées")', 'fem)'), { erreur: /voc\.accN : argument n° 3 non littéral/ });
+
+  // Forme courte : identique par défaut (« labo » n'a pas de forme courte), distincte au miroir (« Abr-… »).
+  identique('const a = "Ex: LABO-001";', 'const a = `Ex: ${voc.MAJ("labo", false, "court")}-001`;');
+  identique(jsx('<label>Labo(s) de fabrication</label>'), jsx('<label>{voc.NomS("labo", "Court")} de fabrication</label>'));
+  identique(jsx('<p>le/les labo(s) de fabrication</p>'), jsx('<p>{voc.acc("labo", "le/les", "la/les")} {voc.nomS("labo", "court")} de fabrication</p>'));
+  assert.equal(analyser(jsx('<label>{voc.NomS("labo", "Court")} de fabrication</label>')).unites[0].miroir, 'Abr-Usine(s) de fabrication');
+  assert.equal(analyser(jsx('<label>{voc.NomS("labo")} de fabrication</label>')).unites[0].miroir, 'Usine(s) de fabrication');
+  assert.equal(analyser('const a = `Ex: ${voc.MAJ("labo", false, "court")}-001`;').unites[0].miroir, 'Ex: ABR-USINE-001');
+  ecart('const a = "Ex: LABO-001";', 'const a = `Ex: ${voc.MAJ("labo", false, casse)}-001`;', { erreur: /voc\.MAJ : argument n° 3 non littéral/ });
+
+  // Clé dérivée article_ingredient : « Ingrédient » par défaut (identité avec la clé ingredient), « Denrée » → « Provision » au miroir.
+  identique(jsx('<th>Ingrédient</th>'), jsx('<th>{voc.Nom("article_ingredient")}</th>'));
+  identique(jsx('<p>Aucun ingrédient trouvé.</p>'), jsx('<p>{voc.Aucun("article_ingredient")} {voc.acc("article_ingredient", "trouvé", "trouvée")}.</p>'));
+  assert.equal(analyser(jsx('<p>{voc.Aucun("article_ingredient")} {voc.acc("article_ingredient", "trouvé", "trouvée")}.</p>')).unites[0].miroir, 'Aucune provision trouvée.');
+});
+
 test('R9 : DOIT échouer — clé non littérale, clé inconnue, méthode inconnue, argument non littéral, voc dans du SQL', () => {
   ecart(jsx('<p>Stock {nom}</p>'), jsx('<p>Stock {voc.nom(cle)}</p>'), { erreur: /voc\.nom : clé non littérale/ });
   ecart('const a = "Stock labo";', 'const a = `Stock ${voc.nom(CLES[i])}`;', { erreur: /clé non littérale/ });

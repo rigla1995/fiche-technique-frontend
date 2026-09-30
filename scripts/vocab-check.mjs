@@ -135,12 +135,17 @@ const SIGNATURES = {
   aucun: null, Aucun: null, tous: null, Tous: null,
   acc: 3,
   det: 2, Det: 2, // voc.det(k, 'du', n?) : le déterminant seul, suivi de son séparateur (étape S4)
+  accN: 3, // voc.accN(['a', 'b'], masc, fem, n?) : accord avec plusieurs termes coordonnés (étape S5)
 };
+// Méthodes dont le 1er argument est une LISTE de clés littérales (au moins deux), et non une clé.
+const CLES_MULTIPLES = new Set(['accN']);
 // Méthodes qui rendent un déterminant SEUL (« du␣ », « l' ») : le texte qui suit n'est pas collé à un terme.
 const DETERMINANT_SEUL = new Set(['det', 'Det']);
 // Méthodes qui ne rendent PAS le terme lui-même (accord, déterminant seul, icône, genre) : ce qui les suit
 // n'est pas « un mot juste après le terme ».
-const NON_NOMINALES = new Set(['acc', 'det', 'Det', 'icon', 'g']);
+const NON_NOMINALES = new Set(['acc', 'accN', 'det', 'Det', 'icon', 'g']);
+// Méthodes d'accord : elles prolongent le groupe du terme déjà nommé (le mot en dur qui les suit s'accorde encore).
+const ACCORD_MOTEUR = new Set(['acc', 'accN']);
 
 // Périmètre par défaut : `src`, hors espace admin et pages publiques (spec I4, §3 règle 8), hors moteur
 // (src/vocab : c'est la référence de l'outil, prouvée par scripts/vocab.test.mjs) et hors copies générées.
@@ -420,6 +425,16 @@ function partieVoc(n, cx) {
     cx.restes.push(a);
     const test = testPluriel(a, cx);
     n_ = test ? { pos: i, ...test } : estBooleen(a, cx) ? { pos: i, generique: true } : { pos: i, regle: '>1', inverse: false };
+  }
+  if (CLES_MULTIPLES.has(methode)) {
+    // Liste de clés littérales : la partie garde la liste (`cles`) et un nom lisible (`cle` : « activite+labo »).
+    const liste = nu(n.arguments[0]);
+    const elements = liste && ts.isArrayLiteralExpression(liste) ? liste.elements.map((e) => nu(e)) : null;
+    if (!elements || elements.length < 2 || !elements.every((e) => estLit(e))) {
+      return erreurPartie(n, cx, `voc.${methode} : le 1er argument est une liste d'au moins deux clés littérales`);
+    }
+    const cles = elements.map((e) => e.text);
+    return { voc: { methode, cle: cles.join('+'), cles, args, n: n_, avec, ...position(n, cx) } };
   }
   const feuille = (cle) => ({ voc: { methode, cle, args, n: n_, avec, ...position(n, cx) } });
   const arbre = (e) => {
@@ -748,7 +763,7 @@ function emettreAppelVoc(v, st, env) {
   if (env.mode === 'dur') { emettreOpaque(MARQUE_VOC, st, true); return; }
   if (v.methode === 'g') { emettreOpaque(TROU, st); return; } // un genre n'est pas un texte
   if (v.avec === 'dynamique') { emettreOpaque(TROU, st, true); return; } // libellé de composant : donnée
-  if (v.avec ? v.cle !== '_' : !Object.hasOwn(env.lexique, v.cle)) {
+  if (v.avec ? v.cle !== '_' : !(v.cles ?? [v.cle]).every((k) => Object.hasOwn(env.lexique, k))) {
     signaler(env, 'cle', `voc.${v.methode}('${v.cle}') : clé de lexique inconnue (l. ${v.l})`);
     emettreOpaque(`⟦ERREUR:clé inconnue ${v.cle}⟧`, st, true);
     return;
@@ -757,7 +772,7 @@ function emettreAppelVoc(v, st, env) {
   const appel = (n) => {
     const args = [...v.args];
     if (v.n) args[v.n.pos - 1] = n;
-    return String(moteur[v.methode](v.cle, ...args));
+    return String(moteur[v.methode](v.cles ?? v.cle, ...args));
   };
   let sg;
   let pl;
@@ -950,7 +965,7 @@ function chercherAccords(parties, avants, etat, profondeur = 0) {
     avants = ['X'];
     // voc.acc prolonge le groupe du terme (« {voc.Nom(k)} {voc.acc(k, 'créé', 'créée')} manuelle ») : le mot qui
     // le suit s'accorde encore avec le terme déjà nommé. Déterminant seul, icône, genre : rien ne s'y accorde.
-    if (v.methode === 'acc') etat.apres = etat.vu ? { voc: etat.vu, tampon: '' } : null;
+    if (ACCORD_MOTEUR.has(v.methode)) etat.apres = etat.vu ? { voc: etat.vu, tampon: '' } : null;
     else if (NON_NOMINALES.has(v.methode)) etat.apres = null;
     else { etat.apres = { voc: v, tampon: '' }; etat.vu = v; }
   };

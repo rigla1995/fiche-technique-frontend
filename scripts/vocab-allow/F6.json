@@ -90,29 +90,5 @@
     "apres": "labo",
     "type": "discriminant",
     "justification": "Clé technique du mode d'approvisionnement ('activite' | 'labo'), premier élément du triplet [clé, libellé, description] du sélecteur de l'étape 1, passée à setAddOrigine : seuls le libellé et la description sont affichés, et ils sortent de voc."
-  },
-  {
-    "fichier": "src/components/client/ProductList.tsx",
-    "avant": "Stock PT, inventaires et pertes de cette activité supprimés",
-    "apres": "Stock PT, inventaires et pertes de cette activité supprimés",
-    "type": "provisoire",
-    "mode": "accords",
-    "justification": "« supprimés » ne s'accorde pas avec le terme qui le précède (voc.ce('activite')) mais avec TROIS termes coordonnés (stock, inventaires et pertes) : masculin pluriel sauf si les trois sont féminins. Le moteur n'a pas d'accord à plusieurs clés et l'outil refuse un voc.acc imbriqué : le participe reste au masculin, comme le guide le prescrit pour des termes coordonnés. Rendu Hôtellerie juste : « Stock Prépa, inventaires et pertes de ce service supprimés ». Besoin décrit dans scripts/vocab-besoins/F6.json."
-  },
-  {
-    "fichier": "src/components/client/ProductList.tsx",
-    "avant": "⟦?Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l'étape Articles)|Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total⟧.",
-    "apres": "⟦?Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l'étape Articles)|Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total⟧.",
-    "type": "provisoire",
-    "mode": "accords",
-    "justification": "« requis » s'accorde avec DEUX termes coordonnés (articles / produits utilisables) : masculin pluriel sauf si les deux sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué : le participe reste au masculin, comme le guide le prescrit pour deux termes coordonnés. Rendu juste par défaut, en Hôtellerie (« 2 fournitures/consommables requis ») et en Céramique ; faux seulement si les deux termes deviennent féminins. Besoin décrit dans scripts/vocab-besoins/F6.json."
-  },
-  {
-    "fichier": "src/components/client/ProductList.tsx",
-    "avant": "⟦?⟦?Sélectionnez exactement 1 article ou produit utilisable|Au minimum 2 articles/produits utilisables requis⟧|⟦·⟧⟧",
-    "apres": "⟦?⟦?Sélectionnez exactement 1 article ou produit utilisable|Au minimum 2 articles/produits utilisables requis⟧|⟦·⟧⟧",
-    "type": "provisoire",
-    "mode": "accords",
-    "justification": "Même phrase que l'aide de l'étape 4, en infobulle du bouton « Suivant » : « requis » s'accorde avec DEUX termes coordonnés (articles / produits utilisables), masculin pluriel sauf si les deux sont féminins ; le moteur n'a pas d'accord à deux clés. Le participe reste au masculin (guide : deux termes coordonnés). Besoin décrit dans scripts/vocab-besoins/F6.json."
   }
 ]

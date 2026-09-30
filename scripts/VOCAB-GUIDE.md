@@ -2,6 +2,9 @@
 
 Guide des agents F1 à F12. Référence : `docs/lot-2-spec.md` du dépôt backend (§2 le moteur, §3 le balayage).
 Le moteur (`src/vocab/`), le lexique et `fr.json` sont **gelés** depuis l'étape S4 : tu ne les modifies pas.
+L'étape S5 les a étendus UNE fois, puis regelés : `voc.accN` (accord avec plusieurs termes coordonnés), la casse
+`'court'` de `voc.MAJ`, `voc.nomS` et `voc.NomS`, et la clé dérivée `article_ingredient` (décisions :
+`scripts/vocab-besoins/S5-decisions.json`).
 
 ## 0. En bref
 
@@ -132,6 +135,7 @@ Une méthode à initiale majuscule met la majuscule au **premier mot du résulta
 | `voc.Titre('fiche_technique')` | Fiche Technique | Fiche Technique | Fiche de Coût de Revient |
 | `voc.Titre('produit_vendable', true)` | Produits Vendables | Prestations Vendues | Produits Finis |
 | `voc.MAJ('vente')` | VENTE | VENTE | VENTE |
+| `voc.MAJ('labo', false, 'court')` | LABO | CUISINE | SITE |
 | `voc.pl('acheteur')` | acheteurs | clients professionnels | revendeurs |
 | `voc.Pl('activite')` | Activités | Services | Points de vente |
 | `voc.court('appro', 2)` | appros | appros | réceptions |
@@ -140,6 +144,7 @@ Une méthode à initiale majuscule met la majuscule au **premier mot du résulta
 | `voc.Court('produit_utilisable')` | PU | Consommable | Semi-fini |
 | `voc.nomS('labo')` | labo(s) | cuisine(s) centrale(s) | site(s) de production |
 | `voc.NomS('article')` | Article(s) | Fourniture(s) | Matière(s) première(s) |
+| `voc.NomS('labo', 'Court')` | Labo(s) | Cuisine(s) | Site(s) |
 | `voc.n('activite', 1)` | 1 activité | 1 service | 1 point de vente |
 | `voc.n('labo', 3)` | 3 labos | 3 cuisines centrales | 3 sites de production |
 | `voc.compl('labo')` | labo | de la cuisine centrale | du site de production |
@@ -174,6 +179,8 @@ Une méthode à initiale majuscule met la majuscule au **premier mot du résulta
 | `voc.Tous('prestataire', '')` | Tous prestataires | Tous prestataires | Tous intermédiaires |
 | `voc.acc('activite', 'créé', 'créée')` | créée | créé | créé |
 | `voc.acc('article', 'transféré', 'transférée', true)` | transférés | transférées | transférées |
+| `voc.accN(['activite', 'labo'], 'assignés', 'assignées')` | assignés | assignés | assignés |
+| `voc.accN(['article', 'produit_vendable'], 'proposés', 'proposées')` | proposés | proposées | proposés |
 | `voc.det('stock', 'du')` | `"du "` | `"du "` | `"du "` |
 | `voc.det('activite', 'le')` | `"l'"` | `"le "` | `"le "` |
 | `voc.Det('article', 'ce')` | `"Cet "` | `"Cette "` | `"Cette "` |
@@ -186,6 +193,7 @@ Une méthode à initiale majuscule met la majuscule au **premier mot du résulta
 | `voc.Nom('labo_long')` | Laboratoire | Cuisine centrale | Site de production |
 | `voc.Nom('labo_desc', true)` | Laboratoires de production | Cuisines centrales | Sites de production |
 | `voc.Nom('activite_desc')` | Point de vente | Service | Point de vente |
+| `voc.Nom('article_ingredient')` | Ingrédient | Fourniture | Matière première |
 | `voc.Nom('cat_pt_utilisable')` | Produits Transformés Utilisables | Consommables | Semi-finis |
 
 Précisions :
@@ -198,6 +206,18 @@ Précisions :
   'nouvelle', n)` rendrait « nouveaus », `acc('labo', 'principal', 'principale', n)` « principals ». Pour
   nouveau, principal, tout, le/la, ou une forme vide : écris les deux pluriels (`voc.acc(k, 'principaux',
   'principales')`), avec `n > 1 ? … : …` autour si le nombre varie.
+- `voc.accN(cles, masc, fem, n?)` (étape S5) accorde avec **plusieurs termes coordonnés** : féminin seulement si
+  TOUS les termes de la liste sont féminins, masculin sinon (« activités & labos assignés », « aucune activité ni
+  labo configuré », « des articles et produits proposés », pronom « ils / elles » qui reprend deux termes). La liste
+  est un tableau d'au moins deux clés littérales ; pour un seul terme, c'est `voc.acc`. Même règle de pluriel que
+  `acc`. Il n'a pas de balise.
+- `voc.MAJ(k, n?, c?)`, `voc.nomS(k, c?)` et `voc.NomS(k, c?)` (étape S5) : avec `c` = `'court'` / `'Court'` ils
+  rendent la forme courte (« CUISINE », « cuisine(s) », « Cuisine(s) ») — pour une référence d'exemple
+  (`Ex: ${voc.MAJ('labo', false, 'court')}-001`) ou un nom composé en libellé (`${voc.NomS('labo', 'Court')} de
+  fabrication`). Sans cet argument, la forme longue, comme avant.
+- `article_ingredient` (étape S5) : l'article que l'existant nomme « ingrédient » là où il est une ligne de stock
+  (saisie d'inventaire, historique des transferts, cumul d'appro). Par défaut « Ingrédient » ; un domaine qui renomme
+  « article » y lit son terme. La clé `ingredient` reste celle du composant d'une recette.
 - `voc.det(k, d, n?, c?)` rend le déterminant **seul, suivi de son séparateur** (une espace, ou rien après une
   apostrophe). `d` : `'le'`, `'un'`, `'du'`, `'de'`, `'au'`, `'ce'`, `'aucun'`, `'votre'`, `'mon'`, `'son'`,
   `'nouveau'`. Il sert quand une balise sépare le déterminant du terme (E18, E19) — et seulement là.
@@ -232,7 +252,7 @@ Précisions :
 | « Tous prestataires », « tous labos » | `voc.Tous('prestataire', '')`, `voc.tous('labo', '')` |
 | « le **stock** », « votre **référentiel** » (déterminant, balise, terme) | `{voc.det('stock', 'le')}<strong>{voc.nom('stock')}</strong>`, `{voc.det('referentiel', 'votre')}<strong>{voc.nom('referentiel')}</strong>` |
 | « la/les **activité(s)** » | `{voc.acc('activite', 'le/les', 'la/les')} <strong>{voc.nomS('activite')}</strong>` |
-| « Aucune activité ou labo trouvé » (deux termes coordonnés) | `` `${voc.Aucun('activite')} ou ${voc.nom('labo')} trouvé` `` : le participe reste au masculin |
+| « Aucune activité ou labo trouvé », « activités & labos assignés » (termes coordonnés) | `` `${voc.Aucun('activite')} ou ${voc.nom('labo')} ${voc.accN(['activite', 'labo'], 'trouvé', 'trouvée')}` `` : le participe sort de `voc.accN` (féminin seulement si tous les termes sont féminins) |
 
 ## 4. Les trois réflexes
 
@@ -754,7 +774,7 @@ du domaine, et une entrée `allow` de type `exemple` (mode `identite`, `avant` �
 
 | Lot | Site | Aujourd'hui | À écrire |
 |---|---|---|---|
-| F2 | ActivitesPage (×2 chacun) | « Ex: Labo Central », « Ex: LABO-001 », « Ex: Point de vente Tunis » | `` `Ex: ${voc.Nom('labo')} 1` ``, `` `Ex: ${voc.MAJ('labo')}-001` ``, `` `Ex: ${voc.Nom('activite')} 1` `` |
+| F2 | ActivitesPage (×2 chacun) | « Ex: Labo Central », « Ex: LABO-001 », « Ex: Point de vente Tunis » | `` `Ex: ${voc.Nom('labo')} 1` ``, `` `Ex: ${voc.MAJ('labo', false, 'court')}-001` `` (forme courte depuis l'étape S5 : « Ex: CUISINE-001 »), `` `Ex: ${voc.Nom('activite')} 1` `` |
 | F6 | ProductForm:434, ProductList:924 | « Ex. Burger, Pizza Margherita… », « Ex. Burger Classic, Pizza Margherita… » | `` `Ex. ${voc.Nom('produit')} A, ${voc.Nom('produit')} B…` `` |
 | F6 | ProductForm:447, ProductList:932 | « Ex. BRG-001, REF-42… », « Ex. BRG-001 » | « Ex. REF-001, REF-42… », « Ex. REF-001 » (référence neutre, sans `voc`) |
 | F7 | ComposedValoriseModal:182 | « Ex. Cookie maison » | `` `Ex. ${voc.Nom('produit_compose')} A` `` |
@@ -883,7 +903,7 @@ que le mot qui suit l'appel. Tout ce qui s'accorde passe par `voc.acc`, et la li
 | exemple de saisie réécrit (E26) | `exemple` | identite |
 | faute d'accord corrigée, double nombre réécrit, « Espace Produits » harmonisé (E27, E30) | `faute-corrigee` | identite |
 | mot de la liste fermée signalé à tort par `accords` : il ne se rapporte pas au terme qui suit (« … pour tous. {voc.Le('labo')} … ») | le type qui convient + `"mode": "accords"` | accords |
-| il manque une clé, une forme ou une méthode | `provisoire` + un besoin | residuels |
+| il manque une clé, une forme ou une méthode | `provisoire` + un besoin (pendant un balayage ; l'étape S5 les a tous repris : il n'en reste aucun) | residuels |
 
 Un écart que l'on peut supprimer en écrivant mieux l'appel n'est pas un écart admis. Une **erreur** de l'outil
 (clé non littérale, variable intermédiaire, pluriel collé) ne s'admet pas : elle se corrige.
@@ -957,7 +977,7 @@ F12 : `contractPdf.ts` et `manuelPdf.ts` ne sont pas des composants, `voc` y ent
 d'appel sont dans le lot : `AdminSupportPage.tsx` (l'admin fournit le lexique du CLIENT de la demande :
 `AvenantPdfParams.lexique`, spec §2.3 — rien d'autre ne change dans ce fichier admin) et `GuidePage.tsx`.
 
-## Annexe A — Les clés du lexique (40)
+## Annexe A — Les clés du lexique (41)
 
 | Clé | Singulier / pluriel | Genre | Élision | Courte | Apposition | Icône |
 |---|---|---|---|---|---|---|
@@ -998,6 +1018,7 @@ d'appel sont dans le lot : `AdminSupportPage.tsx` (l'admin fournit le lexique du
 | `labo_long` | Laboratoire / Laboratoires | m | | | | 🏭 |
 | `labo_desc` | Laboratoire de production / Laboratoires de production | m | | | | 🏭 |
 | `activite_desc` | Point de vente / Points de vente | m | | | | 🏪 |
+| `article_ingredient` | Ingrédient / Ingrédients | m | oui | | | 📦 |
 | `cat_pt_utilisable` | Produits Transformés Utilisables | m | | | | 🧂 |
 | `cat_pt_valorise` | Produits Composés Valorisés | m | | | | 💎 |
 | `cat_pt_vendable` | Produits Transformés Vendables | m | | | | 🛒 |

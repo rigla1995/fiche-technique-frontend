@@ -86,6 +86,8 @@ sont les premières qu'une revue relit.
 | `provisoire` | texte laissé en l'état en attendant une extension du moteur ou du lexique | avec une ligne dans `scripts/vocab-besoins/<lot>.json` |
 
 `provisoire` est une dette : l'outil rappelle leur nombre à chaque passage, et l'étape S5 doit les ramener à 0.
+Après l'étape S5 du lot 2a il n'en reste aucune (les 9 entrées, toutes des accords avec des termes coordonnés, passent
+par `voc.accN`) ; l'écart admis à cette étape est dans `S5.json`.
 
 ## Ce qui ne va PAS dans allow
 

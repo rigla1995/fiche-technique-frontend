@@ -576,7 +576,7 @@ export default function TransferPage() {
               {labo ? labo.nom : t('common.loading')} — {t('client.labo.transfer_title')}</h1>
           </div>
           <span style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem' }}>
-            {hasLaboDest ? `Transférez ${voc.le('article', true)} ${voc.du('labo')} vers ${voc.votre('activite', true)} et ${voc.pl('labo')} ${voc.acc('labo', 'rattachés', 'rattachées')}` : `Transférez ${voc.le('article', true)} ${voc.du('labo')} vers ${voc.votre('activite', true)}`}
+            {hasLaboDest ? `Transférez ${voc.le('article', true)} ${voc.du('labo')} vers ${voc.votre('activite', true)} et ${voc.pl('labo')} ${voc.accN(['activite', 'labo'], 'rattachés', 'rattachées')}` : `Transférez ${voc.le('article', true)} ${voc.du('labo')} vers ${voc.votre('activite', true)}`}
           </span>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>

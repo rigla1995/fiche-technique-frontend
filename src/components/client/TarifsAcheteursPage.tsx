@@ -211,7 +211,7 @@ export default function TarifsAcheteursPage() {
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Tarifs {voc.Court('acheteur', true)}</h1>
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
-            Prix HT (+ TVA) {voc.du('article', true)} et {voc.pl('produit')} proposés à {voc.votre('acheteur', true)} — TTC calculé, promo affichée prix barré.
+            Prix HT (+ TVA) {voc.du('article', true)} et {voc.pl('produit')} {voc.accN(['article', 'produit'], 'proposés', 'proposées')} à {voc.votre('acheteur', true)} — TTC calculé, promo affichée prix barré.
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0 }}>
@@ -282,7 +282,7 @@ export default function TarifsAcheteursPage() {
           <div style={{ fontSize: '0.86rem', color: '#5b21b6', maxWidth: 460, margin: '0 auto', lineHeight: 1.6 }}>
             {tab === 'articles'
               ? <>Activez le toggle <strong>Commandable</strong> sur {voc.le('article', true)} {voc.acc('article', 'concernés', 'concernées')} dans <Link to="/client/referentiel/articles" style={{ color: C, fontWeight: 700 }}>{voc.Nom('referentiel')} → {voc.Pl('article')}</Link> : {voc.acc('article', 'ils', 'elles')} apparaîtront ici.</>
-              : <>Créez {voc.un('produit_compose', true)} d'origine {voc.nom('labo')}, ou rattachez {voc.votre('produit_utilisable', true)} à {voc.un('labo')} : ils apparaîtront ici.</>}
+              : <>Créez {voc.un('produit_compose', true)} d'origine {voc.nom('labo')}, ou rattachez {voc.votre('produit_utilisable', true)} à {voc.un('labo')} : {voc.accN(['produit_compose', 'produit_utilisable'], 'ils', 'elles')} apparaîtront ici.</>}
           </div>
         </div>
       ) : filtered.length === 0 ? (

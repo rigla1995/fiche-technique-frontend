@@ -4,11 +4,11 @@
     "src/vocab/categoriesPt.ts": "bba8f523475b5a45d651fbdbe59a9288350fb07ff2f1f1b5e74ba1baa575adc7",
     "src/vocab/contexte.ts": "2ad693facded9a777945363956d29568000207f6616f6ea6b34cdaf66eabc45b",
     "src/vocab/excel.ts": "470756b63edf046eba7ddbfb58ecce46e7dbf578aa1b8b27b25a4408df584ef1",
-    "src/vocab/lexiqueDefaut.ts": "f80bfa962fe5e668fe623e4f76523e52f201d53922343285bac5644371673edc",
+    "src/vocab/lexiqueDefaut.ts": "46033e7ce957ca510d5e563418b4b3a6602d515a88c3e34f8b376f9627040d0d",
     "src/vocab/rendre.ts": "223c560e7e7617f10204144ef043ec404711b6c5e31f0b92cb540eab12539b2e",
-    "src/vocab/vocab.ts": "84fa19d73a3fdf43d4252b2c087e8b1641bb409736a737ff1b704abd3080315a"
+    "src/vocab/vocab.ts": "0f7a5a2012bf8dc7a86376071d5951d8f98cb086e9e727412e8d4da47411b8ed"
   },
-  "lexique": "1c8fa59909dedb7aacdcfa9bc1622752e3f2b35c34fd33dc49d1d803f58d9526",
-  "empreinte": "157345ef0051f9e3fcb0e18e5c62975a1ff5271c414f1799acaefe8aa9789413",
+  "lexique": "49c282f92d4011bf466d21d2fb65c6ce2573ff6a8b46598ebe1e6de30e79cf4b",
+  "empreinte": "ce11392aeefce6acb4cb447cdd74b366116b8e7da2982740af98372927e20262",
   "gele_le": "2026-09-30"
 }

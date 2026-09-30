@@ -11,6 +11,14 @@ méthode, il :
 L'étape S5 fusionne tous les fichiers, étend le moteur et le lexique UNE fois, puis reprend chaque texte
 provisoire. Critère de sortie : 0 entrée `provisoire`, 0 besoin ouvert.
 
+## État après l'étape S5 (lot 2a)
+
+Les besoins des lots F1 à F12 (37) ont été fusionnés dans `S5-decisions.json`, avec la décision prise pour chacun :
+extension unique du moteur (`voc.accN`, casse `'court'` de `voc.MAJ` / `voc.nomS` / `voc.NomS`) et du lexique
+(clé dérivée `article_ingredient`), meilleure écriture, texte laissé en dur, ou report au sous-lot 2b. Ce fichier est
+un OBJET (pas un tableau) : l'outil ne le compte pas. Les fichiers par lot ont été retirés : 0 besoin ouvert,
+0 entrée `provisoire`. Un prochain balayage (sous-lot 2b : `B1.json` …) reprend le format ci-dessous.
+
 ## Un fichier par lot
 
 `scripts/vocab-besoins/<lot>.json` (`F1.json` … `F12.json`, `B1.json` …). Un agent n'écrit que dans le

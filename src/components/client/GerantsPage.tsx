@@ -299,7 +299,7 @@ export default function GerantsPage() {
                 return (
                   <div style={{ gridColumn: '1 / -1' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <label style={lbl}>{voc.Pl('activite')} &amp; {voc.pl('labo')} assignés <span style={{ color: '#ef4444' }}>*</span></label>
+                      <label style={lbl}>{voc.Pl('activite')} &amp; {voc.pl('labo')} {voc.accN(['activite', 'labo'], 'assignés', 'assignées')} <span style={{ color: '#ef4444' }}>*</span></label>
                       {(allActIds.length + allLaboIds.length) > 0 && (
                         <button type="button"
                           onClick={() => setForm((f) => allChecked ? { ...f, activiteIds: [], laboIds: [], accesAcheteurs: false } : { ...f, activiteIds: allActIds, laboIds: allLaboIds })}

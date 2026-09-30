@@ -1138,7 +1138,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   </label>
                   <input type="text" className="input" value={laboFormData.refLabo}
                     onChange={(e) => setLaboFormData((p) => ({ ...p, refLabo: e.target.value }))}
-                    placeholder={`Ex: ${voc.MAJ('labo')}-001`} />
+                    placeholder={`Ex: ${voc.MAJ('labo', false, 'court')}-001`} />
                 </div>
               )}
 
@@ -1305,7 +1305,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                       </label>
                       <input type="text" className="input" value={bizLaboForm.refLabo}
                         onChange={(e) => setBizLaboForm((p) => ({ ...p, refLabo: e.target.value }))}
-                        placeholder={`Ex: ${voc.MAJ('labo')}-001`} />
+                        placeholder={`Ex: ${voc.MAJ('labo', false, 'court')}-001`} />
                     </div>
                     <div style={fieldWrap}>
                       <label style={fieldLabel}>Adresse</label>

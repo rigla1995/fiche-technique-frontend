@@ -34,8 +34,8 @@ export interface VocabDe<K extends string> {
   Nom(k: K, n?: Nombre): string;
   /** Majuscule à chaque mot sauf mots-outils : « Produits Vendables », « Fiche de Coût de Revient ». */
   Titre(k: K, n?: Nombre): string;
-  /** Capitales : « LABO ». */
-  MAJ(k: K, n?: Nombre): string;
+  /** Capitales : « LABO » ; `c` = 'court' | 'Court' → capitales de la forme courte (« CUISINE »). */
+  MAJ(k: K, n?: Nombre, c?: Casse): string;
   /** Alias de `nom(k, true)`. */
   pl(k: K): string;
   /** Alias de `Nom(k, true)`. */
@@ -44,9 +44,12 @@ export interface VocabDe<K extends string> {
   court(k: K, n?: Nombre): string;
   /** Forme courte stockée : « PT », « Labo », « Appro ». */
   Court(k: K, n?: Nombre): string;
-  /** Pluriel typographique mot à mot : « labo(s) », « produit(s) vendable(s) » ; irrégulier : « sg/pl ». */
-  nomS(k: K): string;
-  NomS(k: K): string;
+  /**
+   * Pluriel typographique mot à mot : « labo(s) », « produit(s) vendable(s) » ; irrégulier : « sg/pl ».
+   * `c` = 'court' | 'Court' → sur la forme courte (« cuisine(s) » au lieu de « cuisine(s) centrale(s) »).
+   */
+  nomS(k: K, c?: Casse): string;
+  NomS(k: K, c?: Casse): string;
   /** `String(n) + ' ' + nom(k, n)` : « 3 labos ». */
   n(k: K, n: number): string;
   /** Complément du nom en phrase : apposition (« stock labo ») sinon `du` (« de la cuisine centrale »). */
@@ -98,6 +101,12 @@ export interface VocabDe<K extends string> {
   Det(k: K, d: NomDeterminant, n?: Nombre, c?: Casse): string;
   /** Forme accordée en genre ; au pluriel ajoute « s » sauf finale s, x, z. */
   acc(k: K, masc: string, fem: string, n?: Nombre): string;
+  /**
+   * Accord avec PLUSIEURS termes coordonnés (« activités & labos assignés », « aucune activité ni labo
+   * configuré ») : féminin seulement si TOUS les termes sont féminins, masculin sinon. Même règle de
+   * pluriel que `acc`.
+   */
+  accN(cles: readonly K[], masc: string, fem: string, n?: Nombre): string;
   /** Genre de l'entrée. */
   g(k: K): Genre;
   /** Icône de l'entrée ('' si absente). */
@@ -259,6 +268,12 @@ const determinantSeul = (d: Determinant, e: EntreeNorm, pluriel: boolean, c: Cas
   return f.endsWith("'") ? f : `${f} `;
 };
 
+// Forme accordée (masculin ou féminin) ; au pluriel ajoute « s » sauf finale s, x, z.
+const accorder = (feminin: boolean, masc: string, fem: string, n: Nombre): string => {
+  const accorde = String((feminin ? fem : masc) ?? '');
+  return estPluriel(n) && !/[sxz]$/i.test(accorde) ? `${accorde}s` : accorde;
+};
+
 // Pluriel typographique mot à mot (« produit(s) vendable(s) ») ; irrégulier → « sg/pl ».
 const plurielTypographique = (sg: string, pl: string): string => {
   if (sg === pl) return sg;
@@ -324,22 +339,23 @@ function construire<K extends string>(lexique: unknown): VocabDe<K> {
     nom: (k, n) => forme(entree(k), estPluriel(n), 'nom'),
     Nom: (k, n) => forme(entree(k), estPluriel(n), 'Nom'),
     Titre: (k, n) => forme(entree(k), estPluriel(n), 'Titre'),
-    MAJ: (k, n) => {
+    MAJ: (k, n, c) => {
       const e = entree(k);
-      const stockee = forme(e, estPluriel(n), 'Nom');
+      const stockee = forme(e, estPluriel(n), estCourte(c) ? 'Court' : 'Nom');
       return e.inconnue ? stockee : stockee.toUpperCase();
     },
     pl: (k) => forme(entree(k), true, 'nom'),
     Pl: (k) => forme(entree(k), true, 'Nom'),
     court: (k, n) => forme(entree(k), estPluriel(n), 'court'),
     Court: (k, n) => forme(entree(k), estPluriel(n), 'Court'),
-    nomS: (k) => {
+    nomS: (k, c) => {
       const e = entree(k);
-      return e.inconnue ? e.sg : minuscules(plurielTypographique(e.sg, e.pl));
+      if (e.inconnue) return e.sg;
+      return minuscules(estCourte(c) ? plurielTypographique(e.courtSg, e.courtPl) : plurielTypographique(e.sg, e.pl));
     },
-    NomS: (k) => {
+    NomS: (k, c) => {
       const e = entree(k);
-      return plurielTypographique(e.sg, e.pl);
+      return estCourte(c) ? plurielTypographique(e.courtSg, e.courtPl) : plurielTypographique(e.sg, e.pl);
     },
     n: (k, n) => `${String(n)} ${forme(entree(k), estPluriel(n), 'nom')}`,
     compl: (k, n) => {
@@ -380,9 +396,10 @@ function construire<K extends string>(lexique: unknown): VocabDe<K> {
     Tous: (k, d, c) => majuscule(tous(k, d, c)),
     det: seul,
     Det: (k, d, n, c) => majuscule(seul(k, d, n, c)),
-    acc: (k, masc, fem, n) => {
-      const accorde = String((entree(k).g === 'f' ? fem : masc) ?? '');
-      return estPluriel(n) && !/[sxz]$/i.test(accorde) ? `${accorde}s` : accorde;
+    acc: (k, masc, fem, n) => accorder(entree(k).g === 'f', masc, fem, n),
+    accN: (cles, masc, fem, n) => {
+      const liste: readonly K[] = Array.isArray(cles) ? cles : [cles as unknown as K];
+      return accorder(liste.length > 0 && liste.every((k) => entree(k).g === 'f'), masc, fem, n);
     },
     g: (k) => entree(k).g,
     icon: (k) => entree(k).icon,

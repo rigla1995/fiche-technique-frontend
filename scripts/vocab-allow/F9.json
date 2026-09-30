@@ -68,29 +68,5 @@
     "apres": "Ex: kg, L, pièce, portion…",
     "type": "exemple",
     "justification": "Exemple de saisie inchangé (guide §5 bis, ligne F9 ; spec §3 règle 4 : unités citées en exemple) : « portion » est ici une unité de mesure citée dans une liste d'unités, pas le terme « portion » du lexique. Placeholder du champ Nom de la modale de modification."
-  },
-  {
-    "fichier": "src/components/client/ReferentielArticlesPage.tsx",
-    "avant": "Aucune activité ni labo configuré.",
-    "apres": "Aucune activité ni labo configuré.",
-    "type": "provisoire",
-    "mode": "accords",
-    "justification": "« configuré » s'accorde avec DEUX termes coordonnés (activité ni labo) : masculin sauf si les deux termes sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué (argument non littéral) : le participe reste au masculin, comme le guide le prescrit pour deux termes coordonnés (§3, « Aucune activité ou labo trouvé »). Rendu Hôtellerie juste : « Aucun service ni cuisine centrale configuré. » Deux unités identiques (ajout multiple, modale de modification). Besoin décrit dans scripts/vocab-besoins/F9.json."
-  },
-  {
-    "fichier": "src/components/client/ReferentielArticlesPage.tsx",
-    "avant": "Aucune activité ou labo trouvé. Créez-en depuis « Mes Activités ».",
-    "apres": "Aucune activité ou labo trouvé. Créez-en depuis « Mes Activités ».",
-    "type": "provisoire",
-    "mode": "accords",
-    "justification": "« trouvé » s'accorde avec DEUX termes coordonnés (activité ou labo) : masculin sauf si les deux termes sont féminins. C'est l'écriture que le guide prescrit mot pour mot (§3 : `${voc.Aucun('activite')} ou ${voc.nom('labo')} trouvé`, le participe reste au masculin) ; le moteur n'a pas d'accord à deux clés. Rendu Hôtellerie juste : « Aucun service ou cuisine centrale trouvé. Créez-en depuis « Mes Services ». » Besoin décrit dans scripts/vocab-besoins/F9.json."
-  },
-  {
-    "fichier": "src/components/client/ProductCategoriesPage.tsx",
-    "avant": "Les produits et articles valorisés liés perdront leur catégorie.",
-    "apres": "Les produits et articles valorisés liés perdront leur catégorie.",
-    "type": "provisoire",
-    "mode": "accords",
-    "justification": "« liés » ne s'accorde pas avec le seul terme qui le précède (articles) mais avec DEUX termes coordonnés (les produits et les articles valorisés) : masculin pluriel sauf si les deux termes sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué : le participe reste au masculin (guide : deux termes coordonnés) ; « valorisés », qui ne porte que sur les articles, passe par voc.acc. Rendu Hôtellerie juste : « Les produits et fournitures valorisées liés perdront leur catégorie. » Besoin décrit dans scripts/vocab-besoins/F9.json."
   }
 ]

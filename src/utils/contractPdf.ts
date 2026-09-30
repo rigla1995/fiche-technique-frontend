@@ -159,12 +159,27 @@ export function generateAvenantPdf(params: AvenantPdfParams): string {
   if (nbGerantsAdded > 0)   addedParts.push(`+${voc.n('gerant', nbGerantsAdded)}`);
   if (acheteursCible && acheteursCible > 0) addedParts.push(`Option ${voc.Court('acheteur', true)} → palier ${acheteursCible}`);
 
-  // Green highlight for added capacity
-  rect(ML, y, CW, 16, '#f0fdf4');
-  hrule(y, '#bbf7d0'); hrule(y + 16, '#bbf7d0');
+  // Green highlight for added capacity. Les termes d'un autre domaine sont plus longs (« +1 responsable de
+  // service ») : les postes passent à la ligne quand ils dépassent le cadre, qui grandit d'autant. Avec le
+  // vocabulaire par défaut tout tient sur une ligne, comme avant.
+  const CAPA_SEP = '   ·   ';
+  const capaLines: string[] = [];
+  const policeCapa = () => setFont(12, 'bold', '#14532d');
+  policeCapa(); // la largeur se mesure dans la police de la ligne
+  for (const part of addedParts) {
+    const dernier = capaLines.length - 1;
+    const essai = dernier >= 0 ? `${capaLines[dernier]}${CAPA_SEP}${part}` : part;
+    if (dernier >= 0 && doc.getTextWidth(essai) <= CW - 8) capaLines[dernier] = essai;
+    else capaLines.push(part);
+  }
+  if (capaLines.length === 0) capaLines.push('');
+  const capaH = 16 + (capaLines.length - 1) * 6;
+  rect(ML, y, CW, capaH, '#f0fdf4');
+  hrule(y, '#bbf7d0'); hrule(y + capaH, '#bbf7d0');
   setFont(7, 'bold', '#15803d');   txt('CAPACITÉ AJOUTÉE', ML + 4, y + 6);
-  setFont(12, 'bold', '#14532d'); txt(addedParts.join('   ·   '), ML + 4, y + 13);
-  y += 22;
+  policeCapa();
+  for (let i = 0; i < capaLines.length; i++) txt(capaLines[i], ML + 4, y + 13 + i * 6);
+  y += capaH + 6;
 
   // ── NOUVELLE CONFIGURATION ─────────────────────────────────────────────────
   y = sectionHeader('NOUVELLE CONFIGURATION', y);

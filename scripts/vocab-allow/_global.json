@@ -109,7 +109,7 @@
     "avant": "sous-produit",
     "apres": "sous-produit",
     "type": "locution",
-    "justification": "Mot composé figé (3 occurrences, sous le seuil d'une clé) : décision de l'étape S4, il reste en dur. L'outil ne replie pas « sous-${voc.nom('produit', n)} » et l'accord « du sous-… » serait faux pour un terme féminin ; si un domaine renomme « produit », ce mot ne suit pas (limite connue, à revoir en S5)."
+    "justification": "Mot composé figé (3 occurrences, sous le seuil d'une clé) : décision de l'étape S4, il reste en dur. L'outil ne replie pas « sous-${voc.nom('produit', n)} » et l'accord « du sous-… » serait faux pour un terme féminin ; si un domaine renomme « produit », ce mot ne suit pas — limite connue, confirmée à l'étape S5 (4 textes, aucun brouillon ne renomme « produit »)."
   },
   {
     "fichier": "*",

@@ -751,7 +751,7 @@ export default function ProductList() {
                             </div>
                             <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.83rem', color: '#7f1d1d', lineHeight: 1.7 }}>
                               <li><strong>{historyCount}</strong> {voc.court('appro', (historyCount ?? 0) > 1)} {voc.acc('appro', 'supprimé', 'supprimée', (historyCount ?? 0) > 1)}</li>
-                              <li>{voc.Nom('stock')} {voc.Court('pt')}, {voc.pl('inventaire')} et {voc.pl('perte')} de {voc.ce('activite')} supprimés</li>
+                              <li>{voc.Nom('stock')} {voc.Court('pt')}, {voc.pl('inventaire')} et {voc.pl('perte')} de {voc.ce('activite')} {voc.accN(['stock', 'inventaire', 'perte'], 'supprimés', 'supprimées')}</li>
                             </ul>
                           </>
                         ) : (
@@ -1118,7 +1118,7 @@ export default function ProductList() {
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
                             {addIsSupplement
                               ? `Mode ${voc.nom('supplement')} — sélectionnez exactement 1 ${voc.nom('produit_utilisable')} (OU utilisez l'étape ${voc.Pl('article')}).`
-                              : `Ajoutez ${voc.un('produit_utilisable', true)} comme sous-composants. Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} requis au total.`}
+                              : `Ajoutez ${voc.un('produit_utilisable', true)} comme sous-composants. Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} ${voc.accN(['article', 'produit_utilisable'], 'requis', 'requises')} au total.`}
                           </div>
                           {utilisableForWizard.length === 0 ? (
                             <div style={{ padding: 16, borderRadius: 8, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.85rem', color: '#5b21b6', textAlign: 'center' }}>
@@ -1172,7 +1172,7 @@ export default function ProductList() {
                                 <button className="btn btn-ghost" onClick={() => setAddModal(3)}>← Retour</button>
                                 <button disabled={!canNext} onClick={() => setAddModal(5)}
                                   style={{ background: canNext ? 'linear-gradient(135deg, #4338ca, #6366f1)' : '#e5e7eb', border: 'none', borderRadius: 10, color: canNext ? '#fff' : '#9ca3af', fontWeight: 700, padding: '9px 22px', cursor: canNext ? 'pointer' : 'not-allowed' }}
-                                  title={!canNext ? (addIsSupplement ? `Sélectionnez exactement 1 ${voc.nom('article')} ou ${voc.nom('produit_utilisable')}` : `Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} requis`) : undefined}>
+                                  title={!canNext ? (addIsSupplement ? `Sélectionnez exactement 1 ${voc.nom('article')} ou ${voc.nom('produit_utilisable')}` : `Au minimum 2 ${voc.pl('article')}/${voc.pl('produit_utilisable')} ${voc.accN(['article', 'produit_utilisable'], 'requis', 'requises')}`) : undefined}>
                                   Suivant →
                                 </button>
                               </div>
@@ -1229,7 +1229,7 @@ export default function ProductList() {
                             {isVendable
                               ? <>Sélectionnez {voc.acc('activite', 'le/les', 'la/les')} <strong>{voc.nomS('activite')}</strong> qui vendront {voc.ce('produit')} ({voc.nom('recette')} {voc.acc('recette', 'consommé', 'consommée')} sur place).</>
                               : isLaboMode
-                                ? <>Sélectionnez {voc.acc('labo', 'le/les', 'la/les')} <strong>{voc.nomS('labo')}</strong> de fabrication — {voc.le('article', true)} {voc.acc('article', 'proposés', 'proposées')} seront {voc.acc('article', 'ceux', 'celles')} du périmètre.</>
+                                ? <>Sélectionnez {voc.acc('labo', 'le/les', 'la/les')} <strong>{voc.nomS('labo', 'court')}</strong> de fabrication — {voc.le('article', true)} {voc.acc('article', 'proposés', 'proposées')} seront {voc.acc('article', 'ceux', 'celles')} du périmètre.</>
                                 : <>Sélectionnez {voc.acc('activite', 'le/les', 'la/les')} <strong>{voc.nomS('activite')}</strong> où {voc.ce('produit_utilisable')} sera {voc.acc('produit_utilisable', 'géré', 'gérée')}.</>}
                           </div>
                           {opts.length === 0 ? (
@@ -1384,7 +1384,7 @@ export default function ProductList() {
                           {addAffectationIds.length > 0 && (
                             <div>
                               <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                                {addOrigine === 'labo' ? `${voc.icon('labo')} ${voc.NomS('labo')} de fabrication` : (isVendable ? `📍 ${voc.Pl('activite')}` : `📍 ${voc.Pl('stock')} ${voc.acc('stock', 'activés', 'activées')}`)}
+                                {addOrigine === 'labo' ? `${voc.icon('labo')} ${voc.NomS('labo', 'Court')} de fabrication` : (isVendable ? `📍 ${voc.Pl('activite')}` : `📍 ${voc.Pl('stock')} ${voc.acc('stock', 'activés', 'activées')}`)}
                               </div>
                               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                 {addAffectationIds.map(id => {

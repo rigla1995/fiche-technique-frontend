@@ -223,7 +223,7 @@ export default function TransferHistoriquePage() {
                 Historique {voc.Court('transfert')}{labo ? ` — ${labo.nom}` : ''}
               <HelpButton section="transferts" variant="solid" size={18} tip="Aide" /></h1>
               <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: '0.82rem', margin: '4px 0 0' }}>
-                {hasLaboDest ? `Consultez et exportez l'historique ${voc.du('transfert', true)} vers ${voc.le('activite', true)} et ${voc.pl('labo')} ${voc.acc('labo', 'rattachés', 'rattachées')}` : `Consultez et exportez l'historique ${voc.du('transfert', true)} vers ${voc.le('activite', true)}`}
+                {hasLaboDest ? `Consultez et exportez l'historique ${voc.du('transfert', true)} vers ${voc.le('activite', true)} et ${voc.pl('labo')} ${voc.accN(['activite', 'labo'], 'rattachés', 'rattachées')}` : `Consultez et exportez l'historique ${voc.du('transfert', true)} vers ${voc.le('activite', true)}`}
               </p>
             </div>
           </div>
@@ -312,7 +312,7 @@ export default function TransferHistoriquePage() {
                 <thead>
                   <tr style={{ background: 'linear-gradient(135deg, #3b0764, #7e22ce)' }}>
                     <th style={{ width: 28, padding: '10px 4px', color: '#fff', background: 'transparent', borderBottom: 'none' }} />
-                    {([voc.Nom('ingredient'), 'Date', colDestLabel] as const).map((label) => (
+                    {([voc.Nom('article_ingredient'), 'Date', colDestLabel] as const).map((label) => (
                       <th key={label} style={{ fontWeight: 800, fontSize: '0.75rem', letterSpacing: '0.04em', textTransform: 'uppercase', padding: '10px 10px', color: '#fff', background: 'transparent', borderBottom: 'none' }}>{label}</th>
                     ))}
                     {([t('client.historique_appro.col_qty'), 'Prix U. HT', 'TVA %', 'Prix U. TTC'] as const).map((label) => (
@@ -416,7 +416,7 @@ export default function TransferHistoriquePage() {
                   {[
                     ['Date', fmtDate(editTarget.dateTransfert)],
                     [rowDestLabel(editTarget), destCell(voc, editTarget)],
-                    [voc.Nom('ingredient'), editTarget.ingredientNom],
+                    [voc.Nom('article_ingredient'), editTarget.ingredientNom],
                     ['Catégorie', editTarget.categorieNom],
                     ['Ancienne quantité', `${editTarget.quantite % 1 === 0 ? editTarget.quantite.toFixed(0) : editTarget.quantite} ${editTarget.uniteNom}`],
                   ].map(([label, value]) => (
@@ -491,7 +491,7 @@ export default function TransferHistoriquePage() {
                   {[
                     ['Date', fmtDate(deleteTarget.dateTransfert)],
                     [rowDestLabel(deleteTarget), destCell(voc, deleteTarget)],
-                    [voc.Nom('ingredient'), deleteTarget.ingredientNom],
+                    [voc.Nom('article_ingredient'), deleteTarget.ingredientNom],
                     ['Quantité', `${deleteTarget.quantite % 1 === 0 ? deleteTarget.quantite.toFixed(0) : deleteTarget.quantite} ${deleteTarget.uniteNom}`],
                   ].map(([label, value]) => (
                     <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
@@ -532,7 +532,7 @@ export default function TransferHistoriquePage() {
                   {[
                     ['Date', fmtDate(detailPopup.dateTransfert)],
                     [rowDestLabel(detailPopup), destCell(voc, detailPopup)],
-                    [voc.Nom('ingredient'), detailPopup.ingredientNom],
+                    [voc.Nom('article_ingredient'), detailPopup.ingredientNom],
                     ['Catégorie', detailPopup.categorieNom],
                     ['Quantité', `${detailPopup.quantite % 1 === 0 ? detailPopup.quantite.toFixed(0) : detailPopup.quantite} ${detailPopup.uniteNom}`],
                   ].map(([label, value]) => (

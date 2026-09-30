@@ -64,6 +64,7 @@ const LEXIQUE_LABELS: Record<string, string> = {
   labo_long: 'Labo, forme longue (laboratoire)',
   labo_desc: 'Labo, description (laboratoire de production)',
   activite_desc: 'Activité, description (point de vente)',
+  article_ingredient: 'Article, nommé « ingrédient » (inventaire, historique des transferts)',
   cat_pt_utilisable: 'Catégorie « PT utilisables » (titre)',
   cat_pt_valorise: 'Catégorie « produits composés valorisés » (titre)',
   cat_pt_vendable: 'Catégorie « PT vendables » (titre)',

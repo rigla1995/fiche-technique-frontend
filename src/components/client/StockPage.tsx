@@ -384,7 +384,7 @@ function ApproConflictModal({ date, conflicts, newQuantite, onConfirm, onCancel 
   const dateLabel = `${d}/${m}/${y}`;
   const existingTotal = conflicts.reduce((sum, c) => sum + c.entries.reduce((s, e) => s + (e.quantite ?? 0), 0), 0);
   const newQty = newQuantite ?? 0;
-  const nom = conflicts.length === 1 ? conflicts[0].ingredientNom : `${conflicts.length} ${voc.nomS('ingredient')}`;
+  const nom = conflicts.length === 1 ? conflicts[0].ingredientNom : `${conflicts.length} ${voc.nomS('article_ingredient')}`;
   return (
     <div className="modal-overlay">
       <div className="modal" style={{ maxWidth: 480 }} onClick={(e) => e.stopPropagation()}>

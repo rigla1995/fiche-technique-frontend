@@ -259,7 +259,7 @@ export default function ProductCategoriesPage() {
             <div className="modal-body" style={{ padding: '28px 24px' }}>
               <div style={{ fontSize: 36, marginBottom: 12 }}>⚠️</div>
               <h3 style={{ margin: '0 0 10px' }}>Supprimer cette catégorie ?</h3>
-              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>{voc.Le('produit', true)} et {voc.pl('article')} {voc.acc('article', 'valorisés', 'valorisées')} liés perdront leur catégorie.</p>
+              <p style={{ color: 'var(--text-muted)', margin: '0 0 20px', fontSize: '0.9rem' }}>{voc.Le('produit', true)} et {voc.pl('article')} {voc.acc('article', 'valorisés', 'valorisées')} {voc.accN(['produit', 'article'], 'liés', 'liées')} perdront leur catégorie.</p>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={() => setDeleteId(null)}>Annuler</button>
                 <button className="btn btn-danger" onClick={() => handleDelete(deleteId!)}>Supprimer</button>

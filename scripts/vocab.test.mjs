@@ -131,6 +131,8 @@ test('API §2.1 : toutes les méthodes, avec leurs variantes à majuscule', () =
     'acc', 'g', 'icon', 'avec',
     // Ajouts de l'étape S4 (inventaire) : déterminant seul, pour un terme séparé de son déterminant par une balise.
     'det', 'Det',
+    // Ajout de l'étape S5 (consolidation) : accord avec plusieurs termes coordonnés.
+    'accN',
   ];
   assert.deepEqual(Object.keys(vocabDefaut).sort(), [...attendues].sort());
   for (const m of attendues) assert.equal(typeof vocabDefaut[m], 'function', m);
@@ -153,9 +155,9 @@ test('lexique par défaut v2 : les 32 clés d\'origine rendent exactement sg / p
 });
 
 test('lexique par défaut v2 : clés ajoutées (§1.3), formes courtes, appositions, gel', () => {
-  assert.equal(LEXIQUE_CLES.length, 40);
+  assert.equal(LEXIQUE_CLES.length, 41);
   assert.deepEqual(LEXIQUE_CLES.slice(32), [
-    'produit', 'produit_compose', 'labo_long', 'labo_desc', 'activite_desc',
+    'produit', 'produit_compose', 'labo_long', 'labo_desc', 'activite_desc', 'article_ingredient',
     'cat_pt_utilisable', 'cat_pt_valorise', 'cat_pt_vendable',
   ]);
   assert.deepEqual([LEXIQUE_DEFAUT.produit.sg, LEXIQUE_DEFAUT.produit.pl, LEXIQUE_DEFAUT.produit.g], ['Produit', 'Produits', 'm']);
@@ -187,6 +189,8 @@ const DERIVEES = {
   labo_long:         ['labo', 'copie', 'Laboratoire'],
   labo_desc:         ['labo', 'copie', 'Laboratoire de production'],
   activite_desc:     ['activite', 'copie', 'Point de vente'],
+  // Étape S5 : l'article que l'existant nomme « ingrédient » (inventaire, historique des transferts).
+  article_ingredient: ['article', 'copie', 'Ingrédient'],
   cat_pt_utilisable: ['produit_utilisable', 'pluriel_titre', 'Produits Transformés Utilisables'],
   cat_pt_valorise:   ['produit_valorise', 'pluriel_titre', 'Produits Composés Valorisés'],
   cat_pt_vendable:   ['produit_vendable', 'pluriel_titre', 'Produits Transformés Vendables'],
@@ -350,6 +354,73 @@ test('lexique miroir : chaque clé du défaut, genre et élision inversés, mot 
     // l'élision déclarée correspond bien à l'initiale du mot (voyelle ou non)
     assert.equal(/^[aeiouyàâéèêëîïôöùûœh]/i.test(m.sg), m.el, `${k} : « ${m.sg} » et el = ${m.el}`);
   }
+});
+
+// ── 3 bis. Extension de l'étape S5 (consolidation du balayage) ────────────────
+test('S5 — accN : accord avec plusieurs termes coordonnés, féminin seulement si TOUS sont féminins', () => {
+  // par défaut : activité (f) + labo (m) → masculin ; vente (f) + marge (f) → féminin
+  assert.equal(vocabDefaut.accN(['activite', 'labo'], 'assignés', 'assignées'), 'assignés');
+  assert.equal(vocabDefaut.accN(['vente', 'marge'], 'liés', 'liées'), 'liées');
+  // l'ordre des clés ne compte pas ; une seule clé = acc
+  assert.equal(vocabDefaut.accN(['labo', 'activite'], 'trouvé', 'trouvée'), vocabDefaut.accN(['activite', 'labo'], 'trouvé', 'trouvée'));
+  for (const k of ['activite', 'labo', 'vente', 'stock']) {
+    assert.equal(vocabDefaut.accN([k], 'créé', 'créée', 2), vocabDefaut.acc(k, 'créé', 'créée', 2), k);
+  }
+  // même règle de pluriel que acc (« s » sauf finale s, x, z)
+  assert.equal(vocabDefaut.accN(['vente', 'marge'], 'lié', 'liée', 3), 'liées');
+  assert.equal(vocabDefaut.accN(['article', 'produit'], 'requis', 'requise', true), 'requis');
+  // liste vide ou clé inconnue : masculin, jamais d'exception
+  assert.equal(vocabDefaut.accN([], 'x', 'y'), 'x');
+  assert.equal(vocabDefaut.accN(['vente', 'cle_absente_s5'], 'x', 'y'), 'x');
+  // le cas qui a motivé la méthode : faux au masculin dès que les DEUX termes sont féminins
+  const deuxFeminins = creerVocab(resoudreLexique(LEXIQUE_DEFAUT, { labo: { sg: 'Cuisine centrale', pl: 'Cuisines centrales', g: 'f', el: false } }));
+  assert.equal(deuxFeminins.accN(['activite', 'labo'], 'assignés', 'assignées'), 'assignées');
+  assert.equal(VOCS.hotellerie.accN(['activite', 'labo'], 'assignés', 'assignées'), 'assignés', 'Hôtellerie : service (m) + cuisine centrale (f)');
+  assert.equal(VOCS.miroir.accN(['article', 'produit_utilisable'], 'requis', 'requises'), 'requises');
+});
+
+test('S5 — forme courte pour MAJ, nomS et NomS (argument de casse « court » / « Court »)', () => {
+  // identité par défaut : « labo » n'a pas de forme courte, le rendu ne change pas
+  assert.equal(vocabDefaut.MAJ('labo', false, 'court'), vocabDefaut.MAJ('labo'));
+  assert.equal(vocabDefaut.NomS('labo', 'Court'), vocabDefaut.NomS('labo'));
+  assert.equal(vocabDefaut.nomS('labo', 'court'), vocabDefaut.nomS('labo'));
+  // sans argument, ou avec une casse qui n'est pas courte : la forme longue, comme avant
+  for (const k of LEXIQUE_CLES) {
+    assert.equal(vocabDefaut.MAJ(k, false, 'Nom'), vocabDefaut.MAJ(k), k);
+    assert.equal(vocabDefaut.nomS(k, 'nom'), vocabDefaut.nomS(k), k);
+    assert.equal(vocabDefaut.NomS(k, 'Titre'), vocabDefaut.NomS(k), k);
+  }
+  assert.equal(VOCS.hotellerie.MAJ('labo'), 'CUISINE CENTRALE');
+  assert.equal(VOCS.hotellerie.MAJ('labo', false, 'court'), 'CUISINE');
+  assert.equal(VOCS.ceramique.MAJ('labo', false, 'court'), 'SITE');
+  assert.equal(VOCS.hotellerie.NomS('labo', 'Court'), 'Cuisine(s)');
+  assert.equal(VOCS.ceramique.NomS('labo', 'Court'), 'Site(s)');
+  assert.equal(VOCS.ceramique.nomS('labo', 'court'), 'site(s)');
+  assert.equal(vocabDefaut.NomS('appro', 'Court'), 'Appro(s)');
+});
+
+test('S5 — clé dérivée article_ingredient : « Ingrédient » par défaut, le terme de « article » dès qu\'un domaine le renomme', () => {
+  const d = LEXIQUE_DEFAUT.article_ingredient;
+  const o = LEXIQUE_DEFAUT.ingredient;
+  // par défaut, exactement les formes de la clé ingredient (identité des écrans qui changent de clé)
+  assert.deepEqual([d.sg, d.pl, d.g, d.el], [o.sg, o.pl, o.g, o.el]);
+  assert.deepEqual([d.derive_de, d.mode], ['article', 'copie']);
+  for (const m of ['nom', 'Nom', 'pl', 'Pl', 'nomS', 'le', 'Le', 'un', 'du', 'de', 'ce', 'aucun', 'Aucun']) {
+    assert.equal(vocabDefaut[m]('article_ingredient'), vocabDefaut[m]('ingredient'), m);
+  }
+  assert.equal(vocabDefaut.n('article_ingredient', 3), vocabDefaut.n('ingredient', 3));
+  assert.equal(vocabDefaut.du('article_ingredient', true), vocabDefaut.du('ingredient', true));
+  assert.equal(vocabDefaut.acc('article_ingredient', 'Tous', 'Toutes'), 'Tous');
+  // domaine qui renomme « article » : copie de l'entrée du parent
+  const h = LEXIQUES.hotellerie;
+  assert.deepEqual([h.article_ingredient.sg, h.article_ingredient.pl, h.article_ingredient.g, h.article_ingredient.el], ['Fourniture', 'Fournitures', 'f', false]);
+  assert.equal(h.ingredient.sg, 'Composant', 'la clé ingredient (composant d\'une recette) reste distincte');
+  assert.equal(LEXIQUES.ceramique.article_ingredient.sg, 'Matière première');
+  // domaine qui ne renomme que « ingrédient » : la clé dérivée garde son défaut (règle 3 du §1.3) ; elle se surcharge à part
+  const r = resoudreLexique(LEXIQUE_DEFAUT, { ingredient: { sg: 'Intrant', pl: 'Intrants', g: 'm', el: true } });
+  assert.equal(r.article_ingredient.sg, 'Ingrédient');
+  const r2 = resoudreLexique(LEXIQUE_DEFAUT, { article_ingredient: { sg: 'Référence', pl: 'Références', g: 'f', el: false } });
+  assert.deepEqual([r2.article_ingredient.sg, r2.article.sg], ['Référence', 'Article']);
 });
 
 // ── 4. Lexique reçu du serveur ───────────────────────────────────────────────

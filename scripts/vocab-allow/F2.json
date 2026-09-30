@@ -34,13 +34,5 @@
     "type": "non-repliable",
     "mode": "accords",
     "justification": "Signalement à tort : « requis » s'accorde avec « Nom » (« Nom … requis »), pas avec le terme rendu par voc.du('labo') ; l'outil ne sait pas rattacher le participe à son antécédent. Rendu Hôtellerie juste : « Nom de la cuisine centrale requis ». Deux messages identiques (setLaboError, setBizError)."
-  },
-  {
-    "fichier": "src/components/client/GerantsPage.tsx",
-    "avant": "Activités & labos assignés ⟦<span>⟧",
-    "apres": "Activités & labos assignés ⟦<span>⟧",
-    "type": "provisoire",
-    "mode": "accords",
-    "justification": "« assignés » s'accorde avec DEUX termes coordonnés (activités et labos) : masculin pluriel sauf si les deux termes sont féminins. Le moteur n'a pas d'accord à deux clés et l'outil refuse un voc.acc imbriqué (argument non littéral) : le participe reste au masculin, comme le prescrit le guide pour deux termes coordonnés. Besoin décrit dans scripts/vocab-besoins/F2.json."
   }
 ]

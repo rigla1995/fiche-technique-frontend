@@ -84,8 +84,8 @@ export default function FormuleGuard() {
           Votre compte est en formule <strong>Activité Basique</strong> ({voc.nom('stock')} et {voc.pl('vente')} {voc.de('article', true)} {voc.acc('article', 'valorisés', 'valorisées')})
           et sans {voc.nom('labo')}. {voc.Le('espace_produits', false, 'Nom')} — {voc.pl('produit')} vendables, utilisables, {voc.acc('produit', 'composés', 'composées')} et production — est
           disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement {voc.acc('espace_produits', 'inclus', 'incluse')} avec la
-          base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories {voc.Court('produit', true)} et {voc.Pl('article')}{' '}
-          {voc.acc('article', 'Valorisés', 'Valorisées')} restent accessibles depuis le menu.
+          base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories {voc.Court('produit', true)} et{' '}
+          {voc.Titre('produit_valorise', true)} restent accessibles depuis le menu.
         </p>
 
         {(hasPending || requested) ? (

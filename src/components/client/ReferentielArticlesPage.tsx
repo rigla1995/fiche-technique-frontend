@@ -601,7 +601,7 @@ export default function ReferentielArticlesPage() {
                     {isAssignOpen && (
                       <div style={{ marginBottom: 8, padding: '10px 12px', borderRadius: 8, border: '1.5px solid #dcfce7', background: '#f0fdf4' }}>
                         {activites.length === 0 && labos.length === 0 ? (
-                          <div style={{ fontSize: '0.82rem', color: '#166534' }}>{voc.Aucun('activite')} ni {voc.nom('labo')} configuré.</div>
+                          <div style={{ fontSize: '0.82rem', color: '#166534' }}>{voc.Aucun('activite')} ni {voc.nom('labo')} {voc.accN(['activite', 'labo'], 'configuré', 'configurée')}.</div>
                         ) : (
                           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                             {activites.map(act => {
@@ -752,7 +752,7 @@ export default function ReferentielArticlesPage() {
 
                   {allCount === 0 ? (
                     <div style={{ padding: '16px', borderRadius: 8, background: '#f0fdf4', border: '1px solid #86efac', fontSize: '0.85rem', color: '#166534', textAlign: 'center' }}>
-                      {voc.Aucun('activite')} ou {voc.nom('labo')} trouvé. Créez-en depuis « {voc.Mon('activite', true, 'Nom')} ».
+                      {voc.Aucun('activite')} ou {voc.nom('labo')} {voc.accN(['activite', 'labo'], 'trouvé', 'trouvée')}. Créez-en depuis « {voc.Mon('activite', true, 'Nom')} ».
                     </div>
                   ) : (
                     <>
@@ -922,7 +922,7 @@ export default function ReferentielArticlesPage() {
                   <div style={{ color: 'var(--text-muted)', fontSize: '0.82rem', padding: '8px 0' }}>Chargement…</div>
                 ) : assignLoaded && editActivites.length === 0 && editLabos.length === 0 ? (
                   <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)', padding: '8px 12px', background: '#f8fafc', borderRadius: 8 }}>
-                    {voc.Aucun('activite')} ni {voc.nom('labo')} configuré.
+                    {voc.Aucun('activite')} ni {voc.nom('labo')} {voc.accN(['activite', 'labo'], 'configuré', 'configurée')}.
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 220, overflowY: 'auto' }}>

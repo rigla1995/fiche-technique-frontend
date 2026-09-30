@@ -243,7 +243,7 @@ src/components/client/ActivitesPage.tsx
     miroir : Ex: Usine 1
   l. 1141
     défaut : Ex: LABO-001
-    miroir : Ex: USINE-001
+    miroir : Ex: ABR-USINE-001
   l. 1157
     défaut : Alimenté par<span>(labo source des transferts, optionnel)</span>
     miroir : Alimentée par<span>(usine source des expéditions, optionnel)</span>
@@ -279,7 +279,7 @@ src/components/client/ActivitesPage.tsx
     miroir : Ex: Usine 1
   l. 1308
     défaut : Ex: LABO-001
-    miroir : Ex: USINE-001
+    miroir : Ex: ABR-USINE-001
   l. 1319
     défaut : Étape ignorée — vous pourrez créer un labo plus tard
     miroir : Étape ignorée — vous pourrez créer une usine plus tard
@@ -781,7 +781,7 @@ src/components/client/ComposedValoriseModal.tsx
     miroir : Fabriquée à l'usine, transférée vers les locaux cochés, vendue telle quelle (valorisée).
   l. 150
     défaut : Labo(s) de fabrication <span>*</span>
-    miroir : Usine(s) de fabrication <span>*</span>
+    miroir : Abr-Usine(s) de fabrication <span>*</span>
   l. 151
     défaut : Aucun labo disponible.
     miroir : Aucune usine disponible.
@@ -1065,8 +1065,8 @@ src/components/client/FormuleGuard.tsx
     défaut : Créez vos produits vendables, utilisables et composés, et pilotez votre production.
     miroir : Créez vos inventions vendables, utilisables et composées, et pilotez votre production.
   l. 83
-    défaut : Votre compte est en formule <strong>Activité Basique</strong> (stock et ventes d'articles valorisés) et sans labo. L'Espace Produit — produits vendables, utilisables, composés et production — est disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement inclus avec la base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories Produits et Articles Valorisés restent accessibles depuis le menu.
-    miroir : Votre compte est en formule <strong>Activité Basique</strong> (armoire et encaissements de denrées valorisées) et sans usine. La Zone Invention — inventions vendables, utilisables, composées et production — est disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement incluse avec la base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories Abr-Inventions et Denrées Valorisées restent accessibles depuis le menu.
+    défaut : Votre compte est en formule <strong>Activité Basique</strong> (stock et ventes d'articles valorisés) et sans labo. L'Espace Produit — produits vendables, utilisables, composés et production — est disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement inclus avec la base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories Produits et Produits Valorisés restent accessibles depuis le menu.
+    miroir : Votre compte est en formule <strong>Activité Basique</strong> (armoire et encaissements de denrées valorisées) et sans usine. La Zone Invention — inventions vendables, utilisables, composées et production — est disponible avec la formule <strong>Activité Premium</strong>, ou automatiquement incluse avec la base <strong>Labo</strong> (nécessaire à la production). Les pages Catégories Abr-Inventions et Inventions Valorisées restent accessibles depuis le menu.
 
 src/components/client/FournisseursImportPage.tsx
   l. 59
@@ -1392,7 +1392,7 @@ src/components/client/InventairePage.tsx
     miroir : 📋 Historique Abr-Pesées
   l. 228
     défaut : Ingrédients
-    miroir : Matières
+    miroir : Provisions
   l. 240
     défaut : Saisis
     miroir : Saisies
@@ -1404,7 +1404,7 @@ src/components/client/InventairePage.tsx
     miroir : ← sélectionner le local
   l. 294
     défaut : 🧂 Ingrédient
-    miroir : 🧂 Matière
+    miroir : 🧂 Provision
   l. 296
     défaut : — Tous —
     miroir : — Toutes —
@@ -1413,19 +1413,19 @@ src/components/client/InventairePage.tsx
     miroir : 📅 Date abr-pesée
   l. 321
     défaut : Chargement des ingrédients...
-    miroir : Chargement des matières...
+    miroir : Chargement des provisions...
   l. 326
     défaut : Aucun ingrédient trouvé.
-    miroir : Aucune matière trouvée.
+    miroir : Aucune provision trouvée.
   l. 333
     défaut : Ingrédient
-    miroir : Matière
+    miroir : Provision
   l. 334
     défaut : Stock actuel
     miroir : Armoire actuelle
   l. 353
     défaut : ⟦·⟧ ⟦ingrédient|ingrédients@>1⟧⟦·⟧⟦·⟧
-    miroir : ⟦·⟧ ⟦matière|matières@>1⟧⟦·⟧⟦·⟧
+    miroir : ⟦·⟧ ⟦provision|provisions@>1⟧⟦·⟧⟦·⟧
   l. 355
     défaut :  · ⟦·⟧ ⟦saisi|saisis@>1⟧
     miroir :  · ⟦·⟧ ⟦saisie|saisies@>1⟧
@@ -1440,7 +1440,7 @@ src/components/client/InventairePage.tsx
     miroir : ⟦?🚨 Remplacement détecté|📋 Confirmer la pesée⟧
   l. 476
     défaut : Date : <strong>⟦·⟧</strong> · ⟦·⟧ ingrédient(s)⟦·⟧
-    miroir : Date : <strong>⟦·⟧</strong> · ⟦·⟧ matière(s)⟦·⟧
+    miroir : Date : <strong>⟦·⟧</strong> · ⟦·⟧ provision(s)⟦·⟧
   l. 482
     défaut : ⚠️ <strong>Important :</strong> Cet inventaire <strong>ne peut pas être supprimé</strong>, seulement modifié. Il recalcule le stock à partir du <strong>⟦·⟧</strong>.
     miroir : ⚠️ <strong>Important :</strong> Cette pesée <strong>ne peut pas être supprimée</strong>, seulement modifiée. Elle recalcule l'armoire à partir du <strong>⟦·⟧</strong>.
@@ -1865,7 +1865,7 @@ src/components/client/ProductCategoriesPage.tsx
     miroir : ⟦·⟧ ⟦invention|inventions@≠1⟧
   l. 262
     défaut : Les produits et articles valorisés liés perdront leur catégorie.
-    miroir : Les inventions et denrées valorisées liés perdront leur catégorie.
+    miroir : Les inventions et denrées valorisées liées perdront leur catégorie.
 
 src/components/client/ProductForm.tsx
   l. 73
@@ -2061,7 +2061,7 @@ src/components/client/ProductList.tsx
     miroir : ⟦·⟧ ⟦denrée|denrées@≠1⟧ ⟦valide|valides@≠1⟧ (échantillon > 0)
   l. 1118
     défaut : ⟦?Mode supplément — sélectionnez exactement 1 produit utilisable (OU utilisez l'étape Articles)|Ajoutez des produits utilisables comme sous-composants. Au minimum 2 articles/produits utilisables requis au total⟧.
-    miroir : ⟦?Mode option — sélectionnez exactement 1 invention utile (OU utilisez l'étape Denrées)|Ajoutez des inventions utiles comme sous-composants. Au minimum 2 denrées/inventions utiles requis au total⟧.
+    miroir : ⟦?Mode option — sélectionnez exactement 1 invention utile (OU utilisez l'étape Denrées)|Ajoutez des inventions utiles comme sous-composants. Au minimum 2 denrées/inventions utiles requises au total⟧.
   l. 1124
     défaut : Aucun produit utilisable disponible.
     miroir : Aucune invention utile disponible.
@@ -2076,7 +2076,7 @@ src/components/client/ProductList.tsx
     miroir : ⟦·⟧ invention(s) utile(s) sélectionnée(s)
   l. 1175
     défaut : ⟦?⟦?Sélectionnez exactement 1 article ou produit utilisable|Au minimum 2 articles/produits utilisables requis⟧|⟦·⟧⟧
-    miroir : ⟦?⟦?Sélectionnez exactement 1 denrée ou invention utile|Au minimum 2 denrées/inventions utiles requis⟧|⟦·⟧⟧
+    miroir : ⟦?⟦?Sélectionnez exactement 1 denrée ou invention utile|Au minimum 2 denrées/inventions utiles requises⟧|⟦·⟧⟧
   l. 1202
     défaut : 🆓 Appros libres
     miroir : 🆓 Abr-Rentrées libres
@@ -2094,7 +2094,7 @@ src/components/client/ProductList.tsx
     miroir : Sélectionnez le/les <strong>local/locaux</strong> qui vendront cette invention (assemblage consommé sur place).
   l. 1232
     défaut : Sélectionnez le/les <strong>labo(s)</strong> de fabrication — les articles proposés seront ceux du périmètre.
-    miroir : Sélectionnez la/les <strong>usine(s)</strong> de fabrication — les denrées proposées seront celles du périmètre.
+    miroir : Sélectionnez la/les <strong>abr-usine(s)</strong> de fabrication — les denrées proposées seront celles du périmètre.
   l. 1233
     défaut : Sélectionnez la/les <strong>activité(s)</strong> où ce produit utilisable sera géré.
     miroir : Sélectionnez le/les <strong>local/locaux</strong> où cette invention utile sera gérée.
@@ -2130,7 +2130,7 @@ src/components/client/ProductList.tsx
     miroir : 🔄 Élaborations internes
   l. 1386
     défaut : ⟦?🏭 Labo(s) de fabrication|📍 ⟦?Activités|Stocks activés⟧⟧
-    miroir : ⟦?🏭 Usine(s) de fabrication|📍 ⟦?Locaux|Armoires activées⟧⟧
+    miroir : ⟦?🏭 Abr-Usine(s) de fabrication|📍 ⟦?Locaux|Armoires activées⟧⟧
   l. 1395
     défaut : ⟦?🏭 |⟧⟦·⟧
     miroir : ⟦?🏭 |⟧⟦·⟧
@@ -2578,7 +2578,7 @@ src/components/client/StockPage.tsx
     miroir : Géré automatiquement par l'usine — non modifiable.
   l. 387
     défaut : ⟦·⟧⟦| ingrédient(s)@≠1⟧
-    miroir : ⟦·⟧⟦| matière(s)@≠1⟧
+    miroir : ⟦·⟧⟦| provision(s)@≠1⟧
   l. 392
     défaut : ⚠️ Appro existant — ⟦·⟧
     miroir : ⚠️ Abr-Rentrée existante — ⟦·⟧
@@ -2762,7 +2762,7 @@ src/components/client/TarifsAcheteursPage.tsx
     miroir : Tarifs Abr-Clientes
   l. 213
     défaut : Prix HT (+ TVA) des articles et produits proposés à vos acheteurs — TTC calculé, promo affichée prix barré.
-    miroir : Prix HT (+ TVA) des denrées et inventions proposés à vos clientes — TTC calculé, promo affichée prix barré.
+    miroir : Prix HT (+ TVA) des denrées et inventions proposées à vos clientes — TTC calculé, promo affichée prix barré.
   l. 238
     défaut : ⟦?🧂 Articles|🍱 Produits⟧ (⟦·⟧)
     miroir : ⟦?🧂 Denrées|🍱 Inventions⟧ (⟦·⟧)
@@ -2777,7 +2777,7 @@ src/components/client/TarifsAcheteursPage.tsx
     miroir : Activez le toggle <strong>Commandable</strong> sur les denrées concernées dans <Link>Encyclopédie → Denrées</Link> : elles apparaîtront ici.
   l. 285
     défaut : Créez des produits composés d'origine labo, ou rattachez vos produits utilisables à un labo : ils apparaîtront ici.
-    miroir : Créez des inventions composées d'origine usine, ou rattachez vos inventions utiles à une usine : ils apparaîtront ici.
+    miroir : Créez des inventions composées d'origine usine, ou rattachez vos inventions utiles à une usine : elles apparaîtront ici.
   l. 320
     défaut : ⟦?Article|Produit⟧
     miroir : ⟦?Denrée|Invention⟧
@@ -2826,7 +2826,7 @@ src/components/client/TransferHistoriquePage.tsx
     miroir : Historique Abr-Expédition⟦? — ⟦·⟧|⟧⟦<HelpButton/>⟧
   l. 225
     défaut : Consultez et exportez l'historique des transferts vers les activités⟦? et labos rattachés|⟧
-    miroir : Consultez et exportez l'historique des expéditions vers les locaux⟦? et usines rattachées|⟧
+    miroir : Consultez et exportez l'historique des expéditions vers les locaux⟦? et usines rattachés|⟧
   l. 241
     défaut : 🏭 ⟦·⟧
     miroir : 🏭 ⟦·⟧
@@ -2844,7 +2844,7 @@ src/components/client/TransferHistoriquePage.tsx
     miroir : ⟦·⟧ ⟦sélectionnée|sélectionnées@>1⟧
   l. 315
     défaut : Ingrédient
-    miroir : Matière
+    miroir : Provision
   l. 342
     défaut : ⟦?Cession interne vers un labo rattaché|⟦·⟧⟧
     miroir : ⟦?Cession interne vers une usine rattachée|⟦·⟧⟧
@@ -2859,7 +2859,7 @@ src/components/client/TransferHistoriquePage.tsx
     miroir : ✏️ Modifier l'expédition
   l. 419
     défaut : Ingrédient
-    miroir : Matière
+    miroir : Provision
   l. 443
     défaut : Prix ⟦?de référence (PMP HT à la date du transfert|unitaire (dernier appro⟧)
     miroir : Prix ⟦?de référence (PMP HT à la date de l'expédition|unitaire (dernière abr-rentrée⟧)
@@ -2874,13 +2874,13 @@ src/components/client/TransferHistoriquePage.tsx
     miroir : Cette suppression va recalculer l'<strong>armoire de l'usine</strong> (la quantité sera restituée) et l'<strong>armoire ⟦?de l'usine|du local⟧ «⟦·⟧»</strong> (la quantité transférée sera retirée). Cette action est irréversible.
   l. 494
     défaut : Ingrédient
-    miroir : Matière
+    miroir : Provision
   l. 526
     défaut : 📋 Détail du transfert
     miroir : 📋 Détail de l'expédition
   l. 535
     défaut : Ingrédient
-    miroir : Matière
+    miroir : Provision
 
 src/components/client/TransferPage.tsx
   l. 430
@@ -2906,7 +2906,7 @@ src/components/client/TransferPage.tsx
     miroir : ✓ Confirmer l'expédition
   l. 579
     défaut : Transférez les articles du labo vers vos activités⟦? et labos rattachés|⟧
-    miroir : Transférez les denrées de l'usine vers vos locaux⟦? et usines rattachées|⟧
+    miroir : Transférez les denrées de l'usine vers vos locaux⟦? et usines rattachés|⟧
   l. 606
     défaut : 🏭 ⟦·⟧
     miroir : 🏭 ⟦·⟧
@@ -3621,16 +3621,16 @@ src/utils/contractPdf.ts
   l. 160
     défaut : Option Acheteurs → palier ⟦·⟧
     miroir : Option Abr-Clientes → palier ⟦·⟧
-  l. 184
+  l. 199
     défaut : ⟦Activité|Activités@>1⟧⟦·⟧
     miroir : ⟦Local|Locaux@>1⟧⟦·⟧
-  l. 186
+  l. 201
     défaut : Labo(s)
     miroir : Usine(s)
-  l. 187
+  l. 202
     défaut : Gérant(s) sup.
     miroir : Animatrice(s) sup.
-  l. 190
+  l. 205
     défaut : Option Acheteurs
     miroir : Option Abr-Clientes
 

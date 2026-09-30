@@ -95,6 +95,9 @@ export const LEXIQUE_DEFAUT = geler({
   labo_long:          { sg: 'Laboratoire',               pl: 'Laboratoires',               g: 'm', el: false, icon: '🏭', derive_de: 'labo',     mode: 'copie' },
   labo_desc:          { sg: 'Laboratoire de production', pl: 'Laboratoires de production', g: 'm', el: false, icon: '🏭', derive_de: 'labo',     mode: 'copie' },
   activite_desc:      { sg: 'Point de vente',            pl: 'Points de vente',            g: 'm', el: false, icon: '🏪', derive_de: 'activite', mode: 'copie' },
+  // Étape S5 : l'article nommé « ingrédient » par l'existant (inventaire, historique des transferts, cumul d'appro).
+  // Par défaut « Ingrédient » (identité) ; un domaine qui renomme « article » y lit son propre terme (copie).
+  article_ingredient: { sg: 'Ingrédient',                pl: 'Ingrédients',                g: 'm', el: true,  icon: '📦', derive_de: 'article',  mode: 'copie' },
   cat_pt_utilisable:  { sg: 'Produits Transformés Utilisables', pl: 'Produits Transformés Utilisables', g: 'm', el: false, icon: '🧂', derive_de: 'produit_utilisable', mode: 'pluriel_titre' },
   cat_pt_valorise:    { sg: 'Produits Composés Valorisés',      pl: 'Produits Composés Valorisés',      g: 'm', el: false, icon: '💎', derive_de: 'produit_valorise',   mode: 'pluriel_titre' },
   cat_pt_vendable:    { sg: 'Produits Transformés Vendables',   pl: 'Produits Transformés Vendables',   g: 'm', el: false, icon: '🛒', derive_de: 'produit_vendable',   mode: 'pluriel_titre' },
