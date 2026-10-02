@@ -23,7 +23,7 @@ import {
   empreinte, ecartsDeGel, texteAccords, MOTS_ACCORD, ACCORDS_APRES, TYPES_ALLOW, TROU,
   // lot 2b (§3.2, E1 à E11)
   formesDans, lireSql, estCodeSql, fonctionsSqlDe, validerRendu, diffSquelette, ecrireAccords,
-  CODES_SQL_CAPITALES, PERIMETRE_EN_PLUS, HORS_RESIDUELS, LOTS_REPORTE,
+  CODES_SQL_CAPITALES, PERIMETRE_EN_PLUS, HORS_RESIDUELS, LOTS_REPORTE, RESIDUELS_EN_PLUS,
 } from './vocab-check.mjs';
 import { vocabDefaut } from '../src/vocab/vocab.ts';
 
@@ -2388,4 +2388,38 @@ test('E10 — idiomes du guide serveur : `const voc = req.voc ?? vocabDefaut;` r
   identique(avant, "res.status(404).json({ message: `${req.voc.Nom('labo')} introuvable` });", opts);
   ecart(avant, "res.status(404).json({ message: `${(req.voc ?? vocabDefaut).Nom('labo')} introuvable` });", { moins: 'Labo introuvable', plus: '⟦·⟧ introuvable' }, opts);
   ecart(avant, "res.status(404).json({ message: `${req['voc'].Nom('labo')} introuvable` });", { moins: 'Labo introuvable', plus: '⟦·⟧ introuvable' }, opts);
+});
+
+test('CLI identite : un fichier nommé qui n\'est pas du code (CHAMPS.md) est ignoré et signalé, pas compilé', () => {
+  const d = depot({ 'src/A.tsx': PAGE_A, 'docs/CHAMPS.md': '# Champs\n\nNb activités, Option Acheteurs (lot 2)\n' });
+  ecrire(d, { 'docs/CHAMPS.md': '# Champs\n\nNb activités, Option Acheteurs (lot 3)\n' });
+  const r = outil(d, 'identite', 'src/A.tsx', 'docs/CHAMPS.md');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.match(r.sortie, /docs\/CHAMPS\.md : pas du code, ignoré par identite/);
+  assert.match(r.sortie, /identite : 1 fichier\(s\) comparé\(s\).* 0 écart\(s\), 0 erreur\(s\)/);
+  assert.doesNotMatch(r.sortie, /analyse impossible/);
+});
+
+test('E5b / CLI : residuels sans liste lit aussi docuseal-templates/CHAMPS.md — ses écarts admis servent, pas « sans objet » ; identite ne le lit pas', () => {
+  assert.deepEqual(RESIDUELS_EN_PLUS, ['docuseal-templates/CHAMPS.md']);
+  const champs = '| `Nb labos` | nombre de labos du compte |\n';
+  const d = depot({ 'src/a.js': 'module.exports = {};\n', 'docuseal-templates/CHAMPS.md': champs });
+  let r = outil(d, 'residuels');
+  assert.equal(r.code, 1, r.sortie + r.erreur);
+  assert.match(r.sortie, /^docuseal-templates\/CHAMPS\.md:1 .*« Nb labos »$/m);
+  assert.match(r.sortie, /residuels : 2 fichier\(s\), 1 unité\(s\) dans 1 fichier\(s\)/);
+  ecrire(d, { 'scripts/vocab-allow/B2.json': JSON.stringify([{ fichier: 'docuseal-templates/CHAMPS.md', avant: 'Nb labos', apres: 'Nb labos', type: 'discriminant', justification: 'Nom de champ DocuSeal, inchangé.' }]) });
+  r = outil(d, 'residuels');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.doesNotMatch(r.sortie, /allow sans objet/);
+  // Nommé, il est lu de même ; un autre fichier nommé seul ne l'entraîne pas.
+  r = outil(d, 'residuels', 'docuseal-templates/CHAMPS.md');
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 0 unité\(s\)/);
+  r = outil(d, 'residuels', 'src/a.js');
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 0 unité\(s\)/);
+  // identite et accords, sans liste, ne le lisent pas (pas du code, hors périmètre git E1).
+  ecrire(d, { 'docuseal-templates/CHAMPS.md': champs.replace('du compte', 'du compte client') });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.doesNotMatch(r.sortie, /CHAMPS/);
 });

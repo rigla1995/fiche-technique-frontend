@@ -4,6 +4,7 @@ import type { Abonnement, AbonnementConfig, Promotion, DomaineDuCompte } from '.
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Vocab } from '../../vocab/vocab';
+import { libelleComposant } from '../../vocab/composants';
 import GuideButton from './GuideButton';
 
 // Lignes de capacité de « Votre configuration » : MENU du domaine (composants actifs) avec la
@@ -27,7 +28,7 @@ function lignesCapacite(config: AbonnementConfig, domaine: DomaineDuCompte | nul
   ];
   const lignes: LigneCapacite[] = items.map((c) => ({
     key: c.code,
-    label: c.nb > 1 ? (c.libellePluriel || c.libelle) : c.libelle,
+    label: libelleComposant(voc, c, c.nb > 1),
     nb: c.nb,
     icon: c.icone || ICONE_TYPE[c.typeTechnique] || '📍',
     palier: c.typeTechnique === 'acheteurs',

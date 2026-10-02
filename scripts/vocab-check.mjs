@@ -41,6 +41,9 @@
 //       ${ptCategorieSql(x)} / ${ptTypeSql(…)} développées avec src/utils/stockUtils.js du MÊME commit ;
 //   E5  residuels : swagger, fichiers entièrement admin (HORS_RESIDUELS), noms de champs d'express-validator,
 //       router.delete(…) exclus ;
+//   E5b residuels sans liste de fichiers : les fichiers d'un lot qui ne sont pas du code (RESIDUELS_EN_PLUS :
+//       docuseal-templates/CHAMPS.md) sont lus aussi, comme quand on les nomme — sinon leurs écarts admis
+//       seraient « sans objet » ; identite (pasDuCode) et accords ne les lisent pas ;
 //   E7  vocab-accords.txt écrit dans <root>/scripts, seulement si son contenu change ;
 //   E8  types d'écarts `reporte` (champ lot : 3 ou 2c), `admin` (route et garde), `fiscal` ;
 //   E11 formesDans(texte, formes) : recherche en mot entier d'une liste de formes donnée (oracle, §2.5).
@@ -206,6 +209,9 @@ export const HORS_RESIDUELS = [
   'src/config/swagger.js',
   'src/controllers/bossController.js', 'src/controllers/adminRapportsController.js', 'src/controllers/adminSiteController.js',
 ];
+// E5b : fichiers d'un lot du serveur (scripts/vocab-lots.mjs) qui ne sont pas du code, lus par residuels en mode
+// complet comme quand on les nomme (vague 2 du lot 2b : écarts admis de CHAMPS.md signalés « sans objet » sinon).
+export const RESIDUELS_EN_PLUS = ['docuseal-templates/CHAMPS.md'];
 // Rendu des balises au serveur (E2, I7) : aucun point de rendu dans les routes (leur texte part dans errors[].msg).
 const ROUTES = /^src\/routes\//;
 
@@ -2092,7 +2098,10 @@ export function modeIdentite({ root, fichiers, ensemble, base, entrees, rendu = 
   let cibles;
   let inchanges = 0;
   const horsPerimetre = [];
-  if (fichiers.length) cibles = fichiers;
+  // Un fichier nommé qui n'est pas du code (CHAMPS.md du lot B2) n'est pas analysable ici : il est
+  // ignoré et signalé ; le mode residuels le relit (besoin B2[2] de la vague 2 du lot 2b).
+  const pasDuCode = fichiers.filter((f) => f !== FR_JSON && !EXTENSIONS.test(f));
+  if (fichiers.length) cibles = fichiers.filter((f) => !pasDuCode.includes(f));
   else {
     // Sans fichier demandé : tout fichier du périmètre qui diffère de la référence (modifié, nouveau, supprimé).
     const modifies = new Set([
@@ -2116,7 +2125,10 @@ export function modeIdentite({ root, fichiers, ensemble, base, entrees, rendu = 
   const frCur = frCurTexte ? valeursFr(lireFr(frCurTexte)) : new Map();
 
   const groupes = [];
-  const infos = horsPerimetre.map((f) => `${f} : modifié, hors périmètre par défaut (espace admin ou page publique) — à contrôler en le nommant`);
+  const infos = [
+    ...horsPerimetre.map((f) => `${f} : modifié, hors périmètre par défaut (espace admin ou page publique) — à contrôler en le nommant`),
+    ...pasDuCode.map((f) => `${f} : pas du code, ignoré par identite (relu par residuels)`),
+  ];
   const erreurs = [];
   const parFichier = [];
   for (const f of cibles) {
@@ -2225,7 +2237,9 @@ export function modeResiduels({ root, fichiers, entrees, rendu = [] }) {
   const parFichier = {};
   // E5 : profil serveur — documentation API et fichiers entièrement admin, exclus par chemin.
   const exclus = HORS_RESIDUELS.filter((f) => fs.existsSync(path.join(root, f)) && (!fichiers.length || fichiers.includes(f)));
-  const analyses = analyserCourant(root, fichiers, rendu, HORS_RESIDUELS);
+  // E5b : sans liste de fichiers, les fichiers hors code des lots sont lus aussi (comme quand on les nomme).
+  const enPlus = fichiers.length ? [] : RESIDUELS_EN_PLUS.filter((f) => fs.existsSync(path.join(root, f)));
+  const analyses = [...analyserCourant(root, fichiers, rendu, HORS_RESIDUELS), ...(enPlus.length ? analyserCourant(root, enPlus, rendu) : [])];
   const garder = (a, x) => { residuels.push({ fichier: a.fichier, ...x }); parFichier[a.fichier] = (parFichier[a.fichier] ?? 0) + 1; };
   // E2 (I7) : une balise sans rendu est une ERREUR dans ce mode aussi (sans écart admis possible) — un agent qui ne
   // lancerait que residuels la verrait sinon comme un simple résiduel.

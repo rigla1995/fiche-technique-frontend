@@ -1,0 +1,22 @@
+[
+  {
+    "besoin": "autre",
+    "demande": "Fichier du socle src/types/index.ts, interface Composant (l. 328-342) : ajouter les deux champs que le serveur renvoie depuis la migration 192 (spec §11.2.2) — « genre?: 'm' | 'f' | null; » et « elision?: boolean | null; » — juste après « actif: boolean; ».",
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "ligne": 138,
+    "texte": "type ComposantServeur = Composant & { genre?: string | null; elision?: boolean | 'auto' | null };",
+    "ecriture_souhaitee": "toRows(composants: Composant[]) sans le type local ComposantServeur (la page admin garde son type ComposantAccord pour l'état du formulaire).",
+    "raison": "Non bloquant : le type local de la page admin couvre le besoin, tsc est vert. Sans ce champ dans le type partagé, un autre écran qui lirait le genre d'un composant (DomaineProfil.composants, DomaineDuCompte.composants) devrait redéclarer le même type.",
+    "etat": "APPLIQUÉ par l'intégrateur de la vague 2 (02/10/2026) : genre et elision ajoutés à l'interface Composant (src/types/index.ts) ; AdminDomaineEditPage n'a plus de type local ComposantServeur (ComposantRow étend Omit<Composant, 'genre' | 'elision'>) ; tsc vert."
+  },
+  {
+    "besoin": "autre",
+    "demande": "Décision de spec à trancher par l'intégrateur ou la consolidation : la spec §10.2 demande « perteLabel sur les valeurs » de l'export du tableau de bord, mais perteLabel change le texte d'un compte RESTAURATION (cellule « avarie » → « Avarie » / « Avaries », « dechet » → « Déchet(s) »), changement absent du §11.1. B6 ne l'a donc PAS appliqué (I1). Pour l'appliquer : ajouter au §11.1.3 « types de perte de l'export du tableau de bord (colonnes type des listes par_type de l'onglet Pertes et pertes_par_type de l'onglet Labo) : code brut → libellé perteLabel(code, true), comme à l'écran », puis écrire la cellule ainsi.",
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "ligne": 388,
+    "texte": "row.getCell(ci + 1).value = cellValue(k === 'categorie' && typeof v === 'string' ? libelleCategoriePt(voc, v) : v);",
+    "ecriture_souhaitee": "cellValue(k === 'categorie' && typeof v === 'string' ? libelleCategoriePt(voc, v) : k === 'type' && (key === 'pertes_par_type' || (tab === 'pertes' && key === 'par_type')) ? perteLabel(String(v), true) : v)",
+    "raison": "perteLabel ne dépend pas du lexique (codes du domaine, libellés fixes) : il n'apporte rien à l'objectif « aucun mot de la restauration », et il changerait l'export d'un compte restauration hors §11. La carte (carto-tableaux.md §4.4) disait aussi : « Les codes écrits bruts (produit, valorise, avarie, statuts) restent des identifiants (I2) ».",
+    "etat": "NON appliqué, porté à la consolidation par l'intégrateur de la vague 2 (02/10/2026) : perteLabel changerait l'export d'un compte restauration hors §11 (I1) ; décision de spec à prendre (§10.2 contre §11.1.3)."
+  }
+]

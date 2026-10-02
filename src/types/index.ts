@@ -339,6 +339,10 @@ export interface Composant {
   nbMax: number | null;
   ordre: number;
   actif: boolean;
+  /** Genre grammatical du libellé (migration 192, lot 2b §5.4) : 'm' par défaut. */
+  genre?: 'm' | 'f' | null;
+  /** Élision forcée (vrai / faux) ; null ou absent = déduite du libellé (lot 2b §4.2). */
+  elision?: boolean | null;
 }
 
 /** Forme courte ou sigle d'un terme (« PT », « Appro ») ; `el` absent → élision de l'entrée. */
