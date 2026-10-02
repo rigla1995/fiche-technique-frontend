@@ -1,20 +1,6 @@
 [
   {
     "fichier": "src/components/admin/AdminSupportPage.tsx",
-    "avant": null,
-    "apres": "/admin/clients/⟦·⟧",
-    "type": "discriminant",
-    "justification": "URL technique, jamais affichée : appel GET /admin/clients/:id ajouté pour lire le domaine (domaineId) du CLIENT de la demande, afin que l'avenant PDF soit rédigé dans son vocabulaire (spec §2.3, AvenantPdfParams.lexique). Aucun texte visible de l'écran admin ne change."
-  },
-  {
-    "fichier": "src/components/admin/AdminSupportPage.tsx",
-    "avant": null,
-    "apres": "/api/domaines/⟦·⟧",
-    "type": "discriminant",
-    "justification": "URL technique, jamais affichée : appel GET /api/domaines/:id ajouté pour lire le lexique résolu du domaine du client de la demande, passé à generateAvenantPdf (spec §2.3). Aucun texte visible de l'écran admin ne change."
-  },
-  {
-    "fichier": "src/components/admin/AdminSupportPage.tsx",
     "avant": "gérant",
     "apres": "gérant",
     "type": "homonyme",

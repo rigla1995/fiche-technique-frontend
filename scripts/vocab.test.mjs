@@ -26,9 +26,10 @@ const RACINE = path.resolve(ICI, '..');
 const lireJson = (relatif) => JSON.parse(fs.readFileSync(path.join(RACINE, relatif), 'utf8'));
 
 // Commit de référence (avant le lot 2) : fr.json d'origine et appels t('clé', 'défaut') d'origine.
-// Si l'outil de preuve a posé scripts/vocab-check.base, c'est lui qui fait foi.
-const BASE_DEFAUT = '0cce3bfd6db0c7ce9491c7983488bda3d5281f9f';
-const fichierBase = path.join(ICI, 'vocab-check.base');
+// scripts/vocab-reference-lot2 fait foi (spec lot 2b §3.1) ; ce n'est PAS scripts/vocab-check.base, référence
+// de l'outil de preuve, réépinglée à chaque sous-lot.
+const BASE_DEFAUT = 'af60301589887bad716940eeed972b0577416fb6';
+const fichierBase = path.join(ICI, 'vocab-reference-lot2');
 const BASE = fs.existsSync(fichierBase) ? fs.readFileSync(fichierBase, 'utf8').trim() || BASE_DEFAUT : BASE_DEFAUT;
 const gitShow = (fichier) => execFileSync('git', ['-C', RACINE, 'show', `${BASE}:${fichier}`], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
 
