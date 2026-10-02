@@ -8,9 +8,16 @@ Ce dossier liste les écarts que l'on accepte, un par un, avec leur raison.
 
 ## Un fichier par lot
 
-`scripts/vocab-allow/<lot>.json` (`F1.json` … `F12.json`, `S1.json`, `B1.json` …). Un agent n'écrit que dans le
+`scripts/vocab-allow/<lot>.json` (`F1.json` … `F12.json`, `B6.json` …). Un agent n'écrit que dans le
 fichier de son lot : l'outil fusionne tous les fichiers du dossier. Le dossier lu est celui du dépôt analysé
 (`<root>/scripts/vocab-allow/`) : les écarts du backend vivent dans le dépôt backend.
+
+`archives-2a/` (lot 2b, spec `docs/lot-2b-spec.md` §3.1) : les écarts admis du lot 2a qui ne servent plus,
+archivés et **non lus** par l'outil (il ne lit que les `*.json` du dossier, pas les sous-dossiers) : `S1.json`,
+`S5.json`, et les entrées des `F*.json` dont le mode, explicite ou déduit, est `identite`. Raison : la référence
+de l'outil (`scripts/vocab-check.base`) a été réépinglée sur la tête du 2a ; une entrée `avant: null` restée
+sans objet absorberait en silence un nouveau littéral identique. Les entrées `residuels` et `accords` restent.
+La preuve « rien ne change depuis avant le lot 2 » garde sa propre référence : `scripts/vocab-reference-lot2`.
 
 ## Format
 
@@ -86,10 +93,18 @@ sont les premières qu'une revue relit.
 | `apostrophe` | écart d'apostrophe ou de ponctuation typographique assumé | — (`’` et `'` sont déjà confondus par l'outil) |
 | `faute-corrigee` | faute de français de l'existant, corrigée par le moteur | « Aucun activité » → « Aucune activité » |
 | `provisoire` | texte laissé en l'état en attendant une extension du moteur ou du lexique | avec une ligne dans `scripts/vocab-besoins/<lot>.json` |
+| `reporte` | texte laissé pour un lot ultérieur (lot 2b, E8) : champ **`lot` obligatoire**, `3` ou `2c` | texte fixe du contrat (lot 3), description de l'outil de recherche de l'assistant (2c) |
+| `admin` | texte lu seulement par un super_admin ou le boss (I4), dans un fichier mixte (E8) : la justification nomme **la route et son garde** (`requireSuperAdmin`, `requireBoss`) | « … : route /admin/clients, garde requireSuperAdmin » |
+| `fiscal` | texte d'un document fiscal inchangé à l'octet près (E1) | facture acheteur de `docuseal-templates/generate.js` |
 
 `provisoire` est une dette : l'outil rappelle leur nombre à chaque passage, et l'étape S5 doit les ramener à 0.
 Après l'étape S5 du lot 2a il n'en reste aucune (les 9 entrées, toutes des accords avec des termes coordonnés, passent
-par `voc.accN`) ; l'écart admis à cette étape est dans `S5.json`.
+par `voc.accN`) ; l'écart admis à cette étape (`S5.json`) est archivé dans `archives-2a/`.
+
+**SQL (lot 2b, E3 / E4).** Une requête se compare par ses constantes-libellés (avec les autres textes du
+fichier), ses constantes-codes (`[a-z0-9_]+`, et `'PT'`) et son squelette. Un code ajouté, retiré ou changé
+s'affiche `⟦sql⟧'code'` et ne s'admet QUE par une entrée `discriminant`. Un squelette changé n'est pas un écart :
+c'est une ligne « requête modifiée, à relire », que l'intégrateur relit.
 
 ## Ce qui ne va PAS dans allow
 
@@ -99,6 +114,7 @@ par `voc.accN`) ; l'écart admis à cette étape est dans `S5.json`.
   il s'écrit `voc.ex('Ex: Poulet entier', …)`, le texte de l'existant en premier argument — aucun écart en mode
   `identite`. Les 14 entrées `exemple` de ce mode ont été retirées.
 - Une erreur de l'outil (`ERREUR clé non littérale`, `variable intermédiaire`, `pluriel collé à un appel voc`,
-  `balise invalide`, `balise … dans un fichier source`, `méthode ou propriété appliquée à un appel voc`) :
+  `balise invalide`, `balise … dans un fichier source`, `balise sans rendu` (serveur, E2 ; dite en `identite` ET en `residuels`),
+  `méthode ou propriété appliquée à un appel voc`) :
   elle se corrige dans le code, aucune entrée ne l'éteint.
 - Un doute : dans ce cas, `provisoire` + un besoin, pas `homonyme`.

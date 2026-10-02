@@ -6,7 +6,9 @@
     "(Hôtellerie : food_cost = Ratio matière, labo.court = Cuisine, pt.court = Prépa ; Céramique : perte retirée,",
     "labo.court = Site, pt.court = PF, fiche_technique.court = FCR, appro.court = Réception / Réceptions).",
     "miroir : chaque clé du défaut avec le genre et l'élision INVERSÉS et un autre mot, pour débusquer les accords écrits en dur.",
-    "Dans le miroir, appro surcharge sg sans forme courte : la forme courte du défaut (Appro) ne doit PAS être héritée."
+    "Dans le miroir, appro surcharge sg sans forme courte : la forme courte du défaut (Appro) ne doit PAS être héritée.",
+    "Lot 2b (spec §4.5) : dans le miroir, les 4 clés *_abr ont une forme PROPRE, différente de celle de leur parent (comme",
+    "article_ingredient « Provision » contre article « Denrée ») : sans elle, un mauvais choix de clé resterait invisible."
   ],
   "hotellerie": {
     "activite":           { "sg": "Service",                "pl": "Services",                "g": "m", "el": false },
@@ -86,6 +88,10 @@
     "cat_pt_valorise":    { "sg": "Inventions Composées Valorisées", "pl": "Inventions Composées Valorisées", "g": "f", "el": true },
     "cat_pt_vendable":    { "sg": "Inventions Internes Vendues",    "pl": "Inventions Internes Vendues",    "g": "f", "el": true },
     "transfert_abr":      { "sg": "Expéd.",                 "pl": "Expéd.",                   "g": "f", "el": true },
-    "supplement_abr":     { "sg": "Opt.",                   "pl": "Opt.",                     "g": "f", "el": true }
+    "supplement_abr":     { "sg": "Opt.",                   "pl": "Opt.",                     "g": "f", "el": true },
+    "pt_abr":                 { "sg": "Élab. interne",  "pl": "Élab. internes",  "g": "f", "el": true },
+    "produit_utilisable_abr": { "sg": "Inv. utile",     "pl": "Inv. utiles",     "g": "f", "el": true },
+    "produit_vendable_abr":   { "sg": "Inv. vendue",    "pl": "Inv. vendues",    "g": "f", "el": true },
+    "produit_valorise_abr":   { "sg": "Inv. valorisée", "pl": "Inv. valorisées", "g": "f", "el": true }
   }
 }

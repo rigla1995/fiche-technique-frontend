@@ -1,0 +1,23 @@
+[
+  {
+    "fichier": "src/components/client/ComposedValoriseModal.tsx",
+    "avant": "Aucune activité rattachée à ce(s) labo(s).",
+    "apres": "Aucune activité rattachée à ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos sélectionnés (selectedLabos.length, toujours ≥ 1 quand la phrase s'affiche) : « ce labo » / « ces labos »."
+  },
+  {
+    "fichier": "src/components/client/ComposedValoriseModal.tsx",
+    "avant": "Produits utilisables du/des labo(s) ⟦<span>⟧",
+    "apres": "Produits utilisables ⟦du|des@>1⟧ ⟦labo|labos@>1⟧ ⟦<span>⟧",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3 : le double nombre « du/des labo(s) » est réécrit avec le nombre réel de labos sélectionnés (selectedLabos.length, ≥ 1 à l'étape 4 de l'assistant) : « du labo » / « des labos »."
+  },
+  {
+    "fichier": "src/components/client/ComposedValoriseModal.tsx",
+    "avant": "Aucun produit utilisable disponible pour ce(s) labo(s).",
+    "apres": "Aucun produit utilisable disponible pour ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos sélectionnés (selectedLabos.length, ≥ 1 à l'étape 4 de l'assistant) : « ce labo » / « ces labos »."
+  }
+]

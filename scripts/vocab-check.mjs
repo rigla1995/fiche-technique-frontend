@@ -25,6 +25,29 @@
 //   accords     `b` est analysé comme n'importe quel texte ; la ligne « miroir » rend `b`.
 // Dans fr.json et les messages du serveur, la balise [[ex:clé:texte par défaut]] suit les mêmes règles.
 //
+// Profil serveur (lot 2b, spec docs/lot-2b-spec.md §3.2) — avec --root sur le backend :
+//   E1  docuseal-templates/generate.js est lu en plus de src/ (parcours, ls-tree, diff, ls-files) ;
+//   E2  une balise d'un .js n'est rendue qu'à un POINT DE RENDU (message d'un objet passé à res.json, ou poussé
+//       dans `erreurs` ; message d'une erreur levée hors src/routes et hors .custom(…) ; rendre(voc, m) ; points de
+//       <root>/scripts/vocab-rendu.json ; variable const dont tous les emplois sont des trous d'un tel point) ;
+//       ailleurs : ERREUR « balise sans rendu », qu'aucune entrée allow n'éteint (modes identite ET residuels) ;
+//       limite assumée (lettre du §3.2) : new Error(m) est un point de rendu PARTOUT, même là où l'erreur n'atteint
+//       jamais une réponse (generate.js, email, PDF, err.message comparé §5.2) — l'intégrateur relit toute balise
+//       ajoutée à un new Error hors des contrôleurs ; un agent de vague lance identite sur ses fichiers ;
+//   E3  residuels : les constantes d'une requête SQL (lexeur : -- et /* */ sautés, '' = apostrophe) qui ne sont pas
+//       des codes ([a-z0-9_]+ ou CODES_SQL_CAPITALES) sont jugées comme des textes ;
+//   E4  identite : une requête = ses constantes-libellés (avec les textes du fichier) + ses codes (à part, admis
+//       par « discriminant » seulement) + son squelette (changé = « requête modifiée, à relire », pas un écart) ;
+//       ${ptCategorieSql(x)} / ${ptTypeSql(…)} développées avec src/utils/stockUtils.js du MÊME commit ;
+//   E5  residuels : swagger, fichiers entièrement admin (HORS_RESIDUELS), noms de champs d'express-validator,
+//       router.delete(…) exclus ;
+//   E5b residuels sans liste de fichiers : les fichiers d'un lot qui ne sont pas du code (RESIDUELS_EN_PLUS :
+//       docuseal-templates/CHAMPS.md) sont lus aussi, comme quand on les nomme — sinon leurs écarts admis
+//       seraient « sans objet » ; identite (pasDuCode) et accords ne les lisent pas ;
+//   E7  vocab-accords.txt écrit dans <root>/scripts, seulement si son contenu change ;
+//   E8  types d'écarts `reporte` (champ lot : 3 ou 2c), `admin` (route et garde), `fiscal` ;
+//   E11 formesDans(texte, formes) : recherche en mot entier d'une liste de formes donnée (oracle, §2.5).
+//
 // Options : --root <dépôt> (défaut : ce dépôt ; le backend s'analyse avec --root), --ensemble (compare
 // l'union des fichiers donnés : chaînes déplacées), --base <ref>, --sans-allow, --proposer-allow, --json,
 // --geler / --fichier-gel <f> / --back <dossier> (mode lexique). Arguments restants : fichiers à contrôler
@@ -121,6 +144,9 @@ export const ACCORDS_APRES = [
   'précédent|précédente', 'suivant|suivante', 'laitier|laitière', 'vendeur|vendeuse', 'principal|principale',
   'complet|complète', 'prêt|prête', 'manquant|manquante', 'restant|restante', 'présent|présente', 'absent|absente',
   'seul|seule', 'nouveau|nouvelle', 'premier|première', 'dernier|dernière', 'ouvert|ouverte', 'fermé|fermée',
+  // relevés dans les textes du serveur (spec lot 2b §3.2 E9)
+  'élevé|élevée', 'détecté|détectée', 'bon|bonne', 'récent|récente', 'confirmé|confirmée', 'autorisé|autorisée',
+  'référencé|référencée', 'réintégré|réintégrée',
 ];
 // Pronoms qui reprennent un terme nommé plus tôt dans la même unité (« {voc.Le('activite')} … : elle sera … »).
 // « il » impersonnel (il faut, il y a, s'il vous plaît…) n'est pas un pronom de reprise.
@@ -130,7 +156,16 @@ const IL_IMPERSONNEL = /^(?:\s+(?:y\s|n['’]y\s|faut|fallait|faudra|s['’]agit
 export const TYPES_ALLOW = [
   'homonyme', 'formule', 'locution', 'verbe', 'exemple', 'discriminant',
   'deplacement', 'non-repliable', 'apostrophe', 'faute-corrigee', 'provisoire',
+  'reporte', 'admin', // spec lot 2b §3.2 E8
+  'fiscal', // spec lot 2b §3.2 E1 : facture acheteur de docuseal-templates/generate.js, inchangée (document fiscal)
 ];
+// `reporte` : texte laissé à un lot ultérieur, champ `lot` obligatoire (le texte fixe du contrat au lot 3, l'outil
+// de recherche de l'assistant au 2c). `admin` : texte lu seulement par un super_admin ou le boss (I4), dans un
+// fichier mixte ; la justification nomme la route et son garde. `fiscal` : texte d'un document fiscal (facture
+// acheteur, facture d'abonnement) qui reste inchangé à l'octet près (spec lot 2b §0, §8.3).
+export const LOTS_REPORTE = ['3', '2c'];
+const GARDE_ADMIN = /\brequire(?:SuperAdmin|Boss)\b/;
+const ROUTE = /(?:^|[\s«(`'"])\/[\w:-]+/;
 const MODES_ALLOW = ['identite', 'residuels', 'accords'];
 const FICHIER_GLOBAL = '*'; // entrée allow valable pour tous les fichiers (mode residuels seulement)
 
@@ -164,6 +199,21 @@ const HORS_VOCABULAIRE = ['src/components/admin/', 'src/components/auth/'];
 const EXCLUS_DEFAUT = [...HORS_VOCABULAIRE, 'src/vocab/', 'src/config/lexiqueDefaut.js', 'src/utils/vocab.js'];
 const FR_JSON = 'src/i18n/locales/fr.json';
 const EXTENSIONS = /\.(?:tsx?|jsx?|mjs|cjs)$/;
+// E1 (spec lot 2b §3.2) : fichiers hors de `src` lus en plus quand ils existent dans le dépôt analysé (le backend :
+// les documents PDF de docuseal-templates/generate.js) — parcours, git ls-tree, git diff, ls-files.
+export const PERIMETRE_EN_PLUS = ['docuseal-templates/generate.js'];
+const CHEMINS_GIT = ['src', ...PERIMETRE_EN_PLUS];
+// E5 : profil serveur du mode residuels — documentation API pour les développeurs, et fichiers entièrement admin
+// (I4 : vocabulaire LabFlow). Exclus par chemin ; le titre Swagger de src/app.js l'est par sa propriété.
+export const HORS_RESIDUELS = [
+  'src/config/swagger.js',
+  'src/controllers/bossController.js', 'src/controllers/adminRapportsController.js', 'src/controllers/adminSiteController.js',
+];
+// E5b : fichiers d'un lot du serveur (scripts/vocab-lots.mjs) qui ne sont pas du code, lus par residuels en mode
+// complet comme quand on les nomme (vague 2 du lot 2b : écarts admis de CHAMPS.md signalés « sans objet » sinon).
+export const RESIDUELS_EN_PLUS = ['docuseal-templates/CHAMPS.md'];
+// Rendu des balises au serveur (E2, I7) : aucun point de rendu dans les routes (leur texte part dans errors[].msg).
+const ROUTES = /^src\/routes\//;
 
 // Contextes techniques du mode residuels (spec §2.5).
 const APPELES_TECHNIQUES = [
@@ -174,7 +224,12 @@ const ATTRIBUTS_TECHNIQUES = new Set([
   'to', 'path', 'className', 'key', 'id', 'name', 'type', 'value', 'section', 'theme', 'href', 'src',
   'htmlFor', 'role', 'style', 'dataKey', 'labelKey',
 ]);
-const PROPRIETES_TECHNIQUES = new Set(['key', 'type', 'value', 'id', 'mode', 'origine', 'type_vente', 'field', 'path']);
+const PROPRIETES_TECHNIQUES = new Set(['key', 'type', 'value', 'id', 'mode', 'origine', 'type_vente', 'field', 'path',
+  'customSiteTitle']); // titre de la documentation Swagger du serveur (E5)
+// E5 : nom de champ d'express-validator (`body('portion')`, `param('id')`) : 1er argument, appel nu.
+const VALIDATEURS = /^arg0:(?:body|param|query|check|header|cookie)$/;
+// Appels « router.delete(…) », « app.use(…) » : jamais le `Set.delete(…)` des appels à identifiant (E5).
+const ROUTEUR = /^(?:router|app)\./;
 // Contextes où le littéral est TANTÔT une valeur technique, TANTÔT un texte affiché (`<Line name="Marge brute">`,
 // `<input value="— Aucun fournisseur —" disabled>`, `h === 'Article'`, `{ type: 'Transfert labo' }`) : il n'est
 // exclu du mode residuels que s'il a la FORME d'un identifiant (minuscules, chiffres, _ - . /).
@@ -186,6 +241,15 @@ const APPELES_A_IDENTIFIANT = /\.(?:has|includes|add|delete)$/;
 const EXEMPLE = /^\s*(?:ex\s*[.:]|exemple\b)/iu;
 const TERME_EXEMPLE = 'exemple'; // pseudo-terme du mode residuels (ce n'est pas une clé du lexique)
 const SQL = /^[\s(,]*(?:SELECT|INSERT|UPDATE|DELETE|WITH|CREATE|ALTER|DROP|BEGIN|COMMIT|ROLLBACK|SAVEPOINT|AND|OR|WHERE|FROM|JOIN|LEFT|RIGHT|INNER|OUTER|ORDER|GROUP|HAVING|LIMIT|OFFSET|SET|VALUES|CASE|WHEN|COALESCE|UNION|ON|RETURNING|EXISTS|NOT|IN)\b/;
+// E3 / E4 (spec lot 2b §3.2) : une constante SQL est un CODE si elle a la forme [a-z0-9_]+, ou si elle est dans la
+// liste fermée des codes en capitales (tout ajout passe par la spec). Les autres sont des textes.
+export const CODES_SQL_CAPITALES = ['PT'];
+const CODE_SQL = /^[a-z0-9_]+$/;
+// Fonctions qui écrivent du SQL : leurs arguments littéraux font partie de l'unité SQL (jamais des unités à part),
+// et ptCategorieSql(x) est développée avec le texte de stockUtils.js lu AU MÊME commit (mode identite).
+const FONCTIONS_SQL = ['ptCategorieSql', 'ptTypeSql'];
+const FICHIER_FONCTIONS_SQL = 'src/utils/stockUtils.js';
+const MARQUE_CODE_SQL = '⟦sql⟧'; // préfixe du texte canonique d'une constante-code (mode identite)
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Termes : formes par défaut du lexique (mode residuels, inventaire)
@@ -209,6 +273,21 @@ export function termesDans(texte) {
   return TERMES.filter((t) => t.res.some((re) => { re.lastIndex = 0; return re.test(texte); })).map((t) => t.cle);
 }
 const sansTermes = (texte) => TERMES.reduce((s, t) => t.res.reduce((x, re) => x.replace(re, ' '), s), texte);
+
+/**
+ * E11 (spec lot 2b §3.2, §2.5) — formes d'une liste DONNÉE présentes dans `texte`, en mot entier (même motif que
+ * termesDans) : un sigle (2 à 4 capitales ou chiffres) en respectant la casse, un mot sans tenir compte de la
+ * casse, accents compris. → les formes trouvées, telles que données, dans l'ordre de la liste, sans doublon.
+ */
+export function formesDans(texte, formes) {
+  if (typeof texte !== 'string' || !texte) return [];
+  const o = [];
+  for (const f of [...new Set(formes ?? [])]) {
+    if (typeof f !== 'string' || !f) continue;
+    if (motEntier([f], SIGLE.test(f) ? 'u' : 'iu').test(texte)) o.push(f);
+  }
+  return o;
+}
 
 // ═════════════════════════════════════════════════════════════════════════════
 // R1 — blancs et entités JSX (règle exacte du compilateur, testée contre ts.transpileModule)
@@ -483,8 +562,25 @@ function partieVoc(n, cx) {
   return parties ? parties[0] : erreurPartie(n, cx, `voc.${methode} : clé non littérale`);
 }
 
-// Littéral d'un fichier source. `brut` : ses balises ne sont PAS rendues (fichier .ts / .tsx du front, R8).
-const litteral = (texte, cx) => (cx.balises ? { lit: texte } : { lit: texte, brut: true });
+// Littéral d'un fichier source. `brut` : ses balises ne sont PAS rendues (fichier .ts / .tsx du front, R8 ; au
+// serveur, littéral hors d'un point de rendu, E2 : `sansRendu`).
+const litteral = (texte, cx) => (!cx.balises ? { lit: texte, brut: true }
+  : cx.rendu === false ? { lit: texte, brut: true, sansRendu: true } : { lit: texte });
+
+// Appel d'une fonction qui écrit du SQL (`ptCategorieSql('pp')`) dans une unité : un trou, dont les arguments
+// littéraux restent dans l'unité (E4) ; un argument non littéral est un trou à son tour.
+function appelFonctionSql(n, cx) {
+  const appele = n.expression;
+  const nom = ts.isIdentifier(appele) ? appele.text : ts.isPropertyAccessExpression(appele) ? appele.name.text : null;
+  if (!nom || !FONCTIONS_SQL.includes(nom)) return null;
+  const args = n.arguments.map((a) => {
+    const v = valeurStatique(a);
+    if (v.ok && v.v !== undefined) return v.v;
+    cx.restes.push(a);
+    return null;
+  });
+  return { h: 1, sqlFn: { nom, args } };
+}
 
 function plier(n, cx) {
   n = nu(n);
@@ -503,8 +599,8 @@ function plier(n, cx) {
     const k = n.operatorToken.kind;
     if (k === SK.PlusToken) return [...plier(n.left, cx), ...plier(n.right, cx)];
     if (k === SK.BarBarToken || k === SK.QuestionQuestionToken) return [{ c: [plier(n.left, cx), plier(n.right, cx)] }];
-    cx.restes.push(n.left); // a && 'texte'
-    return [{ c: [plier(n.right, cx), []] }];
+    cx.restes.push(n.left); // a && 'texte' — `&&` n'est pas un chemin vers un point de rendu (E2)
+    return [{ c: [plier(n.right, cx.rendu === undefined ? cx : { ...cx, rendu: false }), []] }];
   }
   if (ts.isConditionalExpression(n)) {
     cx.restes.push(n.condition);
@@ -525,6 +621,8 @@ function plier(n, cx) {
       n.arguments.forEach((a, i) => { if (i > 0 && !(i === 1 && defaut)) cx.restes.push(a); });
       return [{ t: { cle: n.arguments[0].text, defaut } }];
     }
+    const sqlFn = appelFonctionSql(n, cx);
+    if (sqlFn) return [sqlFn];
   }
   cx.restes.push(n);
   return [ts.isIdentifier(n) ? { h: 1, id: n.text } : { h: 1 }];
@@ -590,6 +688,208 @@ function attributAncetre(n, cx) {
   return null;
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// E2 (spec lot 2b §3.2, invariant I7) — points de rendu des balises au serveur
+// ═════════════════════════════════════════════════════════════════════════════
+// Dans un .js du serveur, une balise n'est rendue que dans un littéral qui ATTEINT un point de rendu, à travers
+// ces seuls nœuds : parenthèses, branches d'un ternaire, || / ??, concaténation +, gabarit (morceaux et trous).
+// Points de rendu : propriété `message` d'un objet passé directement à res.json(…) / res.status(…).json(…), ou
+// poussé dans un tableau `erreurs` (et `erreurs[].message` du corps d'une réponse) ; message d'une erreur levée
+// (new Error(m), new TransfertError(s, c, m), new UniteError(c, m)) hors des routes et des validateurs .custom(…) ;
+// 2e argument de rendre(voc, m) ; points déclarés dans <root>/scripts/vocab-rendu.json ; variable `const` dont
+// l'unique initialiseur est un littéral (ou un ternaire de littéraux) et dont TOUS les emplois sont des trous d'un
+// point de rendu. Ailleurs : erreur « balise sans rendu », qu'aucun écart admis n'éteint.
+
+export const GENRES_RENDU = ['argument', 'valeurs-objet', 'retours-fonction'];
+const ERREURS_RENDUES = { Error: 0, TransfertError: 2, UniteError: 1 }; // constructeur → position du message
+const nomPropriete = (p) => (p && (ts.isIdentifier(p) || ts.isStringLiteral(p) || ts.isNoSubstitutionTemplateLiteral(p)) ? p.text : null);
+const ENVELOPPES = (p) => ts.isParenthesizedExpression(p) || ts.isAsExpression(p) || ts.isNonNullExpression(p) || ts.isSatisfiesExpression(p);
+const CHEMIN_BINAIRE = new Set([SK.PlusToken, SK.BarBarToken, SK.QuestionQuestionToken]);
+
+function sansEnveloppe(n) {
+  let enfant = n;
+  let p = n.parent;
+  while (p && ENVELOPPES(p)) { enfant = p; p = p.parent; }
+  return { enfant, parent: p };
+}
+
+// Remonte de `n` à travers les nœuds du chemin ; → { enfant, parent } au premier nœud qui n'en est pas un.
+function remonterChemin(n) {
+  let enfant = n;
+  let p = n.parent;
+  while (p) {
+    if (ENVELOPPES(p)) { enfant = p; p = p.parent; continue; }
+    if (ts.isConditionalExpression(p) && p.condition !== enfant) { enfant = p; p = p.parent; continue; }
+    if (ts.isBinaryExpression(p) && CHEMIN_BINAIRE.has(p.operatorToken.kind)) { enfant = p; p = p.parent; continue; }
+    if (ts.isTemplateSpan(p) && p.expression === enfant) { enfant = p.parent; p = p.parent.parent; continue; }
+    break;
+  }
+  return { enfant, parent: p };
+}
+
+const texteAppele = (c, cx) => (ts.isIdentifier(c.expression) ? c.expression.text : c.expression.getText(cx.sf).replace(/\s+/g, ''));
+const nomAppele = (c) => (ts.isIdentifier(c.expression) ? c.expression.text
+  : ts.isPropertyAccessExpression(c.expression) ? c.expression.name.text : null);
+
+// res, res.status(…), res.status(…).set(…) : la chaîne d'appels part de l'identifiant `res`.
+function recepteurRes(e) {
+  e = nu(e);
+  while (e && ts.isCallExpression(e) && ts.isPropertyAccessExpression(e.expression)) e = nu(e.expression.expression);
+  return !!e && ts.isIdentifier(e) && e.text === 'res';
+}
+const appelJson = (c) => ts.isCallExpression(c) && ts.isPropertyAccessExpression(c.expression) && c.expression.name.text === 'json'
+  && recepteurRes(c.expression.expression);
+function appelPushErreurs(c) {
+  if (!ts.isCallExpression(c) || !ts.isPropertyAccessExpression(c.expression) || c.expression.name.text !== 'push') return false;
+  const r = nu(c.expression.expression);
+  return (ts.isIdentifier(r) && r.text === 'erreurs') || (ts.isPropertyAccessExpression(r) && r.name.text === 'erreurs');
+}
+// Objet littéral passé DIRECTEMENT à res.json(…) : le corps de la réponse.
+function corpsDeReponse(obj) {
+  const { enfant, parent } = sansEnveloppe(obj);
+  return !!parent && appelJson(parent) && parent.arguments.includes(enfant);
+}
+// Objet littéral dont la propriété `message` est rendue au bord : corps de réponse, élément poussé dans `erreurs`,
+// élément du tableau `erreurs` d'un corps de réponse.
+function objetMessageRendu(obj) {
+  const { enfant, parent } = sansEnveloppe(obj);
+  if (!parent) return false;
+  if (ts.isCallExpression(parent) && parent.arguments.includes(enfant)) return appelJson(parent) || appelPushErreurs(parent);
+  if (ts.isArrayLiteralExpression(parent)) {
+    const t = sansEnveloppe(parent);
+    return !!t.parent && ts.isPropertyAssignment(t.parent) && t.parent.initializer === t.enfant
+      && nomPropriete(t.parent.name) === 'erreurs' && corpsDeReponse(t.parent.parent);
+  }
+  return false;
+}
+// Constructeur d'erreur dans un validateur d'express-validator (`body(…).custom(…)`) : son texte part dans errors[].msg.
+function dansValidateur(n) {
+  for (let p = n.parent; p; p = p.parent) {
+    if (ts.isCallExpression(p) && ts.isPropertyAccessExpression(p.expression) && p.expression.name.text === 'custom') return true;
+  }
+  return false;
+}
+// Nom d'une fonction : déclaration, ou `const nom = (…) => …` / `function`, ou propriété `nom: (…) => …`.
+function nomFonction(f) {
+  if (!f) return null;
+  if ((ts.isFunctionDeclaration(f) || ts.isFunctionExpression(f) || ts.isMethodDeclaration(f)) && f.name && ts.isIdentifier(f.name)) return f.name.text;
+  const { parent } = sansEnveloppe(f);
+  if (parent && ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) return parent.name.text;
+  if (parent && ts.isPropertyAssignment(parent)) return nomPropriete(parent.name);
+  return null;
+}
+const estFonction = (n) => ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) || ts.isArrowFunction(n) || ts.isMethodDeclaration(n);
+
+// Point déclaré dans scripts/vocab-rendu.json (même fichier) : { genre, nom, argument?, cles? }.
+function pointDeclare(d, enfant, p, cx) {
+  if (d.genre === 'argument') {
+    return ts.isCallExpression(p) && p.arguments.indexOf(enfant) === d.argument - 1 && texteAppele(p, cx) === d.nom;
+  }
+  if (d.genre === 'valeurs-objet') {
+    if (!ts.isPropertyAssignment(p) || p.initializer !== enfant || (d.cles && !d.cles.includes(nomPropriete(p.name)))) return false;
+    let x = p.parent; // objet littéral, puis ses objets parents jusqu'à `const nom = …` (Object.freeze toléré)
+    for (;;) {
+      const s = sansEnveloppe(x);
+      const q = s.parent;
+      if (!q) return false;
+      if (ts.isPropertyAssignment(q) && q.initializer === s.enfant) { x = q.parent; continue; }
+      if (ts.isCallExpression(q) && texteAppele(q, cx) === 'Object.freeze' && q.arguments[0] === s.enfant) { x = q; continue; }
+      return ts.isVariableDeclaration(q) && q.initializer === s.enfant && ts.isIdentifier(q.name) && q.name.text === d.nom;
+    }
+  }
+  if (d.genre === 'retours-fonction') {
+    if (ts.isArrowFunction(p) && p.body === enfant) return nomFonction(p) === d.nom;
+    if (!ts.isReturnStatement(p) || p.expression !== enfant) return false;
+    let f = p.parent;
+    while (f && !estFonction(f)) f = f.parent;
+    return nomFonction(f) === d.nom;
+  }
+  return false;
+}
+
+// Initialiseur fait de littéraux : littéral, gabarit, ou ternaire dont les deux branches en sont.
+function initialiseurLitteral(e) {
+  e = nu(e);
+  if (!e) return false;
+  if (estLit(e) || ts.isTemplateExpression(e)) return true;
+  return ts.isConditionalExpression(e) && initialiseurLitteral(e.whenTrue) && initialiseurLitteral(e.whenFalse);
+}
+
+// Variable `const` dont tous les emplois (au moins un) sont des trous d'un point de rendu (cas `cible`,
+// transfertService.js:174) ; son initialiseur est alors lui-même à un point de rendu.
+function variableDeRendu(decl, cx) {
+  const nom = decl.name.text;
+  const cache = cx.etat.variablesRendu ?? (cx.etat.variablesRendu = new Map());
+  if (cache.has(decl)) return cache.get(decl);
+  cache.set(decl, false); // garde contre une récursion (emploi dans son propre initialiseur)
+  let ok = initialiseurLitteral(decl.initializer) && initialiseurUnique(nom, cx) === decl.initializer;
+  if (ok) {
+    const emplois = [];
+    (function marche(n) {
+      if (ts.isIdentifier(n) && n.text === nom && n !== decl.name) {
+        const p = n.parent;
+        const estNomDePropriete = (ts.isPropertyAccessExpression(p) && p.name === n) || (ts.isPropertyAssignment(p) && p.name === n)
+          || (ts.isMethodDeclaration(p) && p.name === n) || (ts.isBindingElement(p) && p.propertyName === n);
+        if (!estNomDePropriete) emplois.push(n);
+      }
+      ts.forEachChild(n, marche);
+    })(cx.sf);
+    ok = emplois.length > 0 && emplois.every((u) => pointDeRendu(u, cx, false));
+  }
+  cache.set(decl, ok);
+  return ok;
+}
+
+/** E2 — le nœud `n` (départ d'une unité, ou emploi d'une variable) atteint-il un point de rendu ? */
+function pointDeRendu(n, cx, variables = true) {
+  if (ROUTES.test(cx.nom ?? '')) return false; // I7 : jamais de balise dans src/routes/*.js
+  const { enfant, parent: p } = remonterChemin(n);
+  if (!p) return false;
+  if ((ts.isPropertyAssignment(p) && p.initializer === enfant && nomPropriete(p.name) === 'message')
+    || (ts.isShorthandPropertyAssignment(p) && p.name === enfant && p.name.text === 'message')) {
+    if (objetMessageRendu(p.parent)) return true;
+  }
+  if (ts.isNewExpression(p) && ts.isIdentifier(p.expression) && Object.hasOwn(ERREURS_RENDUES, p.expression.text)
+    && (p.arguments ?? []).indexOf(enfant) === ERREURS_RENDUES[p.expression.text] && !dansValidateur(p)) return true;
+  if (ts.isCallExpression(p) && p.arguments.indexOf(enfant) === 1 && nomAppele(p) === 'rendre') return true;
+  if ((cx.points ?? []).some((d) => pointDeclare(d, enfant, p, cx))) return true;
+  if (variables && ts.isVariableDeclaration(p) && p.initializer === enfant && ts.isIdentifier(p.name)
+    && ts.isVariableDeclarationList(p.parent) && (p.parent.flags & ts.NodeFlags.Const)) return variableDeRendu(p, cx);
+  return false;
+}
+
+/** Valide le contenu de scripts/vocab-rendu.json : → { points, problemes }. */
+export function validerRendu(contenu, source = 'vocab-rendu.json') {
+  const points = [];
+  const problemes = [];
+  if (!Array.isArray(contenu)) return { points, problemes: [`${source} : le fichier doit être un tableau de points de rendu`] };
+  contenu.forEach((d, i) => {
+    const ou = `${source}[${i}]`;
+    if (!d || typeof d !== 'object') { problemes.push(`${ou} : entrée invalide`); return; }
+    if (typeof d.fichier !== 'string' || !d.fichier) problemes.push(`${ou} : « fichier » manquant`);
+    if (!GENRES_RENDU.includes(d.genre)) problemes.push(`${ou} : genre « ${d.genre} » inconnu (${GENRES_RENDU.join(', ')})`);
+    if (typeof d.nom !== 'string' || !d.nom) problemes.push(`${ou} : « nom » manquant`);
+    if (d.genre === 'argument' && !(Number.isInteger(d.argument) && d.argument >= 1)) problemes.push(`${ou} : « argument » (rang à partir de 1) obligatoire pour le genre argument`);
+    if (d.genre !== 'argument' && d.argument !== undefined) problemes.push(`${ou} : « argument » ne vaut que pour le genre argument`);
+    if (d.cles !== undefined && (d.genre !== 'valeurs-objet' || !Array.isArray(d.cles) || !d.cles.length || !d.cles.every((c) => typeof c === 'string' && c))) {
+      problemes.push(`${ou} : « cles » = liste de noms de propriétés, pour le genre valeurs-objet seulement`);
+    }
+    const connus = new Set(['fichier', 'genre', 'nom', 'argument', 'cles', 'justification']);
+    for (const k of Object.keys(d)) if (!connus.has(k)) problemes.push(`${ou} : champ « ${k} » inconnu`);
+    points.push({ ...d, fichier: String(d.fichier ?? '').replace(/\\/g, '/') });
+  });
+  return { points, problemes };
+}
+
+/** Points de rendu déclarés du dépôt analysé (<root>/scripts/vocab-rendu.json ; absent = aucun). */
+export function chargerRendu(root) {
+  const f = path.join(root, 'scripts', 'vocab-rendu.json');
+  if (!fs.existsSync(f)) return { points: [], problemes: [] };
+  let contenu;
+  try { contenu = JSON.parse(fs.readFileSync(f, 'utf8')); } catch (e) { return { points: [], problemes: [`vocab-rendu.json : JSON illisible (${e.message})`] }; }
+  return validerRendu(contenu);
+}
+
 const typeScript = (nom) => (/\.tsx$/.test(nom) ? ts.ScriptKind.TSX : /\.ts$/.test(nom) ? ts.ScriptKind.TS
   : /\.jsx$/.test(nom) ? ts.ScriptKind.JSX : ts.ScriptKind.JS);
 
@@ -603,7 +903,11 @@ function extraire(texte, nom, options) {
   // (rendreTout) et les messages du serveur (.js, rendu au bord, sous-lot 2b). Dans un .ts / .tsx du front,
   // rien ne les rend : l'écran afficherait « [[Nom:labo]] ».
   const balises = options.balises ?? !/\.tsx?$/.test(nom);
-  const cx = { sf, options, balises, restes: [], jsx: new Map(), etat: { declarations: null } };
+  // E2 : au serveur (fichier .js), une balise n'est rendue qu'à un point de rendu ; `rendu` est calculé par unité,
+  // et vaut `false` par défaut (attribut JSX, texte JSX…).
+  const serveur = balises;
+  const points = (options.rendu ?? []).filter((d) => d.fichier === nom);
+  const cx = { sf, nom, options, balises, serveur, points, rendu: serveur ? false : undefined, restes: [], jsx: new Map(), etat: { declarations: null } };
   const unites = [];
   const variablesVoc = [];
   const visiter = (n) => {
@@ -624,7 +928,8 @@ function extraire(texte, nom, options) {
     }
     if (pliable(n, cx)) {
       const restes = [];
-      const parties = plier(n, { ...cx, restes });
+      const rendu = serveur ? pointDeRendu(n, cx) : undefined;
+      const parties = plier(n, { ...cx, restes, rendu });
       unites.push({ parties, ...position(n, cx), ctx: contexteDe(n, cx), attribut: attributAncetre(n, cx), noeud: n });
       restes.forEach(visiter);
       return;
@@ -705,12 +1010,26 @@ const signaler = (env, type, message, toujours = true) => { if (env.erreurs) env
 // R8 — une balise écrite dans un fichier source du front n'est JAMAIS rendue (seuls fr.json et les messages du
 // serveur le sont) : le littéral reste tel quel — donc différent de la référence — et c'est une erreur.
 const BALISE_CANDIDATE = /\[\[[^[\]\n]*\]\]/;
-function baliseEnSource(texte, env) {
+function baliseEnSource(texte, env, sansRendu = false) {
   const m = texte.indexOf('[[') === -1 ? null : BALISE_CANDIDATE.exec(texte);
-  if (m) {
+  if (m && sansRendu) {
+    // E2 (I7) : au serveur, seul un point de rendu rend une balise — ailleurs (onglet, en-tête Excel, email, PDF,
+    // prompt, base, routes, details[]…), le texte partirait avec la balise.
+    signaler(env, 'balise-sans-rendu', `balise sans rendu ${m[0]} : hors d'un point de rendu (message d'une réponse JSON, erreur levée, rendre(voc, m), scripts/vocab-rendu.json), rien ne la rend — écrire l'appel voc`);
+  } else if (m) {
     signaler(env, 'balise-source', `balise ${m[0]} dans un fichier source : une balise n'est rendue que dans fr.json, l'écran l'afficherait telle quelle — écrire l'appel voc`);
   }
   return texte;
+}
+
+// Fonction SQL (ptCategorieSql…) dans une unité SQL : développée (mode identite, texte de stockUtils.js au même
+// commit) ou écrite comme un jeton stable « ⟦ptCategorieSql(p)⟧ » (non développable, ou mode residuels).
+function texteFonctionSql(f, sql) {
+  if (sql.developper && sql.fonctions && sql.fonctions.has(f.nom)) {
+    const t = sql.fonctions.get(f.nom)(f.args);
+    if (typeof t === 'string') return t;
+  }
+  return `⟦${f.nom}(${f.args.map((a) => (a === null ? '·' : String(a))).join(',')})⟧`;
 }
 
 // R8 — balises rendues dans les littéraux de fr.json et des fichiers .js (messages du serveur).
@@ -848,7 +1167,8 @@ function distribuerSuffixes(parties) {
 
 function emettre(p, st, env) {
   if (typeof p === 'string') { emettreTexte(baliseEnSource(p, env), st, env); return; } // texte JSX : jamais rendu
-  if (p.lit !== undefined) { emettreTexte(p.brut ? baliseEnSource(p.lit, env) : rendreLitteral(p.lit, env), st, env); return; }
+  if (p.lit !== undefined) { emettreTexte(p.brut ? baliseEnSource(p.lit, env, p.sansRendu) : rendreLitteral(p.lit, env), st, env); return; }
+  if (p.h && p.sqlFn && env.sql) { emettreOpaque(texteFonctionSql(p.sqlFn, env.sql), st); return; }
   if (p.h) {
     // accords : une variable qui reçoit un appel voc est montrée dans la phrase qui l'emploie.
     const variable = env.plat && p.id && env.variables && (env.profondeur ?? 0) < 2 ? env.variables(p.id) : null;
@@ -1124,7 +1444,10 @@ function exclusion(u) {
   // candidat même au fond d'un attribut technique (`style={{ textAlign: h === 'Article' ? … }}`).
   if (ctx === 'comparaison' || ctx === 'case') return identifiant ? ctx : null;
   const arg = /^arg(\d+):(.*)$/.exec(ctx);
-  if (arg && APPELES_TECHNIQUES.some((re) => re.test(arg[2])) && (identifiant || !APPELES_A_IDENTIFIANT.test(arg[2]))) return `argument de ${arg[2]}`;
+  if (VALIDATEURS.test(ctx)) return `nom de champ de ${arg[2]}`; // E5 : body('portion')
+  // `router.delete(…)` est une route, pas le `Set.delete(…)` des appels à identifiant (E5).
+  const aIdentifiant = (appele) => APPELES_A_IDENTIFIANT.test(appele) && !ROUTEUR.test(appele);
+  if (arg && APPELES_TECHNIQUES.some((re) => re.test(arg[2])) && (identifiant || !aIdentifiant(arg[2]))) return `argument de ${arg[2]}`;
   if (u.attribut && (ATTRIBUTS_TECHNIQUES.has(u.attribut) || u.attribut.startsWith('data-'))
     && (identifiant || !ATTRIBUTS_A_IDENTIFIANT.has(u.attribut))) return `attribut ${u.attribut}`;
   if (ctx.startsWith('prop:') && PROPRIETES_TECHNIQUES.has(ctx.slice(5))
@@ -1136,6 +1459,144 @@ function exclusion(u) {
   if (/^[a-z0-9_\-./:?=&]+$/.test(t) && /[/\-_.]/.test(t)) return 'identifiant technique';
   if (SQL.test(t)) return 'SQL';
   return null;
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// E3 / E4 (spec lot 2b §3.2) — constantes et squelette d'une unité SQL
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Lexeur SQL. Constantes '…' ('' = une apostrophe ; une constante peut contenir un trou ⟦·⟧), hors commentaires
+ * -- (jusqu'à la fin de ligne) et /* … *\/, hors identifiants "…". → { constantes: [{ texte, ligne }], squelette } :
+ * `ligne` = rang de ligne dans le texte (0 = première) ; le squelette est le texte où chaque constante devient '⟦c⟧'
+ * et chaque $n devient $⟦n⟧, commentaires retirés, blancs normalisés.
+ */
+export function lireSql(sql) {
+  const constantes = [];
+  let squelette = '';
+  let ligne = 0;
+  const lignes = (s) => (s.match(/\n/g) ?? []).length;
+  let i = 0;
+  while (i < sql.length) {
+    const c = sql[i];
+    if (c === '-' && sql[i + 1] === '-') {
+      const j = sql.indexOf('\n', i);
+      i = j === -1 ? sql.length : j;
+      squelette += ' ';
+    } else if (c === '/' && sql[i + 1] === '*') {
+      const j = sql.indexOf('*/', i + 2);
+      const fin = j === -1 ? sql.length : j + 2;
+      ligne += lignes(sql.slice(i, fin));
+      i = fin;
+      squelette += ' ';
+    } else if (c === '"') {
+      const j = sql.indexOf('"', i + 1);
+      const fin = j === -1 ? sql.length : j + 1;
+      ligne += lignes(sql.slice(i, fin));
+      squelette += sql.slice(i, fin);
+      i = fin;
+    } else if (c === "'") {
+      const debut = ligne;
+      let t = '';
+      let j = i + 1;
+      for (; j < sql.length; j += 1) {
+        if (sql[j] === "'") { if (sql[j + 1] === "'") { t += "'"; j += 1; continue; } break; }
+        if (sql[j] === '\n') ligne += 1;
+        t += sql[j];
+      }
+      constantes.push({ texte: t, ligne: debut });
+      squelette += "'⟦c⟧'";
+      i = j + 1;
+    } else {
+      if (c === '\n') ligne += 1;
+      squelette += c;
+      i += 1;
+    }
+  }
+  return { constantes, squelette: squelette.replace(/\$\d+/g, '$⟦n⟧').replace(/\s+/g, ' ').trim() };
+}
+
+/** Une constante SQL est-elle un code (et non un texte) ? */
+export const estCodeSql = (texte) => CODE_SQL.test(texte) || CODES_SQL_CAPITALES.includes(texte);
+
+// Unité SQL : texte écrit qui commence par un mot-clé SQL, ou 1er argument d'un appel `….query(…)`.
+const estUniteSql = (ctx, texte) => SQL.test(texte) || /^arg0:.+\.query$/.test(ctx);
+
+// Évaluation statique d'une fonction SQL de stockUtils.js (return d'un gabarit, `+`, `if (param === 'lit') return …`).
+function evaluerSql(e, env) {
+  e = nu(e);
+  if (estLit(e)) return e.text;
+  if (ts.isTemplateExpression(e)) return e.templateSpans.reduce((s, sp) => s + evaluerSql(sp.expression, env) + sp.literal.text, e.head.text);
+  if (ts.isIdentifier(e) && typeof env.get(e.text) === 'string') return env.get(e.text);
+  if (ts.isBinaryExpression(e) && e.operatorToken.kind === SK.PlusToken) return evaluerSql(e.left, env) + evaluerSql(e.right, env);
+  throw new Error('non évaluable');
+}
+function conditionSql(e, env) {
+  e = nu(e);
+  if (ts.isBinaryExpression(e) && [SK.EqualsEqualsEqualsToken, SK.ExclamationEqualsEqualsToken].includes(e.operatorToken.kind)) {
+    const [id, lit] = ts.isIdentifier(nu(e.left)) ? [nu(e.left), nu(e.right)] : [nu(e.right), nu(e.left)];
+    if (ts.isIdentifier(id) && estLit(lit) && typeof env.get(id.text) === 'string') {
+      return (env.get(id.text) === lit.text) === (e.operatorToken.kind === SK.EqualsEqualsEqualsToken);
+    }
+  }
+  throw new Error('condition non évaluable');
+}
+function executerSql(corps, env) {
+  if (!ts.isBlock(corps) && !ts.isReturnStatement(corps) && !ts.isIfStatement(corps)) return evaluerSql(corps, env); // fonction fléchée
+  for (const st of ts.isBlock(corps) ? corps.statements : [corps]) {
+    if (ts.isReturnStatement(st)) return evaluerSql(st.expression, env);
+    if (ts.isIfStatement(st)) {
+      const branche = conditionSql(st.expression, env) ? st.thenStatement : st.elseStatement;
+      if (branche) { const r = executerSql(branche, env); if (r !== undefined) return r; }
+      continue;
+    }
+    throw new Error('instruction non évaluable');
+  }
+  return undefined;
+}
+
+/**
+ * Fonctions SQL (ptCategorieSql, ptTypeSql) lues dans le texte de stockUtils.js : Map nom → (args) → texte SQL, ou
+ * null si l'appel n'est pas évaluable (argument non littéral, par exemple).
+ */
+export function fonctionsSqlDe(texte) {
+  const m = new Map();
+  if (!texte) return m;
+  const sf = ts.createSourceFile(FICHIER_FONCTIONS_SQL, texte.replace(/\r\n?/g, '\n'), ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const retenir = (nom, f) => {
+    if (!FONCTIONS_SQL.includes(nom) || !f.body) return;
+    const params = f.parameters.map((p) => (ts.isIdentifier(p.name) ? p.name.text : null));
+    m.set(nom, (args) => {
+      const env = new Map(params.map((p, i) => [p, args[i] ?? null]));
+      try { const r = executerSql(f.body, env); return typeof r === 'string' ? r : null; } catch { return null; }
+    });
+  };
+  for (const st of sf.statements) {
+    if (ts.isFunctionDeclaration(st) && st.name) retenir(st.name.text, st);
+    else if (ts.isVariableStatement(st)) {
+      for (const d of st.declarationList.declarations) {
+        const f = nu(d.initializer);
+        if (ts.isIdentifier(d.name) && f && (ts.isArrowFunction(f) || ts.isFunctionExpression(f))) retenir(d.name.text, f);
+      }
+    }
+  }
+  return m;
+}
+
+// Mode identite : une unité SQL se compare par trois multi-ensembles (E4) — ses constantes-libellés, versées avec
+// les autres textes du fichier ; ses constantes-codes, à part (un écart n'est admis que par une entrée
+// `discriminant`) ; son squelette, dont un changement n'est pas un écart mais une requête « à relire ».
+function eclaterSql(unites) {
+  const textes = [];
+  const squelettes = [];
+  for (const u of unites) {
+    if (!u.sql) { textes.push(u); continue; }
+    const base = { fichier: u.fichier, ctx: 'sql', erreurs: [], trous: [] };
+    for (const c of u.sql.libelles) textes.push({ ...base, l: c.l, canon: c.texte, nature: 'sql' });
+    for (const c of u.sql.codes) textes.push({ ...base, l: c.l, canon: `${MARQUE_CODE_SQL}'${c.texte}'`, nature: 'code' });
+    squelettes.push({ fichier: u.fichier, l: u.l, canon: u.sql.squelette, nature: 'squelette' });
+  }
+  return { textes, squelettes };
 }
 
 // Lexique miroir (genre et élision inversés). Chaque entrée sans forme courte en reçoit une DISTINCTE, en
@@ -1203,6 +1664,22 @@ export function analyser(texte, nom = 'x.tsx', options = {}) {
     for (const e of errs) erreurs.push({ l: b.l, ...e });
     if (!porteDuTexte(b.parties)) continue;
     const u = { l: b.l, ctx: b.ctx, attribut: b.attribut ?? null, canon, erreurs: errs, trous: trousNommes(b.parties), voc: cles, apostrophes: serie.typo };
+    if (estUniteSql(b.ctx, fragments(b.parties).join(''))) {
+      // E4 : texte SQL rendu, fonctions SQL développées avec stockUtils.js du même commit.
+      const lu = lireSql(serialiserSuite(b.parties, {
+        voc: vocabDefaut, lexique: LEXIQUE_DEFAUT, mode: 'identite', fr: opts.fr, erreurs: null,
+        sql: { fonctions: opts.fonctionsSql ?? null, developper: true },
+      }).s);
+      const sql = { libelles: [], codes: [], squelette: lu.squelette };
+      for (const c of lu.constantes) (estCodeSql(c.texte) ? sql.codes : sql.libelles).push({ texte: c.texte, l: b.l + c.ligne });
+      u.sql = sql;
+      if (opts.complet) {
+        // E3 : constantes-textes du texte ÉCRIT (fonctions SQL non développées : leurs libellés sont comptés une fois,
+        // dans stockUtils.js), jugées comme des textes.
+        const dur = lireSql(serialiserSuite(b.parties, { voc: vocabDefaut, lexique: LEXIQUE_DEFAUT, mode: 'dur', fr: null, erreurs: null, sql: { developper: false } }).s);
+        u.sqlTextes = dur.constantes.filter((c) => !estCodeSql(c.texte)).map((c) => ({ texte: c.texte, l: b.l + c.ligne, termes: termesDans(c.texte) }));
+      }
+    }
     if (opts.complet) {
       u.fragments = fragments(b.parties);
       u.dur = serialiserSuite(b.parties, { voc: vocabDefaut, lexique: LEXIQUE_DEFAUT, mode: 'dur', fr: null, erreurs: null }).s;
@@ -1337,6 +1814,7 @@ export function apparier(moins, plus) {
   const candidats = [];
   if (moins.length * plus.length <= 250000) {
     moins.forEach((m, i) => plus.forEach((p, j) => {
+      if ((m.nature === 'code') !== (p.nature === 'code')) return; // une constante-code ne s'apparie qu'à un code
       const s = ressemblance(m.canon, p.canon) + (m.fichier === p.fichier ? 0.05 : 0) - Math.min(Math.abs(m.l - p.l), 400) / 8000;
       if (s >= 0.3) candidats.push([s, i, j]);
     }));
@@ -1362,13 +1840,19 @@ export function apparier(moins, plus) {
  */
 export function comparer(avant, apres, options = {}) {
   const nom = options.nom ?? 'x.tsx';
-  const ref = analyser(avant, nom, { t: options.t ?? true, fr: options.frRef ?? options.fr ?? null, complet: false });
-  const cur = analyser(apres, nom, { t: options.t ?? true, fr: options.fr ?? null, complet: false });
+  // Fonctions SQL : stockUtils.js de chaque côté (`stockUtilsRef` pour la référence, `stockUtils` sinon).
+  const fRef = fonctionsSqlDe(options.stockUtilsRef ?? options.stockUtils ?? null);
+  const fCur = fonctionsSqlDe(options.stockUtils ?? null);
+  const commun = { t: options.t ?? true, complet: false, rendu: options.rendu ?? [] };
+  const ref = analyser(avant, nom, { ...commun, fr: options.frRef ?? options.fr ?? null, fonctionsSql: fRef });
+  const cur = analyser(apres, nom, { ...commun, fr: options.fr ?? null, fonctionsSql: fCur });
   const tag = (l) => l.map((u) => ({ ...u, fichier: nom }));
-  const courantes = tag(cur.unites);
-  const { moins, plus } = differences(tag(ref.unites), courantes);
-  const erreurs = erreursRetenues({ ...cur, unites: courantes }, plus);
-  return { ok: moins.length === 0 && plus.length === 0 && erreurs.length === 0, moins, plus, paires: apparier(moins, plus), erreurs };
+  const R = eclaterSql(tag(ref.unites));
+  const C = eclaterSql(tag(cur.unites));
+  const { moins, plus } = differences(R.textes, C.textes);
+  const erreurs = erreursRetenues({ ...cur, unites: C.textes }, plus);
+  const sq = differences(R.squelettes, C.squelettes);
+  return { ok: moins.length === 0 && plus.length === 0 && erreurs.length === 0, moins, plus, paires: apparier(moins, plus), erreurs, relire: apparier(sq.moins, sq.plus) };
 }
 
 // Erreurs de la version courante : celles du moteur (toujours), celles d'une unité restée sans équivalent,
@@ -1415,6 +1899,12 @@ export function chargerAllow(dossier) {
       if (!texte(e.avant) || !texte(e.apres) || (e.avant == null && e.apres == null)) problemes.push(`${ou} : « avant » / « apres » doivent être des textes (l'un des deux peut être null)`);
       if (!TYPES_ALLOW.includes(e.type)) problemes.push(`${ou} : type « ${e.type} » inconnu (${TYPES_ALLOW.join(', ')})`);
       if (typeof e.justification !== 'string' || e.justification.trim().length < 10) problemes.push(`${ou} : justification manquante (une phrase, relue en revue)`);
+      // E8 : `reporte` porte le lot qui reprendra le texte ; `admin` nomme la route et son garde (I4).
+      if (e.type === 'reporte' && !LOTS_REPORTE.includes(String(e.lot ?? ''))) problemes.push(`${ou} : type « reporte » : champ « lot » obligatoire (${LOTS_REPORTE.join(' ou ')})`);
+      if (e.type !== 'reporte' && e.lot !== undefined) problemes.push(`${ou} : le champ « lot » ne vaut que pour le type « reporte »`);
+      if (e.type === 'admin' && typeof e.justification === 'string' && !(GARDE_ADMIN.test(e.justification) && ROUTE.test(e.justification))) {
+        problemes.push(`${ou} : type « admin » : la justification nomme la route (/admin/…) et son garde (requireSuperAdmin ou requireBoss)`);
+      }
       const modes = e.mode == null ? null : [].concat(e.mode);
       if (modes && !modes.every((m) => MODES_ALLOW.includes(m))) problemes.push(`${ou} : mode inconnu (${MODES_ALLOW.join(', ')})`);
       const avant = e.avant == null ? null : apostrophe(e.avant);
@@ -1435,7 +1925,7 @@ export function chargerAllow(dossier) {
         }
       }
       entrees.push({
-        ...e, avant, apres, lot: nom.replace(/\.json$/, ''), source: ou, emplois: 0,
+        ...e, avant, apres, lot: nom.replace(/\.json$/, ''), ...(e.lot !== undefined ? { reporteAuLot: String(e.lot) } : {}), source: ou, emplois: 0,
         fichier: String(e.fichier ?? '').replace(/\\/g, '/'),
         modes: modes ?? [avant !== apres ? 'identite' : 'residuels'],
       });
@@ -1444,12 +1934,22 @@ export function chargerAllow(dossier) {
   return { entrees, problemes };
 }
 
-/** Nombre de besoins déposés par les lots (scripts/vocab-besoins/*.json, un tableau par fichier). */
+/** État final d'un besoin (champ `etat`, consolidation du lot 2b) : un besoin qui le porte est clos. */
+export const ETAT_BESOIN_CLOS = /^(?:APPLIQUÉ|REFUSÉ|REPORTÉ|SANS OBJET|DÉCISION CLIENT)(?![\p{L}])/u;
+
+/**
+ * Nombre de besoins OUVERTS déposés par les lots (scripts/vocab-besoins/*.json, un tableau par fichier) :
+ * une entrée sans `etat`, ou dont l'`etat` ne commence pas par un état final (ETAT_BESOIN_CLOS). Un fichier
+ * illisible compte pour 1 ; un fichier qui est un OBJET (décisions d'une étape, S5-decisions.json) n'est pas compté.
+ */
 export function compterBesoins(dossier) {
   if (!fs.existsSync(dossier)) return 0;
   let n = 0;
   for (const nom of fs.readdirSync(dossier).filter((f) => f.endsWith('.json'))) {
-    try { const c = JSON.parse(fs.readFileSync(path.join(dossier, nom), 'utf8')); if (Array.isArray(c)) n += c.length; } catch { n += 1; }
+    try {
+      const c = JSON.parse(fs.readFileSync(path.join(dossier, nom), 'utf8'));
+      if (Array.isArray(c)) n += c.filter((b) => !(b && typeof b.etat === 'string' && ETAT_BESOIN_CLOS.test(b.etat))).length;
+    } catch { n += 1; }
   }
   return n;
 }
@@ -1463,15 +1963,17 @@ function appliquerAllowIdentite(moins, plus, entrees, fichiers) {
   const ensemble = fichiers.size > 1;
   for (const e of entrees) {
     if (!e.modes.includes('identite') || !fichiers.has(e.fichier)) continue;
+    // E4 : une constante-code SQL ajoutée, retirée ou changée n'est admise que par une entrée `discriminant`.
+    const admis = (u) => u.nature !== 'code' || e.type === 'discriminant';
     const sien = (u) => u.fichier === e.fichier;
     const m = [];
     const p = [];
-    if (e.avant === null) p.push(...plus.filter((u) => u.canon === e.apres && sien(u)).slice(0, e.occurrences ?? 1));
-    else if (e.apres === null) m.push(...moins.filter((u) => u.canon === e.avant && sien(u)).slice(0, e.occurrences ?? 1));
+    if (e.avant === null) p.push(...plus.filter((u) => u.canon === e.apres && sien(u) && admis(u)).slice(0, e.occurrences ?? 1));
+    else if (e.apres === null) m.push(...moins.filter((u) => u.canon === e.avant && sien(u) && admis(u)).slice(0, e.occurrences ?? 1));
     else {
       const lesSiensDAbord = (a, b) => Number(sien(b)) - Number(sien(a));
-      const mTous = moins.filter((u) => u.canon === e.avant && (ensemble || sien(u))).sort(lesSiensDAbord);
-      const pTous = plus.filter((u) => u.canon === e.apres && (ensemble || sien(u))).sort(lesSiensDAbord);
+      const mTous = moins.filter((u) => u.canon === e.avant && admis(u) && (ensemble || sien(u))).sort(lesSiensDAbord);
+      const pTous = plus.filter((u) => u.canon === e.apres && admis(u) && (ensemble || sien(u))).sort(lesSiensDAbord);
       for (let i = 0; i < Math.min(mTous.length, pTous.length); i += 1) {
         if (sien(mTous[i]) || sien(pTous[i])) { m.push(mTous[i]); p.push(pTous[i]); }
       }
@@ -1533,6 +2035,7 @@ function fichiersCourants(root) {
       else { const rel = posix(path.relative(root, complet)); if (dansPerimetre(rel)) o.push(rel); }
     }
   })(path.join(root, 'src'));
+  for (const f of PERIMETRE_EN_PLUS) if (fs.existsSync(path.join(root, f)) && dansPerimetre(f)) o.push(f); // E1
   return o.sort();
 }
 
@@ -1593,21 +2096,27 @@ function defautsDeReference(root, base, cles, lireRef) {
 const apostrophesDe = (unites) => unites.reduce((n, u) => n + (u.apostrophes ?? 0), 0);
 const infoApostrophes = (f, n) => `${f} : ${n} apostrophe(s) typographique(s) ’ devenue(s) droite(s) ' — écart d'un caractère admis par la spec (§2.5), à citer dans le compte rendu du lot`;
 
-export function modeIdentite({ root, fichiers, ensemble, base, entrees }) {
+export function modeIdentite({ root, fichiers, ensemble, base, entrees, rendu = [] }) {
   const zero = (l) => l.split('\0').filter(Boolean);
-  const dansRef = new Set(zero(git(root, ['ls-tree', '-r', '-z', '--name-only', base, '--', 'src'])));
+  const dansRef = new Set(zero(git(root, ['ls-tree', '-r', '-z', '--name-only', base, '--', ...CHEMINS_GIT])));
   const lireRef = (f) => (dansRef.has(f) ? git(root, ['show', `${base}:${f}`]) : null);
   const existe = (f) => fs.existsSync(path.join(root, f));
+  // E4 : ptCategorieSql(x) développée avec stockUtils.js lu au MÊME commit, de chaque côté.
+  const fonctionsRef = fonctionsSqlDe(lireRef(FICHIER_FONCTIONS_SQL));
+  const fonctionsCur = fonctionsSqlDe(existe(FICHIER_FONCTIONS_SQL) ? lire(root, FICHIER_FONCTIONS_SQL) : null);
 
   let cibles;
   let inchanges = 0;
   const horsPerimetre = [];
-  if (fichiers.length) cibles = fichiers;
+  // Un fichier nommé qui n'est pas du code (CHAMPS.md du lot B2) n'est pas analysable ici : il est
+  // ignoré et signalé ; le mode residuels le relit (besoin B2[2] de la vague 2 du lot 2b).
+  const pasDuCode = fichiers.filter((f) => f !== FR_JSON && !EXTENSIONS.test(f));
+  if (fichiers.length) cibles = fichiers.filter((f) => !pasDuCode.includes(f));
   else {
     // Sans fichier demandé : tout fichier du périmètre qui diffère de la référence (modifié, nouveau, supprimé).
     const modifies = new Set([
-      ...zero(git(root, ['diff', '--name-only', '--no-renames', '-z', base, '--', 'src'])),
-      ...zero(git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--', 'src'])),
+      ...zero(git(root, ['diff', '--name-only', '--no-renames', '-z', base, '--', ...CHEMINS_GIT])),
+      ...zero(git(root, ['ls-files', '--others', '--exclude-standard', '-z', '--', ...CHEMINS_GIT])),
     ]);
     const tous = new Set([...fichiersCourants(root), ...[...dansRef].filter(dansPerimetre)]);
     cibles = [...tous].filter((f) => modifies.has(f) || !dansRef.has(f) || !existe(f)).sort();
@@ -1626,7 +2135,10 @@ export function modeIdentite({ root, fichiers, ensemble, base, entrees }) {
   const frCur = frCurTexte ? valeursFr(lireFr(frCurTexte)) : new Map();
 
   const groupes = [];
-  const infos = horsPerimetre.map((f) => `${f} : modifié, hors périmètre par défaut (espace admin ou page publique) — à contrôler en le nommant`);
+  const infos = [
+    ...horsPerimetre.map((f) => `${f} : modifié, hors périmètre par défaut (espace admin ou page publique) — à contrôler en le nommant`),
+    ...pasDuCode.map((f) => `${f} : pas du code, ignoré par identite (relu par residuels)`),
+  ];
   const erreurs = [];
   const parFichier = [];
   for (const f of cibles) {
@@ -1673,19 +2185,22 @@ export function modeIdentite({ root, fichiers, ensemble, base, entrees }) {
     const curTexte = existe(f) ? lire(root, f) : null;
     if (refTexte === null && curTexte === null) throw new Usage(`${f} : introuvable (ni dans ${root}, ni dans la référence ${base.slice(0, 7)})`);
     if (refTexte !== null && curTexte !== null && refTexte.replace(/\r\n?/g, '\n') === curTexte.replace(/\r\n?/g, '\n')) { inchanges += 1; continue; }
-    const ref = refTexte === null ? { unites: [] } : analyser(refTexte, f, { t: avecT, fr: frRef, complet: false });
-    const cur = curTexte === null ? { unites: [], erreurs: [], variablesVoc: [] } : analyser(curTexte, f, { t: avecT, fr: frCur, complet: false });
+    const ref = refTexte === null ? { unites: [] } : analyser(refTexte, f, { t: avecT, fr: frRef, complet: false, rendu, fonctionsSql: fonctionsRef });
+    const cur = curTexte === null ? { unites: [], erreurs: [], variablesVoc: [] } : analyser(curTexte, f, { t: avecT, fr: frCur, complet: false, rendu, fonctionsSql: fonctionsCur });
     if (refTexte === null) infos.push(`${f} : nouveau fichier (absent de la référence)`);
     if (curTexte === null) infos.push(`${f} : fichier supprimé`);
     if (refTexte !== null && curTexte !== null && apostrophesDe(cur.unites) < apostrophesDe(ref.unites)) {
       infos.push(infoApostrophes(f, apostrophesDe(ref.unites) - apostrophesDe(cur.unites)));
     }
     const tag = (l) => l.map((u) => ({ ...u, fichier: f }));
-    parFichier.push({ fichier: f, ref: tag(ref.unites), cur: tag(cur.unites), analyse: cur });
+    const R = eclaterSql(tag(ref.unites)); // E4 : une unité SQL = ses libellés + ses codes + son squelette
+    const C = eclaterSql(tag(cur.unites));
+    parFichier.push({ fichier: f, ref: R.textes, cur: C.textes, refSql: R.squelettes, curSql: C.squelettes, analyse: cur });
   }
 
   // R11 : par fichier, ou sur l'union des fichiers (--ensemble) pour les chaînes déplacées.
   const lots = ensemble ? [parFichier] : parFichier.map((x) => [x]);
+  const relire = [];
   for (const lot of lots) {
     if (!lot.length) continue;
     const moins = [];
@@ -1695,6 +2210,9 @@ export function modeIdentite({ root, fichiers, ensemble, base, entrees }) {
       const d = differences(sources.flatMap((x) => x.ref), sources.flatMap((x) => x.cur));
       moins.push(...d.moins);
       plus.push(...d.plus);
+      // E4 : squelette SQL changé = requête modifiée, à relire par l'intégrateur (jamais un écart).
+      const sq = differences(sources.flatMap((x) => x.refSql), sources.flatMap((x) => x.curSql));
+      relire.push(...apparier(sq.moins, sq.plus));
     }
     for (const x of lot) if (x.analyse === null) { moins.push(...x.moins); plus.push(...x.plus); }
     for (const x of sources) {
@@ -1706,43 +2224,61 @@ export function modeIdentite({ root, fichiers, ensemble, base, entrees }) {
     if (moins.length || plus.length) groupes.push({ fichiers: [...noms], paires: apparier(moins, plus) });
   }
   const ecarts = groupes.reduce((n, g) => n + g.paires.length, 0);
-  return { mode: 'identite', base, controles: cibles.length, inchanges, ecarts, groupes, erreurs, infos, ok: ecarts === 0 && erreurs.length === 0 };
+  return { mode: 'identite', base, controles: cibles.length, inchanges, ecarts, groupes, erreurs, infos, relire, ok: ecarts === 0 && erreurs.length === 0 };
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
 // Modes residuels, accords, inventaire (version courante seulement)
 // ═════════════════════════════════════════════════════════════════════════════
 
-function analyserCourant(root, fichiers) {
-  const cibles = fichiers.length ? fichiers : fichiersCourants(root);
+function analyserCourant(root, fichiers, rendu = [], sauf = []) {
+  const cibles = (fichiers.length ? fichiers : fichiersCourants(root)).filter((f) => !sauf.includes(f));
   const frTexte = fs.existsSync(path.join(root, FR_JSON)) ? lire(root, FR_JSON) : null;
   const fr = frTexte ? valeursFr(lireFr(frTexte)) : null;
+  const fonctionsSql = fonctionsSqlDe(fs.existsSync(path.join(root, FICHIER_FONCTIONS_SQL)) ? lire(root, FICHIER_FONCTIONS_SQL) : null);
   return cibles.map((f) => {
     if (!fs.existsSync(path.join(root, f))) throw new Usage(`${f} : fichier introuvable dans ${root}`);
-    return { fichier: f, ...analyserFichier(lire(root, f), f, { t: fr !== null, fr, complet: true }) };
+    return { fichier: f, ...analyserFichier(lire(root, f), f, { t: fr !== null, fr, complet: true, rendu, fonctionsSql }) };
   });
 }
 
-export function modeResiduels({ root, fichiers, entrees }) {
+export function modeResiduels({ root, fichiers, entrees, rendu = [] }) {
   const residuels = [];
   const parFichier = {};
-  const analyses = analyserCourant(root, fichiers);
+  // E5 : profil serveur — documentation API et fichiers entièrement admin, exclus par chemin.
+  const exclus = HORS_RESIDUELS.filter((f) => fs.existsSync(path.join(root, f)) && (!fichiers.length || fichiers.includes(f)));
+  // E5b : sans liste de fichiers, les fichiers hors code des lots sont lus aussi (comme quand on les nomme).
+  const enPlus = fichiers.length ? [] : RESIDUELS_EN_PLUS.filter((f) => fs.existsSync(path.join(root, f)));
+  const analyses = [...analyserCourant(root, fichiers, rendu, HORS_RESIDUELS), ...(enPlus.length ? analyserCourant(root, enPlus, rendu) : [])];
+  const garder = (a, x) => { residuels.push({ fichier: a.fichier, ...x }); parFichier[a.fichier] = (parFichier[a.fichier] ?? 0) + 1; };
+  // E2 (I7) : une balise sans rendu est une ERREUR dans ce mode aussi (sans écart admis possible) — un agent qui ne
+  // lancerait que residuels la verrait sinon comme un simple résiduel.
+  const erreurs = [];
+  for (const a of analyses) for (const e of a.erreurs ?? []) if (e.type === 'balise-sans-rendu') erreurs.push({ fichier: a.fichier, ...e });
   for (const a of analyses) {
     for (const u of a.unites) {
+      // E3 : une unité SQL n'est jamais un texte ; ses constantes-textes le sont, une par une (les codes, non).
+      if (u.sqlTextes && !['index', 'cle-objet', 'comparaison', 'case'].includes(u.exclu)) {
+        for (const c of u.sqlTextes) {
+          if (!c.termes.length) continue;
+          const termes = residuAdmis({ dur: c.texte, canon: c.texte, exemple: false }, a.fichier, entrees);
+          if (termes.length) garder(a, { l: c.l, texte: c.texte, termes, ctx: 'sql' });
+        }
+        continue;
+      }
       if ((!u.termes.length && !u.exemple) || u.exclu) continue;
       const termes = residuAdmis(u, a.fichier, entrees);
       if (!termes.length) continue;
-      residuels.push({ fichier: a.fichier, l: u.l, texte: u.neutre ?? u.canon, termes, ctx: u.ctx });
-      parFichier[a.fichier] = (parFichier[a.fichier] ?? 0) + 1;
+      garder(a, { l: u.l, texte: u.neutre ?? u.canon, termes, ctx: u.ctx });
     }
   }
-  return { mode: 'residuels', controles: analyses.length, residuels, parFichier, ok: residuels.length === 0 };
+  return { mode: 'residuels', controles: analyses.length, exclus, residuels, parFichier, erreurs, ok: residuels.length === 0 && erreurs.length === 0 };
 }
 
-export function modeAccords({ root, fichiers, entrees }) {
+export function modeAccords({ root, fichiers, entrees, rendu = [] }) {
   const signalements = [];
   const miroir = [];
-  const analyses = analyserCourant(root, fichiers);
+  const analyses = analyserCourant(root, fichiers, rendu);
   for (const a of analyses) {
     for (const u of a.unites) {
       if (u.miroir !== undefined) miroir.push({ fichier: a.fichier, l: u.l, cle: u.cle, defaut: u.plat, miroir: u.miroir, voc: u.vocPlat });
@@ -1778,8 +2314,35 @@ export function texteAccords(miroir) {
   return `${lignes.join('\n')}\n`;
 }
 
-export function modeInventaire({ root, fichiers, base }) {
-  const analyses = analyserCourant(root, fichiers);
+/**
+ * vocab-accords.txt : écrit seulement si son contenu change, avec les fins de ligne du fichier existant (CRLF d'une
+ * extraction git sous Windows). → true si le fichier a été écrit.
+ */
+export function ecrireAccords(fichier, texte) {
+  const existant = fs.existsSync(fichier) ? fs.readFileSync(fichier, 'utf8') : null;
+  if (existant !== null && existant.replace(/\r\n/g, '\n') === texte) return false;
+  fs.writeFileSync(fichier, existant !== null && existant.includes('\r\n') ? texte.replace(/\n/g, '\r\n') : texte);
+  return true;
+}
+
+// E4 : diff lisible de deux squelettes SQL — contexte commun (40 caractères) autour de la partie qui change.
+export function diffSquelette(avant, apres) {
+  const court = (s, n, fin) => (s.length <= n ? s : fin ? `…${s.slice(-n)}` : `${s.slice(0, n)}…`);
+  if (avant === null || apres === null) return [`${avant === null ? 'après' : 'avant'} : « ${court(avant ?? apres, 400, false)} »`];
+  let i = 0;
+  while (i < avant.length && i < apres.length && avant[i] === apres[i]) i += 1;
+  let j = 0;
+  while (j < avant.length - i && j < apres.length - i && avant[avant.length - 1 - j] === apres[apres.length - 1 - j]) j += 1;
+  const debut = court(avant.slice(0, i), 40, true);
+  const finA = court(avant.slice(avant.length - j), 40, false);
+  return [
+    `avant : « ${debut}⟨${avant.slice(i, avant.length - j)}⟩${finA} »`,
+    `après : « ${debut}⟨${apres.slice(i, apres.length - j)}⟩${finA} »`,
+  ];
+}
+
+export function modeInventaire({ root, fichiers, base, rendu = [] }) {
+  const analyses = analyserCourant(root, fichiers, rendu);
   const sortie = {
     outil: 'vocab-check inventaire', depot: posix(root), base,
     resume: { fichiers: analyses.length, fichiersATerme: 0, unites: 0, unitesATerme: 0, candidates: 0, exclues: 0, unitesVoc: 0, parCle: {}, parCleVoc: {} },
@@ -1955,13 +2518,19 @@ function main(argv) {
     allow.problemes.forEach((p) => console.error(`  ${p}`));
     return 2;
   }
+  const { points: rendu, problemes: problemesRendu } = chargerRendu(o.root); // E2
+  if (problemesRendu.length) {
+    console.error(`scripts/vocab-rendu.json : ${problemesRendu.length} problème(s)`);
+    problemesRendu.forEach((p) => console.error(`  ${p}`));
+    return 2;
+  }
   const propositions = [];
   let r;
 
   if (o.mode === 'inventaire') {
     let base = null;
     try { base = lireBase(o.root, o.base); } catch { /* l'inventaire ne lit pas la référence */ }
-    const inv = modeInventaire({ root: o.root, fichiers, base });
+    const inv = modeInventaire({ root: o.root, fichiers, base, rendu });
     dire(JSON.stringify(inv, null, 1));
     const s = inv.resume;
     console.error(`inventaire : ${s.fichiers} fichier(s), ${s.fichiersATerme} à terme ou à appel voc, ${s.candidates} unité(s) candidate(s), ${s.exclues} exclue(s) (contexte technique), ${s.unitesVoc} avec appel voc — ${duree()}`);
@@ -1969,7 +2538,7 @@ function main(argv) {
   }
 
   if (o.mode === 'identite') {
-    r = modeIdentite({ root: o.root, fichiers, ensemble: o.ensemble, base: lireBase(o.root, o.base), entrees: allow.entrees });
+    r = modeIdentite({ root: o.root, fichiers, ensemble: o.ensemble, base: lireBase(o.root, o.base), entrees: allow.entrees, rendu });
     if (!o.json) {
       for (const g of r.groupes) {
         if (g.fichiers.length > 1) dire(`ENSEMBLE ${g.fichiers.join(' + ')}`);
@@ -1982,12 +2551,18 @@ function main(argv) {
         }
       }
       for (const e of r.erreurs) dire(`${e.fichier}:${e.l}  ERREUR ${e.message}`);
+      // E4 : requêtes dont le squelette a changé — pas un écart ; l'intégrateur relit chacune.
+      for (const p of r.relire) {
+        const u = p.apres ?? p.avant;
+        dire(`${u.fichier}:${u.l}  requête ${p.avant && p.apres ? 'modifiée' : p.apres ? 'ajoutée' : 'supprimée'}, à relire`);
+        for (const ligne of diffSquelette(p.avant?.canon ?? null, p.apres?.canon ?? null)) dire(`  ${ligne}`);
+      }
       r.infos.forEach((i) => dire(`  ${i}`));
       rapportAllow(allow.entrees, dire, o.mode, fichiers);
-      dire(`identite : ${r.controles} fichier(s) comparé(s) à ${r.base.slice(0, 7)}${fichiers.length ? '' : `, ${r.inchanges} inchangé(s)`} — ${r.ecarts} écart(s), ${r.erreurs.length} erreur(s) — ${duree()}`);
+      dire(`identite : ${r.controles} fichier(s) comparé(s) à ${r.base.slice(0, 7)}${fichiers.length ? '' : `, ${r.inchanges} inchangé(s)`} — ${r.ecarts} écart(s), ${r.erreurs.length} erreur(s)${r.relire.length ? `, ${r.relire.length} requête(s) SQL à relire` : ''} — ${duree()}`);
     }
   } else if (o.mode === 'residuels') {
-    r = modeResiduels({ root: o.root, fichiers, entrees: allow.entrees });
+    r = modeResiduels({ root: o.root, fichiers, entrees: allow.entrees, rendu });
     if (!o.json) {
       for (const x of r.residuels) {
         dire(`${x.fichier}:${x.l}  [${x.termes.join(', ')}]  ${guillemets(x.texte)}`);
@@ -1995,15 +2570,19 @@ function main(argv) {
       }
       const tries = Object.entries(r.parFichier).sort((a, b) => b[1] - a[1]);
       if (tries.length) { dire('— unités par fichier —'); tries.forEach(([f, n]) => dire(`${String(n).padStart(5)}  ${f}`)); }
+      if (r.exclus.length) dire(`  exclus par chemin (documentation API, fichiers entièrement admin — I4) : ${r.exclus.join(', ')}`);
+      for (const e of r.erreurs) dire(`${e.fichier}:${e.l}  ERREUR ${e.message}`);
       rapportAllow(allow.entrees, dire, o.mode, fichiers);
-      dire(`residuels : ${r.controles} fichier(s), ${r.residuels.length} unité(s) dans ${tries.length} fichier(s) — ${duree()}`);
+      dire(`residuels : ${r.controles} fichier(s), ${r.residuels.length} unité(s) dans ${tries.length} fichier(s)${r.erreurs.length ? `, ${r.erreurs.length} erreur(s)` : ''} — ${duree()}`);
     }
   } else {
-    r = modeAccords({ root: o.root, fichiers, entrees: allow.entrees });
+    r = modeAccords({ root: o.root, fichiers, entrees: allow.entrees, rendu });
     const sortie = path.join(o.root, 'scripts', 'vocab-accords.txt');
     const texte = texteAccords(r.miroir);
     // Le fichier partagé n'est réécrit que par un passage complet ; sur une liste de fichiers, le volet 2 est affiché.
-    if (!fichiers.length && fs.existsSync(path.dirname(sortie))) fs.writeFileSync(sortie, texte);
+    // Contenu inchangé : le fichier n'est pas touché ; sinon il garde ses fins de ligne (CRLF d'une extraction
+    // git sous Windows) — un passage sans changement ne laisse pas le fichier « modifié » dans git.
+    if (!fichiers.length && fs.existsSync(path.dirname(sortie))) ecrireAccords(sortie, texte);
     if (!o.json) {
       const signal = (s) => (s.position === 'apres' ? `« ${s.mot} » après ${s.appel}`
         : s.position === 'reprise' ? `pronom « ${s.mot} » qui reprend ${s.appel}`
@@ -2027,7 +2606,7 @@ function main(argv) {
   const provisoires = allow.entrees.filter((e) => e.type === 'provisoire').length;
   const besoins = compterBesoins(path.join(o.root, 'scripts', 'vocab-besoins'));
   if ((provisoires || besoins) && !o.json) {
-    dire(`  rappel : ${provisoires} entrée(s) allow de type « provisoire », ${besoins} besoin(s) dans scripts/vocab-besoins (à ramener à 0 à l'étape S5)`);
+    dire(`  rappel : ${provisoires} entrée(s) allow de type « provisoire », ${besoins} besoin(s) ouvert(s) dans scripts/vocab-besoins (à ramener à 0 : appliqué, ou état final écrit dans le champ etat)`);
   }
   return r.ok ? 0 : 1;
 }

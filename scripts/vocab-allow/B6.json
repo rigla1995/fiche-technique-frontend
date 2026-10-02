@@ -1,0 +1,1010 @@
+[
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Coût matière",
+    "type": "faute-corrigee",
+    "justification": "Spec lot 2b §11.1.3 (changement visible listé, à valider par le client) : l'en-tête de la clé cout_matiere s'écrivait « Cout matiere » (human(clé), sans accent) ; il passe par voc.Nom('cout_matiere')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Marge",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Marge brute",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Marge apres com",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Marge nette",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Food cost pct",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Taux marge pct",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Taux marge nette pct",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Nb ventes",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Pertes",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Pertes pct ca",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Valeur stock",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Ventes acheteurs",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Nb ventes acheteurs",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Top marge",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Flop marge",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Produits",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Nb appros",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Receptions transferts",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Nb transferts",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Stock bas",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Achats par fournisseur",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Fournisseur",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Stock par categorie",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Alertes stock",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Article",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Inventaires",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Activité",
+    "type": "faute-corrigee",
+    "justification": "Spec lot 2b §11.1.3 (changement visible listé, à valider par le client) : la colonne activite (inventaires, transferts par activité) s'écrivait « Activite » (human(clé), sans accent) ; elle passe par voc.Nom('activite')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Top articles",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Appros",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Receptions labo",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Nb receptions labo",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Production PT",
+    "type": "faute-corrigee",
+    "justification": "Spec lot 2b §11.1.3 (changement visible listé, à valider par le client) : la clé production_pt s'écrivait « Production pt » (human(clé)) ; le sigle passe par voc.Court('pt')."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Transferts",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Cessions labo",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Nb cessions labo",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Ventes labo",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Nb ventes labo",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Production par produit",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Pertes par type",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Top transferts",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Transferts par activite",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Acheteurs factures",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Acheteur",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "Top acheteurs",
+    "type": "deplacement",
+    "justification": "Export Excel du tableau de bord (ClientDashboard) : ce libellé était calculé par human(clé) à partir de la clé d'API ; il est désormais un littéral de la table libellesClesExport (spec lot 2b §10.2), qui rend EXACTEMENT human(clé) avec le vocabulaire par défaut (prouvé clé par clé par test/B6-ecrans.test.js du backend) et le terme du domaine sinon. Aucun changement pour un compte restauration."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "categorie",
+    "type": "discriminant",
+    "justification": "Clé d'API comparée (k === 'categorie') : seule la colonne des catégories PT passe par libelleCategoriePt au moment d'écrire la cellule (spec §10.2, §6.3) ; jamais affichée."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": null,
+    "apres": "string",
+    "type": "discriminant",
+    "justification": "Test de type JavaScript (typeof v === 'string') avant libelleCategoriePt ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Produit transformé, abréviation (type d'appro « Prod. Transformé » des exports)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Produit utilisable, abréviation (en-tête « Produits util. » des exports)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Produit vendable, abréviation (préfixe « P. Vendable / » du tableau de bord)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Produit valorisé, abréviation (préfixe « P. Valorisé / » du tableau de bord)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "⟦?f|m⟧",
+    "type": "discriminant",
+    "justification": "Code du genre ou de l'élision d'un composant (valeurs 'm' / 'f', test typeof === 'boolean') dans toRows, rowsToPayload et le select Genre de l'onglet Composants (spec lot 2b §10.2) : valeur envoyée à PUT /api/domaines/:id, jamais un terme.",
+    "occurrences": 3
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "f",
+    "type": "discriminant",
+    "justification": "Code du genre ou de l'élision d'un composant (valeurs 'm' / 'f', test typeof === 'boolean') dans toRows, rowsToPayload et le select Genre de l'onglet Composants (spec lot 2b §10.2) : valeur envoyée à PUT /api/domaines/:id, jamais un terme.",
+    "occurrences": 4
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "boolean",
+    "type": "discriminant",
+    "justification": "Code du genre ou de l'élision d'un composant (valeurs 'm' / 'f', test typeof === 'boolean') dans toRows, rowsToPayload et le select Genre de l'onglet Composants (spec lot 2b §10.2) : valeur envoyée à PUT /api/domaines/:id, jamais un terme.",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "m",
+    "type": "discriminant",
+    "justification": "Code du genre ou de l'élision d'un composant (valeurs 'm' / 'f', test typeof === 'boolean') dans toRows, rowsToPayload et le select Genre de l'onglet Composants (spec lot 2b §10.2) : valeur envoyée à PUT /api/domaines/:id, jamais un terme.",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Genre",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Élision",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Masculin",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "Féminin",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "⟦?auto|⟦?oui|non⟧⟧",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "auto : déduite de l'initiale (voyelle : oui ; h, y et consonne : non). Oui pour un h muet (mon huilerie).",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "oui",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique).",
+    "occurrences": 3
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "non",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique).",
+    "occurrences": 3
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": null,
+    "apres": "auto",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte ajouté par le lot 2b (spec §10.2 : colonnes Genre et Élision de l'onglet Composants, libellés des 4 clés *_abr de l'onglet Lexique).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Caractères refusés : [ ] | * \\ ` { } $, retour à la ligne et tabulation. ⟦·⟧ caractères au plus (⟦·⟧ pour la forme courte).",
+    "apres": "Caractères refusés : [ ] | * \\ ` { } $ < >, retour à la ligne et tabulation. ⟦·⟧ caractères au plus (⟦·⟧ pour la forme courte).",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Aide de l'onglet Lexique : « < » et « > » ajoutés à la liste des caractères refusés, comme le serveur (spec lot 2b §4.4)."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Unité de vente (activité)",
+    "apres": "Unité de vente (activité)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Unité de production (labo)",
+    "apres": "Unité de production (labo)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit vendable",
+    "apres": "Produit vendable",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit utilisable",
+    "apres": "Produit utilisable",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit valorisé",
+    "apres": "Produit valorisé",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Article (référentiel)",
+    "apres": "Article (référentiel)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Ingrédient (composant de recette)",
+    "apres": "Ingrédient (composant de recette)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Recette",
+    "apres": "Recette",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Fiche technique",
+    "apres": "Fiche technique",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Portion",
+    "apres": "Portion",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Food cost",
+    "apres": "Food cost",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Coût matière",
+    "apres": "Coût matière",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Marge",
+    "apres": "Marge",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Transfert (labo → activité)",
+    "apres": "Transfert (labo → activité)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Approvisionnement",
+    "apres": "Approvisionnement",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Perte",
+    "apres": "Perte",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Inventaire",
+    "apres": "Inventaire",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Vente",
+    "apres": "Vente",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Acheteur (B2B)",
+    "apres": "Acheteur (B2B)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Gérant",
+    "apres": "Gérant",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Fournisseur",
+    "apres": "Fournisseur",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Dépôt (compte sans activité)",
+    "apres": "Dépôt (compte sans activité)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit transformé (PT)",
+    "apres": "Produit transformé (PT)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Stock",
+    "apres": "Stock",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Prestataire (livraison / commission)",
+    "apres": "Prestataire (livraison / commission)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Supplément",
+    "apres": "Supplément",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Espace Activités (menu)",
+    "apres": "Espace Activités (menu)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Espace Labo (menu)",
+    "apres": "Espace Labo (menu)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Espace Vente (menu)",
+    "apres": "Espace Vente (menu)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Espace Acheteurs (menu)",
+    "apres": "Espace Acheteurs (menu)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Espace Produit (écran de verrou ; le menu « Espace Produits » suit la clé « produit »)",
+    "apres": "Espace Produit (écran de verrou ; le menu « Espace Produits » suit la clé « produit »)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Référentiel",
+    "apres": "Référentiel",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit (terme générique)",
+    "apres": "Produit (terme générique)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit composé",
+    "apres": "Produit composé",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Labo, forme longue (laboratoire)",
+    "apres": "Labo, forme longue (laboratoire)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Labo, description (laboratoire de production)",
+    "apres": "Labo, description (laboratoire de production)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Activité, description (point de vente)",
+    "apres": "Activité, description (point de vente)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Article, nommé « ingrédient » (inventaire, historique des transferts)",
+    "apres": "Article, nommé « ingrédient » (inventaire, historique des transferts)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Catégorie « PT utilisables » (titre)",
+    "apres": "Catégorie « PT utilisables » (titre)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Catégorie « produits composés valorisés » (titre)",
+    "apres": "Catégorie « produits composés valorisés » (titre)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Catégorie « PT vendables » (titre)",
+    "apres": "Catégorie « PT vendables » (titre)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Transfert, abréviation (badges « ↗ Transf. » ; forme courte « Trf » des colonnes étroites)",
+    "apres": "Transfert, abréviation (badges « ↗ Transf. » ; forme courte « Trf » des colonnes étroites)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Supplément, abréviation (badge « Suppl. »)",
+    "apres": "Supplément, abréviation (badge « Suppl. »)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit transformé, abréviation (type d'appro « Prod. Transformé » des exports)",
+    "apres": "Produit transformé, abréviation (type d'appro « Prod. Transformé » des exports)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit utilisable, abréviation (en-tête « Produits util. » des exports)",
+    "apres": "Produit utilisable, abréviation (en-tête « Produits util. » des exports)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit vendable, abréviation (préfixe « P. Vendable / » du tableau de bord)",
+    "apres": "Produit vendable, abréviation (préfixe « P. Vendable / » du tableau de bord)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit valorisé, abréviation (préfixe « P. Valorisé / » du tableau de bord)",
+    "apres": "Produit valorisé, abréviation (préfixe « P. Valorisé / » du tableau de bord)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Option Acheteurs ⇒ au moins 1 labo",
+    "apres": "Option Acheteurs ⇒ au moins 1 labo",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "La base acheteurs (B2B) ne peut être activée que si le compte a au moins une unité de production.",
+    "apres": "La base acheteurs (B2B) ne peut être activée que si le compte a au moins une unité de production.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Compte dépôt ⇒ labo + acheteurs",
+    "apres": "Compte dépôt ⇒ labo + acheteurs",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Un compte sans activité (dépôt) doit avoir au moins 1 labo ET l'option Acheteurs.",
+    "apres": "Un compte sans activité (dépôt) doit avoir au moins 1 labo ET l'option Acheteurs.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Espace Produit verrouillé en Basique sans labo",
+    "apres": "Espace Produit verrouillé en Basique sans labo",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Formule Basique et 0 labo ⇒ Espace Produit inaccessible (la base Labo l'inclut).",
+    "apres": "Formule Basique et 0 labo ⇒ Espace Produit inaccessible (la base Labo l'inclut).",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Ventes B2B depuis une activité",
+    "apres": "Ventes B2B depuis une activité",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Autoriser les ventes aux acheteurs depuis une unité de vente (sinon depuis un labo uniquement).",
+    "apres": "Autoriser les ventes aux acheteurs depuis une unité de vente (sinon depuis un labo uniquement).",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Activité",
+    "apres": "Activité",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "unité de vente",
+    "apres": "unité de vente",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Labo",
+    "apres": "Labo",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "compte gérant",
+    "apres": "compte gérant",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Base acheteurs",
+    "apres": "Base acheteurs",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Le seuil coût matière doit être un pourcentage entre 0 et 100.",
+    "apres": "Le seuil coût matière doit être un pourcentage entre 0 et 100.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Le nombre maximum de composants par supplément doit être un entier ≥ 1.",
+    "apres": "Le nombre maximum de composants par supplément doit être un entier ≥ 1.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Indiquez au moins un type de perte.",
+    "apres": "Indiquez au moins un type de perte.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Type de perte invalide « ⟦·⟧ » : lettres minuscules sans accent, chiffres et _ (2 à 20 caractères), séparés par des virgules.",
+    "apres": "Type de perte invalide « ⟦·⟧ » : lettres minuscules sans accent, chiffres et _ (2 à 20 caractères), séparés par des virgules.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "ex : hotellerie",
+    "apres": "ex : hotellerie",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Chaque composant est proposé au wizard client avec son libellé ; le type technique détermine le prix et les écrans (activité = vente, labo = production, gérant, base acheteurs).",
+    "apres": "Chaque composant est proposé au wizard client avec son libellé ; le type technique détermine le prix et les écrans (activité = vente, labo = production, gérant, base acheteurs).",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Aucun composant. Ajoutez au moins un composant de type Activité ou Labo.",
+    "apres": "Aucun composant. Ajoutez au moins un composant de type Activité ou Labo.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Produit",
+    "apres": "Produit",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "⟦?Unité avec Espace Vente|Sans objet pour ce type⟧",
+    "apres": "⟦?Unité avec Espace Vente|Sans objet pour ce type⟧",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "⟦?Unité avec production (PT)|Sans objet pour ce type⟧",
+    "apres": "⟦?Unité avec production (PT)|Sans objet pour ce type⟧",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Champ vide = terme par défaut (affiché en gris). Seuls les écarts sont enregistrés. Élision = le mot commence par une voyelle (l'activité, d'activité). Si le singulier est modifié, le pluriel, le genre et l'élision doivent être renseignés. Forme courte = sigle ou abréviation des libellés courts (PT, Appro, FT). Une clé « ↳ » suit son parent tant que son singulier est vide (seule son icône se change à part).",
+    "apres": "Champ vide = terme par défaut (affiché en gris). Seuls les écarts sont enregistrés. Élision = le mot commence par une voyelle (l'activité, d'activité). Si le singulier est modifié, le pluriel, le genre et l'élision doivent être renseignés. Forme courte = sigle ou abréviation des libellés courts (PT, Appro, FT). Une clé « ↳ » suit son parent tant que son singulier est vide (seule son icône se change à part).",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Formules d'activités proposées à la configuration d'un compte de ce domaine.",
+    "apres": "Formules d'activités proposées à la configuration d'un compte de ce domaine.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Seuil coût matière (%)",
+    "apres": "Seuil coût matière (%)",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Au-delà de ce pourcentage, le coût matière (food cost) est signalé en alerte.",
+    "apres": "Au-delà de ce pourcentage, le coût matière (food cost) est signalé en alerte.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Types de perte",
+    "apres": "Types de perte",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Types proposés à la saisie des pertes, séparés par des virgules (défaut : avarie, dechet).",
+    "apres": "Types proposés à la saisie des pertes, séparés par des virgules (défaut : avarie, dechet).",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Composants max par supplément",
+    "apres": "Composants max par supplément",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  },
+  {
+    "fichier": "src/components/admin/AdminDomaineEditPage.tsx",
+    "avant": "Nombre maximum de composants (ingrédients) d'un supplément. 1 = comportement actuel.",
+    "apres": "Nombre maximum de composants (ingrédients) d'un supplément. 1 = comportement actuel.",
+    "type": "admin",
+    "justification": "Espace admin (I4) : page /admin/domaines/:id (profil de domaine), lue seulement par un super_admin ou le boss ; ses données viennent de GET et PUT /api/domaines/:id, gardés par requireSuperAdmin. L'écran admin garde le vocabulaire LabFlow, jamais celui d'un compte. Texte resté en dur : le profil de domaine décrit les termes LabFlow que chaque domaine remplace."
+  }
+]

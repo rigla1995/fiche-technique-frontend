@@ -9,7 +9,7 @@
 const INTERDITS = /[*?:\\/[\]]/g;
 const LONGUEUR_MAX = 31;
 
-/** Nom d'onglet Excel sûr : caractères interdits retirés, 31 caractères au plus, jamais vide. */
+/** Nom d'onglet Excel sûr : caractères interdits remplacés par une espace, 31 caractères au plus, jamais vide. */
 export function nomOnglet(texte: string): string {
   const propre = String(texte ?? '').replace(INTERDITS, ' ').replace(/\s+/g, ' ').trim();
   const nom = propre.slice(0, LONGUEUR_MAX).replace(/^'+|'+$/g, '').trim();

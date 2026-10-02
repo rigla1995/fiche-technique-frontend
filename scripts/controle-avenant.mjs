@@ -3,11 +3,13 @@
 //   node scripts/controle-avenant.mjs [--base <ref>]
 //
 // Génère l'avenant avec le contractPdf.ts COURANT (lexique par défaut) et avec celui du commit de référence
-// (scripts/vocab-check.base, ou --base), sur 5 jeux de postes, et exige des PDF identiques à l'octet près
+// (scripts/vocab-reference-lot2 = avant le lot 2, ou --base), sur 5 jeux de postes, et exige des PDF identiques à l'octet près
 // (hors identifiant de fichier et date de création, masqués ; Date figée pour le numéro AVN et la date du jour).
 // Un compte restauration reçoit donc exactement l'avenant d'aujourd'hui. Ce contrôle aurait vu la ligne
 // « Option Acheteurs → palier » (flèche hors police, ligne illisible) que la référence avait corrigée en « : ».
 // Puis un rendu Hôtellerie (lexique d'essai) doit rester lisible : aucune chaîne codée sur deux octets.
+// Non-vacuité : le contractPdf.ts de la référence doit DIFFÉRER du courant (sinon le contrôle compare un fichier à
+// lui-même et réussit à vide : c'est ce que donnait une référence réépinglée sur la tête du lot 2a).
 // Dépendance : rolldown (livré avec vite, dans node_modules de ce dépôt). Sortie 0 = identique ; 1 = écart.
 import fs from 'node:fs';
 import os from 'node:os';
@@ -20,7 +22,9 @@ const ICI = path.dirname(fileURLToPath(import.meta.url));
 const FRONT = path.resolve(ICI, '..');
 const args = process.argv.slice(2);
 const iBase = args.indexOf('--base');
-const BASE = (iBase !== -1 && args[iBase + 1]) || fs.readFileSync(path.join(ICI, 'vocab-check.base'), 'utf8').trim();
+// Référence d'AVANT le lot 2 : scripts/vocab-reference-lot2 (spec lot 2b §3.1), jamais scripts/vocab-check.base
+// (référence de l'outil de preuve, réépinglée à chaque sous-lot : le contrôle comparerait le 2a au 2a, à vide).
+const BASE = (iBase !== -1 && args[iBase + 1]) || fs.readFileSync(path.join(ICI, 'vocab-reference-lot2'), 'utf8').trim();
 
 // Référence : contractPdf.ts et ses imports relatifs (./pdfTexte, ../vocab/*) au commit BASE, hors dépôt.
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'controle-avenant-'));
@@ -32,6 +36,16 @@ for (const f of ['src/utils/contractPdf.ts', 'src/utils/pdfTexte.ts', 'src/vocab
   fs.mkdirSync(path.dirname(path.join(REF, f)), { recursive: true });
   fs.writeFileSync(path.join(REF, f), gitShow(f));
 }
+
+// Non-vacuité (spec lot 2b §3.1) : une référence où contractPdf.ts est celui d'aujourd'hui ne prouve rien.
+const lf = (s) => s.replace(/\r\n?/g, '\n');
+const sourceRef = fs.existsSync(path.join(REF, 'src', 'utils', 'contractPdf.ts')) ? lf(fs.readFileSync(path.join(REF, 'src', 'utils', 'contractPdf.ts'), 'utf8')) : null;
+if (sourceRef === null || sourceRef === lf(fs.readFileSync(path.join(FRONT, 'src', 'utils', 'contractPdf.ts'), 'utf8'))) {
+  console.log(`ÉCHEC contrôle à vide : contractPdf.ts de la référence ${BASE.slice(0, 7)} ${sourceRef === null ? 'absent' : 'identique au courant'} — la référence doit être le commit d'avant le lot 2 (scripts/vocab-reference-lot2)`);
+  fs.rmSync(tmp, { recursive: true, force: true });
+  process.exit(1);
+}
+console.log(`référence ${BASE.slice(0, 7)} : contractPdf.ts différent du courant (le contrôle n'est pas à vide)`);
 
 const { build } = await import(pathToFileURL(path.join(FRONT, 'node_modules', 'rolldown', 'dist', 'index.mjs')).href);
 const bundler = async (entree, sortie) => build({
