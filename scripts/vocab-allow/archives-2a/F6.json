@@ -1,0 +1,24 @@
+[
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Aucun ⟦?labo|activité⟧ disponible.",
+    "apres": "⟦?Aucun labo|Aucune activité⟧ disponible.",
+    "type": "faute-corrigee",
+    "justification": "« Aucun activité disponible. » était une faute d'accord de l'existant (le déterminant restait au masculin quand la condition rendait « activité ») ; voc.Aucun(isLaboMode ? 'labo' : 'activite') rend « Aucune activité disponible. »."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": "Aucune activité rattachée à ce(s) labo(s).",
+    "apres": "Aucune activité rattachée à ⟦ce|ces@>1⟧ ⟦labo|labos@>1⟧.",
+    "type": "faute-corrigee",
+    "justification": "Spec §3 règle 3, guide E27 : « ce(s) labo(s) » est réécrit avec le nombre réel de labos cochés à l'étape 1 (addAffectationIds.length, toujours ≥ 1 à cet endroit) : « ce labo » / « ces labos »."
+  },
+  {
+    "fichier": "src/components/client/ProductList.tsx",
+    "avant": null,
+    "apres": "supplement",
+    "type": "discriminant",
+    "occurrences": 1,
+    "justification": "Littéral de comparaison, jamais affiché : dans « Inclure aussi les <strong>…</strong> », le déterminant est séparé du terme par la balise, donc rendu par voc.det (guide E18/E19) ; la clé dépend du même test (vendableSubTab === 'supplement') que le contenu de la balise, et ce test écrit une seconde fois ajoute une unité « supplement » au décompte de l'outil. Le texte affiché est identique (« Inclure aussi les »)."
+  }
+]

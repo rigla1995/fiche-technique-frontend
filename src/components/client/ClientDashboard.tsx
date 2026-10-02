@@ -128,6 +128,63 @@ const sourcesB2bOpts = (voc: Vocab): MultiSelectOption[] => [
 
 const STORAGE_KEY = 'dashboardV2State';
 
+// Export Excel : libellé d'une clé de l'API (« food_cost_pct » → « Food cost pct »).
+const human = (s: string) => s.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
+// Clés à terme du lexique (lot 2b, spec §10.2) : par défaut, exactement human(clé) ; « Cout matiere »,
+// « Activite » et « Production pt » prennent leurs accents et leur sigle (spec §11.1.3). Les clés sont des
+// identifiants de l'API (I2) : jamais renommées, seulement libellées.
+const libellesClesExport = (voc: Vocab): Record<string, string> => ({
+  cout_matiere: voc.Nom('cout_matiere'),
+  marge: voc.Nom('marge'),
+  marge_brute: `${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`,
+  marge_apres_com: `${voc.Nom('marge')} apres com`,
+  marge_nette: `${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')}`,
+  food_cost_pct: `${voc.Nom('food_cost')} pct`,
+  taux_marge_pct: `Taux ${voc.court('marge')} pct`,
+  taux_marge_nette_pct: `Taux ${voc.court('marge')} ${voc.acc('marge', 'net', 'nette')} pct`,
+  nb_ventes: `Nb ${voc.pl('vente')}`,
+  pertes: voc.Pl('perte'),
+  pertes_pct_ca: `${voc.Pl('perte')} pct ca`,
+  valeur_stock: `Valeur ${voc.court('stock')}`,
+  ventes_acheteurs: `${voc.Pl('vente')} ${voc.court('acheteur', true)}`,
+  nb_ventes_acheteurs: `Nb ${voc.pl('vente')} ${voc.court('acheteur', true)}`,
+  top_marge: `Top ${voc.court('marge')}`,
+  flop_marge: `Flop ${voc.court('marge')}`,
+  produits: voc.Pl('produit'),
+  nb_appros: `Nb ${voc.court('appro', true)}`,
+  receptions_transferts: `Receptions ${voc.court('transfert', true)}`,
+  nb_transferts: `Nb ${voc.pl('transfert')}`,
+  stock_bas: `${voc.Nom('stock')} ${voc.acc('stock', 'bas', 'basse')}`,
+  achats_par_fournisseur: `Achats par ${voc.nom('fournisseur')}`,
+  fournisseur: voc.Nom('fournisseur'),
+  stock_par_categorie: `${voc.Nom('stock')} par categorie`,
+  alertes_stock: `Alertes ${voc.court('stock')}`,
+  article: voc.Nom('article'),
+  inventaires: voc.Pl('inventaire'),
+  activite: voc.Nom('activite'),
+  top_articles: `Top ${voc.court('article', true)}`,
+  appros: voc.Court('appro', true),
+  receptions_labo: `Receptions ${voc.court('labo')}`,
+  nb_receptions_labo: `Nb receptions ${voc.court('labo')}`,
+  production_pt: `Production ${voc.Court('pt')}`,
+  transferts: voc.Pl('transfert'),
+  cessions_labo: `Cessions ${voc.court('labo')}`,
+  nb_cessions_labo: `Nb cessions ${voc.court('labo')}`,
+  ventes_labo: `${voc.Pl('vente')} ${voc.court('labo')}`,
+  nb_ventes_labo: `Nb ${voc.pl('vente')} ${voc.court('labo')}`,
+  production_par_produit: `Production par ${voc.nom('produit')}`,
+  pertes_par_type: `${voc.Pl('perte')} par type`,
+  top_transferts: `Top ${voc.court('transfert', true)}`,
+  transferts_par_activite: voc.ex('Transferts par activite', `${voc.Pl('transfert')} par ${voc.nom('activite')}`),
+  acheteurs_factures: `${voc.Pl('acheteur')} factures`,
+  acheteur: voc.Nom('acheteur'),
+  top_acheteurs: `Top ${voc.court('acheteur', true)}`,
+});
+const libelleCleExport = (voc: Vocab, cle: string): string => {
+  const libelles = libellesClesExport(voc);
+  return Object.prototype.hasOwnProperty.call(libelles, cle) ? libelles[cle] : human(cle);
+};
+
 export default function ClientDashboard() {
   const voc = useVocabulaire();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -246,7 +303,7 @@ export default function ClientDashboard() {
   // Catégories produits : le type préfixe le nom (« P. Vendable / Burger » vs
   // « P. Valorisé / Burger ») — deux catégories homonymes restent différenciables.
   const TYPE_PRODUIT_PREFIX: Record<string, string> = {
-    vendable: 'P. Vendable', supplement: voc.Nom('supplement'), valorise: 'P. Valorisé',
+    vendable: voc.Nom('produit_vendable_abr'), supplement: voc.Nom('supplement'), valorise: voc.Nom('produit_valorise_abr'),
   };
   const toCatProduitOpts = (rows: FiltresOptions['categories_produit']): MultiSelectOption[] =>
     rows.map((r) => ({
@@ -275,7 +332,6 @@ export default function ClientDashboard() {
         ([, v]) => Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && v[0] !== null,
       ) as [string, Record<string, unknown>[]][];
 
-      const human = (s: string) => s.replace(/_/g, ' ').replace(/^./, (c) => c.toUpperCase());
       // Montants en DT — heuristique sur les clés (jamais les compteurs/pourcentages).
       const isMoney = (k: string) =>
         !/(^|_)(nb|pct|pts|qte|quantite|seuil|jours|part)(_|$)/.test(k)
@@ -309,7 +365,7 @@ export default function ClientDashboard() {
         r += 1;
         kpiEntries.forEach(([k, v], i) => {
           const row = ws.getRow(r);
-          row.getCell(1).value = human(k);
+          row.getCell(1).value = libelleCleExport(voc, k);
           row.getCell(2).value = cellValue(v);
           if (typeof v === 'number' && isMoney(k)) row.getCell(2).numFmt = FMT_DT;
           dataRowStyle(row, { index: i, colCount: 2 });
@@ -321,14 +377,15 @@ export default function ClientDashboard() {
       // Sections listes — en-têtes charte + zébrage.
       for (const [key, rows] of listes) {
         const keys = Object.keys(rows[0]);
-        sectionTitle(human(key));
-        headerRow(ws, r, keys.map(human));
+        sectionTitle(libelleCleExport(voc, key));
+        headerRow(ws, r, keys.map((k) => libelleCleExport(voc, k)));
         r += 1;
         rows.forEach((rec, i) => {
           const row = ws.getRow(r);
           keys.forEach((k, ci) => {
             const v = rec[k];
-            row.getCell(ci + 1).value = cellValue(v);
+            // Catégories PT : valeur par défaut de l'API, traduite au moment d'écrire la cellule (comme à l'écran).
+            row.getCell(ci + 1).value = cellValue(k === 'categorie' && typeof v === 'string' ? libelleCategoriePt(voc, v) : v);
             if (typeof v === 'number' && isMoney(k)) row.getCell(ci + 1).numFmt = FMT_DT;
           });
           dataRowStyle(row, { index: i, colCount: keys.length });

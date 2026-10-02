@@ -7,6 +7,8 @@ import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import type { Activite, ActiviteIngredient, Labo, AbonnementConfig, Composant, UniteOperationnelleFields } from '../../types';
+import type { Vocab } from '../../vocab/vocab';
+import { libelleComposant } from '../../vocab/composants';
 
 type ActiviteForm = { nom: string; adresse: string; composantId: number | null };
 const emptyForm = (): ActiviteForm => ({ nom: '', adresse: '', composantId: null });
@@ -26,13 +28,13 @@ const composantsActifs = (all: Composant[] | undefined | null, type: 'activite' 
     .filter((c) => c.actif !== false && c.typeTechnique === type && typeof c.id === 'number')
     .slice()
     .sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || (a.id ?? 0) - (b.id ?? 0));
-const composantLabel = (c: Composant): string => `${c.icone ? `${c.icone} ` : ''}${c.libelle}`;
+const composantLabel = (voc: Vocab, c: Composant): string => `${c.icone ? `${c.icone} ` : ''}${libelleComposant(voc, c)}`;
 // Répartition informative « 1 Restaurant · 0 Bar » (unités sans composant imputées au 1er, comme le serveur).
-const repartitionComposants = (unites: UniteOperationnelleFields[], comps: Composant[]): string => {
+const repartitionComposants = (unites: UniteOperationnelleFields[], comps: Composant[], voc: Vocab): string => {
   const defautId = comps[0]?.id ?? null;
   return comps.map((c) => {
     const n = unites.filter((u) => (u.composant?.id ?? defautId) === c.id).length;
-    return `${n} ${n > 1 ? (c.libellePluriel || c.libelle) : c.libelle}`;
+    return `${n} ${libelleComposant(voc, c, n > 1)}`;
   }).join(' · ');
 };
 
@@ -488,8 +490,8 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
   // Lot 1b : le compteur Labos = labos existants (un Économat qui n'alimente qu'une
   // Cuisine compte aussi) ; les quotas restent par TYPE technique (nbActivites/nbLabos).
   const usedLabos = labos.length;
-  const repartitionActivites = showComposantActivite ? repartitionComposants(activites, composantsActivite) : '';
-  const repartitionLabos = showComposantLabo ? repartitionComposants(labos, composantsLabo) : '';
+  const repartitionActivites = showComposantActivite ? repartitionComposants(activites, composantsActivite, voc) : '';
+  const repartitionLabos = showComposantLabo ? repartitionComposants(labos, composantsLabo, voc) : '';
 
   // Show empty-state card only when truly nothing exists
   const showEmptyCard = !loading && activites.length === 0 && labos.length === 0;
@@ -714,7 +716,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                             const c = composantById(act.composant?.id, composantsActivite) ?? composantsActivite[0];
                             return c ? (
                               <span style={{ marginLeft: 8, fontSize: '0.7rem', fontWeight: 700, color: '#1e40af', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 20, padding: '1px 8px', whiteSpace: 'nowrap' }}>
-                                {composantLabel(c)}
+                                {composantLabel(voc, c)}
                               </span>
                             ) : null;
                           })()}
@@ -815,7 +817,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                               const c = composantById(labo.composant?.id, composantsLabo) ?? composantsLabo[0];
                               return c ? (
                                 <span style={{ marginLeft: 8, fontSize: '0.7rem', fontWeight: 700, color: '#7c3aed', background: '#f5f3ff', border: '1px solid #c4b5fd', borderRadius: 20, padding: '1px 8px', whiteSpace: 'nowrap' }}>
-                                  {composantLabel(c)}
+                                  {composantLabel(voc, c)}
                                 </span>
                               ) : null;
                             })()}
@@ -910,7 +912,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                     <label style={fieldLabel}>Type <span style={{ color: '#ef4444' }}>*</span></label>
                     <select className="input" style={{ width: '100%' }} value={form.composantId ?? ''}
                       onChange={(e) => setForm((f) => ({ ...f, composantId: e.target.value === '' ? null : Number(e.target.value) }))}>
-                      {composantsActivite.map((c) => <option key={c.id} value={c.id}>{composantLabel(c)}</option>)}
+                      {composantsActivite.map((c) => <option key={c.id} value={c.id}>{composantLabel(voc, c)}</option>)}
                     </select>
                   </div>
                 )}
@@ -1124,7 +1126,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                   <label style={fieldLabel}>Type <span style={{ color: '#ef4444' }}>*</span></label>
                   <select className="input" style={{ width: '100%' }} value={laboFormData.composantId ?? ''}
                     onChange={(e) => setLaboFormData((p) => ({ ...p, composantId: e.target.value === '' ? null : Number(e.target.value) }))}>
-                    {composantsLabo.map((c) => <option key={c.id} value={c.id}>{composantLabel(c)}</option>)}
+                    {composantsLabo.map((c) => <option key={c.id} value={c.id}>{composantLabel(voc, c)}</option>)}
                   </select>
                 </div>
               )}
@@ -1361,7 +1363,7 @@ export default function ActivitesPage({ onCreated, minimal }: Props) {
                         <label style={fieldLabel}>Type <span style={{ color: '#ef4444' }}>*</span></label>
                         <select className="input" style={{ width: '100%' }} value={af.composantId ?? ''}
                           onChange={(e) => { const v = e.target.value === '' ? null : Number(e.target.value); setBizActForms((p) => p.map((f, i) => i === idx ? { ...f, composantId: v } : f)); }}>
-                          {composantsActivite.map((c) => <option key={c.id} value={c.id}>{composantLabel(c)}</option>)}
+                          {composantsActivite.map((c) => <option key={c.id} value={c.id}>{composantLabel(voc, c)}</option>)}
                         </select>
                       </div>
                     )}

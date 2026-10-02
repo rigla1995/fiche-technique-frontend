@@ -6,7 +6,8 @@
 // 3. chaque règle R1–R12 et la normalisation d'apostrophe : un cas conforme ET un cas qui doit échouer ;
 // 4. modes residuels et accords, écarts admis (allow) ;
 // 5. la ligne de commande de bout en bout, sur un dépôt git jetable (codes de sortie, --root, --ensemble,
-//    fr.json, allow, inventaire) ; le mode lexique sur un faux backend jetable.
+//    fr.json, allow, inventaire) ; le mode lexique sur un faux backend jetable ;
+// 6. lot 2b (spec docs/lot-2b-spec.md §3.2) : extensions serveur E1 à E9 et E11, cas positifs ET négatifs.
 // Un cas « doit échouer » vérifie toujours QUEL écart l'outil signale, jamais seulement « pas conforme ».
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,6 +21,11 @@ import ts from 'typescript';
 import {
   analyser, analyserFr, comparer, differences, texteJsx, factoriser, termesDans, chargerAllow,
   empreinte, ecartsDeGel, texteAccords, MOTS_ACCORD, ACCORDS_APRES, TYPES_ALLOW, TROU,
+  // lot 2b (§3.2, E1 à E11)
+  formesDans, lireSql, estCodeSql, fonctionsSqlDe, validerRendu, diffSquelette, ecrireAccords,
+  CODES_SQL_CAPITALES, PERIMETRE_EN_PLUS, HORS_RESIDUELS, LOTS_REPORTE, RESIDUELS_EN_PLUS,
+  // consolidation du lot 2b : besoins ouverts
+  compterBesoins, ETAT_BESOIN_CLOS,
 } from './vocab-check.mjs';
 import { vocabDefaut } from '../src/vocab/vocab.ts';
 
@@ -420,11 +426,13 @@ test('R7 : un élément enfant est un marqueur dans son parent et une unité à 
 // messages du serveur (fichiers .js, rendu au bord). Les cas R8 se jouent donc sur un fichier `x.js`.
 const canonsJs = (source) => analyser(source, 'x.js', { t: false }).unites.map((u) => u.canon);
 const JS = { nom: 'x.js', t: false };
+// E2 (lot 2b) : au serveur, une balise n'est rendue qu'à un point de rendu — ici, le message d'une réponse JSON.
+const msg = (lit) => `res.json({ message: ${lit} });`;
 
 test('R8 : les balises [[…]] sont rendues dans les littéraux du serveur (.js) et dans fr.json', () => {
-  assert.deepEqual(canonsJs('const a = "Aucun [[nom:labo]] créé";'), ['Aucun labo créé']);
-  assert.deepEqual(canonsJs('const a = `[[Le:activite:pl]] de ${x}`;'), [`Les activités de ${TROU}`]);
-  assert.deepEqual(canonsJs('const a = "[[acc:activite:lié:liée:pl]]";'), ['liées']);
+  assert.deepEqual(canonsJs(msg('"Aucun [[nom:labo]] créé"')), ['Aucun labo créé']);
+  assert.deepEqual(canonsJs(msg('`[[Le:activite:pl]] de ${x}`')), [`Les activités de ${TROU}`]);
+  assert.deepEqual(canonsJs(msg('"[[acc:activite:lié:liée:pl]]"')), ['liées']);
   identique('res.status(400).json({ message: "Labo introuvable" });', 'res.status(400).json({ message: "[[Nom:labo]] introuvable" });', JS);
   // fr.json : valeur balisée rendue avec le lexique par défaut.
   const fr = analyserFr('{ "nav": { "activites": "[[Mon:activite:pl]]", "x": "Stock [[Court:labo]]" } }');
@@ -434,9 +442,9 @@ test('R8 : les balises [[…]] sont rendues dans les littéraux du serveur (.js)
 });
 
 test('R8 : DOIT échouer — balise invalide, clé inconnue, mauvaise balise', () => {
-  ecart('const a = "Aucun labo";', 'const a = "Aucun [[nomm:labo]]";', { plus: 'Aucun [[nomm:labo]]', erreur: /balise invalide \[\[nomm:labo\]\]/ }, JS);
-  ecart('const a = "Aucun labo";', 'const a = "Aucun [[nom:laboo]]";', { erreur: /clé de lexique inconnue « laboo »/ }, JS);
-  ecart('const a = "Aucun labo";', 'const a = "Aucun [[Nom:labo]]";', { moins: 'Aucun labo', plus: 'Aucun Labo' }, JS);
+  ecart(msg('"Aucun labo"'), msg('"Aucun [[nomm:labo]]"'), { plus: 'Aucun [[nomm:labo]]', erreur: /balise invalide \[\[nomm:labo\]\]/ }, JS);
+  ecart(msg('"Aucun labo"'), msg('"Aucun [[nom:laboo]]"'), { erreur: /clé de lexique inconnue « laboo »/ }, JS);
+  ecart(msg('"Aucun labo"'), msg('"Aucun [[Nom:labo]]"'), { moins: 'Aucun labo', plus: 'Aucun Labo' }, JS);
   const fr = analyserFr('{ "a": "[[nom:labo:zzz]]" }');
   assert.match(fr.erreurs[0].message, /balise invalide/);
 });
@@ -691,7 +699,7 @@ test('residuels : tout texte en dur portant un terme est candidat', () => {
   assert.deepEqual(candidates('const a = t("x.y", "Stock Activités");'), ['Stock Activités']);
   // Une fois réécrit, plus rien : ni l'appel voc, ni la balise, ni la clé i18n ne sont du texte en dur.
   assert.deepEqual(candidates(jsx('<p title={`${voc.Nom("stock")} ${voc.du("labo")}`}>{voc.Aucun("labo")} ici</p>')), []);
-  assert.deepEqual(candidates('const a = "[[Nom:stock]] [[Court:activite:pl]]"; const b = t("nav.stock_activite");', 'x.js'), []);
+  assert.deepEqual(candidates(`${msg('"[[Nom:stock]] [[Court:activite:pl]]"')} const b = t("nav.stock_activite");`, 'x.js'), []);
   // … mais dans un .tsx la balise n'est pas rendue : le terme est bel et bien écrit en dur.
   assert.deepEqual(candidates('const a = "[[Nom:stock]] [[Court:activite:pl]]";'), ['[[Nom:stock]] [[Court:activite:pl]]']);
   // Mais un terme resté en dur à côté d'un appel voc reste candidat.
@@ -758,7 +766,7 @@ test('accords (1) : chaque mot de la liste fermée devant un appel voc est signa
   assert.deepEqual(signales('const a = "Supprimer ce " + voc.nom("labo");'), ['ce nom:labo']);
   assert.deepEqual(signales('const a = `Aucun ${c ? voc.nom("labo") : voc.nom("activite")}`;'), ['aucun nom:labo', 'aucun nom:activite']);
   assert.deepEqual(signales('const a = `Aucun ${voc.nom(c ? "labo" : "activite")}`;'), ['aucun nom:labo', 'aucun nom:activite']);
-  assert.deepEqual(signales('const a = "Aucun [[nom:labo]] et une [[nom:activite]]";', 'x.js'), ['aucun nom:labo', 'une nom:activite']);
+  assert.deepEqual(signales(msg('"Aucun [[nom:labo]] et une [[nom:activite]]"'), 'x.js'), ['aucun nom:labo', 'une nom:activite']);
   assert.deepEqual(analyserFr('{ "a": "Supprimer cette [[nom:activite]]" }').unites[0].accords.map((a) => a.mot), ['cette']);
   assert.deepEqual(signales(jsx('<p>ce(s) {voc.nomS("labo")}</p>')), ['ce nomS:labo']);
   assert.deepEqual(signales(jsx('<p>Sélectionnez la/les <strong>{voc.nomS("activite")}</strong></p>')), ['les nomS:activite']);
@@ -773,7 +781,7 @@ test('accords (1) : chaque mot de la liste fermée devant un appel voc est signa
   // Mais la contraction reste due au moteur : « de {voc.le(k)} » (voc.du) et « à {voc.le(k)} » (voc.au).
   assert.deepEqual(signales(jsx('<p>Stock de {voc.le("activite")}</p>')), ['de le:activite']);
   assert.deepEqual(signales(jsx('<p>Livré à {voc.le("activite")} puis à {voc.ce("labo")}</p>')), ['à le:activite']);
-  assert.deepEqual(signales('const a = "Livré à [[le:activite]]";', 'x.js'), ['à le:activite']);
+  assert.deepEqual(signales(msg('"Livré à [[le:activite]]"'), 'x.js'), ['à le:activite']);
   assert.deepEqual(signales(jsx('<p>Liste de {voc.pl("labo")} et d\'{voc.pl("activite")}</p>')), ['de pl:labo', "d' pl:activite"]);
 });
 
@@ -797,7 +805,7 @@ test('allow : entrées typées et justifiées, sinon refusées', () => {
     const ok = chargerAllow(d);
     assert.deepEqual(ok.problemes, []);
     assert.deepEqual(ok.entrees.map((e) => [e.fichier, e.lot, e.modes]), [['src/a.tsx', 'F1', ['identite']], ['src/a.tsx', 'F1', ['residuels']]]);
-    assert.equal(TYPES_ALLOW.length, 11);
+    assert.equal(TYPES_ALLOW.length, 14); // + reporte, admin (E8) et fiscal (E1)
     const mauvais = [
       [{ ...bon, type: 'pratique' }, /type « pratique » inconnu/],
       [{ ...bon, justification: '' }, /justification manquante/],
@@ -1174,8 +1182,8 @@ test('balise [[ex:clé:texte par défaut]] — fr.json et messages du serveur : 
   assert.equal(u.miroir, 'Nom du local (ex: Local A)');
   assert.deepEqual(u.voc, ['du:activite', 'ex:activite']);
   // Messages du serveur (.js) : même rendu ; le texte par défaut porte un terme sans être un résiduel.
-  assert.deepEqual(canonsJs('const m = "Nom requis (ex: [[ex:labo:Labo Central]])";'), ['Nom requis (ex: Labo Central)']);
-  assert.deepEqual(candidates('const m = "Nom requis (ex: [[ex:labo:Labo Central]])";', 'x.js'), []);
+  assert.deepEqual(canonsJs(msg('"Nom requis (ex: [[ex:labo:Labo Central]])"')), ['Nom requis (ex: Labo Central)']);
+  assert.deepEqual(candidates(msg('"Nom requis (ex: [[ex:labo:Labo Central]])"'), 'x.js'), []);
   // Un déterminant en dur devant la balise s'accorde avec le terme qu'elle rend hors restauration.
   assert.deepEqual(analyserFr('{ "a": "Créez un [[ex:labo:Labo Central]]" }').unites[0].accords.map((s) => [s.mot, s.methode, s.cle]), [['un', 'ex', 'labo']]);
   // DOIT échouer : texte par défaut absent, vide ou en double ; clé inconnue ; texte par défaut différent de la référence.
@@ -1184,8 +1192,8 @@ test('balise [[ex:clé:texte par défaut]] — fr.json et messages du serveur : 
     assert.ok(r.erreurs.some((e) => /balise invalide/.test(e.message) && e.message.includes(balise)), balise);
   }
   assert.ok(analyserFr('{ "a": "[[ex:restaurant:Restaurant A]]" }').erreurs.some((e) => /clé de lexique inconnue « restaurant »/.test(e.message)));
-  ecart('const m = "Nom (ex: Restaurant A)";', 'const m = "Nom (ex: [[ex:activite:Restaurant B]])";', { moins: 'Nom (ex: Restaurant A)', plus: 'Nom (ex: Restaurant B)' }, JS);
-  identique('const m = "Nom (ex: Restaurant A)";', 'const m = "Nom (ex: [[ex:activite:Restaurant A]])";', JS);
+  ecart(msg('"Nom (ex: Restaurant A)"'), msg('"Nom (ex: [[ex:activite:Restaurant B]])"'), { moins: 'Nom (ex: Restaurant A)', plus: 'Nom (ex: Restaurant B)' }, JS);
+  identique(msg('"Nom (ex: Restaurant A)"'), msg('"Nom (ex: [[ex:activite:Restaurant A]])"'), JS);
   // Dans un fichier source du front, la balise n'est pas rendue (R8) : c'est voc.ex qu'il faut écrire.
   ecart(jsx('<label>Nom (ex: Restaurant A)</label>'), jsx('<label>Nom (ex: [[ex:activite:Restaurant A]])</label>'), { erreur: /balise \[\[ex:activite:Restaurant A\]\] dans un fichier source/ });
 });
@@ -1903,4 +1911,543 @@ test('CLI lexique : backend généré à jour, vecteurs identiques, gel — et c
   r = lexique();
   assert.equal(r.code, 1);
   assert.match(r.sortie, /backend généré : PÉRIMÉ[\s\S]*src\/utils\/vocab\.js/);
+});
+
+// ═════════════════════════════════════════════════════════════════════════════
+// 6. Lot 2b — extensions serveur (spec docs/lot-2b-spec.md §3.2) : E1 à E9 et E11, cas positifs ET négatifs
+// ═════════════════════════════════════════════════════════════════════════════
+
+const SRV = 'src/controllers/x.js';
+const analyseSrv = (source, nom = SRV, rendu = []) => analyser(source, nom, { t: false, rendu: rendu.map((d) => ({ fichier: nom, ...d })) });
+const canonsSrv = (source, nom, rendu) => analyseSrv(source, nom, rendu).unites.map((u) => u.canon);
+const sansRendu = (source, nom, rendu) => analyseSrv(source, nom, rendu).erreurs.filter((e) => e.type === 'balise-sans-rendu').map((e) => e.message);
+// Rendue = aucune erreur, aucune balise restée dans un texte ; → les textes, sans les codes ('X', 'LABO_REQUIS'…).
+function rendue(source, nom, rendu) {
+  const a = analyseSrv(source, nom, rendu);
+  assert.deepEqual(a.erreurs.map((e) => e.message), [], source);
+  assert.ok(a.unites.length > 0, source);
+  for (const u of a.unites) assert.ok(!u.canon.includes('[['), `${source} → ${u.canon}`);
+  return a.unites.map((u) => u.canon).filter((c) => !/^(?:[A-Z_]+|[a-z])$/.test(c));
+}
+function nonRendue(source, balise, nom, rendu) {
+  const m = sansRendu(source, nom, rendu);
+  assert.ok(m.some((x) => x.includes(`balise sans rendu ${balise}`)), `${source}\n→ ${JSON.stringify(m)}`);
+}
+
+test('E2 — points de rendu : message d\'une réponse JSON, de `erreurs`, d\'une erreur levée, rendre(voc, m) — la balise est rendue', () => {
+  assert.deepEqual(rendue("res.status(404).json({ message: '[[Nom:labo]] introuvable' });"), ['Labo introuvable']);
+  assert.deepEqual(rendue("return res.json({ success: true, message: '[[Nom:labo]] supprimé' });"), ['Labo supprimé']);
+  assert.deepEqual(rendue("res.status(200).set('X', 'y').json({ message: '[[Nom:transfert]] annulé' });"), ['Transfert annulé']);
+  // Chemin : parenthèses, ternaire (branches), || / ??, concaténation +, gabarit (morceaux et trous).
+  assert.deepEqual(rendue("res.json({ message: n > 1 ? '[[Nom:labo:pl]] créés' : '[[Nom:labo]] créé' });"), ['⟦Labo|Labos@>1⟧ ⟦créé|créés@>1⟧']);
+  assert.deepEqual(rendue("res.json({ message: (err.message || '[[Nom:labo]] introuvable') });"), ['⟦?⟦·⟧|Labo introuvable⟧']);
+  assert.deepEqual(rendue("res.json({ message: '[[Nom:labo]] « ' + nom + ' » introuvable' });"), ['Labo « ⟦·⟧ » introuvable']);
+  assert.deepEqual(rendue('res.json({ message: `[[Le:labo]] ${nom} est ${plein ? "[[acc:labo:plein:pleine]]" : "vide"}` });'), ['Le labo ⟦·⟧ est ⟦?plein|vide⟧']);
+  const message = "const message = '[[Nom:labo]] introuvable';\nreturn res.status(404).json({ message });";
+  assert.deepEqual(rendue(message), ['Labo introuvable']);
+  // Tableau `erreurs` : élément poussé, ou élément du tableau d'un corps de réponse.
+  assert.deepEqual(rendue("erreurs.push({ code: 'X', message: '[[Nom:labo]] requis' });"), ['Labo requis']);
+  assert.deepEqual(rendue("this.erreurs.push({ code: 'X', message: '[[Nom:activite]] requise' });"), ['Activité requise']);
+  assert.deepEqual(rendue("res.status(400).json({ erreurs: [{ code: 'X', message: '[[Nom:labo]] requis' }] });"), ['Labo requis']);
+  // Erreurs levées : position du message propre à chaque constructeur.
+  assert.deepEqual(rendue("throw new Error('[[Nom:labo]] introuvable');"), ['Labo introuvable']);
+  assert.deepEqual(rendue("throw new TransfertError(400, 'STOCK', 'Stock [[compl:labo]] insuffisant');"), ['Stock labo insuffisant']);
+  assert.deepEqual(rendue("throw new UniteError('INCONNUE', '[[Nom:activite]] inconnue');"), ['Activité inconnue']);
+  assert.deepEqual(rendue("return { error: rendre(voc, '[[Nom:labo]] introuvable') };"), ['Labo introuvable']);
+  // Identique à la référence : « Labo introuvable » balisé ne fait aucun écart.
+  identique("res.status(404).json({ message: 'Labo introuvable' });", "res.status(404).json({ message: '[[Nom:labo]] introuvable' });", { nom: SRV, t: false });
+});
+
+test('E2 — variable `const` de message : point de rendu si son initialiseur est littéral et TOUS ses emplois sont des trous d\'un point de rendu (cas `cible`, transfertService.js:174)', () => {
+  const cible = (emplois) => `const cible = missing.activiteId != null ? '[[ce:activite]]' : '[[ce:labo]]';\n${emplois}`;
+  const lever = 'throw new TransfertError(400, \'PT_NON_AFFECTE\', `PT non affecté à ${cible}`);';
+  assert.deepEqual(rendue(cible(lever)), ['⟦?cette activité|ce labo⟧', 'PT non affecté à ⟦·⟧']);
+  identique(
+    "const cible = missing.activiteId != null ? 'cette activité' : 'ce labo';\n" + lever,
+    cible(lever), { nom: SRV, t: false },
+  );
+  // DOIT échouer : un emploi hors d'un point de rendu (journal), une variable `let`, un initialiseur non littéral.
+  nonRendue(cible(`${lever}\nconsole.log(cible);`), '[[ce:activite]]');
+  nonRendue(cible(`${lever}\nws.addWorksheet(cible);`), '[[ce:labo]]');
+  nonRendue(`let cible = '[[ce:labo]]';\n${lever}`, '[[ce:labo]]');
+  nonRendue(`const cible = f('[[ce:labo]]');\n${lever}`, '[[ce:labo]]');
+  nonRendue("const m = '[[Nom:labo]] introuvable';\nconst copie = m;\nres.json({ message: copie });", '[[Nom:labo]]');
+});
+
+test('E2 — DOIT échouer : balise sans rendu (onglet, en-tête Excel, HTML d\'email, routes, validateur, details[], autre champ JSON) — erreur « balise sans rendu »', () => {
+  nonRendue("const ws = wb.addWorksheet('Historique [[Pl:perte]]');", '[[Pl:perte]]');
+  nonRendue("headerRow(ws, 5, ['Date', '[[Nom:labo]]', 'Quantité']);", '[[Nom:labo]]');
+  nonRendue('const html = `<p>[[Votre:labo:pl]] sont prêts</p>`;\nawait resend.emails.send({ to, subject, html });', '[[Votre:labo:pl]]');
+  nonRendue("await sendEmail({ subject: '[[Nom:labo]] créé', html });", '[[Nom:labo]]');
+  nonRendue("doc.text('[[Nom:labo]] : ' + nom);", '[[Nom:labo]]');
+  nonRendue("await pool.query('INSERT INTO notifications (message) VALUES ($1)', ['[[Nom:labo]] créé']);", '[[Nom:labo]]');
+  // Routes : jamais un point de rendu (texte parti dans errors[].msg) ; validateur .custom(…) de même, partout.
+  nonRendue("res.status(400).json({ message: '[[Nom:labo]] requis' });", '[[Nom:labo]]', 'src/routes/produits.js');
+  nonRendue("body('portion').custom((v) => { if (v <= 0) throw new Error('[[Nom:ingredient]] invalide'); return true; });", '[[Nom:ingredient]]', 'src/routes/produits.js');
+  nonRendue("body('portion').custom((v) => { if (v <= 0) throw new Error('[[Nom:ingredient]] invalide'); return true; });", '[[Nom:ingredient]]');
+  nonRendue("res.status(400).json({ message: 'Import refusé', details: [{ ligne: 2, message: '[[Nom:fournisseur]] en double' }] });", '[[Nom:fournisseur]]');
+  nonRendue("res.json({ titre: '[[Nom:labo]]', message: 'ok' });", '[[Nom:labo]]');
+  nonRendue("res.json([{ message: '[[Nom:labo]] requis' }]);", '[[Nom:labo]]');
+  nonRendue("client.json({ message: '[[Nom:labo]] requis' });", '[[Nom:labo]]');
+  nonRendue("const corps = { message: '[[Nom:labo]] requis' };\nres.json(corps);", '[[Nom:labo]]');
+  // Chemin rompu : `&&`, argument d'une fonction, mauvais rang d'argument.
+  nonRendue("res.json({ message: vide && '[[Nom:labo]] vide' });", '[[Nom:labo]]');
+  nonRendue("res.json({ message: f('[[Nom:labo]] vide') });", '[[Nom:labo]]');
+  nonRendue("throw new TransfertError(400, '[[Nom:labo]]', 'Stock insuffisant');", '[[Nom:labo]]');
+  nonRendue("throw new UniteError('[[Nom:labo]]');", '[[Nom:labo]]');
+  nonRendue("throw new AutreErreur('[[Nom:labo]] introuvable');", '[[Nom:labo]]');
+  nonRendue("return rendre('[[Nom:labo]] introuvable', voc);", '[[Nom:labo]]');
+  // Le texte reste celui de la balise : un écart d'identité, ET l'erreur, qu'aucune entrée allow n'éteint (CLI ci-dessous).
+  const r = comparer("const ws = wb.addWorksheet('Historique Pertes');", "const ws = wb.addWorksheet('Historique [[Pl:perte]]');", { nom: SRV, t: false });
+  assert.equal(r.ok, false);
+  assert.deepEqual(r.plus.map((u) => u.canon), ['Historique [[Pl:perte]]']);
+  assert.ok(r.erreurs.some((e) => e.type === 'balise-sans-rendu'), JSON.stringify(r.erreurs));
+  // … et au front (.ts / .tsx), rien n'a changé : c'est toujours l'erreur R8 « dans un fichier source ».
+  assert.ok(analyser("const a = '[[Nom:labo]]';", 'src/a.ts').erreurs.some((e) => e.type === 'balise-source'));
+});
+
+test('E2 — points déclarés dans scripts/vocab-rendu.json : argument, valeurs-objet (cles), retours-fonction ; jamais hors de leur fichier', () => {
+  const points = [
+    { genre: 'argument', nom: 'push', argument: 2 },
+    { genre: 'valeurs-objet', nom: 'CODES' },
+    { genre: 'valeurs-objet', nom: 'LIBELLES', cles: ['sg', 'pl'] },
+    { genre: 'retours-fonction', nom: 'messageSupplement' },
+  ];
+  assert.deepEqual(rendue("push('LABO_REQUIS', '[[Nom:labo]] requis');", SRV, points), ['Labo requis']);
+  assert.deepEqual(rendue("const CODES = Object.freeze({ INCONNUE: '[[Nom:activite]] inconnue', AUTRE: { x: '[[Nom:labo]] plein' } });", SRV, points), ['Activité inconnue', 'Labo plein']);
+  assert.deepEqual(rendue("const LIBELLES = { labo: { sg: '[[nom:labo]]', pl: '[[nom:labo:pl]]' } };", SRV, points), ['labo', 'labos']);
+  assert.deepEqual(rendue("function messageSupplement(t) {\n  if (t) return 'Un [[nom:supplement]] est lié';\n  return `Aucun [[nom:supplement]] (${t})`;\n}", SRV, points), ['Un supplément est lié', 'Aucun supplément (⟦·⟧)']);
+  assert.deepEqual(rendue("const messageSupplement = (t) => (t ? '[[Nom:supplement]] lié' : '[[Nom:supplement]] seul');", SRV, points), ['Supplément ⟦?lié|seul⟧']);
+  // DOIT échouer : autre rang, autre nom, clé hors liste, fonction non déclarée, autre fichier.
+  nonRendue("push('[[Nom:labo]] requis', 'X');", '[[Nom:labo]]', SRV, points);
+  nonRendue("ajouter('LABO', '[[Nom:labo]] requis');", '[[Nom:labo]]', SRV, points);
+  nonRendue("const LIBELLES = { labo: { sg: '[[nom:labo]]', titre: '[[Nom:labo]]' } };", '[[Nom:labo]]', SRV, points);
+  nonRendue("const AUTRES = { a: '[[Nom:labo]] plein' };", '[[Nom:labo]]', SRV, points);
+  nonRendue("function autreMessage() { return '[[Nom:labo]] plein'; }", '[[Nom:labo]]', SRV, points);
+  const ailleurs = analyser("push('LABO_REQUIS', '[[Nom:labo]] requis');", SRV, { t: false, rendu: points.map((d) => ({ fichier: 'src/services/autre.js', ...d })) });
+  assert.ok(ailleurs.erreurs.some((e) => e.type === 'balise-sans-rendu'), 'un point déclaré ne vaut que dans SON fichier');
+});
+
+test('E2 — vocab-rendu.json : schéma validé (genre, nom, argument, cles, champs inconnus)', () => {
+  const bon = [
+    { fichier: 'src/services/a.js', genre: 'argument', nom: 'push', argument: 2, justification: 'x' },
+    { fichier: 'src\\services\\b.js', genre: 'valeurs-objet', nom: 'LIBELLES', cles: ['sg', 'pl'] },
+    { fichier: 'src/c.js', genre: 'retours-fonction', nom: 'messageSupplement' },
+  ];
+  const ok = validerRendu(bon);
+  assert.deepEqual(ok.problemes, []);
+  assert.deepEqual(ok.points.map((p) => p.fichier), ['src/services/a.js', 'src/services/b.js', 'src/c.js']);
+  const mauvais = [
+    [{ fichier: 'a.js', genre: 'variable', nom: 'x' }, /genre « variable » inconnu/],
+    [{ fichier: 'a.js', genre: 'argument', nom: 'push' }, /« argument » \(rang à partir de 1\) obligatoire/],
+    [{ fichier: 'a.js', genre: 'argument', nom: 'push', argument: 0 }, /« argument » \(rang à partir de 1\) obligatoire/],
+    [{ fichier: 'a.js', genre: 'valeurs-objet', nom: 'X', argument: 1 }, /« argument » ne vaut que pour le genre argument/],
+    [{ fichier: 'a.js', genre: 'retours-fonction', nom: 'f', cles: ['sg'] }, /« cles » = liste de noms de propriétés/],
+    [{ fichier: 'a.js', genre: 'valeurs-objet', nom: 'X', cles: [] }, /« cles » = liste de noms de propriétés/],
+    [{ genre: 'argument', nom: 'push', argument: 1 }, /« fichier » manquant/],
+    [{ fichier: 'a.js', genre: 'argument', argument: 1 }, /« nom » manquant/],
+    [{ fichier: 'a.js', genre: 'argument', nom: 'push', argument: 1, rang: 2 }, /champ « rang » inconnu/],
+  ];
+  for (const [entree, attendu] of mauvais) {
+    const r = validerRendu([entree]);
+    assert.ok(r.problemes.some((p) => attendu.test(p)), `${JSON.stringify(entree)} → ${JSON.stringify(r.problemes)}`);
+  }
+  assert.match(validerRendu({}).problemes[0], /doit être un tableau/);
+});
+
+test('CLI E2 : « balise sans rendu » — code 1 qu\'aucune entrée allow n\'éteint ; vocab-rendu.json lu ; invalide = code 2', () => {
+  const avant = "exports.exporter = async (req, res) => {\n  const ws = wb.addWorksheet('Historique Pertes');\n  push('X', 'Labo requis');\n  res.json({ message: 'Labo introuvable' });\n};\n";
+  const d = depot({ 'src/controllers/pertesController.js': avant });
+  ecrire(d, { 'src/controllers/pertesController.js': avant.replace("'Labo introuvable'", "'[[Nom:labo]] introuvable'") });
+  let r = outil(d, 'identite');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  ecrire(d, { 'src/controllers/pertesController.js': avant.replace("'Historique Pertes'", "'Historique [[Pl:perte]]'") });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /pertesController\.js:2 {2}ERREUR balise sans rendu \[\[Pl:perte\]\]/);
+  const entree = { fichier: 'src/controllers/pertesController.js', avant: 'Historique Pertes', apres: 'Historique [[Pl:perte]]', type: 'deplacement', justification: 'Tentative : une entrée ne doit pas éteindre l\'erreur.' };
+  ecrire(d, { 'scripts/vocab-allow/socle.json': JSON.stringify([entree]) });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1, 'l\'écart est admis, l\'erreur reste');
+  assert.match(r.sortie, /ERREUR balise sans rendu \[\[Pl:perte\]\]/);
+  // residuels : la balise non rendue garde son terme en dur, ET l'erreur « balise sans rendu » est dite (code 1).
+  r = outil(d, 'residuels');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /pertesController\.js:2 {2}\[perte\] {2}« Historique \[\[Pl:perte\]\] »/);
+  assert.match(r.sortie, /pertesController\.js:2 {2}ERREUR balise sans rendu \[\[Pl:perte\]\]/);
+  assert.match(r.sortie, /residuels : \d+ fichier\(s\), \d+ unité\(s\) dans \d+ fichier\(s\), 1 erreur\(s\)/);
+  // Point déclaré : push(code, message), argument 2 — lu dans <root>/scripts/vocab-rendu.json.
+  ecrire(d, { 'scripts/vocab-allow/socle.json': null, 'src/controllers/pertesController.js': avant.replace("'Labo requis'", "'[[Nom:labo]] requis'") });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /pertesController\.js:3 {2}ERREUR balise sans rendu \[\[Nom:labo\]\]/);
+  const point = { fichier: 'src/controllers/pertesController.js', genre: 'argument', nom: 'push', argument: 2, justification: 'push(code, message) : message rendu au bord.' };
+  ecrire(d, { 'scripts/vocab-rendu.json': JSON.stringify([point]) });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  ecrire(d, { 'scripts/vocab-rendu.json': JSON.stringify([{ ...point, genre: 'appel' }]) });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 2);
+  assert.match(r.erreur, /vocab-rendu\.json : \d+ problème\(s\)\n {2}vocab-rendu\.json\[0\] : genre « appel » inconnu/);
+  ecrire(d, { 'scripts/vocab-rendu.json': '{ pas du json' });
+  assert.equal(outil(d, 'residuels').code, 2);
+});
+
+test('E3 — lexeur SQL : constantes, \'\' = apostrophe, commentaires -- et /* */ sautés, trou accepté, squelette', () => {
+  const l = lireSql("SELECT 'l''activité' AS a, -- on n'utilise pas 'labo' ici\n  'PT' /* 'Labo' */, \"col'x\", '⟦·⟧' FROM t WHERE c = $1 AND d = $12");
+  assert.deepEqual(l.constantes.map((c) => [c.texte, c.ligne]), [["l'activité", 0], ['PT', 1], ['⟦·⟧', 1]]);
+  assert.equal(l.squelette, "SELECT '⟦c⟧' AS a, '⟦c⟧' , \"col'x\", '⟦c⟧' FROM t WHERE c = $⟦n⟧ AND d = $⟦n⟧");
+  assert.deepEqual(lireSql("SELECT 'a\nb', 'c'").constantes.map((c) => c.ligne), [0, 1]);
+  // Codes : [a-z0-9_]+, ou la liste fermée des codes en capitales ('PT' au départ). Le reste est un texte.
+  assert.deepEqual(CODES_SQL_CAPITALES, ['PT']);
+  for (const c of ['labo', 'produit_transforme', 'pt', '1', 'PT']) assert.equal(estCodeSql(c), true, c);
+  for (const c of ['Labo', 'Prestataire', ' (labo)', 'FT', 'Sans catégorie', 'labo-x', '']) assert.equal(estCodeSql(c), false, c);
+});
+
+test('E3 — residuels : les constantes-textes d\'une requête sont jugées une par une ; les codes, les commentaires et les identifiants non', () => {
+  const sqlTextes = (source) => analyser(source, SRV, { t: false, complet: true }).unites.flatMap((u) => (u.sqlTextes ?? []).filter((c) => c.termes.length).map((c) => c.texte));
+  assert.deepEqual(sqlTextes("await pool.query(`SELECT COALESCE(p.nom, 'Prestataire') AS canal, 'labo' AS t FROM ventes v WHERE type_appro = 'PT'`, [id]);"), ['Prestataire']);
+  assert.deepEqual(sqlTextes("await pool.query(`SELECT ld.nom || ' (labo)' AS dest -- l'activité 'Activité'\n FROM labos ld /* 'Labo' */`);"), [' (labo)']);
+  assert.deepEqual(sqlTextes("const q = `SELECT 'Activité' AS site_type, '${grain}' AS g FROM activites`;"), ['Activité']);
+  assert.deepEqual(sqlTextes("await client.query(\"UPDATE stock SET type = 'transfert' WHERE origine = 'labo' AND ref = 'PT'\");"), []);
+  // Fonctions SQL : leurs arguments littéraux restent dans l'unité, jamais des unités à part.
+  const unites = analyser("await pool.query(`SELECT ${ptCategorieSql('pp')} AS cat, ${ptTypeSql('p', ptType)} FROM produits pp`);", SRV, { t: false, complet: true }).unites;
+  assert.equal(unites.length, 1);
+  assert.deepEqual(unites.filter((u) => !u.exclu).map((u) => u.canon), []);
+});
+
+test('CLI E3 : residuels lit le SQL — libellé en dur listé « sql », code jamais ; réécrit en paramètre, il sort', () => {
+  const avant = "exports.ventes = async (req, res) => {\n  const r = await pool.query(\n    `SELECT COALESCE(p.nom, 'Prestataire') AS canal,\n            'labo' AS t\n     FROM ventes v WHERE v.type_appro = 'PT'`, [id]);\n  res.json(r.rows);\n};\n";
+  const d = depot({ 'src/controllers/ventesController.js': avant });
+  let r = outil(d, 'residuels');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /^src\/controllers\/ventesController\.js:3 {2}\[prestataire\] {2}« Prestataire »$/m);
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 1 unité\(s\) dans 1 fichier\(s\)/);
+  ecrire(d, { 'src/controllers/ventesController.js': avant.replace("'Prestataire'", '$2').replace('[id]', "[id, voc.Nom('prestataire')]") });
+  r = outil(d, 'residuels');
+  assert.equal(r.code, 0, r.sortie);
+});
+
+test('E3 — mesure figée sur la copie de référence du serveur (bfb590a) : 46 constantes-libellés dans 22 requêtes ; 18 \'PT\' codes', (t) => {
+  const BACK = path.resolve(ICI, '..', '..', 'fiche-technique-backend');
+  const REF = 'bfb590a';
+  const git = (...a) => execFileSync('git', ['-C', BACK, ...a], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
+  try { git('cat-file', '-e', `${REF}^{commit}`); } catch { t.skip(`dépôt backend ou commit ${REF} indisponible (${BACK})`); return; }
+  const fonctionsSql = fonctionsSqlDe(git('show', `${REF}:src/utils/stockUtils.js`));
+  let requetes = 0;
+  let constantes = 0;
+  let pt = 0;
+  const parTexte = {};
+  for (const f of git('ls-tree', '-r', '--name-only', REF, '--', 'src').split('\n').filter((x) => x.endsWith('.js'))) {
+    for (const u of analyser(git('show', `${REF}:${f}`), f, { t: false, complet: true, fonctionsSql }).unites) {
+      const libelles = (u.sqlTextes ?? []).filter((c) => c.termes.length);
+      if (libelles.length) { requetes += 1; constantes += libelles.length; }
+      for (const c of libelles) parTexte[c.texte] = (parTexte[c.texte] ?? 0) + 1;
+      pt += (u.sql?.codes ?? []).filter((c) => c.texte === 'PT').length;
+    }
+  }
+  // 44 avec le lexique de 43 clés (spec §3.2 E3) ; 46 depuis S1 (§4.3) : les clés produit_vendable_abr et
+  // produit_valorise_abr reconnaissent « P. Vendable / » et « P. Valorisé / » (dashboardV2Controller.js), dans des
+  // requêtes déjà comptées — le nombre de requêtes ne bouge pas.
+  assert.deepEqual({ requetes, constantes, pt }, { requetes: 22, constantes: 46, pt: 18 });
+  assert.equal(parTexte['P. Vendable / '] + parTexte['P. Valorisé / '], 2);
+  // Dont 30 pour les catégories PT (10 copies × 3, ptCategorieSql comprise) — spec carto-outil §2.5.
+  assert.equal(parTexte['Produits Transformés Utilisables'] + parTexte['Produits Composés Valorisés'] + parTexte['Produits Transformés Vendables'], 30);
+});
+
+// stockUtils.js (forme réelle) : la référence et la version courante peuvent différer.
+const STOCK_UTILS = "function ptCategorieSql(alias) {\n  return `CASE WHEN ${alias}.type = 'utilisable' THEN 'Produits Transformés Utilisables' ` +\n         `WHEN ${alias}.origine = 'labo' THEN 'Produits Composés Valorisés' ` +\n         `ELSE 'Produits Transformés Vendables' END`;\n}\nfunction ptTypeSql(alias, ptType) {\n  if (ptType === 'utilisable') return `${alias}.type = 'utilisable'`;\n  if (ptType === 'valorise') return `(${alias}.type = 'vendable' AND ${alias}.origine = 'labo')`;\n  return '1=1';\n}\nmodule.exports = { ptCategorieSql, ptTypeSql };\n";
+const CASE_PP = "CASE WHEN pp.type = 'utilisable' THEN 'Produits Transformés Utilisables' WHEN pp.origine = 'labo' THEN 'Produits Composés Valorisés' ELSE 'Produits Transformés Vendables' END";
+const requete = (sql, params = '[id]') => `const r = await pool.query(\`${sql}\`, ${params});`;
+
+test('E4 — factorisation des catégories PT : ${ptCategorieSql(x)} développée avec stockUtils.js du même commit — aucun écart, aucune requête « à relire »', () => {
+  const avant = requete(`SELECT COALESCE(c.nom, (SELECT ${CASE_PP} FROM produits pp WHERE pp.id = p.produit_id)) AS categorie FROM pertes p`);
+  const apres = requete("SELECT COALESCE(c.nom, (SELECT ${ptCategorieSql('pp')} FROM produits pp WHERE pp.id = p.produit_id)) AS categorie FROM pertes p");
+  const r = identique(avant, apres, { nom: SRV, t: false, stockUtils: STOCK_UTILS });
+  assert.deepEqual(r.relire, []);
+  // Prédicat ptTypeSql : développé aussi (argument non littéral = branche non évaluable → jeton stable).
+  identique(requete("SELECT * FROM produits p WHERE (p.type = 'vendable' AND p.origine = 'labo')"), requete("SELECT * FROM produits p WHERE ${ptTypeSql('p', 'valorise')}"), { nom: SRV, t: false, stockUtils: STOCK_UTILS });
+  // DOIT échouer : sans stockUtils.js, ou avec un stockUtils.js dont le libellé a changé (lu AU MÊME commit).
+  ecart(avant, apres, { moins: 'Produits Composés Valorisés' }, { nom: SRV, t: false });
+  const change = STOCK_UTILS.replace("'Produits Composés Valorisés'", "'Produits Composés'");
+  ecart(avant, apres, { moins: 'Produits Composés Valorisés', plus: 'Produits Composés' }, { nom: SRV, t: false, stockUtils: change, stockUtilsRef: STOCK_UTILS });
+  // Mauvais alias : le squelette change (requête à relire), pas les textes.
+  const alias = comparer(avant, apres.replace("ptCategorieSql('pp')", "ptCategorieSql('p')"), { nom: SRV, t: false, stockUtils: STOCK_UTILS });
+  assert.equal(alias.ok, true);
+  assert.equal(alias.relire.length, 1);
+});
+
+test('E4 — trois multi-ensembles : libellés avec les textes du fichier, codes à part, squelette « à relire » (jamais un écart)', () => {
+  const opts = { nom: SRV, t: false };
+  const base = "SELECT COALESCE(p.nom, 'Prestataire') AS canal FROM ventes v WHERE v.type_vente = 'prestataire' AND v.date >= $1";
+  // Libellé sorti du SQL vers un paramètre $n calculé en JS : la même unité de texte reste — 0 écart, 1 requête à relire.
+  const deplace = comparer(requete(base, '[from]'), requete(base.replace("'Prestataire'", '$2'), "[from, voc.Nom('prestataire')]"), opts);
+  assert.equal(deplace.ok, true, detail(deplace));
+  assert.equal(deplace.relire.length, 1);
+  assert.match(deplace.relire[0].avant.canon, /COALESCE\(p\.nom, '⟦c⟧'\)/);
+  assert.match(deplace.relire[0].apres.canon, /COALESCE\(p\.nom, \$⟦n⟧\)/);
+  // Squelette seul changé ($1 → $2, colonne ajoutée) : pas un écart, une ligne à relire.
+  const sq = comparer(requete(base, '[from]'), requete(`${base.replace('$1', '$2')} AND v.id > 0`, '[id, from]'), opts);
+  assert.equal(sq.ok, true);
+  assert.equal(sq.relire.length, 1);
+  assert.deepEqual(diffSquelette('SELECT a FROM t WHERE x = $⟦n⟧', 'SELECT a FROM t WHERE x = $⟦n⟧ AND y'), [
+    'avant : « SELECT a FROM t WHERE x = $⟦n⟧⟨⟩ »',
+    'après : « SELECT a FROM t WHERE x = $⟦n⟧⟨ AND y⟩ »',
+  ]);
+  // DOIT échouer : libellé changé dans le SQL ; code changé, ajouté ou retiré.
+  ecart(requete(base, '[from]'), requete(base.replace("'Prestataire'", "'Intermédiaire'"), '[from]'), { moins: 'Prestataire', plus: 'Intermédiaire' }, opts);
+  ecart(requete(base, '[from]'), requete(base.replace("'prestataire'", "'directe'"), '[from]'), { moins: "⟦sql⟧'prestataire'", plus: "⟦sql⟧'directe'" }, opts);
+  ecart(requete("SELECT * FROM appros a WHERE a.type_appro = 'PT'"), requete("SELECT * FROM appros a WHERE a.type_appro = 'transfert'"), { moins: "⟦sql⟧'PT'", plus: "⟦sql⟧'transfert'" }, opts);
+  ecart(requete("SELECT * FROM appros a WHERE a.type_appro IN ('PT', 'manuel')"), requete("SELECT * FROM appros a WHERE a.type_appro IN ('PT')"), { moins: "⟦sql⟧'manuel'" }, opts);
+  // Un code ne s'apparie jamais à un texte : « Labo » (libellé) devenu 'labo' (code) = deux écarts distincts.
+  const code = comparer(requete("SELECT 'Labo' AS site_type FROM labos"), requete("SELECT 'labo' AS site_type FROM labos"), opts);
+  assert.equal(code.ok, false);
+  assert.ok(code.paires.every((p) => !(p.avant && p.apres)), JSON.stringify(code.paires.map((p) => [p.avant?.canon, p.apres?.canon])));
+  // Un libellé déplacé vers le JS ne s'annule que s'il reste une unité JS ENTIÈRE de même texte.
+  ecart(requete("SELECT ld.nom || ' (labo)' AS dest FROM labos ld"), "const r = await pool.query(`SELECT ld.nom AS dest FROM labos ld`);\nconst lignes = r.rows.map((x) => `${x.dest} (${voc.court('labo')})`);", { moins: ' (labo)', plus: '⟦·⟧ (labo)' }, opts);
+});
+
+test('CLI E4 : identite — « requête modifiée, à relire » avec le diff, code 0 ; un code changé n\'est admis que par « discriminant »', () => {
+  const avant = "exports.a = async (req, res) => {\n  const r = await pool.query(\n    `SELECT COALESCE(p.nom, 'Prestataire') AS canal\n     FROM ventes v WHERE v.type_vente = 'prestataire' AND v.date >= $1`, [from]);\n  res.json(r.rows);\n};\n";
+  const d = depot({ 'src/controllers/a.js': avant, 'src/utils/stockUtils.js': STOCK_UTILS });
+  ecrire(d, { 'src/controllers/a.js': avant.replace("'Prestataire'", '$2').replace('[from]', "[from, voc.Nom('prestataire')]") });
+  let r = outil(d, 'identite');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.match(r.sortie, /src\/controllers\/a\.js:\d+ {2}requête modifiée, à relire\n {2}avant : « .*⟨'⟦c⟧'⟩.* »\n {2}après : « .*⟨\$⟦n⟧⟩.* »/);
+  assert.match(r.sortie, /0 écart\(s\), 0 erreur\(s\), 1 requête\(s\) SQL à relire/);
+  // Code changé : écart ; une entrée d'un autre type ne l'admet pas ; « discriminant », oui.
+  ecrire(d, { 'src/controllers/a.js': avant.replace("'prestataire'", "'via_prestataire'") });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /avant : « ⟦sql⟧'prestataire' ».*\n {2}après : « ⟦sql⟧'via_prestataire' »/);
+  const entree = { fichier: 'src/controllers/a.js', avant: "⟦sql⟧'prestataire'", apres: "⟦sql⟧'via_prestataire'", type: 'deplacement', justification: 'Code de canal renommé (essai).' };
+  ecrire(d, { 'scripts/vocab-allow/B4.json': JSON.stringify([entree]) });
+  assert.equal(outil(d, 'identite').code, 1, 'un code n\'est admis que par une entrée discriminant');
+  ecrire(d, { 'scripts/vocab-allow/B4.json': JSON.stringify([{ ...entree, type: 'discriminant' }]) });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 0, r.sortie);
+  assert.match(r.sortie, /écarts admis \(allow\) : 1 entrée\(s\) — discriminant 1/);
+  // Factorisation des catégories PT : stockUtils.js lu au même commit de chaque côté — ni écart, ni « à relire ».
+  const pt = `exports.b = async (req, res) => {\n  const r = await pool.query(\`SELECT (SELECT ${CASE_PP} FROM produits pp WHERE pp.id = p.produit_id) AS cat FROM pertes p\`);\n  res.json(r.rows);\n};\n`;
+  const d2 = depot({ 'src/controllers/b.js': pt, 'src/utils/stockUtils.js': STOCK_UTILS });
+  ecrire(d2, { 'src/controllers/b.js': pt.replace(CASE_PP, "${ptCategorieSql('pp')}") });
+  r = outil(d2, 'identite');
+  assert.equal(r.code, 0, r.sortie);
+  assert.doesNotMatch(r.sortie, /à relire/);
+});
+
+test('E5 — profil serveur des residuels : documentation API, fichiers entièrement admin, noms de champs d\'express-validator, router.delete', () => {
+  assert.deepEqual(HORS_RESIDUELS, ['src/config/swagger.js', 'src/controllers/bossController.js', 'src/controllers/adminRapportsController.js', 'src/controllers/adminSiteController.js']);
+  const exclusSrv = (source, nom = 'src/routes/produits.js') => analyser(source, nom, { t: false }).unites.filter((u) => u.termes.length).map((u) => u.exclu ?? null);
+  assert.deepEqual(exclusSrv("router.post('/', body('portion').isFloat(), param('labo').isInt(), query('stock').optional(), h);"), ['nom de champ de body', 'nom de champ de param', 'nom de champ de query']);
+  assert.deepEqual(exclusSrv("router.delete('/labo/:id', authenticate, h);"), ['argument de router.delete']);
+  assert.deepEqual(exclusSrv("app.use(swaggerUi.setup(spec, { customSiteTitle: 'API Fiche Technique — stock et labo' }));", 'src/app.js'), ['propriété customSiteTitle']);
+  // DOIT rester candidat : le message d'un validateur, un texte passé à Set.delete, un titre ordinaire.
+  assert.deepEqual(exclusSrv("body('portion').isFloat({ gt: 0 }).withMessage('La portion doit être positive');"), ['nom de champ de body', null]);
+  assert.deepEqual(exclusSrv("vus.delete('Labo central');"), [null]);
+  assert.deepEqual(exclusSrv("vus.delete('labo');"), ['argument de vus.delete']);
+  assert.deepEqual(exclusSrv("res.json({ titre: 'Stock du labo' });", 'src/controllers/x.js'), [null]);
+});
+
+test('CLI E5 / E6 : residuels du serveur — exclus par chemin (cités au rapport), moteur généré hors périmètre ; un contrôleur ordinaire reste lu', () => {
+  const texte = "module.exports = { titre: 'Stock du labo' };\n";
+  const d = depot({
+    'src/config/swagger.js': "module.exports = { info: { title: 'API — stock des labos' } };\n",
+    'src/controllers/bossController.js': texte, 'src/controllers/adminRapportsController.js': texte, 'src/controllers/adminSiteController.js': texte,
+    'src/utils/vocab.js': "module.exports = { Nom: () => 'Labo' };\n",
+    'src/controllers/laboController.js': texte,
+  });
+  let r = outil(d, 'residuels');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /^src\/controllers\/laboController\.js:1 {2}\[labo, stock\] {2}« Stock du labo »$/m);
+  assert.match(r.sortie, /exclus par chemin \(documentation API, fichiers entièrement admin — I4\) : src\/config\/swagger\.js, src\/controllers\/bossController\.js, src\/controllers\/adminRapportsController\.js, src\/controllers\/adminSiteController\.js/);
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 1 unité\(s\) dans 1 fichier\(s\)/);
+  // Demandé nommément, un fichier exclu reste exclu (cité au rapport).
+  r = outil(d, 'residuels', 'src/controllers/bossController.js');
+  assert.equal(r.code, 0, r.sortie);
+  assert.match(r.sortie, /exclus par chemin .* : src\/controllers\/bossController\.js$/m);
+  // Le mode accords et l'identité, eux, lisent tous les fichiers du périmètre (l'exclusion E5 est propre aux résiduels).
+  ecrire(d, { 'src/controllers/bossController.js': "module.exports = { titre: 'Stock du labo central' };\n" });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /bossController\.js:1\n {2}avant : « Stock du labo ».*\n {2}après : « Stock du labo central »/);
+});
+
+test('E1 / CLI : docuseal-templates/generate.js est dans le périmètre du serveur — parcours, ls-tree, diff, ls-files', () => {
+  assert.deepEqual(PERIMETRE_EN_PLUS, ['docuseal-templates/generate.js']);
+  const gen = "function buildFactureAppro(data) {\n  doc.text('Facture d\\'approvisionnement — labo');\n}\nmodule.exports = { buildFactureAppro };\n";
+  const d = depot({ 'src/a.js': "module.exports = {};\n", 'docuseal-templates/generate.js': gen, 'docuseal-templates/autre.js': "doc.text('Stock du labo');\n" });
+  let r = outil(d, 'residuels');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /^docuseal-templates\/generate\.js:2 {2}\[labo, appro\] {2}« Facture d'approvisionnement — labo »$/m);
+  assert.doesNotMatch(r.sortie, /autre\.js/, 'seul generate.js est ajouté au périmètre');
+  // identite : fichier modifié (git diff), comparé à la référence (ls-tree) — sans demande nominative.
+  ecrire(d, { 'docuseal-templates/generate.js': gen.replace('— labo', '— atelier') });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /docuseal-templates\/generate\.js:2\n {2}avant : « Facture d'approvisionnement — labo ».*\n {2}après : « Facture d'approvisionnement — atelier »/);
+  // Nouveau (ls-files --others) : comparé comme un fichier nouveau.
+  const d2 = depot({ 'src/a.js': "module.exports = {};\n" });
+  ecrire(d2, { 'docuseal-templates/generate.js': gen });
+  r = outil(d2, 'identite');
+  assert.equal(r.code, 1);
+  assert.match(r.sortie, /docuseal-templates\/generate\.js : nouveau fichier \(absent de la référence\)/);
+  // Dépôt sans generate.js (le front) : rien de plus n'est lu.
+  const d3 = depot({ 'src/a.js': "module.exports = { t: 'Stock du labo' };\n" });
+  r = outil(d3, 'residuels');
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 1 unité\(s\)/);
+});
+
+test('E7 — vocab-accords.txt du serveur : écrit dans <root>/scripts, seulement si son contenu change, fins de ligne gardées', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-accords-'));
+  temporaires.push(dir);
+  const f = path.join(dir, 'vocab-accords.txt');
+  assert.equal(ecrireAccords(f, 'a\nb\n'), true);
+  assert.equal(fs.readFileSync(f, 'utf8'), 'a\nb\n');
+  fs.writeFileSync(f, 'a\r\nb\r\n');
+  const avant = fs.statSync(f).mtimeMs;
+  assert.equal(ecrireAccords(f, 'a\nb\n'), false, 'contenu inchangé (CRLF d\'une extraction git) : fichier non touché');
+  assert.equal(fs.statSync(f).mtimeMs, avant);
+  assert.equal(ecrireAccords(f, 'a\nc\n'), true);
+  assert.equal(fs.readFileSync(f, 'utf8'), 'a\r\nc\r\n', 'CRLF gardé');
+  // Au serveur : un passage complet écrit le fichier ; un passage sur une liste de fichiers, jamais.
+  const d = depot({ 'src/controllers/a.js': "res.json({ message: 'Labo introuvable' });\n", 'scripts/.garde': '' });
+  ecrire(d, { 'src/controllers/a.js': "res.json({ message: '[[Nom:labo]] introuvable' });\n" });
+  const sortie = path.join(d, 'scripts', 'vocab-accords.txt');
+  let r = outil(d, 'accords', 'src/controllers/a.js');
+  assert.equal(r.code, 0, r.sortie);
+  assert.equal(fs.existsSync(sortie), false);
+  r = outil(d, 'accords');
+  assert.equal(r.code, 0, r.sortie);
+  assert.match(fs.readFileSync(sortie, 'utf8'), /src\/controllers\/a\.js\n {2}l\. 1\n {4}défaut : Labo introuvable\n {4}miroir : Usine introuvable\n/);
+});
+
+test('E8 — types d\'écarts admis : « reporte » (champ lot 3 ou 2c), « admin » (route et garde), « fiscal »', () => {
+  for (const t of ['reporte', 'admin', 'fiscal']) assert.ok(TYPES_ALLOW.includes(t), t);
+  assert.deepEqual(LOTS_REPORTE, ['3', '2c']);
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-allow-2b-'));
+  temporaires.push(d);
+  const base = { fichier: 'src/services/x.js', avant: 'Contrat de restauration', apres: 'Contrat de restauration' };
+  const charger = (entrees) => { fs.writeFileSync(path.join(d, 'B2.json'), JSON.stringify(entrees)); return chargerAllow(d); };
+  const ok = charger([
+    { ...base, type: 'reporte', lot: 3, justification: 'Texte fixe du contrat : lot 3 (modèle DocuSeal).' },
+    { ...base, type: 'reporte', lot: '2c', justification: 'Description de search_knowledge_base : 2c.' },
+    { ...base, type: 'admin', justification: 'Lu par le super_admin seulement : route /admin/clients, garde requireSuperAdmin.' },
+    { ...base, type: 'admin', justification: 'Annuaire du boss : route GET /api/boss/annuaire, garde requireBoss.' },
+    { ...base, type: 'fiscal', justification: 'Facture acheteur : document fiscal inchangé à l\'octet près.' },
+  ]);
+  assert.deepEqual(ok.problemes, []);
+  assert.deepEqual(ok.entrees.map((e) => [e.type, e.lot, e.reporteAuLot ?? null]), [['reporte', 'B2', '3'], ['reporte', 'B2', '2c'], ['admin', 'B2', null], ['admin', 'B2', null], ['fiscal', 'B2', null]]);
+  const mauvais = [
+    [{ ...base, type: 'reporte', justification: 'Texte fixe du contrat, plus tard.' }, /type « reporte » : champ « lot » obligatoire \(3 ou 2c\)/],
+    [{ ...base, type: 'reporte', lot: 4, justification: 'Texte fixe du contrat, plus tard.' }, /champ « lot » obligatoire/],
+    [{ ...base, type: 'homonyme', lot: 3, justification: 'Homonyme du mot contrat.' }, /le champ « lot » ne vaut que pour le type « reporte »/],
+    [{ ...base, type: 'admin', justification: 'Texte lu seulement par un administrateur.' }, /type « admin » : la justification nomme la route .* et son garde/],
+    [{ ...base, type: 'admin', justification: 'Garde requireSuperAdmin, sans la route.' }, /type « admin » : la justification nomme la route/],
+    [{ ...base, type: 'admin', justification: 'Route /admin/clients, sans le garde.' }, /type « admin » : la justification nomme la route/],
+  ];
+  for (const [entree, attendu] of mauvais) {
+    const r = charger([entree]);
+    assert.ok(r.problemes.some((p) => attendu.test(p)), `${JSON.stringify(entree)} → ${JSON.stringify(r.problemes)}`);
+  }
+});
+
+test('E9 — accords : les 8 formes relevées au serveur sont dans ACCORDS_APRES, et signalées après un terme', () => {
+  const formes = ['élevé|élevée', 'détecté|détectée', 'bon|bonne', 'récent|récente', 'confirmé|confirmée', 'autorisé|autorisée', 'référencé|référencée', 'réintégré|réintégrée'];
+  for (const f of formes) assert.ok(ACCORDS_APRES.includes(f), f);
+  // Les 6 autres formes relevées y étaient déjà (constat 15) : aucune en double.
+  assert.equal(new Set(ACCORDS_APRES).size, ACCORDS_APRES.length);
+  for (const f of ['supprimé|supprimée', 'valorisé|valorisée', 'désactivé|désactivée', 'reçu|reçue', 'actuel|actuelle', 'existant|existante']) assert.ok(ACCORDS_APRES.includes(f), f);
+  const apres = (source) => analyser(source, SRV, { t: false }).unites.flatMap((u) => u.accords ?? []).filter((a) => a.position === 'apres').map((a) => a.mot);
+  assert.deepEqual(apres(msg("'[[Nom:transfert]] confirmé'")), ['confirmé']);
+  assert.deepEqual(apres(msg("'Écart [[compl:inventaire]] détecté'")), ['détecté']);
+  assert.deepEqual(apres(msg("'[[Nom:article]] déjà référencé'")), ['référencé']);
+  // Accordé par le moteur : rien à signaler.
+  assert.deepEqual(apres(msg("'[[Nom:transfert]] [[acc:transfert:confirmé:confirmée]]'")), []);
+});
+
+test('E11 — formesDans(texte, formes) : mots entiers d\'une liste DONNÉE, sigle sensible à la casse, accents compris', () => {
+  assert.deepEqual(formesDans('Le Labo central et la PT du jour', ['labo', 'PT', 'stock']), ['labo', 'PT']);
+  assert.deepEqual(formesDans('Stock pt et labos', ['PT', 'labo']), [], 'sigle : casse respectée ; « labos » n\'est pas « labo »');
+  assert.deepEqual(formesDans('laboratoire, labo_id, sous-labo, labo2', ['labo']), ['labo'], '« sous-labo » : le tiret sépare les mots');
+  assert.deepEqual(formesDans('laboratoire, labo_id, labo2', ['labo']), []);
+  assert.deepEqual(formesDans('Activité du jour', ['activité', 'activite']), ['activité'], 'accents compris : « activite » ne trouve pas « Activité »');
+  assert.deepEqual(formesDans('ACTIVITÉ', ['activité']), ['activité'], 'un mot se cherche sans tenir compte de la casse');
+  assert.deepEqual(formesDans('Prix (labo) : 3', ['labo', 'labo', 'Prix']), ['labo', 'Prix'], 'formes rendues telles que données, sans doublon, dans l\'ordre de la liste');
+  assert.deepEqual(formesDans('Plats du jour', ['plat']), []);
+  assert.deepEqual(formesDans('a.b*c', ['b*c', 'b.c', 'a+']), ['b*c'], 'forme échappée dans le motif : « b.c » ne trouve pas « b*c »');
+  assert.deepEqual(formesDans('', ['labo']), []);
+  assert.deepEqual(formesDans('labo', []), []);
+  assert.deepEqual(formesDans(null, ['labo']), []);
+  // termesDans, lui, cherche toujours toutes les formes du lexique par défaut.
+  assert.ok(termesDans('Stock labo').includes('labo'));
+});
+
+test('E10 — idiomes du guide serveur : `const voc = req.voc ?? vocabDefaut;` reconnu ; (req.voc ?? vocabDefaut).Nom(…) et req[\'voc\'] non (interdits)', () => {
+  const opts = { nom: SRV, t: false };
+  const avant = "res.status(404).json({ message: 'Labo introuvable' });";
+  identique(avant, "const voc = req.voc ?? vocabDefaut;\nres.status(404).json({ message: `${voc.Nom('labo')} introuvable` });", opts);
+  identique(avant, "res.status(404).json({ message: `${req.voc.Nom('labo')} introuvable` });", opts);
+  ecart(avant, "res.status(404).json({ message: `${(req.voc ?? vocabDefaut).Nom('labo')} introuvable` });", { moins: 'Labo introuvable', plus: '⟦·⟧ introuvable' }, opts);
+  ecart(avant, "res.status(404).json({ message: `${req['voc'].Nom('labo')} introuvable` });", { moins: 'Labo introuvable', plus: '⟦·⟧ introuvable' }, opts);
+});
+
+test('CLI identite : un fichier nommé qui n\'est pas du code (CHAMPS.md) est ignoré et signalé, pas compilé', () => {
+  const d = depot({ 'src/A.tsx': PAGE_A, 'docs/CHAMPS.md': '# Champs\n\nNb activités, Option Acheteurs (lot 2)\n' });
+  ecrire(d, { 'docs/CHAMPS.md': '# Champs\n\nNb activités, Option Acheteurs (lot 3)\n' });
+  const r = outil(d, 'identite', 'src/A.tsx', 'docs/CHAMPS.md');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.match(r.sortie, /docs\/CHAMPS\.md : pas du code, ignoré par identite/);
+  assert.match(r.sortie, /identite : 1 fichier\(s\) comparé\(s\).* 0 écart\(s\), 0 erreur\(s\)/);
+  assert.doesNotMatch(r.sortie, /analyse impossible/);
+});
+
+test('E5b / CLI : residuels sans liste lit aussi docuseal-templates/CHAMPS.md — ses écarts admis servent, pas « sans objet » ; identite ne le lit pas', () => {
+  assert.deepEqual(RESIDUELS_EN_PLUS, ['docuseal-templates/CHAMPS.md']);
+  const champs = '| `Nb labos` | nombre de labos du compte |\n';
+  const d = depot({ 'src/a.js': 'module.exports = {};\n', 'docuseal-templates/CHAMPS.md': champs });
+  let r = outil(d, 'residuels');
+  assert.equal(r.code, 1, r.sortie + r.erreur);
+  assert.match(r.sortie, /^docuseal-templates\/CHAMPS\.md:1 .*« Nb labos »$/m);
+  assert.match(r.sortie, /residuels : 2 fichier\(s\), 1 unité\(s\) dans 1 fichier\(s\)/);
+  ecrire(d, { 'scripts/vocab-allow/B2.json': JSON.stringify([{ fichier: 'docuseal-templates/CHAMPS.md', avant: 'Nb labos', apres: 'Nb labos', type: 'discriminant', justification: 'Nom de champ DocuSeal, inchangé.' }]) });
+  r = outil(d, 'residuels');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.doesNotMatch(r.sortie, /allow sans objet/);
+  // Nommé, il est lu de même ; un autre fichier nommé seul ne l'entraîne pas.
+  r = outil(d, 'residuels', 'docuseal-templates/CHAMPS.md');
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 0 unité\(s\)/);
+  r = outil(d, 'residuels', 'src/a.js');
+  assert.match(r.sortie, /residuels : 1 fichier\(s\), 0 unité\(s\)/);
+  // identite et accords, sans liste, ne le lisent pas (pas du code, hors périmètre git E1).
+  ecrire(d, { 'docuseal-templates/CHAMPS.md': champs.replace('du compte', 'du compte client') });
+  r = outil(d, 'identite');
+  assert.equal(r.code, 0, r.sortie + r.erreur);
+  assert.doesNotMatch(r.sortie, /CHAMPS/);
+});
+
+test('Consolidation 2b — compterBesoins ne compte que les besoins ouverts (sans état final dans etat)', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-besoins-'));
+  try {
+    assert.equal(compterBesoins(path.join(d, 'absent')), 0);
+    fs.writeFileSync(path.join(d, 'B1.json'), JSON.stringify([
+      { demande: 'sans état' },
+      { demande: 'a', etat: 'APPLIQUÉ par l\'intégrateur' },
+      { demande: 'b', etat: 'REFUSÉ (consolidation) : facultatif' },
+      { demande: 'c', etat: 'REPORTÉ au lot 2c' },
+      { demande: 'd', etat: 'SANS OBJET : non capté' },
+      { demande: 'e', etat: 'DÉCISION CLIENT : garder tel quel' },
+      { demande: 'f', etat: 'NON appliqué, porté à la consolidation' },
+      { demande: 'g', etat: 'APPLIQUÉES' },
+    ]));
+    fs.writeFileSync(path.join(d, 'B2.json'), '[]');
+    fs.writeFileSync(path.join(d, 'S5-decisions.json'), JSON.stringify({ decisions: [{ demande: 'x' }] }));
+    fs.writeFileSync(path.join(d, 'B3.json'), '{ illisible');
+    // ouverts : « sans état », « NON appliqué… », « APPLIQUÉES » (pas un état final), + 1 fichier illisible
+    assert.equal(compterBesoins(d), 4);
+    assert.ok(ETAT_BESOIN_CLOS.test('DÉCISION CLIENT (consolidation)'));
+    assert.ok(!ETAT_BESOIN_CLOS.test('Appliqué'));
+  } finally {
+    fs.rmSync(d, { recursive: true, force: true });
+  }
 });

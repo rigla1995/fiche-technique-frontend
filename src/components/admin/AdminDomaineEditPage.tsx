@@ -70,6 +70,10 @@ const LEXIQUE_LABELS: Record<string, string> = {
   cat_pt_vendable: 'Catégorie « PT vendables » (titre)',
   transfert_abr: 'Transfert, abréviation (badges « ↗ Transf. » ; forme courte « Trf » des colonnes étroites)',
   supplement_abr: 'Supplément, abréviation (badge « Suppl. »)',
+  pt_abr: 'Produit transformé, abréviation (type d\'appro « Prod. Transformé » des exports)',
+  produit_utilisable_abr: 'Produit utilisable, abréviation (en-tête « Produits util. » des exports)',
+  produit_vendable_abr: 'Produit vendable, abréviation (préfixe « P. Vendable / » du tableau de bord)',
+  produit_valorise_abr: 'Produit valorisé, abréviation (préfixe « P. Valorisé / » du tableau de bord)',
 };
 /** Ordre d'affichage : chaque clé simple, suivie des clés dérivées dont elle est le parent. */
 const ORDRE_CLES: string[] = LEXIQUE_CLES
@@ -78,6 +82,8 @@ const ORDRE_CLES: string[] = LEXIQUE_CLES
 const ENTREE_VIDE: EntreeLexique = { sg: '', pl: '', g: 'm', el: false };
 // Mêmes bornes que la validation du serveur (src/utils/lexiqueValidation.js, spec §1.4).
 const LEXIQUE_MAX = { forme: 60, courte: 20, icone: 8 };
+// « < » et « > » : refusés par le serveur (LEXIQUE_CARACTERE_INTERDIT, lot 2b §4.4), retirés dès la saisie.
+const sansChevrons = (s: string) => s.replace(/[<>]/g, '');
 // Le domaine par défaut est la référence de LabFlow : son lexique est le lexique par défaut, le serveur refuse tout écart.
 const SLUG_DOMAINE_DEFAUT = 'restauration';
 
@@ -127,7 +133,9 @@ const TYPES_TECH: { value: ComposantTypeTechnique; label: string; hint: string }
   { value: 'acheteurs', label: 'Base acheteurs', hint: 'option B2B (paliers)' },
 ];
 
-interface ComposantRow extends Composant { _key: string; _new?: boolean; _codeTouche?: boolean }
+/** Genre et élision d'un composant (migration 192) : élision null = déduite de l'initiale (« auto »). */
+type ComposantAccord = { genre: 'm' | 'f'; elision: boolean | null };
+interface ComposantRow extends Omit<Composant, 'genre' | 'elision'>, ComposantAccord { _key: string; _new?: boolean; _codeTouche?: boolean }
 
 let keySeq = 0;
 const nextKey = () => `k${++keySeq}`;
@@ -156,11 +164,13 @@ function toRows(composants: Composant[]): ComposantRow[] {
       venteActive: c.venteActive !== false,
       productionActive: c.productionActive !== false,
       actif: c.actif !== false,
+      genre: c.genre === 'f' ? 'f' : 'm',
+      elision: typeof c.elision === 'boolean' ? c.elision : null,
       _key: nextKey(),
     }));
 }
 
-function rowsToPayload(rows: ComposantRow[]): Composant[] {
+function rowsToPayload(rows: ComposantRow[]): (Composant & ComposantAccord)[] {
   return rows.map((r) => ({
     ...(r.id != null ? { id: r.id } : {}),
     code: r.code.trim(),
@@ -175,6 +185,8 @@ function rowsToPayload(rows: ComposantRow[]): Composant[] {
     nbMax: r.nbMax == null ? null : Math.max(0, Number(r.nbMax) || 0),
     ordre: Number(r.ordre) || 0,
     actif: !!r.actif,
+    genre: r.genre === 'f' ? 'f' : 'm',
+    elision: typeof r.elision === 'boolean' ? r.elision : null,
   }));
 }
 
@@ -525,7 +537,7 @@ export default function AdminDomaineEditPage() {
     const ordre = rows.reduce((m, r) => Math.max(m, r.ordre), 0) + 1;
     setRows((prev) => [...prev, {
       _key: nextKey(), _new: true, code: '', libelle: '', libellePluriel: '', icone: '', aide: '',
-      typeTechnique: 'activite', venteActive: true, productionActive: true, nbMin: 0, nbMax: null, ordre, actif: true,
+      typeTechnique: 'activite', venteActive: true, productionActive: true, nbMin: 0, nbMax: null, ordre, actif: true, genre: 'm', elision: null,
     }]);
   };
 
@@ -687,10 +699,10 @@ export default function AdminDomaineEditPage() {
             <div style={{ padding: '30px 20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.88rem' }}>Aucun composant. Ajoutez au moins un composant de type Activité ou Labo.</div>
           ) : (
             <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 980 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 1180 }}>
                 <thead>
                   <tr style={{ background: '#fffbeb' }}>
-                    {['Ordre', 'Icône', 'Libellé', 'Pluriel', 'Code', 'Type technique', 'Vend', 'Produit', 'Min', 'Max', 'Actif', ''].map((h, i) => (
+                    {['Ordre', 'Icône', 'Libellé', 'Pluriel', 'Genre', 'Élision', 'Code', 'Type technique', 'Vend', 'Produit', 'Min', 'Max', 'Actif', ''].map((h, i) => (
                       <th key={i} style={th}>{h}</th>
                     ))}
                   </tr>
@@ -707,6 +719,22 @@ export default function AdminDomaineEditPage() {
                           <input value={r.aide || ''} onChange={(e) => updateRow(r._key, { aide: e.target.value })} placeholder="Aide courte (wizard)" style={{ ...cell, width: 150, marginTop: 4, fontSize: '0.74rem', color: '#64748b' }} />
                         </td>
                         <td style={td}><input value={r.libellePluriel || ''} onChange={(e) => updateRow(r._key, { libellePluriel: e.target.value })} placeholder="Restaurants" style={{ ...cell, width: 130 }} /></td>
+                        <td style={td}>
+                          <select value={r.genre} onChange={(e) => updateRow(r._key, { genre: e.target.value === 'f' ? 'f' : 'm' })} style={{ ...cell, width: 100 }}>
+                            <option value="m">Masculin</option>
+                            <option value="f">Féminin</option>
+                          </select>
+                        </td>
+                        <td style={td}>
+                          <select value={r.elision == null ? 'auto' : r.elision ? 'oui' : 'non'}
+                            title="auto : déduite de l'initiale (voyelle : oui ; h, y et consonne : non). Oui pour un h muet (mon huilerie)."
+                            onChange={(e) => updateRow(r._key, { elision: e.target.value === 'oui' ? true : e.target.value === 'non' ? false : null })}
+                            style={{ ...cell, width: 80 }}>
+                            <option value="auto">auto</option>
+                            <option value="oui">oui</option>
+                            <option value="non">non</option>
+                          </select>
+                        </td>
                         <td style={td}>
                           {r._new ? (
                             <input value={r.code} onChange={(e) => updateRow(r._key, { code: e.target.value.toLowerCase(), _codeTouche: true })} placeholder="restaurant" style={{ ...cell, width: 120, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }} />
@@ -748,7 +776,7 @@ export default function AdminDomaineEditPage() {
             <div>
               <div style={{ fontWeight: 800, color: 'var(--text)' }}>Vocabulaire du domaine</div>
               <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Champ vide = terme par défaut (affiché en gris). Seuls les écarts sont enregistrés. Élision = le mot commence par une voyelle (l'activité, d'activité). Si le singulier est modifié, le pluriel, le genre et l'élision doivent être renseignés. Forme courte = sigle ou abréviation des libellés courts (PT, Appro, FT). Une clé « ↳ » suit son parent tant que son singulier est vide (seule son icône se change à part).</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Caractères refusés : {'[ ] | * \\ ` { } $'}, retour à la ligne et tabulation. {LEXIQUE_MAX.forme} caractères au plus ({LEXIQUE_MAX.courte} pour la forme courte).</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>Caractères refusés : {'[ ] | * \\ ` { } $ < >'}, retour à la ligne et tabulation. {LEXIQUE_MAX.forme} caractères au plus ({LEXIQUE_MAX.courte} pour la forme courte).</div>
               {profil?.slug === SLUG_DOMAINE_DEFAUT && (
                 <div style={{ fontSize: '0.78rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', marginTop: 6 }}>Domaine par défaut : son lexique est le vocabulaire de référence de LabFlow, il ne se modifie pas. Pour un autre vocabulaire, créez un domaine.</div>
               )}
@@ -786,10 +814,10 @@ export default function AdminDomaineEditPage() {
                         <code style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{cle}</code>
                         {parent && <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginTop: 1 }}>suit “{parent}” si vide</div>}
                       </td>
-                      <td style={td}><input value={row.sg} disabled={verrou} maxLength={LEXIQUE_MAX.forme} placeholder={h.sg || '—'} onChange={(e) => set({ sg: e.target.value })} style={{ ...cell, width: 190, borderColor: row.sg ? ACCENT : undefined }} /></td>
-                      <td style={td}><input value={row.pl} disabled={verrou} maxLength={LEXIQUE_MAX.forme} placeholder={h.pl || '—'} onChange={(e) => set({ pl: e.target.value })} style={{ ...cell, width: 190, borderColor: row.pl ? ACCENT : undefined }} /></td>
-                      <td style={td}><input value={row.courtSg} disabled={verrou} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.sg || '—'} onChange={(e) => set({ courtSg: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtSg ? ACCENT : undefined }} /></td>
-                      <td style={td}><input value={row.courtPl} disabled={verrou} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.pl || courtHerite?.sg || '—'} onChange={(e) => set({ courtPl: e.target.value })} style={{ ...cell, width: 110, borderColor: row.courtPl ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.sg} disabled={verrou} maxLength={LEXIQUE_MAX.forme} placeholder={h.sg || '—'} onChange={(e) => set({ sg: sansChevrons(e.target.value) })} style={{ ...cell, width: 190, borderColor: row.sg ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.pl} disabled={verrou} maxLength={LEXIQUE_MAX.forme} placeholder={h.pl || '—'} onChange={(e) => set({ pl: sansChevrons(e.target.value) })} style={{ ...cell, width: 190, borderColor: row.pl ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.courtSg} disabled={verrou} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.sg || '—'} onChange={(e) => set({ courtSg: sansChevrons(e.target.value) })} style={{ ...cell, width: 110, borderColor: row.courtSg ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.courtPl} disabled={verrou} maxLength={LEXIQUE_MAX.courte} placeholder={courtHerite?.pl || courtHerite?.sg || '—'} onChange={(e) => set({ courtPl: sansChevrons(e.target.value) })} style={{ ...cell, width: 110, borderColor: row.courtPl ? ACCENT : undefined }} /></td>
                       <td style={td}>
                         <select value={row.g ?? gHerite} disabled={suitParent || verrou} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ g: e.target.value === 'f' ? 'f' : 'm' })} style={{ ...cell, width: 110, cursor: suitParent ? 'not-allowed' : 'pointer', opacity: suitParent ? 0.6 : 1, borderColor: row.g != null && row.g !== gHerite ? ACCENT : undefined }}>
                           <option value="m">masculin</option>
@@ -797,7 +825,7 @@ export default function AdminDomaineEditPage() {
                         </select>
                       </td>
                       <td style={{ ...td, textAlign: 'center' }}><input type="checkbox" checked={row.el ?? elHerite} disabled={suitParent || verrou} title={suitParent ? `Suit « ${parent} » tant que le singulier est vide` : undefined} onChange={(e) => set({ el: e.target.checked })} /></td>
-                      <td style={td}><input value={row.icon} disabled={verrou} maxLength={LEXIQUE_MAX.icone} placeholder={h.icon || '—'} onChange={(e) => set({ icon: e.target.value })} style={{ ...cell, width: 60, textAlign: 'center', borderColor: row.icon ? ACCENT : undefined }} /></td>
+                      <td style={td}><input value={row.icon} disabled={verrou} maxLength={LEXIQUE_MAX.icone} placeholder={h.icon || '—'} onChange={(e) => set({ icon: sansChevrons(e.target.value) })} style={{ ...cell, width: 60, textAlign: 'center', borderColor: row.icon ? ACCENT : undefined }} /></td>
                       <td style={{ ...td, textAlign: 'right' }}>
                         <button onClick={() => set({ sg: '', pl: '', courtSg: '', courtPl: '', icon: '', g: null, el: null, courtEl: undefined, appo: undefined })} disabled={!modifie} title={parent ? `Réinitialiser (suit « ${parent} »)` : 'Réinitialiser (valeurs par défaut)'} style={{ ...iconBtn, opacity: modifie ? 1 : 0.35, cursor: modifie ? 'pointer' : 'default' }}>↺</button>
                       </td>

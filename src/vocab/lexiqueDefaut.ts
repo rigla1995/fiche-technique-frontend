@@ -108,6 +108,14 @@ export const LEXIQUE_DEFAUT = geler({
   // ou « supplément » y lit son propre terme (copie de l'entrée du parent, forme courte comprise).
   transfert_abr:      { sg: 'Transf.',                   pl: 'Transf.',                    g: 'm', el: false, icon: '🚚', court: { sg: 'Trf', pl: 'Trf' }, derive_de: 'transfert', mode: 'copie' },
   supplement_abr:     { sg: 'Suppl.',                    pl: 'Suppl.',                     g: 'm', el: false, icon: '➕', derive_de: 'supplement', mode: 'copie' },
+  // Lot 2b (spec §4.3) : les abréviations que le serveur et l'écran écrivaient en dur (type d'appro « Prod. Transformé »,
+  // en-tête « Produits util. », préfixes « P. Vendable / » et « P. Valorisé / » du tableau de bord). Identité par défaut ;
+  // un domaine qui renomme le parent y lit son propre terme (copie de l'entrée entière du parent, forme courte comprise).
+  // Clés EN PLUS, jamais une forme courte posée sur une clé existante (elle changerait estDefaut d'un ancien écran).
+  pt_abr:                 { sg: 'Prod. Transformé', pl: 'Prod. Transformés', g: 'm', el: false, icon: '🍲', derive_de: 'pt',                 mode: 'copie' },
+  produit_utilisable_abr: { sg: 'Produit util.',    pl: 'Produits util.',    g: 'm', el: false, icon: '🧂', derive_de: 'produit_utilisable', mode: 'copie' },
+  produit_vendable_abr:   { sg: 'P. Vendable',      pl: 'P. Vendables',      g: 'm', el: false, icon: '🛒', derive_de: 'produit_vendable',   mode: 'copie' },
+  produit_valorise_abr:   { sg: 'P. Valorisé',      pl: 'P. Valorisés',      g: 'm', el: false, icon: '💎', derive_de: 'produit_valorise',   mode: 'copie' },
 });
 
 /** Clé du lexique par défaut (les appels `voc.…('clé')` sont vérifiés à la compilation). */

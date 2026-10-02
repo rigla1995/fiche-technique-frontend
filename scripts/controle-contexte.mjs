@@ -10,7 +10,10 @@
 //     pas l'objet `user` (un formulaire alimenté par un effet [user] — « Mon profil » — garde sa saisie) ;
 //   - changement de lexique, déconnexion, rôles (admin et boss : vocabulaire par défaut) ;
 //   - exemples de saisie (voc.ex, balise [[ex:…]] de fr.json) : ceux d'aujourd'hui tant que le vocabulaire est
-//     celui par défaut (non connecté, restauration, admin, boss), neutres et construits pour un autre domaine.
+//     celui par défaut (non connecté, restauration, admin, boss), neutres et construits pour un autre domaine ;
+//   - lexique allégé (lot 2b §5.7) : le serveur rend `domaine.lexique: null` pour le vocabulaire par défaut (compte
+//     restauration, acheteur d'un vendeur restauration), au login comme à /auth/me ; la bascule « lexique complet
+//     → null » au retour sur l'onglet garde l'objet vocabDefaut.
 //
 // Dépendances : rolldown (livré avec vite, dans node_modules de ce dépôt) et puppeteer, pris dans un dépôt
 // voisin — par défaut ../labflow-site ; sinon LABFLOW_PUPPETEER=<chemin d'un package.json qui résout puppeteer>.
@@ -270,28 +273,102 @@ for (const [role, attendu, note] of [
   await page.close();
 }
 
-// ── D. Compte restauration (le serveur renvoie le lexique par défaut complet) : l'objet vocabDefaut lui-même
+// ── D. Compte restauration : le serveur renvoie `lexique: null` (lot 2b §5.7), au login comme à /auth/me.
+// L'objet vocabDefaut lui-même.
 {
   const page = await ouvrir();
-  await page.evaluate(() => { window.__mock.me = { id: 7, name: 'Test', email: 'resto@test.local', role: 'client', modeCompte: 'actif', domaine: { id: 1, slug: 'restauration', nom: 'Restauration', lexique: 'defaut' } }; window.__log.length = 0; });
+  await page.evaluate(() => { window.__mock.me = { id: 7, name: 'Test', email: 'resto@test.local', role: 'client', modeCompte: 'actif', domaine: { id: 1, slug: 'restauration', nom: 'Restauration', lexique: null, composants: [], regles: {} } }; window.__log.length = 0; });
   await page.evaluate(async () => { await window.__auth.login('a', 'b'); });
   const log = await page.evaluate(() => window.__log.slice());
   verifier('D restauration : voc reste l\'objet vocabDefaut, composant mémoïsé non re-rendu, effet [voc] non relancé',
     log.filter((l) => l.c === 'Ecran').every((l) => l.voc === 1) && !log.some((l) => l.c === 'Memo') && !log.some((l) => l.c === 'effet[voc]'), JSON.stringify(log.map((l) => [l.c, l.voc])));
   verifier('D1b restauration : exemple de saisie et libellé d\'origine, voc.estDefaut vrai', await exemple(page) === EXEMPLE_DEFAUT, await exemple(page));
   const vis = await retourOnglet(page);
-  verifier('D2 restauration, retour d\'onglet (réponse identique) : aucun rendu', vis.calls.length === 1 && vis.log.length === 0, JSON.stringify([vis.calls.length, vis.log.map((l) => l.c)]));
+  verifier('D2 restauration, retour d\'onglet (/auth/me identique, lexique null) : aucun rendu', vis.calls.length === 1 && vis.log.length === 0, JSON.stringify([vis.calls.length, vis.log.map((l) => l.c)]));
+  const stocke = await page.evaluate(() => JSON.parse(localStorage.getItem('user')).domaine);
+  verifier('D3 restauration : user stocké avec lexique null', stocke && stocke.lexique === null && stocke.slug === 'restauration', JSON.stringify(stocke));
+  verifier('D aucune erreur console', page.__erreurs.length === 0, page.__erreurs.join(' | '));
+  await page.close();
+}
+
+// ── D4. Rechargement avec un jeton stocké, compte restauration (/auth/me rend lexique null)
+{
+  const page = await ouvrir(() => {
+    localStorage.setItem('token', 'jeton-1');
+    window.__preMock = { id: 7, name: 'Test', email: 'resto@test.local', role: 'client', onboardingStep: 9, modeCompte: 'actif', domaine: { id: 1, slug: 'restauration', nom: 'Restauration', lexique: null, composants: [], regles: {} } };
+  });
+  await page.waitForSelector('#protege', { timeout: 5000 }).catch(() => {});
+  const log = await page.evaluate(() => window.__log.slice());
+  const rendus = log.filter((l) => l.c === 'Ecran' || l.c === 'EcranProtege');
+  verifier('D4 rechargement, lexique null : tous les rendus en vocabDefaut (objet id 1), effet [voc] seulement sur vocabDefaut',
+    rendus.length > 0 && rendus.every((l) => l.voc === 1 && l.le === 'le labo' && l.t === 'Stock Labo') && log.filter((l) => l.c === 'effet[voc]').every((l) => l.voc === 1),
+    JSON.stringify(rendus.map((l) => [l.c, l.voc, l.le])));
+  verifier('D4b rechargement, lexique null : exemple de saisie d\'origine', await exemple(page) === EXEMPLE_DEFAUT, await exemple(page));
+  verifier('D4 aucune erreur console', page.__erreurs.length === 0, page.__erreurs.join(' | '));
+  await page.close();
+}
+
+// ── D5. Acheteur d'un vendeur restauration : domaine réduit { id, slug, nom, lexique: null }
+{
+  const page = await ouvrir();
+  await page.evaluate(() => { window.__mock.me = { id: 8, name: 'Acheteur', email: 'acheteur@test.local', role: 'acheteur', modeCompte: 'actif', domaine: { id: 1, slug: 'restauration', nom: 'Restauration', lexique: null } }; window.__log.length = 0; });
+  await page.evaluate(async () => { await window.__auth.login('a', 'b'); });
+  const log = await page.evaluate(() => window.__log.slice());
+  const e = await etat(page);
+  verifier('D5 acheteur, vendeur restauration (lexique null) : vocabDefaut, aucun effet [voc] relancé',
+    e.ecran === 'le labo | Stock Labo' && log.filter((l) => l.c === 'Ecran').every((l) => l.voc === 1) && !log.some((l) => l.c === 'effet[voc]'), JSON.stringify([e.ecran, log.map((l) => [l.c, l.voc])]));
+  verifier('D5b acheteur, vendeur restauration : exemple de saisie d\'origine', await exemple(page) === EXEMPLE_DEFAUT, await exemple(page));
+  const vis = await retourOnglet(page);
+  verifier('D5c acheteur, retour d\'onglet (/auth/me identique, lexique null) : aucun rendu', vis.calls.length === 1 && vis.log.length === 0, JSON.stringify([vis.calls.length, vis.log.map((l) => l.c)]));
+  verifier('D5 aucune erreur console', page.__erreurs.length === 0, page.__erreurs.join(' | '));
+  await page.close();
+}
+
+// ── D6. Bascule du serveur (lot 2b §5.7) : connecté avec le lexique par défaut COMPLET (ancien serveur), le
+// retour sur l'onglet reçoit `lexique: null`. Le domaine diffère : le user est reposé UNE fois ; voc reste
+// l'objet vocabDefaut (aucun effet [voc]) ; le retour suivant ne pose plus rien.
+{
+  const page = await ouvrir();
+  await page.evaluate(() => { window.__mock.me = { id: 7, name: 'Test', email: 'resto@test.local', role: 'client', modeCompte: 'actif', domaine: { id: 1, slug: 'restauration', nom: 'Restauration', lexique: 'defaut', composants: [], regles: {} } }; });
+  await page.evaluate(async () => { await window.__auth.login('a', 'b'); });
+  await page.evaluate(() => { window.__mock.me.domaine.lexique = null; });
+  let vis = await retourOnglet(page);
+  let e = await etat(page);
+  verifier('D6 lexique complet → null au retour d\'onglet : user reposé une fois, voc toujours vocabDefaut, effet [voc] non relancé',
+    vis.calls.length === 1 && vis.log.filter((l) => l.c === 'effet[user]').length === 1 && !vis.log.some((l) => l.c === 'effet[voc]')
+    && vis.log.filter((l) => l.c === 'Ecran').every((l) => l.voc === 1) && e.ecran === 'le labo | Stock Labo',
+    JSON.stringify([vis.calls.length, vis.log.map((l) => [l.c, l.voc]), e.ecran]));
+  verifier('D6b après la bascule : exemple de saisie d\'origine, user stocké avec lexique null',
+    await exemple(page) === EXEMPLE_DEFAUT && (await page.evaluate(() => JSON.parse(localStorage.getItem('user')).domaine.lexique)) === null, await exemple(page));
+  vis = await retourOnglet(page);
+  verifier('D6c retour suivant (/auth/me identique) : aucun rendu', vis.calls.length === 1 && vis.log.length === 0, JSON.stringify([vis.calls.length, vis.log.map((l) => l.c)]));
+
+  // Le compte change de domaine : lexique Hôtellerie complet, puis retour au vocabulaire par défaut (null).
+  await page.evaluate(() => { window.__mock.me.domaine = { id: 2, slug: 'hotellerie', nom: 'Hôtellerie', lexique: 'hotellerie', composants: [], regles: {} }; });
+  await retourOnglet(page);
+  e = await etat(page);
+  verifier('D6d lexique Hôtellerie au retour d\'onglet : écran en Hôtellerie', e.ecran === 'la cuisine centrale | Stock Cuisine', e.ecran);
+  await page.evaluate(() => { window.__mock.me.domaine = { id: 1, slug: 'restauration', nom: 'Restauration', lexique: null, composants: [], regles: {} }; });
+  vis = await retourOnglet(page);
+  e = await etat(page);
+  verifier('D6e lexique Hôtellerie complet → null au retour d\'onglet : retour à l\'objet vocabDefaut (écran, t(), composant mémoïsé)',
+    e.ecran === 'le labo | Stock Labo' && e.memo === 'Mes activités' && vis.log.filter((l) => l.c === 'effet[voc]').length === 1
+    && vis.log.filter((l) => l.c === 'effet[voc]').every((l) => l.voc === 1),
+    JSON.stringify([e, vis.log.map((l) => [l.c, l.voc])]));
+  verifier('D6f après le retour au défaut : exemple de saisie d\'origine', await exemple(page) === EXEMPLE_DEFAUT, await exemple(page));
+  verifier('D6 aucune erreur console', page.__erreurs.length === 0, page.__erreurs.join(' | '));
   await page.close();
 }
 
 // ── E. Formes RÉELLES du serveur : /auth/login rend moins de champs que /auth/me, dans un autre ordre
 // (authController.js : login = id, name, email, role, onboardingStep, compteurs, domaine ; me ajoute phone,
 // entrepriseName, modeCompte, prolongationJours). Le premier retour sur l'onglet après une connexion ne doit
-// pas remplacer le user : une saisie en cours dans « Mon profil » serait écrasée.
+// pas remplacer le user : une saisie en cours dans « Mon profil » serait écrasée. Compte restauration :
+// `domaine.lexique` vaut null au login comme à /auth/me (lot 2b §5.7).
 {
   const page = await ouvrir();
   await page.evaluate(() => {
-    const domaine = { id: 1, slug: 'restauration', nom: 'Restauration', lexique: 'defaut', composants: [], regles: {} };
+    const domaine = { id: 1, slug: 'restauration', nom: 'Restauration', lexique: null, composants: [], regles: {} };
     window.__mock.login = { id: 7, name: 'Nom en base', email: 'resto@test.local', role: 'client', onboardingStep: 0, activitesCount: 2, labosCount: 1, domaine };
     window.__mock.me = { id: 7, name: 'Nom en base', email: 'resto@test.local', phone: '20111222', role: 'client', onboardingStep: 0, entrepriseName: 'Ma société', modeCompte: 'actif', prolongationJours: 0, activitesCount: 2, labosCount: 1, domaine };
   });

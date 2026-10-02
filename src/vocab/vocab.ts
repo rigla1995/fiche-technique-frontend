@@ -314,6 +314,8 @@ function construire<K extends string>(lexique: unknown, estDefaut: boolean = fal
     const e = normaliser(source[k]);
     if (e) table.set(k, e);
   }
+  // Signalements déjà faits : une fois par clé. Borné (vidé au-delà de 500) : au serveur, un texte rendu peut
+  // interpoler une donnée saisie de la forme d'une balise (« [[nom:xyz]] »), et l'ensemble vit tout le processus.
   const signalees = new Set<string>();
 
   const entree = (k: string): EntreeNorm => {
@@ -321,6 +323,7 @@ function construire<K extends string>(lexique: unknown, estDefaut: boolean = fal
     const e = table.get(cle);
     if (e) return e;
     if (!signalees.has(cle)) {
+      if (signalees.size >= 500) signalees.clear();
       signalees.add(cle);
       console.warn(`[vocab] clé de lexique inconnue : « ${cle} »`);
     }

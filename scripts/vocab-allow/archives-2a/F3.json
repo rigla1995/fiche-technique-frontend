@@ -1,0 +1,9 @@
+[
+  {
+    "fichier": "src/components/client/StockPage.tsx",
+    "avant": "⚠️ Appro existante — ⟦·⟧",
+    "apres": "⚠️ Appro existant — ⟦·⟧",
+    "type": "faute-corrigee",
+    "justification": "« Appro » (approvisionnement) est masculin dans le lexique et dans le reste du fichier (« un appro », « appro manuel ») : l'accord féminin d'origine était une faute, le moteur accorde par voc.acc('appro', 'existant', 'existante') (décision S4, exemple E30 du guide)."
+  }
+]
