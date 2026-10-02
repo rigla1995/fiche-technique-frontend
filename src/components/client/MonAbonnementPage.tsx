@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
-import type { Abonnement, AbonnementConfig, Promotion, DomaineProfil } from '../../types';
+import type { Abonnement, AbonnementConfig, Promotion, DomaineDuCompte } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Vocab } from '../../vocab/vocab';
@@ -17,7 +17,7 @@ const identite = (voc: Vocab): { type: 'activite' | 'labo' | 'gerant' | 'acheteu
   { type: 'gerant', label: voc.Nom('gerant'), nbKey: 'nbGerants' },
   { type: 'acheteurs', label: `Base ${voc.court('acheteur', true)}`, nbKey: 'nbAcheteurs' },
 ];
-function lignesCapacite(config: AbonnementConfig, domaine: DomaineProfil | null | undefined, voc: Vocab): LigneCapacite[] {
+function lignesCapacite(config: AbonnementConfig, domaine: DomaineDuCompte | null | undefined, voc: Vocab): LigneCapacite[] {
   const ICONE_TYPE = iconeType(voc);
   const souscrits = config.composants || [];
   const menu = (domaine?.composants || []).filter((c) => c.actif !== false).slice().sort((a, b) => (a.ordre ?? 0) - (b.ordre ?? 0) || (a.id ?? 0) - (b.id ?? 0));
@@ -103,14 +103,14 @@ export default function MonAbonnementPage() {
   const [contratInfo, setContratInfo] = useState<{ available: boolean; date: string | null } | null>(null);
   // Menu du domaine du compte : /auth/me.domaine (AuthContext) sinon GET /api/domaines (client → son domaine)
   const { user } = useAuth();
-  const [domaineFetched, setDomaineFetched] = useState<DomaineProfil | null>(null);
+  const [domaineFetched, setDomaineFetched] = useState<DomaineDuCompte | null>(null);
   useEffect(() => {
     if (user?.domaine) return;
     api.get('/api/domaines')
-      .then(({ data }) => { if (Array.isArray(data) && data[0]) setDomaineFetched(data[0] as DomaineProfil); })
+      .then(({ data }) => { if (Array.isArray(data) && data[0]) setDomaineFetched(data[0] as DomaineDuCompte); })
       .catch(() => { /* repli : composants souscrits + libellés identité */ });
   }, [user?.domaine]);
-  const domaineProfil: DomaineProfil | null = user?.domaine ?? domaineFetched;
+  const domaineProfil: DomaineDuCompte | null = user?.domaine ?? domaineFetched;
   const voc = useVocabulaire();
   const lignesConfig = useMemo(() => (abo?.config ? lignesCapacite(abo.config, domaineProfil, voc) : []), [abo, domaineProfil, voc]);
 

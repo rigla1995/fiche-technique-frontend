@@ -7,7 +7,8 @@
 // 4. résolution d'un lexique de domaine, lexique reçu du serveur ;
 // 5. balises : une seule passe, signalement des balises invalides ;
 // 6. fr.json : purge, clés ajoutées, et PREUVE d'identité — pour chaque clé conservée,
-//    rendre(vocabDefaut, valeur balisée) === valeur d'origine (git show BASE:src/i18n/locales/fr.json).
+//    rendre(vocabDefaut, valeur balisée) === valeur d'origine (git show BASE:src/i18n/locales/fr.json) ;
+// 7. lot 2b, étape S1 (spec §4) : 4 clés dérivées *_abr, composants (entreeComposant, libelleComposant).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -20,6 +21,7 @@ import { creerVocab, vocabDefaut, resoudreLexique, completerLexique, vocabDuLexi
 import { rendre, rendreTout, balisesInvalides } from '../src/vocab/rendre.ts';
 import { libelleCategoriePt, CATEGORIES_PT_CONNUES } from '../src/vocab/categoriesPt.ts';
 import { nomOnglet } from '../src/vocab/excel.ts';
+import { entreeComposant, entreeComposantVoc, libelleComposant } from '../src/vocab/composants.ts';
 
 const ICI = path.dirname(fileURLToPath(import.meta.url));
 const RACINE = path.resolve(ICI, '..');
@@ -95,9 +97,20 @@ const executer = ([lexique, methode, cle, args]) => {
   if (methode === 'rendre') return rendre(voc, args[0]);
   if (methode === 'avec') return voc.avec(args[0])[args[1]](cle, ...args.slice(2));
   if (methode === 'estDefaut') return voc.estDefaut; // une propriété, pas une méthode
+  // Lot 2b (spec §4.1, §4.2) : fonctions des modules générés au serveur.
+  if (methode === 'entreeComposant') return entreeComposant(args[0]);
+  if (methode === 'composant') return voc.avec(entreeComposant(args[0]))[args[1]]('_', ...args.slice(2));
+  if (methode === 'libelleComposant') return libelleComposant(voc, args[0], ...args.slice(1));
+  if (methode === 'composantVoc') return voc.avec(entreeComposantVoc(voc, args[0]))[args[1]]('_', ...args.slice(2));
+  if (methode === 'nomOnglet') return nomOnglet(args[0]);
+  if (methode === 'libelleCategoriePt') return libelleCategoriePt(voc, args[0]);
   assert.equal(typeof voc[methode], 'function', `méthode inconnue « ${methode} »`);
   return voc[methode](cle, ...args);
 };
+// Un attendu objet (entrée de lexique d'un composant) se compare en JSON, clés dans l'ordre.
+const conforme = (obtenu, attendu) => (attendu !== null && typeof attendu === 'object'
+  ? JSON.stringify(obtenu) === JSON.stringify(attendu)
+  : obtenu === attendu);
 
 test(`vecteurs : ${VECTEURS.length} cas (≥ 200), attendus écrits à la main`, () => {
   assert.ok(VECTEURS.length >= 200, `seulement ${VECTEURS.length} cas`);
@@ -106,7 +119,7 @@ test(`vecteurs : ${VECTEURS.length} cas (≥ 200), attendus écrits à la main`,
     const attendu = cas[4];
     let obtenu;
     try { obtenu = executer(cas); } catch (e) { obtenu = `EXCEPTION ${e.message}`; }
-    if (obtenu !== attendu) echecs.push(`${JSON.stringify(cas.slice(0, 4))}\n      attendu : ${JSON.stringify(attendu)}\n      obtenu  : ${JSON.stringify(obtenu)}`);
+    if (!conforme(obtenu, attendu)) echecs.push(`${JSON.stringify(cas.slice(0, 4))}\n      attendu : ${JSON.stringify(attendu)}\n      obtenu  : ${JSON.stringify(obtenu)}`);
   }
   assert.equal(echecs.length, 0, `${echecs.length} vecteur(s) en échec :\n  - ${echecs.join('\n  - ')}`);
 });
@@ -119,6 +132,8 @@ test('vecteurs : couverture (4 lexiques, toutes les méthodes de l\'API §2.1)',
   const absentes = api.filter((m) => !methodes.has(m));
   assert.deepEqual(absentes, [], `méthodes sans vecteur : ${absentes.join(', ')}`);
   assert.ok(methodes.has('rendre'));
+  // Lot 2b : chaque fonction des modules générés au serveur a ses vecteurs.
+  for (const m of ['entreeComposant', 'composant', 'composantVoc', 'libelleComposant', 'nomOnglet', 'libelleCategoriePt']) assert.ok(methodes.has(m), m);
   for (const nom of lexiques) {
     const n = VECTEURS.filter((c) => c[0] === nom).length;
     assert.ok(n >= 30, `lexique ${nom} : ${n} cas seulement`);
@@ -161,12 +176,14 @@ test('lexique par défaut v2 : les 32 clés d\'origine rendent exactement sg / p
 });
 
 test('lexique par défaut v2 : clés ajoutées (§1.3), formes courtes, appositions, gel', () => {
-  assert.equal(LEXIQUE_CLES.length, 43);
+  assert.equal(LEXIQUE_CLES.length, 47);
   assert.deepEqual(LEXIQUE_CLES.slice(32), [
     'produit', 'produit_compose', 'labo_long', 'labo_desc', 'activite_desc', 'article_ingredient',
     'cat_pt_utilisable', 'cat_pt_valorise', 'cat_pt_vendable',
     // Corrections après revues : abréviations de badge et de colonne.
     'transfert_abr', 'supplement_abr',
+    // Lot 2b (spec §4.3) : abréviations écrites en dur au serveur et à l'écran.
+    'pt_abr', 'produit_utilisable_abr', 'produit_vendable_abr', 'produit_valorise_abr',
   ]);
   // Corrections après revues : le burger de la barre latérale et du tableau de bord est l'icône de « produit ».
   assert.equal(LEXIQUE_DEFAUT.produit.icon, '🍔');
@@ -208,6 +225,12 @@ const DERIVEES = {
   // Corrections après revues : abréviations que l'existant écrivait en dur (« ↗ Transf. », « ⇄Trf », « · Suppl. »).
   transfert_abr:     ['transfert', 'copie', 'Transf.'],
   supplement_abr:    ['supplement', 'copie', 'Suppl.'],
+  // Lot 2b (spec §4.3) : « Prod. Transformé » (type d'appro), « Produits util. » (en-tête), « P. Vendable / » et
+  // « P. Valorisé / » (préfixes du tableau de bord).
+  pt_abr:                 ['pt', 'copie', 'Prod. Transformé'],
+  produit_utilisable_abr: ['produit_utilisable', 'copie', 'Produit util.'],
+  produit_vendable_abr:   ['produit_vendable', 'copie', 'P. Vendable'],
+  produit_valorise_abr:   ['produit_valorise', 'copie', 'P. Valorisé'],
 };
 
 test('clés dérivées : table du §1.3 (parent, mode, défaut)', () => {
@@ -368,6 +391,13 @@ test('lexique miroir : chaque clé du défaut, genre et élision inversés, mot 
     // l'élision déclarée correspond bien à l'initiale du mot (voyelle ou non)
     assert.equal(/^[aeiouyàâéèêëîïôöùûœh]/i.test(m.sg), m.el, `${k} : « ${m.sg} » et el = ${m.el}`);
   }
+  // Lot 2b (spec §4.5) : les clés dérivées par copie ont une forme PROPRE, différente de celle de leur parent —
+  // sans elle, un mauvais choix de clé (pt au lieu de pt_abr) resterait invisible dans le miroir.
+  for (const k of ['article_ingredient', 'pt_abr', 'produit_utilisable_abr', 'produit_vendable_abr', 'produit_valorise_abr']) {
+    const parent = LEXIQUE_DEFAUT[k].derive_de;
+    assert.notEqual(VOCS.miroir.Nom(k), VOCS.miroir.Nom(parent), `${k} : forme propre ≠ ${parent}`);
+    assert.notEqual(VOCS.miroir.Pl(k), VOCS.miroir.Pl(parent), `${k} : pluriel propre ≠ ${parent}`);
+  }
 });
 
 // ── 3 bis. Extension de l'étape S5 (consolidation du balayage) ────────────────
@@ -454,6 +484,122 @@ test('corrections après revues — abréviations transfert_abr / supplement_abr
   // l'abréviation se surcharge à part
   const r2 = resoudreLexique(LEXIQUE_DEFAUT, { transfert_abr: { sg: 'Livr.', pl: 'Livr.', g: 'f', el: false } });
   assert.deepEqual([creerVocab(r2).Nom('transfert_abr'), creerVocab(r2).Court('transfert_abr'), creerVocab(r2).Nom('transfert')], ['Livr.', 'Livr.', 'Transfert']);
+});
+
+test('lot 2b §4.3 — pt_abr, produit_utilisable_abr, produit_vendable_abr, produit_valorise_abr : identité par défaut, le terme du domaine sinon', () => {
+  // par défaut : exactement les abréviations que le serveur et l'écran écrivaient en dur
+  assert.equal(vocabDefaut.Nom('pt_abr'), 'Prod. Transformé', 'type d\'appro « produit_transforme » (laboController, stockController)');
+  assert.equal(vocabDefaut.Pl('produit_utilisable_abr'), 'Produits util.', 'en-tête « Produits util. » (produitsController)');
+  assert.equal(`${vocabDefaut.Nom('produit_vendable_abr')} / `, 'P. Vendable / ', 'préfixe du tableau de bord');
+  assert.equal(`${vocabDefaut.Nom('produit_valorise_abr')} / `, 'P. Valorisé / ', 'préfixe du tableau de bord');
+  // les formes courtes des parents par défaut (« PT », « PU ») ne sont pas celles des abréviations
+  assert.equal(vocabDefaut.Court('pt'), 'PT');
+  assert.equal(vocabDefaut.Court('pt_abr'), 'Prod. Transformé');
+  assert.equal(vocabDefaut.Court('produit_utilisable_abr', true), 'Produits util.');
+  for (const k of ['pt_abr', 'produit_utilisable_abr', 'produit_vendable_abr', 'produit_valorise_abr']) {
+    const d = LEXIQUE_DEFAUT[k];
+    const p = LEXIQUE_DEFAUT[d.derive_de];
+    assert.deepEqual([d.mode, d.g, d.el, d.icon, d.court, d.appo], ['copie', p.g, p.el, p.icon, undefined, undefined], k);
+  }
+  // domaine qui renomme le parent : copie de l'entrée ENTIÈRE du parent, forme courte comprise (spec §4.3, table)
+  const h = LEXIQUES.hotellerie;
+  assert.deepEqual([h.pt_abr.sg, h.pt_abr.pl, h.pt_abr.g, h.pt_abr.court], ['Préparation', 'Préparations', 'f', { sg: 'Prépa', pl: 'Prépas' }]);
+  assert.deepEqual([VOCS.hotellerie.Nom('produit_utilisable_abr'), VOCS.hotellerie.Pl('produit_utilisable_abr')], ['Consommable', 'Consommables']);
+  assert.equal(VOCS.hotellerie.Nom('produit_vendable_abr'), 'Prestation vendue');
+  assert.equal(VOCS.hotellerie.Nom('produit_valorise_abr'), 'Prestation catalogue');
+  assert.equal(VOCS.ceramique.Nom('pt_abr'), 'Produit fabriqué');
+  assert.deepEqual([VOCS.ceramique.Nom('produit_utilisable_abr'), VOCS.ceramique.Pl('produit_utilisable_abr')], ['Semi-fini', 'Semi-finis']);
+  assert.equal(VOCS.ceramique.Nom('produit_vendable_abr'), 'Produit fini');
+  assert.equal(VOCS.ceramique.Nom('produit_valorise_abr'), 'Produit fini catalogue');
+  // l'abréviation se surcharge à part ; le parent redéclaré à l'identique ne la détache pas
+  const r = resoudreLexique(LEXIQUE_DEFAUT, { pt_abr: { sg: 'Prép.', pl: 'Prép.', g: 'f', el: false } });
+  assert.deepEqual([creerVocab(r).Nom('pt_abr'), creerVocab(r).Nom('pt')], ['Prép.', 'Produit transformé']);
+  const r2 = resoudreLexique(LEXIQUE_DEFAUT, { pt: { sg: 'Produit transformé', pl: 'Produits transformés', g: 'm', el: false } });
+  assert.equal(creerVocab(r2).Nom('pt_abr'), 'Prod. Transformé');
+  // clés EN PLUS : un lexique de 43 clés (serveur d'avant S1) reste « par défaut », complété par le défaut local
+  const ancien = Object.fromEntries(LEXIQUE_CLES.slice(0, 43).map((k) => [k, JSON.parse(JSON.stringify(LEXIQUE_DEFAUT[k]))]));
+  assert.equal(vocabDuLexique(ancien), vocabDefaut);
+  assert.equal(creerVocab(resoudreLexique(LEXIQUE_DEFAUT, {})).estDefaut, true);
+});
+
+// ── 3 bis bis. Lot 2b, §4.2 : composants ───────────────────────────────────────
+// Les 4 composants « identité » tels que le serveur les crée (brouillon, domaineProfilService.COMPOSANTS_IDENTITE).
+const IDENTITE = [
+  { code: 'activite', typeTechnique: 'activite', libelle: 'Activité', libellePluriel: 'Activités', icone: '🏪' },
+  { code: 'labo', typeTechnique: 'labo', libelle: 'Labo', libellePluriel: 'Labos', icone: '🏭' },
+  { code: 'gerant', typeTechnique: 'gerant', libelle: 'Gérant', libellePluriel: 'Gérants', icone: '👤' },
+  { code: 'acheteurs', typeTechnique: 'acheteurs', libelle: 'Base acheteurs', libellePluriel: 'Base acheteurs', icone: '🤝' },
+];
+
+test('lot 2b §4.2 — entreeComposant : formule exacte du §4.2 (pluriel absent, genre, élision forcée ou déduite)', () => {
+  // la formule de la spec, recopiée telle quelle : elle juge l'implémentation sur une grille de cas
+  const formule = (c) => ({
+    sg: c.libelle,
+    pl: c.libellePluriel || c.libelle,
+    g: c.genre === 'f' ? 'f' : 'm',
+    el: typeof c.elision === 'boolean' ? c.elision : /^[aeiouàâäæéèêëîïôöœùûü]/i.test(c.libelle),
+  });
+  for (const libelle of ['Cuisine', 'Atelier', 'Housekeeping', 'Huilerie', 'Hôtel', 'Yaourterie', 'Économat', 'Œnothèque', 'Îlot', 'Bar']) {
+    for (const libellePluriel of [undefined, null, '', `${libelle}s`]) {
+      for (const genre of [undefined, null, 'm', 'f', 'x']) {
+        for (const elision of [undefined, null, 'auto', true, false]) {
+          const c = { libelle, libellePluriel, genre, elision };
+          assert.deepEqual(entreeComposant(c), formule(c), JSON.stringify(c));
+        }
+      }
+    }
+  }
+  // noms de colonnes de la base
+  assert.equal(entreeComposant({ libelle: 'Room service', libelle_pluriel: 'Room services' }).pl, 'Room services');
+  assert.equal(entreeComposant({ libelle: 'Bar', libellePluriel: 'Bars', libelle_pluriel: 'Comptoirs' }).pl, 'Bars', 'le camelCase de l\'API prime');
+  // y et h : élision déduite à non ; l'admin la force (h muet)
+  assert.equal(vocabDefaut.avec(entreeComposant({ libelle: 'Huilerie', genre: 'f' })).mon('_'), 'ma huilerie');
+  assert.equal(vocabDefaut.avec(entreeComposant({ libelle: 'Huilerie', genre: 'f', elision: true })).mon('_'), 'mon huilerie');
+  assert.equal(vocabDefaut.avec(entreeComposant({ libelle: 'Yaourterie', genre: 'f' })).le('_'), 'la yaourterie');
+  // le cas qui a motivé la migration 192 : « mon cuisine » devient « ma cuisine »
+  assert.equal(VOCS.hotellerie.avec(entreeComposant({ libelle: 'Cuisine', libellePluriel: 'Cuisines', genre: 'f' })).mon('_'), 'ma cuisine');
+});
+
+test('lot 2b §4.2 — libelleComposant : les 4 composants identité rendent EXACTEMENT libelle et libelle_pluriel par défaut', () => {
+  for (const c of IDENTITE) {
+    for (const n of [undefined, null, 0, 1, false]) assert.equal(libelleComposant(vocabDefaut, c, n), c.libelle, `${c.code} ${n}`);
+    for (const n of [2, 3, 10, true]) assert.equal(libelleComposant(vocabDefaut, c, n), c.libellePluriel, `${c.code} ${n}`);
+    // même rendu que le composant ordinaire de même libellé : la règle d'avant (libellé, ou pluriel si n > 1)
+    for (const n of [1, 2]) assert.equal(libelleComposant(vocabDefaut, c, n), n > 1 ? (c.libellePluriel || c.libelle) : c.libelle);
+  }
+  // domaine sans écart (café, boulangerie) : identique
+  const sansEcart = creerVocab(resoudreLexique(LEXIQUE_DEFAUT, {}));
+  for (const c of IDENTITE) assert.equal(libelleComposant(sansEcart, c, 2), c.libellePluriel);
+  // « Base acheteurs » : même texte que la ligne identité de l'écran Mon abonnement (MonAbonnementPage.tsx)
+  for (const voc of Object.values(VOCS)) assert.equal(libelleComposant(voc, IDENTITE[3], 1), `Base ${voc.court('acheteur', true)}`);
+});
+
+test('lot 2b §4.2 — libelleComposant : terme du domaine pour un composant identité au libellé du brouillon, libellé stocké sinon', () => {
+  const [act, lab, ger, ach] = IDENTITE;
+  const h = VOCS.hotellerie;
+  assert.deepEqual([1, 2].map((n) => libelleComposant(h, act, n)), ['Service', 'Services']);
+  assert.deepEqual([1, 2].map((n) => libelleComposant(h, lab, n)), ['Cuisine centrale', 'Cuisines centrales']);
+  assert.deepEqual([1, 2].map((n) => libelleComposant(h, ger, n)), ['Responsable de service', 'Responsables de service']);
+  assert.deepEqual([1, 2].map((n) => libelleComposant(h, ach, n)), ['Base clients professionnels', 'Base clients professionnels']);
+  // casse : voc[casse](clé, n) pour la table identité, la même casse pour un composant ordinaire
+  assert.equal(libelleComposant(h, lab, 1, 'court'), 'cuisine');
+  assert.equal(libelleComposant(h, lab, 2, 'Court'), 'Cuisines');
+  assert.equal(libelleComposant(h, act, 2, 'nom'), 'services');
+  assert.equal(libelleComposant(h, { code: 'bar', typeTechnique: 'activite', libelle: 'Room service', libellePluriel: 'Room services' }, 2, 'nom'), 'room services');
+  // composant identité RENOMMÉ par l'admin : son libellé, dans tous les domaines
+  const renomme = { code: 'labo', typeTechnique: 'labo', libelle: 'Cuisine', libellePluriel: 'Cuisines', genre: 'f' };
+  for (const voc of Object.values(VOCS)) assert.deepEqual([1, 2].map((n) => libelleComposant(voc, renomme, n)), ['Cuisine', 'Cuisines']);
+  // la table est FERMÉE : un type technique hors des 4, un code ≠ type, un pluriel différent → libellé stocké
+  assert.equal(libelleComposant(h, { code: 'activite', typeTechnique: 'labo', libelle: 'Activité', libellePluriel: 'Activités' }, 1), 'Activité');
+  assert.equal(libelleComposant(h, { code: 'resto', typeTechnique: 'activite', libelle: 'Activité', libellePluriel: 'Activités' }, 1), 'Activité');
+  assert.equal(libelleComposant(h, { code: 'activite', typeTechnique: 'activite', libelle: 'Activité', libellePluriel: 'Activitées' }, 2), 'Activitées');
+  assert.equal(libelleComposant(h, { code: 'activite', typeTechnique: 'activite', libelle: 'Activité' }, 1), 'Activité');
+  assert.equal(libelleComposant(h, { code: 'vente', typeTechnique: 'vente', libelle: 'Vente', libellePluriel: 'Ventes' }, 1), 'Vente');
+  assert.equal(libelleComposant(h, { code: 'acheteur', typeTechnique: 'acheteur', libelle: 'Base acheteurs', libellePluriel: 'Base acheteurs' }, 1), 'Base acheteurs');
+  // colonnes de la base (snake_case) : même règle
+  assert.equal(libelleComposant(h, { code: 'labo', type_technique: 'labo', libelle: 'Labo', libelle_pluriel: 'Labos' }, 2), 'Cuisines centrales');
+  // jamais d'exception sur un composant incomplet
+  assert.equal(typeof libelleComposant(h, { code: null, libelle: 'Spa' }), 'string');
 });
 
 // ── 3 ter. Exemples de saisie : inchangés tant que le lexique est celui par défaut ─────────────

@@ -21,8 +21,9 @@ export interface User {
    * Profil de domaine du compte (client : son abonnement ; gérant : parent ; admin/boss : null).
    * Acheteur (lot 2, spec §2.4) : domaine du client VENDEUR réduit à { id, slug, nom, lexique } — ni
    * `composants` ni `regles` (toute lecture de ces deux champs passe par `?.`).
+   * Lexique allégé (lot 2b §5.7) : `null` pour le vocabulaire par défaut.
    */
-  domaine?: DomaineProfil | null;
+  domaine?: DomaineDuCompte | null;
 }
 
 export interface Promotion {
@@ -376,6 +377,15 @@ export interface DomaineProfil {
   lexique: Record<string, LexiqueEntree>;
   regles: Record<string, unknown>;
 }
+
+/**
+ * Domaine tel qu'un COMPTE le reçoit (lot 2b, spec §5.7) : `/auth/login`, `/auth/me` (`User.domaine`),
+ * `GET /api/domaines` (client, gérant, acheteur) et `GET /api/entreprise`. `lexique` vaut `null` quand le
+ * vocabulaire du compte est le vocabulaire par défaut (`vocabDuLexique(null) === vocabDefaut`) ; sinon c'est
+ * le lexique résolu sans `derive_de`, `mode` ni `gabarit`. Les écrans admin gardent `DomaineProfil`
+ * (profil complet).
+ */
+export type DomaineDuCompte = Omit<DomaineProfil, 'lexique'> & { lexique: Record<string, LexiqueEntree> | null };
 
 /** Alias conservé pour compatibilité (anciens écrans : `{ id, nom }`). */
 export type DomaineActivite = DomaineProfil;

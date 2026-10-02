@@ -2126,7 +2126,7 @@ test('CLI E3 : residuels lit le SQL — libellé en dur listé « sql », code j
   assert.equal(r.code, 0, r.sortie);
 });
 
-test('E3 — mesure figée sur la copie de référence du serveur (bfb590a) : 44 constantes-libellés dans 22 requêtes ; 18 \'PT\' codes', (t) => {
+test('E3 — mesure figée sur la copie de référence du serveur (bfb590a) : 46 constantes-libellés dans 22 requêtes ; 18 \'PT\' codes', (t) => {
   const BACK = path.resolve(ICI, '..', '..', 'fiche-technique-backend');
   const REF = 'bfb590a';
   const git = (...a) => execFileSync('git', ['-C', BACK, ...a], { encoding: 'utf8', maxBuffer: 256 * 1024 * 1024, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -2144,7 +2144,11 @@ test('E3 — mesure figée sur la copie de référence du serveur (bfb590a) : 44
       pt += (u.sql?.codes ?? []).filter((c) => c.texte === 'PT').length;
     }
   }
-  assert.deepEqual({ requetes, constantes, pt }, { requetes: 22, constantes: 44, pt: 18 });
+  // 44 avec le lexique de 43 clés (spec §3.2 E3) ; 46 depuis S1 (§4.3) : les clés produit_vendable_abr et
+  // produit_valorise_abr reconnaissent « P. Vendable / » et « P. Valorisé / » (dashboardV2Controller.js), dans des
+  // requêtes déjà comptées — le nombre de requêtes ne bouge pas.
+  assert.deepEqual({ requetes, constantes, pt }, { requetes: 22, constantes: 46, pt: 18 });
+  assert.equal(parTexte['P. Vendable / '] + parTexte['P. Valorisé / '], 2);
   // Dont 30 pour les catégories PT (10 copies × 3, ptCategorieSql comprise) — spec carto-outil §2.5.
   assert.equal(parTexte['Produits Transformés Utilisables'] + parTexte['Produits Composés Valorisés'] + parTexte['Produits Transformés Vendables'], 30);
 });

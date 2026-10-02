@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "P. Vendable",
+    "apres": "P. Vendable",
+    "type": "provisoire",
+    "justification": "Préfixe du filtre de catégories de l'export du tableau de bord (ClientDashboard.tsx:249), rendu visible au mode residuels par la clé produit_vendable_abr ajoutée à l'étape S1 (spec lot 2b §4.3). Sa réécriture par voc.Nom('produit_vendable_abr') revient à B6 (spec §10.2, « préfixes P. Vendable / P. Valorisé de :249 par les clés *_abr ») : entrée à retirer par B6, jamais à reconduire."
+  },
+  {
+    "fichier": "src/components/client/ClientDashboard.tsx",
+    "avant": "P. Valorisé",
+    "apres": "P. Valorisé",
+    "type": "provisoire",
+    "justification": "Préfixe du filtre de catégories de l'export du tableau de bord (ClientDashboard.tsx:249), rendu visible au mode residuels par la clé produit_valorise_abr ajoutée à l'étape S1 (spec lot 2b §4.3). Sa réécriture par voc.Nom('produit_valorise_abr') revient à B6 (spec §10.2, « préfixes P. Vendable / P. Valorisé de :249 par les clés *_abr ») : entrée à retirer par B6, jamais à reconduire."
+  }
+]

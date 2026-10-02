@@ -2,13 +2,14 @@
   "algo": "sha256",
   "fichiers": {
     "src/vocab/categoriesPt.ts": "bba8f523475b5a45d651fbdbe59a9288350fb07ff2f1f1b5e74ba1baa575adc7",
+    "src/vocab/composants.ts": "1d87d4c3d9cd3f423651ee3e440f8b6ba106b137a0bfc1cbe4489d6aad56b1af",
     "src/vocab/contexte.ts": "2ad693facded9a777945363956d29568000207f6616f6ea6b34cdaf66eabc45b",
-    "src/vocab/excel.ts": "470756b63edf046eba7ddbfb58ecce46e7dbf578aa1b8b27b25a4408df584ef1",
-    "src/vocab/lexiqueDefaut.ts": "c3bd6758525927d22c3838e9f33cdfde688fc53d7bbd7001c2d55a6ffc06369e",
+    "src/vocab/excel.ts": "0256a558c851237c7e779f6a1eb696a8ff04f4530bb0ededae651db16e760451",
+    "src/vocab/lexiqueDefaut.ts": "3f766d1414264467d93a64b4350bef61e2a552a6c27368bea1f8ca38de3a3292",
     "src/vocab/rendre.ts": "8e7868bdddc3ab115d2ce966f4cdca80253250568931c326dcac2182eb89aeca",
-    "src/vocab/vocab.ts": "89e277e0dde41ddc57ed06f700414c26764cf682b0fd0d92313ea31dbc73e30b"
+    "src/vocab/vocab.ts": "639ca5228808ff4a02c8aa67939b1432f27e0088b20a779fc137932d64058121"
   },
-  "lexique": "00b54451ef73c52cbb60bf6ce656101b2be8be84f58078e7ff2b5c0b5ac25679",
-  "empreinte": "7035ec76fec55ce1a89e1927dd50d57e82d6ccf9495dfa3410dc89261a0159b2",
-  "gele_le": "2026-09-30"
+  "lexique": "b0b1a935cd76f5a74cb25012fd3610c6088dd451586aa5cc5d2f7ba3e8582676",
+  "empreinte": "acc90c059d7ed6d21142c77cfcb7871da473a2aaf055249f7fa3a3508c5ec34f",
+  "gele_le": "2026-10-02"
 }
