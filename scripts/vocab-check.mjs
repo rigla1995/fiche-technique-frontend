@@ -1934,12 +1934,22 @@ export function chargerAllow(dossier) {
   return { entrees, problemes };
 }
 
-/** Nombre de besoins déposés par les lots (scripts/vocab-besoins/*.json, un tableau par fichier). */
+/** État final d'un besoin (champ `etat`, consolidation du lot 2b) : un besoin qui le porte est clos. */
+export const ETAT_BESOIN_CLOS = /^(?:APPLIQUÉ|REFUSÉ|REPORTÉ|SANS OBJET|DÉCISION CLIENT)(?![\p{L}])/u;
+
+/**
+ * Nombre de besoins OUVERTS déposés par les lots (scripts/vocab-besoins/*.json, un tableau par fichier) :
+ * une entrée sans `etat`, ou dont l'`etat` ne commence pas par un état final (ETAT_BESOIN_CLOS). Un fichier
+ * illisible compte pour 1 ; un fichier qui est un OBJET (décisions d'une étape, S5-decisions.json) n'est pas compté.
+ */
 export function compterBesoins(dossier) {
   if (!fs.existsSync(dossier)) return 0;
   let n = 0;
   for (const nom of fs.readdirSync(dossier).filter((f) => f.endsWith('.json'))) {
-    try { const c = JSON.parse(fs.readFileSync(path.join(dossier, nom), 'utf8')); if (Array.isArray(c)) n += c.length; } catch { n += 1; }
+    try {
+      const c = JSON.parse(fs.readFileSync(path.join(dossier, nom), 'utf8'));
+      if (Array.isArray(c)) n += c.filter((b) => !(b && typeof b.etat === 'string' && ETAT_BESOIN_CLOS.test(b.etat))).length;
+    } catch { n += 1; }
   }
   return n;
 }
@@ -2596,7 +2606,7 @@ function main(argv) {
   const provisoires = allow.entrees.filter((e) => e.type === 'provisoire').length;
   const besoins = compterBesoins(path.join(o.root, 'scripts', 'vocab-besoins'));
   if ((provisoires || besoins) && !o.json) {
-    dire(`  rappel : ${provisoires} entrée(s) allow de type « provisoire », ${besoins} besoin(s) dans scripts/vocab-besoins (à ramener à 0 à l'étape S5)`);
+    dire(`  rappel : ${provisoires} entrée(s) allow de type « provisoire », ${besoins} besoin(s) ouvert(s) dans scripts/vocab-besoins (à ramener à 0 : appliqué, ou état final écrit dans le champ etat)`);
   }
   return r.ok ? 0 : 1;
 }

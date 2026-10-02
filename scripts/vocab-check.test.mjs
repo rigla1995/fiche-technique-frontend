@@ -24,6 +24,8 @@ import {
   // lot 2b (§3.2, E1 à E11)
   formesDans, lireSql, estCodeSql, fonctionsSqlDe, validerRendu, diffSquelette, ecrireAccords,
   CODES_SQL_CAPITALES, PERIMETRE_EN_PLUS, HORS_RESIDUELS, LOTS_REPORTE, RESIDUELS_EN_PLUS,
+  // consolidation du lot 2b : besoins ouverts
+  compterBesoins, ETAT_BESOIN_CLOS,
 } from './vocab-check.mjs';
 import { vocabDefaut } from '../src/vocab/vocab.ts';
 
@@ -2422,4 +2424,30 @@ test('E5b / CLI : residuels sans liste lit aussi docuseal-templates/CHAMPS.md �
   r = outil(d, 'identite');
   assert.equal(r.code, 0, r.sortie + r.erreur);
   assert.doesNotMatch(r.sortie, /CHAMPS/);
+});
+
+test('Consolidation 2b — compterBesoins ne compte que les besoins ouverts (sans état final dans etat)', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-besoins-'));
+  try {
+    assert.equal(compterBesoins(path.join(d, 'absent')), 0);
+    fs.writeFileSync(path.join(d, 'B1.json'), JSON.stringify([
+      { demande: 'sans état' },
+      { demande: 'a', etat: 'APPLIQUÉ par l\'intégrateur' },
+      { demande: 'b', etat: 'REFUSÉ (consolidation) : facultatif' },
+      { demande: 'c', etat: 'REPORTÉ au lot 2c' },
+      { demande: 'd', etat: 'SANS OBJET : non capté' },
+      { demande: 'e', etat: 'DÉCISION CLIENT : garder tel quel' },
+      { demande: 'f', etat: 'NON appliqué, porté à la consolidation' },
+      { demande: 'g', etat: 'APPLIQUÉES' },
+    ]));
+    fs.writeFileSync(path.join(d, 'B2.json'), '[]');
+    fs.writeFileSync(path.join(d, 'S5-decisions.json'), JSON.stringify({ decisions: [{ demande: 'x' }] }));
+    fs.writeFileSync(path.join(d, 'B3.json'), '{ illisible');
+    // ouverts : « sans état », « NON appliqué… », « APPLIQUÉES » (pas un état final), + 1 fichier illisible
+    assert.equal(compterBesoins(d), 4);
+    assert.ok(ETAT_BESOIN_CLOS.test('DÉCISION CLIENT (consolidation)'));
+    assert.ok(!ETAT_BESOIN_CLOS.test('Appliqué'));
+  } finally {
+    fs.rmSync(d, { recursive: true, force: true });
+  }
 });

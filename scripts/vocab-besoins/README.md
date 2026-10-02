@@ -19,6 +19,14 @@ extension unique du moteur (`voc.accN`, casse `'court'` de `voc.MAJ` / `voc.nomS
 un OBJET (pas un tableau) : l'outil ne le compte pas. Les fichiers par lot ont été retirés : 0 besoin ouvert,
 0 entrée `provisoire`. Un prochain balayage (sous-lot 2b : `B1.json` …) reprend le format ci-dessous.
 
+## État après la consolidation du lot 2b
+
+Le sous-lot 2b garde ses fichiers par lot (`B6.json` ici, `B1.json` … `B5.json` au backend) : chaque besoin y porte
+son état final dans le champ `etat`, qui commence par `APPLIQUÉ`, `REFUSÉ`, `REPORTÉ`, `SANS OBJET` ou
+`DÉCISION CLIENT`, suivi de la raison. L'outil (`compterBesoins`, `ETAT_BESOIN_CLOS`) ne compte que les besoins
+OUVERTS : sans `etat`, ou dont l'`etat` ne commence pas par l'un de ces mots. Après la consolidation (02/10/2026) :
+0 besoin ouvert, 0 entrée `provisoire`.
+
 ## Un fichier par lot
 
 `scripts/vocab-besoins/<lot>.json` (`F1.json` … `F12.json`, `B1.json` …). Un agent n'écrit que dans le
@@ -50,6 +58,7 @@ Un tableau JSON ; une entrée par besoin :
 | `texte` | le texte canonique de l'unité, recopié de la sortie de l'outil (le même que dans l'entrée `provisoire`) |
 | `ecriture_souhaitee` | l'appel voc que l'agent aurait écrit si le besoin était satisfait |
 | `raison` | pourquoi le moteur actuel ne suffit pas (exemple dans un autre domaine) |
+| `etat` | écrit par l'intégrateur ou la consolidation : état final (`APPLIQUÉ`, `REFUSÉ`, `REPORTÉ`, `SANS OBJET`, `DÉCISION CLIENT`) puis la raison ; absent = besoin ouvert |
 
 Avant d'écrire un besoin, vérifier que le moteur ne le couvre pas déjà : `voc.acc` pour un accord,
 `voc.nomS` pour « (s) », `voc.compl` pour un nom en apposition, `voc.avecCourt` pour « nom (sigle) »,
