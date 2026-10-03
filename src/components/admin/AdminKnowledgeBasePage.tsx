@@ -1,7 +1,13 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
+import { rendreDefaut, rendreTexte, controlerChamps, messageFautes, vocDuDomaine } from './manuelBalises.ts';
+import { useDomainesApercu, SelecteurDomaine, FautesBalises, BadgeSansBalises } from './BalisesAdmin';
+
+// Lot 2c (spec backend docs/lot-2c-spec.md §6.2) : titre et contenu peuvent porter des balises de vocabulaire.
+// La liste les affiche rendus en vocabulaire LabFlow (I4), triée à l'écran sur le titre rendu ; le formulaire
+// montre le texte brut, avec un aperçu dans le domaine choisi.
 
 interface KbEntry {
   id: number;
@@ -10,19 +16,34 @@ interface KbEntry {
   motsCles: string | null;
   categorie: string | null;
   actif: boolean;
+  /** Un champ porte des mots du lexique en clair, sans balise (R5.7.2). */
+  sansBalises?: boolean;
   updatedAt: string;
 }
 
 const empty = { titre: '', contenu: '', motsCles: '', categorie: '', actif: true };
 const PAGE_SIZE = 10;
 
+// Catégorie (vides en dernier, comme le serveur), puis titre rendu.
+const comparer = (a: { categorie: string | null; titreAff: string }, b: { categorie: string | null; titreAff: string }) => {
+  if (a.categorie !== b.categorie) {
+    if (a.categorie === null) return 1;
+    if (b.categorie === null) return -1;
+    const c = a.categorie.localeCompare(b.categorie, 'fr');
+    if (c) return c;
+  }
+  return a.titreAff.localeCompare(b.titreAff, 'fr');
+};
+
 export default function AdminKnowledgeBasePage() {
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
+  const domaines = useDomainesApercu();
   const [entries, setEntries] = useState<KbEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<KbEntry | null>(null);
   const [form, setForm] = useState(empty);
   const [showForm, setShowForm] = useState(false);
+  const [apercuDomaine, setApercuDomaine] = useState(''); // '' = Restauration (défaut)
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
   const [search, setSearch] = useState('');
@@ -37,15 +58,31 @@ export default function AdminKnowledgeBasePage() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setShowForm(true); };
+  const affichees = useMemo(
+    () => entries
+      .map((e) => ({ ...e, titreAff: rendreDefaut(e.titre), contenuAff: rendreDefaut(e.contenu) }))
+      .sort(comparer),
+    [entries],
+  );
+
+  const openCreate = () => { setEditing(null); setForm(empty); setErr(''); setApercuDomaine(''); setShowForm(true); };
   const openEdit = (e: KbEntry) => {
     setEditing(e);
     setForm({ titre: e.titre, contenu: e.contenu, motsCles: e.motsCles || '', categorie: e.categorie || '', actif: e.actif });
-    setErr(''); setShowForm(true);
+    setErr(''); setApercuDomaine(''); setShowForm(true);
   };
+
+  const controle = (f: typeof empty) => controlerChamps(
+    { titre: f.titre, contenu: f.contenu },
+    { 'mots-clés': f.motsCles, 'catégorie': f.categorie },
+  );
+  const fautes = showForm ? controle(form) : [];
+  const vocApercu = vocDuDomaine(domaines, apercuDomaine);
 
   const save = async () => {
     if (!form.titre.trim() || !form.contenu.trim()) { setErr('Titre et contenu requis.'); return; }
+    const f = controle(form);
+    if (f.length) { setErr(messageFautes(f)); return; }
     setSaving(true); setErr('');
     try {
       if (editing) await api.put(`/admin/knowledge-base/${editing.id}`, form);
@@ -56,14 +93,16 @@ export default function AdminKnowledgeBasePage() {
     } finally { setSaving(false); }
   };
 
+  // Bascule : `{ actif }` SEUL. Le serveur ne touche alors ni aux mots-clés ni à la catégorie (R5.7.1, question 6).
   const toggleActif = async (e: KbEntry) => {
-    await api.put(`/admin/knowledge-base/${e.id}`, { actif: !e.actif }).catch(() => {});
+    await api.put(`/admin/knowledge-base/${e.id}`, { actif: !e.actif })
+      .catch(() => alerte({ title: 'Action impossible', message: 'La mise à jour a échoué.', tone: 'danger' }));
     load();
   };
 
   const remove = async (e: KbEntry) => {
     const ok = await confirm({
-      title: `Supprimer « ${e.titre} » ?`,
+      title: `Supprimer « ${rendreDefaut(e.titre)} » ?`,
       message: 'Cet article sera retiré de la base de connaissances.',
       tone: 'danger',
       confirmLabel: 'Supprimer',
@@ -73,8 +112,8 @@ export default function AdminKnowledgeBasePage() {
     load();
   };
 
-  const filtered = entries.filter((e) =>
-    !search || `${e.titre} ${e.categorie || ''} ${e.motsCles || ''}`.toLowerCase().includes(search.toLowerCase()));
+  const filtered = affichees.filter((e) =>
+    !search || `${e.titreAff} ${e.categorie || ''} ${e.motsCles || ''}`.toLowerCase().includes(search.toLowerCase()));
   const activeCount = entries.filter((e) => e.actif).length;
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -115,11 +154,12 @@ export default function AdminKnowledgeBasePage() {
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.95rem' }}>{e.titre}</span>
+                    <span style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.95rem' }}>{e.titreAff}</span>
                     {e.categorie && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#4338ca', background: '#eef2ff', borderRadius: 20, padding: '2px 9px' }}>{e.categorie}</span>}
+                    {e.sansBalises && <BadgeSansBalises />}
                     {!e.actif && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#92400e', background: '#fef3c7', borderRadius: 20, padding: '2px 9px' }}>inactif</span>}
                   </div>
-                  <p style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{e.contenu}</p>
+                  <p style={{ margin: '6px 0 0', fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{e.contenuAff}</p>
                   {e.motsCles && <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#94a3b8' }}>🔑 {e.motsCles}</p>}
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
@@ -167,6 +207,19 @@ export default function AdminKnowledgeBasePage() {
                 <input type="checkbox" checked={form.actif} onChange={(e) => setForm({ ...form, actif: e.target.checked })} />
                 Actif (utilisé par les agents)
               </label>
+              <FautesBalises fautes={fautes} />
+
+              {/* Aperçu simple : titre et contenu rendus dans le domaine choisi (R6.2) */}
+              <div style={{ marginTop: 14, border: '1px solid #e5e7eb', borderRadius: 9, padding: '10px 12px', background: '#f8fafc' }}>
+                <SelecteurDomaine domaines={domaines} value={apercuDomaine} onChange={setApercuDomaine} />
+                {vocApercu && (
+                  <>
+                    <div style={{ marginTop: 8, fontWeight: 800, fontSize: '0.88rem', color: '#1e1b4b' }}>{rendreTexte(vocApercu, form.titre)}</div>
+                    <div style={{ marginTop: 4, fontSize: '0.82rem', color: '#475569', lineHeight: 1.5, whiteSpace: 'pre-wrap' }}>{rendreTexte(vocApercu, form.contenu)}</div>
+                  </>
+                )}
+              </div>
+
               {err && <div style={{ marginTop: 14, background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 8, padding: '10px 12px', fontSize: '0.84rem' }}>{err}</div>}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 20 }}>
                 <button onClick={() => setShowForm(false)} style={{ background: '#f1f5f9', color: '#475569', border: 'none', borderRadius: 9, padding: '10px 18px', fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
