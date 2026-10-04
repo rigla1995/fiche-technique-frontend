@@ -133,7 +133,7 @@ function DetailsPopup({
               {/* Supplement */}
               {demande.type === 'supplement' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {pricing && (
+                  {isPending && pricing && (
                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem' }}>
                       <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 6 }}>Abonnement actuel</div>
                       <div style={{ color: '#1e40af' }}>
@@ -153,7 +153,7 @@ function DetailsPopup({
                       demande.nbAcheteursCible && `Option Acheteurs → palier jusqu'à ${demande.nbAcheteursCible} acheteurs`,
                     ].filter(Boolean).map((part, i) => <div key={i} style={{ color: '#15803d', fontWeight: 600 }}>{part}</div>)}
                   </div>
-                  {newTotal !== null && pricingDelta !== null && (
+                  {isPending && newTotal !== null && pricingDelta !== null && (
                     <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1px solid #ddd6fe', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: '0.82rem' }}>
                         <div style={{ fontWeight: 700, color: '#6d28d9' }}>Nouveau total mensuel</div>
@@ -265,7 +265,13 @@ export default function AdminSupportPage() {
   useEffect(() => { setPage(1); }, [selectedClientId, filterStatut, filterType]);
 
   const handleAction = async (id: number, statut: 'validée' | 'refusée', extra: Record<string, unknown> = {}) => {
-    await api.put(`/api/abonnements/admin/support/${id}`, { statut, ...extra });
+    try {
+      await api.put(`/api/abonnements/admin/support/${id}`, { statut, ...extra });
+    } catch (err) {
+      // Lot 3 : demande déjà traitée (409) ou supprimée (404) — l'état réel est rechargé, le message reste affiché
+      fetchDemandes();
+      throw err;
+    }
     setDemandes(prev => prev.map(d => d.id === id ? { ...d, statut, notesAdmin: (extra.notesAdmin as string) || d.notesAdmin, traiteLe: new Date().toISOString() } : d));
   };
 

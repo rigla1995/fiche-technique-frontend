@@ -38,7 +38,7 @@ export const LOTS = {
   // ConfigPrestatairesPage et sa jumelle ConfigChargesPage ; AdminSupportPage et GuidePage pour les SEULS points
   // d'appel de contractPdf (AvenantPdfParams.lexique) et de manuelPdf (voc en paramètre).
   F12: [`${C}AcheteursGuard.tsx`, `${C}FormuleGuard.tsx`, `${C}VenteGuard.tsx`, `${C}MonAbonnementPage.tsx`, `${C}AbonnementGerantPage.tsx`, `${C}SupportPage.tsx`,
-    `${C}ConfigPrestatairesPage.tsx`, `${C}ConfigChargesPage.tsx`, 'src/utils/contractPdf.ts', 'src/utils/manuelPdf.ts', 'src/components/admin/AdminSupportPage.tsx', `${C}GuidePage.tsx`],
+    `${C}ConfigPrestatairesPage.tsx`, `${C}ConfigChargesPage.tsx`, 'src/utils/manuelPdf.ts', 'src/components/admin/AdminSupportPage.tsx', `${C}GuidePage.tsx`],
 };
 
 /** Charge par lot, mesurée maintenant : { lots: [{ lot, charge, fichiers: [{ fichier, charge }] }], problemes }. */

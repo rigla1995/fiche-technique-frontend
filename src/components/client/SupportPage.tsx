@@ -65,7 +65,9 @@ const applyMensPromo = (base: number, p?: SupplPricing['mensPromo']): number => 
 export default function SupportPage() {
   const { user } = useAuth();
   const isGerant = user?.role === 'gerant';
-  const { clearAllFromDB } = useNotifications();
+  const { clearAllFromDB, notifications } = useNotifications();
+  // Lot 3, étape 4 : une demande validée ou refusée pendant que la page est ouverte est rechargée
+  const nbReponses = notifications.filter((n) => n.eventType === 'demande_traitee').length;
   const { confirm } = useConfirm();
   const voc = useVocabulaire();
   const TYPE_LABELS = useMemo(() => typeLabels(voc), [voc]);
@@ -73,13 +75,15 @@ export default function SupportPage() {
   const [demandes, setDemandes] = useState<SupportDemande[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<Record<number, boolean>>({});
+  // Lot 3 : un gérant ne demande pas d'ajout de capacité (même par l'adresse ?type=supplement)
+  const typesPermis = isGerant ? ['aide'] : ['supplement', 'aide'];
   const [formType, setFormType] = useState<SupportDemande['type'] | null>(() => {
     const t = searchParams.get('type');
-    return t && ['supplement', 'aide'].includes(t) ? t as SupportDemande['type'] : null;
+    return t && typesPermis.includes(t) ? t as SupportDemande['type'] : null;
   });
   const [showForm, setShowForm] = useState(() => {
     const t = searchParams.get('type');
-    return !!(t && ['supplement', 'aide'].includes(t));
+    return !!(t && typesPermis.includes(t));
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +128,8 @@ export default function SupportPage() {
         .some(d => d.typeDemande === 'passer_formule_premium' && d.statut === 'en_attente')))
       .catch(() => {});
   }, [fetchDemandes, clearAllFromDB]);
+
+  useEffect(() => { if (nbReponses > 0) fetchDemandes(); }, [nbReponses, fetchDemandes]);
 
   const resetForm = () => {
     setFormType(null);

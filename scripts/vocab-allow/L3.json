@@ -127,6 +127,21 @@
   },
   {
     "fichier": "src/components/client/SupportPage.tsx",
+    "avant": null,
+    "apres": "demande_traitee",
+    "type": "remplace",
+    "justification": "Lot 3, étape 4 — plus d'avenants (décision écrite du client du 04/10/2026) : texte VISIBLE qui remplace la mention de l'avenant (« Demandez un ajout de capacité », demande envoyée à l'équipe LabFlow puis validée)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "supplement",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
     "avant": "Votre avenant a été généré : un email avec le lien de signature vous a été envoyé. Signez-le pour que la capacité soit ajoutée automatiquement.",
     "apres": null,
     "type": "retire",
@@ -137,7 +152,7 @@
     "avant": null,
     "apres": "Votre demande est envoyée à l'équipe LabFlow. Dès sa validation, la capacité sera ajoutée et vous recevrez un email de confirmation.",
     "type": "remplace",
-    "justification": "Lot 3, étape 4 — plus d'avenants (décision écrite du client du 04/10/2026) : texte VISIBLE qui remplace la mention de l'avenant (« Demandez un supplément », demande envoyée à l'équipe LabFlow puis validée)."
+    "justification": "Lot 3, étape 4 — plus d'avenants (décision écrite du client du 04/10/2026) : texte VISIBLE qui remplace la mention de l'avenant (« Demandez un ajout de capacité », demande envoyée à l'équipe LabFlow puis validée)."
   },
   {
     "fichier": "src/components/client/SupportPage.tsx",
@@ -177,13 +192,6 @@
   {
     "fichier": "src/components/client/SupportPage.tsx",
     "avant": "Le contrat signé n'est pas encore disponible.",
-    "apres": null,
-    "type": "retire",
-    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
-  },
-  {
-    "fichier": "src/components/client/SupportPage.tsx",
-    "avant": "supplement",
     "apres": null,
     "type": "retire",
     "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
