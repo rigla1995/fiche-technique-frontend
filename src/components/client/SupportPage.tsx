@@ -183,9 +183,10 @@ export default function SupportPage() {
         if (!description.trim()) { setError('Description requise'); setSaving(false); return; }
         body = { ...body, description: description.trim() };
       }
-      const { data } = await api.post('/api/abonnements/support', body);
-      if (formType === 'supplement' && data?.avenantEmailSent) {
-        setSuccess('Votre avenant a été généré : un email avec le lien de signature vous a été envoyé. Signez-le pour que la capacité soit ajoutée automatiquement.');
+      await api.post('/api/abonnements/support', body);
+      // Lot 3, étape 4 : plus d'avenant à signer — l'équipe LabFlow valide la demande, la capacité est ajoutée tout de suite.
+      if (formType === 'supplement') {
+        setSuccess("Votre demande est envoyée à l'équipe LabFlow. Dès sa validation, la capacité sera ajoutée et vous recevrez un email de confirmation.");
       } else {
         setSuccess('Demande envoyée avec succès.');
       }
@@ -197,23 +198,6 @@ export default function SupportPage() {
       const e = err as { response?: { data?: { message?: string } } };
       setError(e?.response?.data?.message || 'Erreur lors de l\'envoi');
     } finally { setSaving(false); }
-  };
-
-  const downloadContrat = async (id: number) => {
-    try {
-      const res = await api.get(`/api/abonnements/support/${id}/contrat-signe`, { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contrat-avenant-${id}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      setError('Le contrat signé n\'est pas encore disponible.');
-    }
   };
 
   const filtered = demandes.filter((d) => {
@@ -259,7 +243,7 @@ export default function SupportPage() {
       + nbGerants * (supplPricing.prixGerantSup ?? 0)
       + acheteursDelta
     : 0;
-  // Total après application de la promo mensualité active (= ce qui sera sur l'avenant signé)
+  // Total après application de la promo mensualité active (estimation affichée avant la validation)
   const supplTotalEff = supplTotal != null ? applyMensPromo(supplTotal, supplPricing?.mensPromo) : null;
   const supplHasMensPromo = !!supplPricing?.mensPromo && supplTotalEff != null && supplTotal != null && supplTotalEff !== supplTotal;
 
@@ -610,20 +594,6 @@ export default function SupportPage() {
                     <span style={{ color: '#64748b', fontStyle: 'italic' }}>{d.description.slice(0, 120)}{d.description.length > 120 ? '…' : ''}</span>
                   )}
                 </div>
-                {d.type === 'supplement' && d.docusealSubmissionId && (
-                  <div style={{ marginTop: 10, background: '#f5f3ff', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #4338ca' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#374151' }}>
-                      📄 Contrat avenant envoyé à <strong>{d.clientEmail || 'votre adresse email'}</strong> · {d.statut === 'validée' ? 'signé ✓' : 'en attente de signature'}
-                    </div>
-                    {d.statut === 'validée' && (
-                      <button
-                        onClick={() => downloadContrat(d.id)}
-                        style={{ marginTop: 8, padding: '6px 12px', borderRadius: 8, border: '1.5px solid #4338ca', background: '#fff', color: '#4338ca', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer' }}>
-                        ⬇️ Contrat avenant{d.traiteLe ? ` — ${fmtDate(d.traiteLe)}` : ''}
-                      </button>
-                    )}
-                  </div>
-                )}
                 {d.notesAdmin && (
                   <div style={{ marginTop: 10, background: '#f8fafc', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #4338ca' }}>
                     <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 4 }}>Réponse de l'administration</div>

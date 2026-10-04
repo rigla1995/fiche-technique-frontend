@@ -4,125 +4,901 @@
     "avant": "/api/abonnements/contrat-actif?info=1",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "/api/abonnements/contrat-actif",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "blob",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "application/pdf",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "a",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "contrat-labflow.pdf",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "📄 Contrat actif⟦? — ⟦·⟧|⟧",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "100%",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "9px 12px",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "1.5px solid #4338ca",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "#fff",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "#4338ca",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "0.82rem",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "pointer",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "fr-FR",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "2-digit",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "short",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   },
   {
     "fichier": "src/components/client/MonAbonnementPage.tsx",
     "avant": "numeric",
     "apres": null,
     "type": "retire",
-    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "Votre avenant a été généré : un email avec le lien de signature vous a été envoyé. Signez-le pour que la capacité soit ajoutée automatiquement.",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": null,
+    "apres": "Votre demande est envoyée à l'équipe LabFlow. Dès sa validation, la capacité sera ajoutée et vous recevrez un email de confirmation.",
+    "type": "remplace",
+    "justification": "Lot 3, étape 4 — plus d'avenants (décision écrite du client du 04/10/2026) : texte VISIBLE qui remplace la mention de l'avenant (« Demandez un supplément », demande envoyée à l'équipe LabFlow puis validée)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "/api/abonnements/support/⟦·⟧/contrat-signe",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "blob",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "application/pdf",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "a",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "contrat-avenant-⟦·⟧.pdf",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "Le contrat signé n'est pas encore disponible.",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "supplement",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "#f5f3ff",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "10px 12px",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "3px solid #4338ca",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "0.78rem",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "#374151",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "📄 Contrat avenant envoyé à ⟦<strong>⟧ · ⟦?signé ✓|en attente de signature⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "⟦?⟦·⟧|votre adresse email⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "validée",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "⬇️ Contrat avenant⟦? — ⟦·⟧|⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "6px 12px",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "1.5px solid #4338ca",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "#fff",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "#4338ca",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "0.8rem",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/client/SupportPage.tsx",
+    "avant": "pointer",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦·⟧ DT",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "fr-FR",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "mm",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "a4",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "normal",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 20
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#111827",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "helvetica",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "F",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#e2e8f0",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 11
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#f0f4ff",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#c7d2fe",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 3
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "bold",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 11
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#3730a3",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#1e1b4b",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#d97706",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#ffffff",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#fde68a",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 5
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "AVENANT AU CONTRAT D'ABONNEMENT",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#fbbf24",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Réf. AVN-⟦·⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "right",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 6
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#fcd34d",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Émis le ⟦·⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "OBJET DE L'AVENANT",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#fffbeb",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#78350f",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Le présent avenant modifie le contrat d'abonnement en vigueur entre ⟦·⟧ et le client ⟦·⟧. Il prend effet à compter du ⟦·⟧ et complète les termes initiaux du contrat sans les remplacer.",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "CLIENT",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#f8fafc",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 5
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#0f172a",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#64748b",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 6
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "MODIFICATION APPORTÉE",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "+⟦·⟧ ⟦activité|activités@>1⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "+⟦·⟧ ⟦labo|labos@>1⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "+⟦·⟧ ⟦gérant|gérants@>1⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Option Acheteurs : palier ⟦·⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "   ·   ",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#14532d",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#f0fdf4",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#bbf7d0",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#15803d",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "CAPACITÉ AJOUTÉE",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "NOUVELLE CONFIGURATION",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#eef2ff",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#4338ca",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Poste",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Qté",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Tarif mensuel",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦?⟦·⟧ / mois|—⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦? (⟦?Basique|Premium⟧)|⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "basique",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦Activité|Activités@>1⟧⟦·⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Labo(s)",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Gérant(s) sup.",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Option Acheteurs",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦?⟦·⟧|—⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#fafbff",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#374151",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 4
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#f1f5f9",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "IMPACT FINANCIER",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Mensualité précédente",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#94a3b8",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#dbeafe",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#93c5fd",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#1e40af",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Nouvelle mensualite",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#1d4ed8",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦·⟧ /mois",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#3b82f6",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦?Promo active : ⟦·⟧ /mois effectif|Facturation mensuelle recurrente⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "NOTE",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "SIGNATURES",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "PRESTATAIRE",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Date : ⟦·⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#9ca3af",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF).",
+    "occurrences": 4
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Signature & cachet",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Signature — ⟦·⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#fefce8",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "#92400e",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "Validation numérique : la validation par le client de cet avenant vaut acceptation des nouvelles conditions.",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "⟦·⟧  ·  Avenant généré le ⟦·⟧  ·  Document confidentiel",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "center",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": "datauristring",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/utils/contractPdf.ts",
+    "avant": ",",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
   }
 ]
