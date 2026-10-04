@@ -805,7 +805,7 @@ test('allow : entrées typées et justifiées, sinon refusées', () => {
     const ok = chargerAllow(d);
     assert.deepEqual(ok.problemes, []);
     assert.deepEqual(ok.entrees.map((e) => [e.fichier, e.lot, e.modes]), [['src/a.tsx', 'F1', ['identite']], ['src/a.tsx', 'F1', ['residuels']]]);
-    assert.equal(TYPES_ALLOW.length, 16); // + reporte, admin (E8), fiscal (E1), retire et remplace (lot 3)
+    assert.equal(TYPES_ALLOW.length, 17); // + reporte, admin (E8), fiscal (E1), retire, remplace et ajoute (lot 3)
     const mauvais = [
       [{ ...bon, type: 'pratique' }, /type « pratique » inconnu/],
       [{ ...bon, justification: '' }, /justification manquante/],
@@ -2365,6 +2365,32 @@ test('lot 3 — type « remplace » : seulement un texte nouveau qui remplace un
   ]) {
     const r = charger([entree]);
     assert.ok(r.problemes.some((p) => /type « remplace » : seulement un texte nouveau/.test(p)), JSON.stringify(r.problemes));
+  }
+});
+
+test('lot 3 — type « ajoute » : seulement un texte nouveau d\'une fonction nouvelle', () => {
+  assert.ok(TYPES_ALLOW.includes('ajoute'));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-allow-l3a-'));
+  temporaires.push(d);
+  const charger = (entrees) => { fs.writeFileSync(path.join(d, 'L3.json'), JSON.stringify(entrees)); return chargerAllow(d); };
+  const just = 'Section « Mon entreprise » du profil du client (lot 3, étape 6) : texte nouveau, sans terme du lexique.';
+  const ok = charger([{ fichier: 'src/a.tsx', avant: null, apres: 'Mon entreprise', type: 'ajoute', justification: just }]);
+  assert.deepEqual(ok.problemes, []);
+  assert.deepEqual(ok.entrees.map((e) => e.modes), [['identite']]);
+  for (const entree of [
+    { fichier: 'src/a.tsx', avant: 'Ancien texte', apres: null, type: 'ajoute', justification: just },
+    { fichier: 'src/a.tsx', avant: 'Ancien texte', apres: 'Mon entreprise', type: 'ajoute', justification: just },
+  ]) {
+    const r = charger([entree]);
+    assert.ok(r.problemes.some((p) => /type « ajoute » : seulement un texte nouveau/.test(p)), JSON.stringify(r.problemes));
+  }
+  // Un texte nouveau ne fait jamais taire le mode residuels : « mode » autre que identite refusé (ajoute et remplace).
+  for (const type of ['ajoute', 'remplace']) {
+    for (const mode of ['residuels', ['identite', 'residuels'], 'accords']) {
+      const r = charger([{ fichier: 'src/a.tsx', avant: null, apres: 'Envoyez-le à votre gérant', type, mode, justification: just }]);
+      assert.ok(r.problemes.some((p) => new RegExp(`type « ${type} » : seulement le mode identite`).test(p)), `${type} ${JSON.stringify(mode)} → ${JSON.stringify(r.problemes)}`);
+    }
+    assert.deepEqual(charger([{ fichier: 'src/a.tsx', avant: null, apres: 'Mon entreprise', type, mode: 'identite', justification: just }]).problemes, []);
   }
 });
 

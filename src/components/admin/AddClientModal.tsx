@@ -5,7 +5,7 @@ import { MonthPicker } from './MonthPicker';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 import Counter from './Counter';
 import ClientIdentiteForm from './ClientIdentiteForm';
-import { IDENTITE_VIDE, corpsIdentite, identiteDe, type IdentiteLegale } from './identiteLegale';
+import { IDENTITE_VIDE, corpsIdentite, identiteDe, type IdentiteLegale } from '../../utils/identiteLegale';
 import { controlerMatriculeFiscal } from './matriculeFiscal';
 import {
   AIDE_DEFAUT, PALIERS_ACHETEURS, PALIER_LABELS,

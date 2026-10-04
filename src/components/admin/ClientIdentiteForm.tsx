@@ -2,7 +2,7 @@
 // Contrôlé ({ value, onChange }) : utilisé par la fenêtre « Identité » de la page Clients (étape 1),
 // puis par la 1re étape de l'assistant de création (étape 2). Espace admin : vocabulaire LabFlow (I4).
 import { useState } from 'react';
-import { FORMES_JURIDIQUES, formeIndividuelle, type IdentiteLegale } from './identiteLegale';
+import { FORMES_JURIDIQUES, formeIndividuelle, type IdentiteLegale } from '../../utils/identiteLegale';
 import { controlerMatriculeFiscal } from './matriculeFiscal';
 
 interface Props {

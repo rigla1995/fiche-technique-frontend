@@ -160,6 +160,7 @@ export const TYPES_ALLOW = [
   'fiscal', // spec lot 2b §3.2 E1 : facture acheteur de docuseal-templates/generate.js, inchangée (document fiscal)
   'retire', // lot 3 (docs/lot-3-spec.md) : texte SUPPRIMÉ avec sa fonctionnalité, sur décision du client (apres: null)
   'remplace', // lot 3 : texte NOUVEAU et visible qui remplace un texte retiré, sur décision du client (avant: null)
+  'ajoute', // lot 3, étape 6 : texte NOUVEAU et visible d'une fonction nouvelle (rien n'est remplacé), décidée par le client (avant: null)
 ];
 // `reporte` : texte laissé à un lot ultérieur, champ `lot` obligatoire (le texte fixe du contrat au lot 3, l'outil
 // de recherche de l'assistant au 2c). `admin` : texte lu seulement par un super_admin ou le boss (I4), dans un
@@ -168,6 +169,9 @@ export const TYPES_ALLOW = [
 // supprimé avec la fonctionnalité qui l'affichait, sur décision écrite du client (ex. : plus de contrats, 04/10/2026) ;
 // seulement « apres: null », la justification nomme la décision. `remplace` (lot 3) : texte NOUVEAU et visible qui remplace
 // un texte retiré, sur décision écrite du client (ex. : intro de l'email de bienvenue sans contrat) ; seulement « avant: null ».
+// `ajoute` (lot 3, étape 6) : texte NOUVEAU et visible d'une fonction nouvelle validée par le client, qui ne remplace rien
+// (ex. : section « Mon entreprise » du profil) ; seulement « avant: null », la justification nomme la fonction. Le mode
+// residuels relit ces textes comme les autres : un terme du lexique resté en dur y est toujours signalé.
 export const LOTS_REPORTE = ['3', '2c'];
 const GARDE_ADMIN = /\brequire(?:SuperAdmin|Boss)\b/;
 const ROUTE = /(?:^|[\s«(`'"])\/[\w:-]+/;
@@ -1910,11 +1914,17 @@ export function chargerAllow(dossier) {
       // Lot 3 : `retire` n'admet qu'un texte qui DISPARAÎT (jamais un texte nouveau ni modifié).
       if (e.type === 'retire' && (e.apres !== null || e.avant == null)) problemes.push(`${ou} : type « retire » : seulement un texte supprimé (avant = texte, apres: null)`);
       if (e.type === 'remplace' && (e.avant !== null || e.apres == null)) problemes.push(`${ou} : type « remplace » : seulement un texte nouveau (avant: null, apres = texte)`);
+      if (e.type === 'ajoute' && (e.avant !== null || e.apres == null)) problemes.push(`${ou} : type « ajoute » : seulement un texte nouveau (avant: null, apres = texte)`);
       if (e.type === 'admin' && typeof e.justification === 'string' && !(GARDE_ADMIN.test(e.justification) && ROUTE.test(e.justification))) {
         problemes.push(`${ou} : type « admin » : la justification nomme la route (/admin/…) et son garde (requireSuperAdmin ou requireBoss)`);
       }
       const modes = e.mode == null ? null : [].concat(e.mode);
       if (modes && !modes.every((m) => MODES_ALLOW.includes(m))) problemes.push(`${ou} : mode inconnu (${MODES_ALLOW.join(', ')})`);
+      // Un texte NOUVEAU (`ajoute`, `remplace`) n'est admis que par le mode identite : le mode residuels le relit
+      // toujours (un terme du lexique resté en dur dans un texte nouveau ne s'admet pas par cette entrée).
+      if ((e.type === 'ajoute' || e.type === 'remplace') && modes && !(modes.length === 1 && modes[0] === 'identite')) {
+        problemes.push(`${ou} : type « ${e.type} » : seulement le mode identite (le mode residuels relit toujours un texte nouveau)`);
+      }
       const avant = e.avant == null ? null : apostrophe(e.avant);
       const apres = e.apres == null ? null : apostrophe(e.apres);
       // `occurrences` : nombre de textes nouveaux (avant: null) ou supprimés (apres: null) que l'entrée admet.
