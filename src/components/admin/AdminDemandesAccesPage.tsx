@@ -211,6 +211,8 @@ export default function AdminDemandesAccesPage() {
             nom: convertTarget.nom,
             email: convertTarget.email,
             telephone: convertTarget.telephone ?? undefined,
+            // Lot 3 : la ville de la demande pré-remplit l'identité légale
+            ville: convertTarget.ville ?? undefined,
           }}
           onClose={() => setConvertTarget(null)}
           onCreated={(createdClientId) => {
