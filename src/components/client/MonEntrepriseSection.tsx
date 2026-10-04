@@ -4,15 +4,15 @@
 // (renseigné par l'équipe LabFlow). PUT /api/entreprise/identite ne reçoit que les champs modifiés.
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
-import {
-  FORMES_JURIDIQUES, champsModifies, formeIndividuelle, identiteDe, libelleForme, type IdentiteLegale,
-} from '../../utils/identiteLegale';
+import { useAuth } from '../../context/AuthContext';
+import { champsModifies, formeIndividuelle, identiteDe, libelleForme, type IdentiteLegale } from '../../utils/identiteLegale';
 
 type ChampClient = 'adresse' | 'ville' | 'representantNom' | 'representantQualite';
 
 const vide = (v: string | null | undefined) => !(v ?? '').trim();
 
 export default function MonEntrepriseSection() {
+  const { canWrite } = useAuth();
   const [initiale, setInitiale] = useState<IdentiteLegale | null>(null);
   const [valeur, setValeur] = useState<IdentiteLegale | null>(null);
   const [saving, setSaving] = useState(false);
@@ -23,12 +23,13 @@ export default function MonEntrepriseSection() {
     let actif = true;
     api.get('/api/entreprise')
       .then(({ data }) => {
-        if (!actif) return;
+        // Réponse sans identité (serveur d'avant l'étape 6) : pas de section plutôt qu'une section fausse.
+        if (!actif || (data && !data.identite)) return;
         const identite = identiteDe(data?.identite);
         setInitiale(identite);
         setValeur(identite);
       })
-      .catch(() => { /* section absente : le reste du profil reste utilisable */ });
+      .catch(() => { /* réseau coupé : pas de section, le reste du profil reste utilisable */ });
     return () => { actif = false; };
   }, []);
 
@@ -36,26 +37,28 @@ export default function MonEntrepriseSection() {
 
   const corps = champsModifies(valeur, initiale);
   const modifie = Object.keys(corps).length > 0;
+  const fige = saving || !canWrite; // compte en lecture seule : le serveur refuserait l'enregistrement
   // Ce que seule l'équipe LabFlow renseigne (d'après la patente) / ce que le client renseigne lui-même.
   const manqueLabFlow = vide(initiale.raisonSociale) || vide(initiale.matriculeFiscal);
   const manqueClient = vide(initiale.adresse) || vide(initiale.ville);
   // Adresse déjà renseignée puis modifiée : elle est lue telle quelle par les factures existantes.
   const adresseDejaImprimee = !vide(initiale.adresse) && (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
-  const qualiteProposee = FORMES_JURIDIQUES.find((f) => f.value === initiale.formeJuridique)?.qualite || '';
 
   const set = (k: ChampClient, v: string) => { setValeur({ ...valeur, [k]: v }); setSucces(false); setErreur(null); };
 
   const enregistrer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (saving || !modifie) return;
+    if (fige || !modifie) return;
     setSaving(true);
     setSucces(false);
     setErreur(null);
     try {
       const { data } = await api.put('/api/entreprise/identite', corps);
-      const identite = identiteDe(data?.identite);
-      setInitiale(identite);
-      setValeur(identite);
+      if (data?.identite) {
+        const identite = identiteDe(data.identite);
+        setInitiale(identite);
+        setValeur(identite);
+      }
       setSucces(true);
     } catch (err: unknown) {
       setErreur((err as { response?: { data?: { message?: string } } })?.response?.data?.message
@@ -68,7 +71,7 @@ export default function MonEntrepriseSection() {
   const lecture = (libelle: string, v: string | null | undefined) => (
     <div>
       <span style={lbl}>{libelle}</span>
-      <div style={{ fontSize: '0.88rem', color: vide(v) ? '#94a3b8' : '#0f172a', fontWeight: vide(v) ? 400 : 600, overflowWrap: 'anywhere' }}>
+      <div style={{ fontSize: '0.88rem', color: vide(v) ? '#64748b' : '#0f172a', fontWeight: vide(v) ? 400 : 600, overflowWrap: 'anywhere' }}>
         {vide(v) ? 'Non renseigné' : v}
       </div>
     </div>
@@ -76,9 +79,9 @@ export default function MonEntrepriseSection() {
 
   const champ = (k: ChampClient, libelle: string, placeholder: string, maxLength: number) => (
     <div>
-      <label style={lbl}>{libelle}</label>
-      <input value={valeur[k] ?? ''} onChange={(e) => set(k, e.target.value)} placeholder={placeholder}
-        maxLength={maxLength} disabled={saving} style={inp} />
+      <label htmlFor={`mon-entreprise-${k}`} style={lbl}>{libelle}</label>
+      <input id={`mon-entreprise-${k}`} value={valeur[k] ?? ''} onChange={(e) => set(k, e.target.value)}
+        placeholder={placeholder} maxLength={maxLength} disabled={fige} style={inp} />
     </div>
   );
 
@@ -91,9 +94,8 @@ export default function MonEntrepriseSection() {
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {(manqueLabFlow || manqueClient) && (
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', lineHeight: 1.5 }}>
-            🪪 {manqueLabFlow
-              ? "Identité légale à compléter : envoyez votre patente à l'équipe LabFlow, qui renseignera la raison sociale et le matricule fiscal."
-              : "Renseignez l'adresse et la ville de votre entreprise : elles figurent sur vos factures."}
+            {manqueLabFlow && "Identité légale à compléter : l'équipe LabFlow la renseigne à partir de votre patente. "}
+            {manqueClient && "Renseignez l'adresse et la ville de votre entreprise : elles sont nécessaires à vos factures."}
           </div>
         )}
 
@@ -102,11 +104,13 @@ export default function MonEntrepriseSection() {
           {lecture('Forme juridique', libelleForme(initiale.formeJuridique))}
           {!vide(initiale.nomCommercial) && lecture('Nom commercial', initiale.nomCommercial)}
           {lecture('Matricule fiscal', initiale.matriculeFiscal)}
-          {lecture('Identifiant RNE', initiale.rne)}
+          {!vide(initiale.rne) && lecture('Identifiant RNE', initiale.rne)}
         </div>
-        <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
-          Ces informations viennent de votre patente. Pour les corriger, contactez l'équipe LabFlow.
-        </p>
+        {!manqueLabFlow && (
+          <p style={{ margin: 0, fontSize: '0.78rem', color: '#6b7280', lineHeight: 1.5 }}>
+            Ces informations viennent de votre patente : seule l'équipe LabFlow les modifie.
+          </p>
+        )}
 
         <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={grille}>
@@ -115,14 +119,14 @@ export default function MonEntrepriseSection() {
           </div>
           <div style={grille}>
             {champ('representantNom', 'Représentant légal', 'Prénom et nom', 150)}
-            {champ('representantQualite', 'Qualité', qualiteProposee || 'Fonction du représentant', 80)}
+            {champ('representantQualite', 'Fonction du représentant', "Sa fonction dans l'entreprise", 80)}
           </div>
         </div>
 
         {adresseDejaImprimee && (
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', lineHeight: 1.5 }}>
-            ⚠️ L'adresse actuelle est déjà imprimée sur vos factures : une facture déjà émise, téléchargée de nouveau,
-            portera la nouvelle adresse.
+            ⚠️ Vos factures déjà émises porteront aussi la nouvelle adresse si vous les téléchargez de nouveau.
+            La ville n'y est pas encore imprimée : si elle figure dans votre adresse, laissez-la.
           </div>
         )}
         {succes && (
@@ -136,8 +140,8 @@ export default function MonEntrepriseSection() {
           </div>
         )}
 
-        <button type="submit" disabled={saving || !modifie}
-          style={{ alignSelf: 'flex-end', padding: '11px 22px', borderRadius: 12, border: 'none', background: saving || !modifie ? '#e5e7eb' : 'linear-gradient(135deg,#b45309,#f59e0b)', color: saving || !modifie ? '#9ca3af' : '#fff', fontSize: '0.9rem', fontWeight: 800, cursor: saving || !modifie ? 'default' : 'pointer' }}>
+        <button type="submit" disabled={fige || !modifie}
+          style={{ alignSelf: 'flex-end', padding: '11px 22px', borderRadius: 12, border: 'none', background: fige || !modifie ? '#e5e7eb' : 'linear-gradient(135deg,#92400e,#b45309)', color: fige || !modifie ? '#9ca3af' : '#fff', fontSize: '0.9rem', fontWeight: 800, cursor: fige || !modifie ? 'default' : 'pointer' }}>
           {saving ? 'Enregistrement…' : '💾 Enregistrer mon entreprise'}
         </button>
       </div>

@@ -1057,13 +1057,6 @@
   {
     "fichier": "src/components/client/MonEntrepriseSection.tsx",
     "avant": null,
-    "apres": "#⟦?94a3b8|0f172a⟧",
-    "type": "discriminant",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
-  },
-  {
-    "fichier": "src/components/client/MonEntrepriseSection.tsx",
-    "avant": null,
     "apres": "anywhere",
     "type": "discriminant",
     "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
@@ -1212,13 +1205,6 @@
   {
     "fichier": "src/components/client/MonEntrepriseSection.tsx",
     "avant": null,
-    "apres": "🪪 ⟦?Identité légale à compléter : envoyez votre patente à l'équipe LabFlow, qui renseignera la raison sociale et le matricule fiscal|Renseignez l'adresse et la ville de votre entreprise : elles figurent sur vos factures⟧.",
-    "type": "ajoute",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
-  },
-  {
-    "fichier": "src/components/client/MonEntrepriseSection.tsx",
-    "avant": null,
     "apres": "⟦?Nom du titulaire|Raison sociale⟧",
     "type": "ajoute",
     "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
@@ -1264,13 +1250,6 @@
     "apres": "#6b7280",
     "type": "discriminant",
     "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
-  },
-  {
-    "fichier": "src/components/client/MonEntrepriseSection.tsx",
-    "avant": null,
-    "apres": "Ces informations viennent de votre patente. Pour les corriger, contactez l'équipe LabFlow.",
-    "type": "ajoute",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
   },
   {
     "fichier": "src/components/client/MonEntrepriseSection.tsx",
@@ -1348,27 +1327,6 @@
     "apres": "representantQualite",
     "type": "discriminant",
     "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
-  },
-  {
-    "fichier": "src/components/client/MonEntrepriseSection.tsx",
-    "avant": null,
-    "apres": "Qualité",
-    "type": "ajoute",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
-  },
-  {
-    "fichier": "src/components/client/MonEntrepriseSection.tsx",
-    "avant": null,
-    "apres": "⟦?⟦·⟧|Fonction du représentant⟧",
-    "type": "ajoute",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
-  },
-  {
-    "fichier": "src/components/client/MonEntrepriseSection.tsx",
-    "avant": null,
-    "apres": "⚠️ L'adresse actuelle est déjà imprimée sur vos factures : une facture déjà émise, téléchargée de nouveau, portera la nouvelle adresse.",
-    "type": "ajoute",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
   },
   {
     "fichier": "src/components/client/MonEntrepriseSection.tsx",
@@ -1469,13 +1427,6 @@
     "type": "discriminant",
     "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle).",
     "occurrences": 2
-  },
-  {
-    "fichier": "src/components/client/MonEntrepriseSection.tsx",
-    "avant": null,
-    "apres": "⟦?#e5e7eb|linear-gradient(135deg,#b45309,#f59e0b)⟧",
-    "type": "discriminant",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
   },
   {
     "fichier": "src/components/client/MonEntrepriseSection.tsx",
@@ -1715,5 +1666,62 @@
     "apres": "Gérant",
     "type": "homonyme",
     "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : « Gérant » est ici la qualité JURIDIQUE du représentant légal d'une SARL, SUARL ou SNC (droit des sociétés), proposée dans le champ « Qualité » ; ce n'est pas le rôle « gérant » de l'application (clé gerant du lexique). Elle reste la même dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "#⟦?64748b|0f172a⟧",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "mon-entreprise-⟦·⟧",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "⟦?Identité légale à compléter : l'équipe LabFlow la renseigne à partir de votre patente. |⟧⟦?Renseignez l'adresse et la ville de votre entreprise : elles sont nécessaires à vos factures.|⟧",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "Ces informations viennent de votre patente : seule l'équipe LabFlow les modifie.",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "Fonction du représentant",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "Sa fonction dans l'entreprise",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "⚠️ Vos factures déjà émises porteront aussi la nouvelle adresse si vous les téléchargez de nouveau. La ville n'y est pas encore imprimée : si elle figure dans votre adresse, laissez-la.",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "⟦?#e5e7eb|linear-gradient(135deg,#92400e,#b45309)⟧",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
   }
 ]

@@ -2384,6 +2384,14 @@ test('lot 3 — type « ajoute » : seulement un texte nouveau d\'une fonction n
     const r = charger([entree]);
     assert.ok(r.problemes.some((p) => /type « ajoute » : seulement un texte nouveau/.test(p)), JSON.stringify(r.problemes));
   }
+  // Un texte nouveau ne fait jamais taire le mode residuels : « mode » autre que identite refusé (ajoute et remplace).
+  for (const type of ['ajoute', 'remplace']) {
+    for (const mode of ['residuels', ['identite', 'residuels'], 'accords']) {
+      const r = charger([{ fichier: 'src/a.tsx', avant: null, apres: 'Envoyez-le à votre gérant', type, mode, justification: just }]);
+      assert.ok(r.problemes.some((p) => new RegExp(`type « ${type} » : seulement le mode identite`).test(p)), `${type} ${JSON.stringify(mode)} → ${JSON.stringify(r.problemes)}`);
+    }
+    assert.deepEqual(charger([{ fichier: 'src/a.tsx', avant: null, apres: 'Mon entreprise', type, mode: 'identite', justification: just }]).problemes, []);
+  }
 });
 
 test('lot 3 — type « retire » : seulement un texte supprimé avec sa fonctionnalité', () => {

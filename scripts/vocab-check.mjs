@@ -1920,6 +1920,11 @@ export function chargerAllow(dossier) {
       }
       const modes = e.mode == null ? null : [].concat(e.mode);
       if (modes && !modes.every((m) => MODES_ALLOW.includes(m))) problemes.push(`${ou} : mode inconnu (${MODES_ALLOW.join(', ')})`);
+      // Un texte NOUVEAU (`ajoute`, `remplace`) n'est admis que par le mode identite : le mode residuels le relit
+      // toujours (un terme du lexique resté en dur dans un texte nouveau ne s'admet pas par cette entrée).
+      if ((e.type === 'ajoute' || e.type === 'remplace') && modes && !(modes.length === 1 && modes[0] === 'identite')) {
+        problemes.push(`${ou} : type « ${e.type} » : seulement le mode identite (le mode residuels relit toujours un texte nouveau)`);
+      }
       const avant = e.avant == null ? null : apostrophe(e.avant);
       const apres = e.apres == null ? null : apostrophe(e.apres);
       // `occurrences` : nombre de textes nouveaux (avant: null) ou supprimés (apres: null) que l'entrée admet.
