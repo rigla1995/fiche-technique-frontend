@@ -8,7 +8,7 @@ import type { OnboardingEtat } from './AssistantChat';
  * Guide de mise en route — bouton 🤖 de la BARRE DU HAUT (rendu par Header,
  * rôle client uniquement). Le bot n'existe que tant que la configuration
  * souscrite n'est pas entièrement mise en place : il disparaît de lui-même
- * quand tout est fait, et RÉAPPARAÎT automatiquement après un avenant
+ * quand tout est fait, et RÉAPPARAÎT automatiquement après un ajout de capacité
  * (nouvelle activité, labo, module…) puisque l'état est recalculé en direct
  * côté serveur (données réelles vs souscription).
  */

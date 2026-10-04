@@ -908,5 +908,114 @@
     "apres": null,
     "type": "retire",
     "justification": "Lot 3, étapes 3-4 — plus de contrats ni d'avenants (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat, avenant DocuSeal d'une demande de supplément, aperçu et téléchargement de l'avenant, email « Avenant validé » avec PDF)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "avenant_signe",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026, « sans engagement ») : notification admin « Avenant signé — capacité ajoutée » supprimée avec le webhook DocuSeal qui l'émettait (événement avenant_signe : écouteur, icône, fond, libellé, redirection).",
+    "occurrences": 4
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "/admin/clients",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026, « sans engagement ») : notification admin « Avenant signé — capacité ajoutée » supprimée avec le webhook DocuSeal qui l'émettait (événement avenant_signe : écouteur, icône, fond, libellé, redirection)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|⟦?✅|❌⟧⟧⟧⟧⟧⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026, « sans engagement ») : notification admin « Avenant signé — capacité ajoutée » supprimée avec le webhook DocuSeal qui l'émettait (événement avenant_signe : écouteur, icône, fond, libellé, redirection)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧",
+    "type": "remplace",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : même affichage VISIBLE des notifications, sans la branche « Avenant signé » ; les autres libellés et icônes sont inchangés."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "linear-gradient(135deg,#⟦?eff6ff,#dbeafe|⟦?f5f3ff,#ede9fe|⟦?fef3c7,#fde68a|⟦?e0e7ff,#c7d2fe|⟦?d1fae5,#a7f3d0|⟦?d1fae5,#a7f3d0|fee2e2,#fecaca⟧⟧⟧⟧⟧⟧)",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026, « sans engagement ») : notification admin « Avenant signé — capacité ajoutée » supprimée avec le webhook DocuSeal qui l'émettait (événement avenant_signe : écouteur, icône, fond, libellé, redirection)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "linear-gradient(135deg,#⟦?eff6ff,#dbeafe|⟦?f5f3ff,#ede9fe|⟦?fef3c7,#fde68a|⟦?e0e7ff,#c7d2fe|⟦?d1fae5,#a7f3d0|fee2e2,#fecaca⟧⟧⟧⟧⟧)",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 5 : fond CSS des notifications (jamais lu comme un texte), sans la branche de l'événement avenant_signe retiré."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|⟦?Avenant signé — capacité ajoutée|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026, « sans engagement ») : notification admin « Avenant signé — capacité ajoutée » supprimée avec le webhook DocuSeal qui l'émettait (événement avenant_signe : écouteur, icône, fond, libellé, redirection)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧",
+    "type": "remplace",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : même affichage VISIBLE des notifications, sans la branche « Avenant signé » ; les autres libellés et icônes sont inchangés."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": "avenant_signe",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026, « sans engagement ») : notification admin « Avenant signé — capacité ajoutée » supprimée avec le webhook DocuSeal qui l'émettait (événement avenant_signe : écouteur, icône, fond, libellé, redirection).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "demande_capacite_validee",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : événement de notification émis seulement par le webhook DocuSeal supprimé (écouteur et redirection au clic retirés) ; depuis l'étape 4, la validation d'un ajout de capacité par l'équipe LabFlow notifie le client par « demande_traitee », inchangé."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "/client/activites",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : événement de notification émis seulement par le webhook DocuSeal supprimé (écouteur et redirection au clic retirés) ; depuis l'étape 4, la validation d'un ajout de capacité par l'équipe LabFlow notifie le client par « demande_traitee », inchangé."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "demande_gerant_validee",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : événement de notification émis seulement par le webhook DocuSeal supprimé (écouteur et redirection au clic retirés) ; depuis l'étape 4, la validation d'un ajout de capacité par l'équipe LabFlow notifie le client par « demande_traitee », inchangé."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "/client/gerants",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : événement de notification émis seulement par le webhook DocuSeal supprimé (écouteur et redirection au clic retirés) ; depuis l'étape 4, la validation d'un ajout de capacité par l'équipe LabFlow notifie le client par « demande_traitee », inchangé."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": "demande_capacite_validee",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : événement de notification émis seulement par le webhook DocuSeal supprimé (écouteur et redirection au clic retirés) ; depuis l'étape 4, la validation d'un ajout de capacité par l'équipe LabFlow notifie le client par « demande_traitee », inchangé.",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": "demande_gerant_validee",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : événement de notification émis seulement par le webhook DocuSeal supprimé (écouteur et redirection au clic retirés) ; depuis l'étape 4, la validation d'un ajout de capacité par l'équipe LabFlow notifie le client par « demande_traitee », inchangé.",
+    "occurrences": 2
   }
 ]
