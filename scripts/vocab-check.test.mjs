@@ -805,7 +805,7 @@ test('allow : entrées typées et justifiées, sinon refusées', () => {
     const ok = chargerAllow(d);
     assert.deepEqual(ok.problemes, []);
     assert.deepEqual(ok.entrees.map((e) => [e.fichier, e.lot, e.modes]), [['src/a.tsx', 'F1', ['identite']], ['src/a.tsx', 'F1', ['residuels']]]);
-    assert.equal(TYPES_ALLOW.length, 15); // + reporte, admin (E8), fiscal (E1) et retire (lot 3)
+    assert.equal(TYPES_ALLOW.length, 16); // + reporte, admin (E8), fiscal (E1), retire et remplace (lot 3)
     const mauvais = [
       [{ ...bon, type: 'pratique' }, /type « pratique » inconnu/],
       [{ ...bon, justification: '' }, /justification manquante/],
@@ -2349,6 +2349,22 @@ test('E8 — types d\'écarts admis : « reporte » (champ lot 3 ou 2c), « admi
   for (const [entree, attendu] of mauvais) {
     const r = charger([entree]);
     assert.ok(r.problemes.some((p) => attendu.test(p)), `${JSON.stringify(entree)} → ${JSON.stringify(r.problemes)}`);
+  }
+});
+
+test('lot 3 — type « remplace » : seulement un texte nouveau qui remplace un texte retiré', () => {
+  assert.ok(TYPES_ALLOW.includes('remplace'));
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'vocab-allow-l3r-'));
+  temporaires.push(d);
+  const charger = (entrees) => { fs.writeFileSync(path.join(d, 'L3.json'), JSON.stringify(entrees)); return chargerAllow(d); };
+  const just = 'Email de bienvenue sans contrat (décision du client du 04/10/2026) : nouvelle introduction.';
+  assert.deepEqual(charger([{ fichier: 'src/a.js', avant: null, apres: 'Votre espace est prêt.', type: 'remplace', justification: just }]).problemes, []);
+  for (const entree of [
+    { fichier: 'src/a.js', avant: 'Ancien texte', apres: null, type: 'remplace', justification: just },
+    { fichier: 'src/a.js', avant: 'Ancien texte', apres: 'Votre espace est prêt.', type: 'remplace', justification: just },
+  ]) {
+    const r = charger([entree]);
+    assert.ok(r.problemes.some((p) => /type « remplace » : seulement un texte nouveau/.test(p)), JSON.stringify(r.problemes));
   }
 });
 

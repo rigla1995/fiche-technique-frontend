@@ -159,13 +159,15 @@ export const TYPES_ALLOW = [
   'reporte', 'admin', // spec lot 2b §3.2 E8
   'fiscal', // spec lot 2b §3.2 E1 : facture acheteur de docuseal-templates/generate.js, inchangée (document fiscal)
   'retire', // lot 3 (docs/lot-3-spec.md) : texte SUPPRIMÉ avec sa fonctionnalité, sur décision du client (apres: null)
+  'remplace', // lot 3 : texte NOUVEAU et visible qui remplace un texte retiré, sur décision du client (avant: null)
 ];
 // `reporte` : texte laissé à un lot ultérieur, champ `lot` obligatoire (le texte fixe du contrat au lot 3, l'outil
 // de recherche de l'assistant au 2c). `admin` : texte lu seulement par un super_admin ou le boss (I4), dans un
 // fichier mixte ; la justification nomme la route et son garde. `fiscal` : texte d'un document fiscal (facture
 // acheteur, facture d'abonnement) qui reste inchangé à l'octet près (spec lot 2b §0, §8.3). `retire` (lot 3) : texte
 // supprimé avec la fonctionnalité qui l'affichait, sur décision écrite du client (ex. : plus de contrats, 04/10/2026) ;
-// seulement « apres: null », la justification nomme la décision.
+// seulement « apres: null », la justification nomme la décision. `remplace` (lot 3) : texte NOUVEAU et visible qui remplace
+// un texte retiré, sur décision écrite du client (ex. : intro de l'email de bienvenue sans contrat) ; seulement « avant: null ».
 export const LOTS_REPORTE = ['3', '2c'];
 const GARDE_ADMIN = /\brequire(?:SuperAdmin|Boss)\b/;
 const ROUTE = /(?:^|[\s«(`'"])\/[\w:-]+/;
@@ -1907,6 +1909,7 @@ export function chargerAllow(dossier) {
       if (e.type !== 'reporte' && e.lot !== undefined) problemes.push(`${ou} : le champ « lot » ne vaut que pour le type « reporte »`);
       // Lot 3 : `retire` n'admet qu'un texte qui DISPARAÎT (jamais un texte nouveau ni modifié).
       if (e.type === 'retire' && (e.apres !== null || e.avant == null)) problemes.push(`${ou} : type « retire » : seulement un texte supprimé (avant = texte, apres: null)`);
+      if (e.type === 'remplace' && (e.avant !== null || e.apres == null)) problemes.push(`${ou} : type « remplace » : seulement un texte nouveau (avant: null, apres = texte)`);
       if (e.type === 'admin' && typeof e.justification === 'string' && !(GARDE_ADMIN.test(e.justification) && ROUTE.test(e.justification))) {
         problemes.push(`${ou} : type « admin » : la justification nomme la route (/admin/…) et son garde (requireSuperAdmin ou requireBoss)`);
       }

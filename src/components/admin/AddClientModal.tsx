@@ -898,6 +898,12 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
               </div>
 
               <PricingCard preview={preview} promos={promos} grille={grilleNom} onboarding={montantObValid ? montantOb : undefined} />
+              {/* Promo système, appliquée par le serveur à la création (ne pas l'envoyer : elle serait créée en double) */}
+              {!aDejaPromoMensuelle && (
+                <div style={{ marginTop: 12, background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#047857', fontWeight: 600 }}>
+                  🎁 1er mois d'abonnement offert — appliqué automatiquement à la création
+                </div>
+              )}
 
               <div style={{ marginTop: 12, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#713f12', marginBottom: 4 }}>📬 Ce qui sera envoyé au client :</div>
