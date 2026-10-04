@@ -52,8 +52,6 @@ export default function ClientsManagement() {
   const [identiteClient, setIdentiteClient] = useState<Client | null>(null);
   const titreDe = (c: Client) => c.nomAffiche || c.name;
 
-  // Téléchargement du contrat (spinner par client)
-  const [contractLoadingId, setContractLoadingId] = useState<number | null>(null);
 
   const [resendingId, setResendingId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
@@ -88,38 +86,6 @@ export default function ClientsManagement() {
       setConfigPopup({ client, data, loading: false });
     } catch {
       setConfigPopup({ client, data: null, loading: false });
-    }
-  };
-
-  // ── Contrat download ──────────────────────────────────────────────────────
-  // Le VRAI contrat : celui signé via DocuSeal si disponible, sinon le document
-  // régénéré par le backend avec la charte contractuelle (même builder que l'envoi).
-  const downloadContract = async (client: Client) => {
-    if (contractLoadingId !== null) return; // un téléchargement à la fois
-    setContractLoadingId(client.id);
-    try {
-      const res = await api.get(`/api/abonnements/client/${client.id}/contrat-pdf`, { responseType: 'blob' });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `contrat-${client.name.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch (err: unknown) {
-      const status = (err as { response?: { status?: number } })?.response?.status;
-      // 404 = vraiment aucun contrat ; autres statuts = indisponibilité passagère
-      alerte({
-        title: 'Contrat indisponible',
-        message: status === 404
-          ? "Aucun contrat n'existe pour ce client."
-          : 'Le contrat est momentanément indisponible — réessayez dans un instant.',
-        tone: 'danger',
-      });
-    } finally {
-      setContractLoadingId(null);
     }
   };
 
@@ -436,15 +402,6 @@ export default function ClientsManagement() {
                     >
                       ⚙️ Config
                     </button>
-                    {active && (
-                      <button
-                        disabled={contractLoadingId === c.id}
-                        onClick={() => downloadContract(c)}
-                        style={{ flex: 1, minWidth: 86, background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: 8, padding: '7px 8px', fontSize: '0.76rem', fontWeight: 700, cursor: contractLoadingId === c.id ? 'default' : 'pointer', opacity: contractLoadingId === c.id ? 0.6 : 1 }}
-                      >
-                        {contractLoadingId === c.id ? '…' : '📄 Contrat'}
-                      </button>
-                    )}
                     {!active && (
                       <button
                         disabled={resendingId === c.id}
