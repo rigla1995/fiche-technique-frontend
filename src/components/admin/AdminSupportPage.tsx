@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import api from '../../api/client';
-import type { SupportDemande, Client, DomaineProfil } from '../../types';
+import type { SupportDemande } from '../../types';
 import { useNotifications } from '../../context/NotificationContext';
-// jsPDF (~113 Ko gzip) ne se charge qu'à l'ouverture d'une demande supplément (import dynamique).
 import { FilterSegmented, FilterInput } from '../common/HistoryFilterBar';
 import type { SegmentedOption } from '../common/HistoryFilterBar';
 
@@ -56,12 +55,6 @@ function DetailsPopup({
 
   // Supplement pricing
   const [pricing, setPricing] = useState<SupplPricing | null>(null);
-  // Avenant PDF (generated client-side from pricing)
-  const [avenantPdfBase64, setAvenantPdfBase64] = useState<string | null>(null);
-  // Lexique du domaine du CLIENT de la demande (lot 2, spec §2.3) : l'avenant est rédigé dans le vocabulaire
-  // du client, pas dans celui de l'admin. undefined = en cours ; null = client sans domaine, ou profil
-  // indisponible → vocabulaire par défaut.
-  const [lexiqueClient, setLexiqueClient] = useState<DomaineProfil['lexique'] | null | undefined>(undefined);
   // Notes admin
   const [notesAdmin, setNotesAdmin] = useState(demande.notesAdmin || '');
   const [saving, setSaving] = useState(false);
@@ -71,66 +64,8 @@ function DetailsPopup({
     if (demande.type === 'supplement') {
       api.get(`/api/abonnements/client/${demande.clientId}/supplement-pricing`)
         .then(({ data }) => setPricing(data)).catch(() => {});
-      // Le client porte son domaine (GET /admin/clients/:id → domaineId) ; le profil du domaine porte le lexique résolu.
-      api.get(`/admin/clients/${demande.clientId}`)
-        .then(({ data }) => {
-          const domaineId = (data as Client).domaineId;
-          return domaineId != null ? api.get(`/api/domaines/${domaineId}`) : null;
-        })
-        .then((res) => setLexiqueClient((res?.data as DomaineProfil | undefined)?.lexique ?? null))
-        .catch(() => setLexiqueClient(null));
     }
   }, [demande.clientId, demande.type]);
-
-  // Generate avenant PDF client-side once pricing and the client's lexique are loaded
-  useEffect(() => {
-    if (!pricing || lexiqueClient === undefined) return;
-    const nbAAdded = demande.nbActivitesSupp || 0;
-    const nbLAdded = demande.nbLabosSupp     || 0;
-    const nbGAdded = demande.nbGerantsSupp   || 0;
-    // Option Acheteurs : la cible REMPLACE le palier actuel — delta = différence de prix
-    const cible = demande.nbAcheteursCible || 0;
-    const ciblePrix = cible > 0
-      ? (pricing.paliersAcheteurs?.find((p) => p.palier === cible)?.prix ?? null)
-      : null;
-    const acheteursApres = ciblePrix != null ? ciblePrix : pricing.acheteursCost;
-    const acheteursDelta = ciblePrix != null ? Math.max(0, ciblePrix - (pricing.acheteursCost ?? 0)) : 0;
-    const delta = nbAAdded * (pricing.prixActiviteSup || 0)
-                + nbLAdded * (pricing.prixLaboSup     || 0)
-                + nbGAdded * (pricing.prixGerantSup   || 0)
-                + acheteursDelta;
-    // Coût mensuel du poste APRÈS ajout ≈ coût actuel + nb ajoutés × prix unitaire sup.
-    const coutApres = (cost: number | undefined, added: number, prixSup: number | undefined): number | undefined =>
-      cost != null ? cost + added * (prixSup || 0) : undefined;
-    let cancelled = false;
-    import('../../utils/contractPdf').then(({ generateAvenantPdf }) => {
-      if (cancelled) return;
-      const base64 = generateAvenantPdf({
-      clientNom:       demande.clientNom   || 'Client',
-      clientEmail:     demande.clientEmail || '',
-      nbActivitesAdded: nbAAdded,
-      nbLabosAdded:     nbLAdded,
-      nbGerantsAdded:   nbGAdded,
-      acheteursCible:   cible > 0 ? cible : undefined,
-      nbActivites: (pricing.nbActivites || 1) + nbAAdded,
-      nbLabos:     (pricing.nbLabos     || 0) + nbLAdded,
-      nbGerants:   (pricing.nbGerants   || 0) + nbGAdded,
-      ancienMensuel:   pricing.currentMensuel || 0,
-      nouveauMensuel:  (pricing.currentMensuel || 0) + delta,
-      activiteCost: coutApres(pricing.activiteCost, nbAAdded, pricing.prixActiviteSup),
-      laboCost:     coutApres(pricing.laboCost,     nbLAdded, pricing.prixLaboSup),
-      gerantCost:   coutApres(pricing.gerantCost,   nbGAdded, pricing.prixGerantSup),
-      formuleActivites: pricing.formuleActivites ?? undefined,
-      nbAcheteurs: cible > 0 ? cible : pricing.nbAcheteurs,
-      acheteursCost: acheteursApres,
-      lexique: lexiqueClient,
-      appName: 'LabFlow',
-      dateAvenant: new Date().toISOString(),
-      });
-      setAvenantPdfBase64(base64);
-    });
-    return () => { cancelled = true; };
-  }, [pricing, demande, lexiqueClient]);
 
   const handleAction = async (statut: 'validée' | 'refusée') => {
     setSaving(true);
@@ -138,8 +73,9 @@ function DetailsPopup({
     try {
       await onAction(demande.id, statut, { notesAdmin: notesAdmin.trim() || null });
       onClose();
-    } catch {
-      setError('Erreur lors de la mise à jour.');
+    } catch (err: unknown) {
+      // 409 : demande déjà traitée (2e validation, double clic) — le serveur dit pourquoi
+      setError((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur lors de la mise à jour.');
     }
     setSaving(false);
   };
@@ -197,7 +133,7 @@ function DetailsPopup({
               {/* Supplement */}
               {demande.type === 'supplement' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {pricing && (
+                  {isPending && pricing && (
                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem' }}>
                       <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 6 }}>Abonnement actuel</div>
                       <div style={{ color: '#1e40af' }}>
@@ -217,7 +153,7 @@ function DetailsPopup({
                       demande.nbAcheteursCible && `Option Acheteurs → palier jusqu'à ${demande.nbAcheteursCible} acheteurs`,
                     ].filter(Boolean).map((part, i) => <div key={i} style={{ color: '#15803d', fontWeight: 600 }}>{part}</div>)}
                   </div>
-                  {newTotal !== null && pricingDelta !== null && (
+                  {isPending && newTotal !== null && pricingDelta !== null && (
                     <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1px solid #ddd6fe', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: '0.82rem' }}>
                         <div style={{ fontWeight: 700, color: '#6d28d9' }}>Nouveau total mensuel</div>
@@ -226,22 +162,9 @@ function DetailsPopup({
                       <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#4c1d95' }}>{newTotal.toFixed(0)} DT<span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/mois</span></div>
                     </div>
                   )}
-                  {/* Avenant PDF download */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10 }}>
-                    <span style={{ fontSize: '1rem' }}>📄</span>
-                    <span style={{ fontSize: '0.82rem', color: '#374151', fontWeight: 600, flex: 1 }}>Contrat avenant</span>
-                    {avenantPdfBase64 ? (
-                      <button onClick={() => { const a = document.createElement('a'); a.href = `data:application/pdf;base64,${avenantPdfBase64}`; a.download = `avenant-${(demande.clientNom || String(demande.clientId)).replace(/\s+/g, '-').toLowerCase()}.pdf`; a.click(); }}
-                        style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4338ca', background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '5px 14px', cursor: 'pointer' }}>
-                        ⬇ Télécharger
-                      </button>
-                    ) : (
-                      <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Génération…</span>
-                    )}
-                  </div>
                   {isPending && (
                     <div style={{ background: '#fef3c7', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px', fontSize: '0.8rem', color: '#92400e', fontWeight: 600 }}>
-                      ✉️ Ce contrat avenant sera envoyé par email au client lors de la validation.
+                      ✉️ À la validation, la capacité est ajoutée tout de suite et le client reçoit un email de confirmation.
                     </div>
                   )}
                 </div>
@@ -342,7 +265,13 @@ export default function AdminSupportPage() {
   useEffect(() => { setPage(1); }, [selectedClientId, filterStatut, filterType]);
 
   const handleAction = async (id: number, statut: 'validée' | 'refusée', extra: Record<string, unknown> = {}) => {
-    await api.put(`/api/abonnements/admin/support/${id}`, { statut, ...extra });
+    try {
+      await api.put(`/api/abonnements/admin/support/${id}`, { statut, ...extra });
+    } catch (err) {
+      // Lot 3 : demande déjà traitée (409) ou supprimée (404) — l'état réel est rechargé, le message reste affiché
+      fetchDemandes();
+      throw err;
+    }
     setDemandes(prev => prev.map(d => d.id === id ? { ...d, statut, notesAdmin: (extra.notesAdmin as string) || d.notesAdmin, traiteLe: new Date().toISOString() } : d));
   };
 
