@@ -143,7 +143,8 @@ export default function GerantsPage() {
   const handleResendInvite = async (id: number, email: string) => {
     setResendingId(id);
     try {
-      await api.post(`/auth/invite/resend/${id}`);
+      // Route du client propriétaire (ses gérants non activés) : /auth/invite/resend est réservée au super admin.
+      await api.post(`/api/abonnements/gerants/${id}/inviter`);
       await alerte({ title: 'Invitation envoyée', message: `Invitation renvoyée à ${email}`, tone: 'primary', icon: '✉️' });
     } catch {
       alerte({ title: 'Envoi impossible', message: 'Erreur lors de l\'envoi', tone: 'danger' });

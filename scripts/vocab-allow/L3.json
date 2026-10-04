@@ -1017,5 +1017,12 @@
     "type": "retire",
     "justification": "Lot 3, étape 5 — plus d'avenant (décision écrite du client du 04/10/2026) : événement de notification émis seulement par le webhook DocuSeal supprimé (écouteur et redirection au clic retirés) ; depuis l'étape 4, la validation d'un ajout de capacité par l'équipe LabFlow notifie le client par « demande_traitee », inchangé.",
     "occurrences": 2
+  },
+  {
+    "fichier": "src/components/client/GerantsPage.tsx",
+    "avant": "/auth/invite/resend/⟦·⟧",
+    "apres": "/api/abonnements/gerants/⟦·⟧/inviter",
+    "type": "discriminant",
+    "justification": "Correctif du 04/10/2026 (demande écrite du client) : URL appelée par le bouton « ✉️ Renvoyer » de l'écran des gérants — /auth/invite/resend est réservée au super admin (403 pour un client) ; le client appelle désormais sa propre route. Chaîne technique jamais affichée."
   }
 ]
