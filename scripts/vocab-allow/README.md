@@ -98,6 +98,7 @@ sont les premières qu'une revue relit.
 | `fiscal` | texte d'un document fiscal inchangé à l'octet près (E1) | facture acheteur de `docuseal-templates/generate.js` |
 | `retire` | lot 3 : texte SUPPRIMÉ avec la fonctionnalité qui l'affichait, sur décision écrite du client ; seulement `apres: null`, la justification nomme la décision | bouton « Contrat actif » (plus de contrats, décision du 04/10/2026) |
 | `remplace` | lot 3 : texte NOUVEAU et visible qui remplace un texte retiré, sur décision écrite du client ; seulement `avant: null`, la justification nomme la décision | introduction de l'email de bienvenue sans contrat |
+| `ajoute` | lot 3, étape 6 : texte NOUVEAU et visible d'une fonction nouvelle validée par le client, qui ne remplace rien ; seulement `avant: null`, la justification nomme la fonction. Le mode `residuels` relit quand même ces textes | section « Mon entreprise » du profil |
 
 `provisoire` est une dette : l'outil rappelle leur nombre à chaque passage, et l'étape S5 doit les ramener à 0.
 Après l'étape S5 du lot 2a il n'en reste aucune (les 9 entrées, toutes des accords avec des termes coordonnés, passent

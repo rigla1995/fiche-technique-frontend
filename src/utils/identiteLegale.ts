@@ -1,5 +1,6 @@
 // Identité légale du client (lot 3, spec backend docs/lot-3-spec.md §1) : type, formes juridiques, valeurs vides.
 // Le serveur (src/utils/identite.js) normalise, contrôle et décide ; l'écran ne fait que saisir et afficher.
+// Partagé par l'espace admin (fiche et création d'un client) et par le profil du client (« Mon entreprise », étape 6).
 
 export interface IdentiteLegale {
   raisonSociale: string | null;

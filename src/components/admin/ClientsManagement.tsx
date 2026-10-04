@@ -6,7 +6,7 @@ import Pagination from '../common/Pagination';
 import { useConfirm } from '../common/ConfirmDialog';
 import { composantsActifs, palierAcheteurs, type DomaineOption } from './composition';
 import IdentiteClientModal from './IdentiteClientModal';
-import { libelleForme, type IdentiteLegale } from './identiteLegale';
+import { libelleForme, type IdentiteLegale } from '../../utils/identiteLegale';
 
 interface Client {
   id: number;
