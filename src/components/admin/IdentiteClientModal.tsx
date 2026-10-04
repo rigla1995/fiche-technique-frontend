@@ -82,13 +82,13 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
           <form onSubmit={enregistrer} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
             <div className="modal-body">
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 14px', lineHeight: 1.55 }}>
-                Telle qu'elle figure sur la patente. Elle servira aux contrats et aux factures.
+                Telle qu'elle figure sur la patente. Elle figurera sur les factures.
                 Un champ peut rester vide : la fiche reste marquée « Identité à compléter ».
               </p>
               <ClientIdentiteForm value={valeur} onChange={(v) => { setValeur(v); setErreur(null); }} disabled={saving} />
               {adresseDejaImprimee && (
                 <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', marginTop: 14, lineHeight: 1.5 }}>
-                  ⚠️ L'adresse actuelle est déjà imprimée sur les factures et les contrats de ce client : une facture déjà émise,
+                  ⚠️ L'adresse actuelle est déjà imprimée sur les factures de ce client : une facture déjà émise,
                   téléchargée de nouveau, portera la nouvelle adresse.
                 </div>
               )}
