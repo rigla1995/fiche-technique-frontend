@@ -1,9 +1,12 @@
 // Formulaire d'identité légale d'un client (lot 3, spec backend docs/lot-3-spec.md §2).
 // Contrôlé ({ value, onChange }) : utilisé par la fenêtre « Identité » de la page Clients (étape 1),
 // puis par la 1re étape de l'assistant de création (étape 2). Espace admin : vocabulaire LabFlow (I4).
+// Étape 7 : « Lire la patente » (patente/LecturePatente) pré-remplit les champs VIDES ; pastille « lu » par champ.
 import { useState } from 'react';
 import { FORMES_JURIDIQUES, formeIndividuelle, type IdentiteLegale } from '../../utils/identiteLegale';
 import { controlerMatriculeFiscal } from './matriculeFiscal';
+import LecturePatente, { PastilleLu } from './patente/LecturePatente';
+import type { ChampIdentite, ChampLu } from './patente/types';
 
 interface Props {
   value: IdentiteLegale;
@@ -24,7 +27,13 @@ const grille: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'rep
 
 export default function ClientIdentiteForm({ value, onChange, disabled }: Props) {
   const [enseigne, setEnseigne] = useState(!!value.nomCommercial);
-  const set = (k: keyof IdentiteLegale, v: string) => onChange({ ...value, [k]: v });
+  // Lecture de la patente : d'où vient chaque valeur lue (pastille), et dernier champ où le curseur s'est posé.
+  const [lus, setLus] = useState<Partial<Record<ChampIdentite, ChampLu>>>({});
+  const [champActif, setChampActif] = useState<ChampIdentite | null>(null);
+  const set = (k: keyof IdentiteLegale, v: string) => {
+    onChange({ ...value, [k]: v });
+    if (lus[k] && lus[k].valeur !== v) setLus((l) => { const reste = { ...l }; delete reste[k]; return reste; }); // valeur retouchée : plus « lue »
+  };
   const mf = controlerMatriculeFiscal(value.matriculeFiscal);
 
   const changerForme = (forme: string) => {
@@ -34,12 +43,27 @@ export default function ClientIdentiteForm({ value, onChange, disabled }: Props)
     const qualite = !value.representantQualite || anciennes.includes(value.representantQualite)
       ? proposee : value.representantQualite;
     onChange({ ...value, formeJuridique: forme, representantQualite: qualite });
+    setLus((l) => { const reste = { ...l }; delete reste.formeJuridique; return reste; });
+  };
+
+  // Champs lus sur la patente : écrits dans la fiche (le panneau n'envoie que des champs vides, ou un remplacement
+  // demandé). Une forme lue propose la qualité comme un choix à la main ; un nom commercial lu ouvre son champ.
+  const remplir = (champs: Partial<IdentiteLegale>, nouveaux: Partial<Record<ChampIdentite, ChampLu>>) => {
+    const suivant = { ...value, ...champs };
+    if (champs.matriculeFiscal) suivant.matriculeFiscal = controlerMatriculeFiscal(champs.matriculeFiscal).valeur;
+    if (champs.formeJuridique && !suivant.representantQualite) {
+      suivant.representantQualite = FORMES_JURIDIQUES.find((x) => x.value === champs.formeJuridique)?.qualite ?? '';
+    }
+    if (champs.nomCommercial) setEnseigne(true);
+    onChange(suivant);
+    setLus((l) => ({ ...l, ...nouveaux }));
   };
 
   const input = (k: keyof IdentiteLegale, placeholder = '', extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
     <input
       value={value[k] ?? ''}
       onChange={(e) => set(k, e.target.value)}
+      onFocus={() => setChampActif(k)}
       placeholder={placeholder}
       disabled={disabled}
       style={inputStyle}
@@ -49,13 +73,15 @@ export default function ClientIdentiteForm({ value, onChange, disabled }: Props)
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <LecturePatente valeur={value} disabled={disabled} champActif={champActif} onRemplir={remplir}
+        onRecopier={(ligne) => { if (champActif) set(champActif, ligne); }} />
       <div style={grille}>
         <div>
-          <label style={labelStyle}>{formeIndividuelle(value.formeJuridique) ? 'Nom du titulaire' : 'Raison sociale'}</label>
+          <label style={labelStyle}>{formeIndividuelle(value.formeJuridique) ? 'Nom du titulaire' : 'Raison sociale'}<PastilleLu lu={lus.raisonSociale} /></label>
           {input('raisonSociale', "Telle qu'écrite sur la patente", { maxLength: 255 })}
         </div>
         <div>
-          <label style={labelStyle}>Forme juridique</label>
+          <label style={labelStyle}>Forme juridique<PastilleLu lu={lus.formeJuridique} /></label>
           <select
             value={value.formeJuridique ?? ''}
             onChange={(e) => changerForme(e.target.value)}
@@ -79,14 +105,14 @@ export default function ClientIdentiteForm({ value, onChange, disabled }: Props)
       </label>
       {enseigne && (
         <div>
-          <label style={labelStyle}>Nom commercial</label>
+          <label style={labelStyle}>Nom commercial<PastilleLu lu={lus.nomCommercial} /></label>
           {input('nomCommercial', "Nom de l'enseigne", { maxLength: 255 })}
         </div>
       )}
 
       <div style={grille}>
         <div>
-          <label style={labelStyle}>Matricule fiscal</label>
+          <label style={labelStyle}>Matricule fiscal<PastilleLu lu={lus.matriculeFiscal} /></label>
           {input('matriculeFiscal', '1234567A/A/M/000', {
             maxLength: 50,
             onBlur: () => { if (mf.valeur !== (value.matriculeFiscal ?? '')) set('matriculeFiscal', mf.valeur); },
@@ -96,29 +122,29 @@ export default function ClientIdentiteForm({ value, onChange, disabled }: Props)
           {mf.ok && mf.avertissement && <div style={{ ...aide, color: '#b45309' }}>{mf.avertissement}</div>}
         </div>
         <div>
-          <label style={labelStyle}>Identifiant RNE</label>
+          <label style={labelStyle}>Identifiant RNE<PastilleLu lu={lus.rne} /></label>
           {input('rne', 'Registre national des entreprises', { maxLength: 50 })}
         </div>
       </div>
 
       <div style={grille}>
         <div>
-          <label style={labelStyle}>Adresse</label>
+          <label style={labelStyle}>Adresse<PastilleLu lu={lus.adresse} /></label>
           {input('adresse', 'Rue, numéro', { maxLength: 300 })}
         </div>
         <div>
-          <label style={labelStyle}>Ville</label>
+          <label style={labelStyle}>Ville<PastilleLu lu={lus.ville} /></label>
           {input('ville', 'Code postal et ville', { maxLength: 120 })}
         </div>
       </div>
 
       <div style={grille}>
         <div>
-          <label style={labelStyle}>Représentant légal</label>
+          <label style={labelStyle}>Représentant légal<PastilleLu lu={lus.representantNom} /></label>
           {input('representantNom', 'Prénom et nom', { maxLength: 150 })}
         </div>
         <div>
-          <label style={labelStyle}>Qualité</label>
+          <label style={labelStyle}>Qualité<PastilleLu lu={lus.representantQualite} /></label>
           {input('representantQualite', 'Gérant, Titulaire…', { maxLength: 80 })}
         </div>
       </div>
