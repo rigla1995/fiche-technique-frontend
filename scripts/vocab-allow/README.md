@@ -96,6 +96,8 @@ sont les premières qu'une revue relit.
 | `reporte` | texte laissé pour un lot ultérieur (lot 2b, E8) : champ **`lot` obligatoire**, `3` ou `2c` | texte fixe du contrat (lot 3), description de l'outil de recherche de l'assistant (2c) |
 | `admin` | texte lu seulement par un super_admin ou le boss (I4), dans un fichier mixte (E8) : la justification nomme **la route et son garde** (`requireSuperAdmin`, `requireBoss`) | « … : route /admin/clients, garde requireSuperAdmin » |
 | `fiscal` | texte d'un document fiscal inchangé à l'octet près (E1) | facture acheteur de `docuseal-templates/generate.js` |
+| `retire` | lot 3 : texte SUPPRIMÉ avec la fonctionnalité qui l'affichait, sur décision écrite du client ; seulement `apres: null`, la justification nomme la décision | bouton « Contrat actif » (plus de contrats, décision du 04/10/2026) |
+| `remplace` | lot 3 : texte NOUVEAU et visible qui remplace un texte retiré, sur décision écrite du client ; seulement `avant: null`, la justification nomme la décision | introduction de l'email de bienvenue sans contrat |
 
 `provisoire` est une dette : l'outil rappelle leur nombre à chaque passage, et l'étape S5 doit les ramener à 0.
 Après l'étape S5 du lot 2a il n'en reste aucune (les 9 entrées, toutes des accords avec des termes coordonnés, passent

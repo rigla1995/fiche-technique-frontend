@@ -1,0 +1,128 @@
+[
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "/api/abonnements/contrat-actif?info=1",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "/api/abonnements/contrat-actif",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "blob",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "application/pdf",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "a",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "contrat-labflow.pdf",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "📄 Contrat actif⟦? — ⟦·⟧|⟧",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "100%",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "9px 12px",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "1.5px solid #4338ca",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "#fff",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "#4338ca",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "0.82rem",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "pointer",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "fr-FR",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "2-digit",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "short",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  },
+  {
+    "fichier": "src/components/client/MonAbonnementPage.tsx",
+    "avant": "numeric",
+    "apres": null,
+    "type": "retire",
+    "justification": "Lot 3, étape 3 — plus de contrats (décision écrite du client du 04/10/2026, « sans engagement ») : texte supprimé avec la fonctionnalité qui l'affichait (contrat à la création, aperçu et téléchargement du contrat, acte de résiliation, étape « Contrat signé » du guide, email de bienvenue avec contrat)."
+  }
+]

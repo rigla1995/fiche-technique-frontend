@@ -53,7 +53,8 @@ const apiMessage = (err: unknown, fallback: string) =>
 
 // ── Step indicator ────────────────────────────────────────────────────────────
 
-const STEPS = ['Informations', 'Configuration', 'Promotions', 'Contrat'];
+// Lot 3, étape 3 : plus de contrat (LabFlow est sans engagement) — la 4e étape est un récapitulatif.
+const STEPS = ['Informations', 'Configuration', 'Promotions', 'Récapitulatif'];
 
 function StepIndicator({ current }: { current: number }) {
   return (
@@ -257,11 +258,6 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const [promoForm, setPromoForm] = useState<PromoForm>({ type: 'percent_off', appliesTo: 'mensualite', moisDebut: '', months: '', discountVal: '', fixedVal: '' });
   const [promoError, setPromoError] = useState<string | null>(null);
 
-  // Step 4
-  const [pdfBase64, setPdfBase64] = useState<string | null>(null);
-  const [pdfError, setPdfError] = useState(false);
-  const [pdfErrorMsg, setPdfErrorMsg] = useState<string | null>(null);
-  const previewSeq = useRef(0);
 
   // ── Domaine / composition dérivés ──
   const domaine = useMemo(() => domaines.find((d) => d.id === domaineId) ?? null, [domaines, domaineId]);
@@ -335,40 +331,6 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
       fetchPreview(domaineId, JSON.parse(composantsKey), { nbActivites, nbLabos, nbGerants, nbAcheteurs }, formuleActivites);
     }
   }, [step, domaineId, composantsKey, nbActivites, nbLabos, nbGerants, nbAcheteurs, formuleActivites, fetchPreview]);
-
-  // Step 4 : le contrat téléchargeable = EXACTEMENT le document contractuel
-  // généré par le backend (même builder/charte que l'envoi en signature DocuSeal).
-  useEffect(() => {
-    if (step !== 3) return;
-    const seq = ++previewSeq.current;
-    setPdfBase64(null);
-    setPdfError(false);
-    setPdfErrorMsg(null);
-    api.post('/api/abonnements/contrat-preview', {
-      nom, email, telephone: tel,
-      adresse: identite.adresse ?? '',
-      domaineId,
-      composants: JSON.parse(composantsKey),
-      nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs,
-      montantOnboarding: parseFloat(montantOnboarding) || 0,
-      // aperçu = promos manuelles + la promo « 1er mois offert » (sauf si l'admin
-      // a déjà une promo mensualité). Ne PAS la mettre dans le POST de création.
-      promotions: [...(aDejaPromoMensuelle ? [] : [promoPremierMoisApi()]), ...promos.map(mapPromoForApi)],
-    })
-      .then(({ data }) => {
-        if (seq !== previewSeq.current) return;
-        if (data?.pdfBase64) setPdfBase64(data.pdfBase64);
-        else setPdfError(true);
-      })
-      .catch((err: unknown) => {
-        if (seq !== previewSeq.current) return;
-        setPdfError(true);
-        const status = (err as { response?: { status?: number } })?.response?.status;
-        if (status && status >= 400 && status < 500) setPdfErrorMsg(apiMessage(err, 'Le serveur a refusé la configuration.'));
-      });
-    // mapPromoForApi est stable (fonction pure du composant) — promos suffit en dépendance
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, nom, email, tel, identite.adresse, domaineId, composantsKey, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, promos]);
 
   // ── Step validation ──
 
@@ -467,27 +429,11 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     };
   };
 
-  // Promo SYSTÈME « 1er mois offert » : créée automatiquement par le backend à la
-  // création (mensualité du mois courant à 0 DT, non supprimable). On l'injecte
-  // UNIQUEMENT dans l'aperçu du contrat (pour que l'admin la voie), jamais dans le
-  // POST /admin/clients — sinon le backend la créerait en double.
-  const promoPremierMoisApi = () => ({
-    type: 'free_months' as const,
-    appliesTo: 'mensualite' as const,
-    dateDebut: `${new Date().toISOString().slice(0, 7)}-01`,
-    monthsDuration: 1,
-    discountOnboarding: null, discountMensualite: null, discountSupplement: null,
-    fixedOnboarding: null, fixedMensualite: null, fixedSupplement: null,
-  });
   // La promo système est ignorée si l'admin a déjà posé une promo sur la mensualité
   // (la sienne prime, exactement comme côté backend).
   const aDejaPromoMensuelle = promos.some((p) => ['mensualite', 'les_deux'].includes(p.appliesTo));
 
   const handleSubmit = async () => {
-    // Génération en cours : on attend. Échec de génération : on N'EMPÊCHE PAS la
-    // création — le backend génère lui-même le document (repli) et le flux
-    // DocuSeal produit de toute façon son propre contrat à la signature.
-    if (!pdfBase64 && !pdfError) { setError('Génération du contrat en cours…'); return; }
     setSaving(true);
     setError(null);
     try {
@@ -501,7 +447,6 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
         nbActivites, nbLabos, nbGerants, nbAcheteurs,
         formuleActivites,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
-        contractPdfBase64: pdfBase64 || null,
         promotions: promos.map(mapPromoForApi),
       });
       // Id du client créé si la réponse le fournit (plusieurs formes tolérées).
@@ -568,7 +513,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
               {identiteAvert.filter((a) => a !== controlerMatriculeFiscal(identite.matriculeFiscal).avertissement)
                 .map((a) => <div key={a} style={bannerWarn}>⚠️ {a}</div>)}
 
-              <div style={{ ...sectionTitre, marginTop: 6 }}>👤 Contact <span style={sectionAide}>la personne qui recevra le contrat et les accès</span></div>
+              <div style={{ ...sectionTitre, marginTop: 6 }}>👤 Contact <span style={sectionAide}>la personne qui recevra l'email d'activation</span></div>
               <div>
                 <label style={labelStyle}>Nom du contact *</label>
                 <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Prénom et nom" maxLength={100} disabled={controleEnCours} style={inputStyle} />
@@ -903,7 +848,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
             );
           })()}
 
-          {/* ── STEP 4: Contrat ── */}
+          {/* ── STEP 4: Récapitulatif ── */}
           {step === 3 && (
             <div>
               {/* Summary */}
@@ -953,45 +898,17 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
               </div>
 
               <PricingCard preview={preview} promos={promos} grille={grilleNom} onboarding={montantObValid ? montantOb : undefined} />
-
-              {/* Contrat : téléchargement uniquement (pas d'aperçu embarqué) */}
-              <div style={{ marginTop: 14, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14 }}>
-                <div style={{ width: 42, height: 42, borderRadius: 10, background: '#eef2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>📄</div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Contrat d'abonnement</div>
-                  <div style={{ fontSize: 11, color: pdfError ? '#dc2626' : '#64748b', marginTop: 2 }}>
-                    {pdfBase64
-                      ? 'Prêt — téléchargez-le pour le consulter avant l\'envoi. C\'est le document exact qui partira en signature.'
-                      : pdfError
-                        ? (pdfErrorMsg || 'Impossible de générer le contrat — revenez en arrière puis réessayez.')
-                        : 'Génération du contrat…'}
-                  </div>
+              {/* Promo système, appliquée par le serveur à la création (ne pas l'envoyer : elle serait créée en double) */}
+              {!aDejaPromoMensuelle && (
+                <div style={{ marginTop: 12, background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#047857', fontWeight: 600 }}>
+                  🎁 1er mois d'abonnement offert — appliqué automatiquement à la création
                 </div>
-                <button
-                  disabled={!pdfBase64}
-                  onClick={() => {
-                    if (!pdfBase64) return;
-                    const link = document.createElement('a');
-                    link.href = `data:application/pdf;base64,${pdfBase64}`;
-                    link.download = `contrat-${nom.replace(/\s+/g, '-').toLowerCase()}.pdf`;
-                    link.click();
-                  }}
-                  style={{
-                    fontSize: 12, fontWeight: 700, borderRadius: 8, padding: '9px 16px', cursor: pdfBase64 ? 'pointer' : 'default',
-                    color: pdfBase64 ? '#fff' : '#9ca3af',
-                    background: pdfBase64 ? 'linear-gradient(135deg,#4338ca,#6366f1)' : '#e5e7eb',
-                    border: 'none', whiteSpace: 'nowrap',
-                    boxShadow: pdfBase64 ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
-                  }}
-                >
-                  ⬇ Télécharger le contrat
-                </button>
-              </div>
+              )}
 
               <div style={{ marginTop: 12, background: '#fefce8', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 14px' }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#713f12', marginBottom: 4 }}>📬 Ce qui sera envoyé au client :</div>
                 <div style={{ fontSize: 11, color: '#92400e', lineHeight: 1.7 }}>
-                  ✉️ Email de bienvenue · 📎 Contrat PDF · 🔗 Lien d'activation (48h)
+                  ✉️ Email de bienvenue avec 🔗 lien d'activation (valable 48 h), tout de suite après la création
                 </div>
               </div>
             </div>
@@ -1018,16 +935,13 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
               {step === 0 && (emailChecking || controleEnCours) ? 'Vérification…' : 'Suivant →'}
             </button>
           ) : (() => {
-            // Désactivé pendant la génération seulement — un échec de génération
-            // n'empêche pas la création (repli backend).
-            const waiting = !pdfBase64 && !pdfError;
-            const disabled = saving || waiting;
+            const disabled = saving;
             return (
               <button
                 onClick={handleSubmit}
                 disabled={disabled}
                 style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: disabled ? '#e5e7eb' : 'linear-gradient(135deg,#059669,#10b981)', color: disabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: disabled ? 'default' : 'pointer', boxShadow: disabled ? 'none' : '0 4px 14px rgba(16,185,129,0.35)' }}>
-                {saving ? 'Création en cours…' : '✓ Créer le compte & Envoyer'}
+                {saving ? 'Création en cours…' : "✓ Créer le compte & envoyer l'accès"}
               </button>
             );
           })()}
