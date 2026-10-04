@@ -1,0 +1,181 @@
+{
+  "_": "Vecteurs écrits à la main (lot 3, spec docs/lot-3-spec.md §1.3). Copie identique : fiche-technique-frontend/scripts/matricule-fiscal-vecteurs.json. entree → normalise (normaliserMatriculeFiscal) ; ok / avertissement (controlerMatriculeFiscal).",
+  "vecteurs": [
+    {
+      "entree": "",
+      "normalise": "",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "   ",
+      "normalise": "",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": null,
+      "normalise": "",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567A/A/M/000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567a/a/m/000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567AAM000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567/A/A/M/000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567 A/A/M/000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567-A-A-M-000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567.A.A.M.000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": " 1234567 a / a / m / 001 ",
+      "normalise": "1234567A/A/M/001",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1996459A",
+      "normalise": "1996459A",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1996459 a",
+      "normalise": "1996459A",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1996459/A",
+      "normalise": "1996459A",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567/A/M/000",
+      "normalise": "1234567/A/M/000",
+      "ok": true,
+      "avertissement": true
+    },
+    {
+      "entree": "1234567AM000",
+      "normalise": "1234567/A/M/000",
+      "ok": true,
+      "avertissement": true
+    },
+    {
+      "entree": "1234567",
+      "normalise": "1234567",
+      "ok": true,
+      "avertissement": true
+    },
+    {
+      "entree": "123456A",
+      "normalise": "123456A",
+      "ok": false,
+      "avertissement": false
+    },
+    {
+      "entree": "12345678A",
+      "normalise": "12345678A",
+      "ok": false,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567AB",
+      "normalise": "1234567AB",
+      "ok": false,
+      "avertissement": false
+    },
+    {
+      "entree": "1234567A/A/M/00",
+      "normalise": "1234567A/A/M/00",
+      "ok": false,
+      "avertissement": false
+    },
+    {
+      "entree": "B0123452024",
+      "normalise": "B0123452024",
+      "ok": false,
+      "avertissement": false
+    },
+    {
+      "entree": "abc",
+      "normalise": "ABC",
+      "ok": false,
+      "avertissement": false
+    },
+    {
+      "entree": "MF : 1234567A/A/M/000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "M.F. 1234567aam000",
+      "normalise": "1234567A/A/M/000",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "Matricule fiscal: 1996459a",
+      "normalise": "1996459A",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "mf1996459A",
+      "normalise": "1996459A",
+      "ok": true,
+      "avertissement": false
+    },
+    {
+      "entree": "123456A/A/M/000",
+      "normalise": "123456A/A/M/000",
+      "ok": false,
+      "avertissement": false,
+      "erreur": "7 chiffres"
+    },
+    {
+      "entree": "123456A",
+      "normalise": "123456A",
+      "ok": false,
+      "avertissement": false,
+      "erreur": "7 chiffres"
+    }
+  ]
+}
