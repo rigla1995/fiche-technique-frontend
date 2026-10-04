@@ -6,6 +6,7 @@ import { useEmailCheck } from '../../hooks/useEmailCheck';
 import Counter from './Counter';
 import ClientIdentiteForm from './ClientIdentiteForm';
 import { IDENTITE_VIDE, corpsIdentite, identiteDe, type IdentiteLegale } from './identiteLegale';
+import { controlerMatriculeFiscal } from './matriculeFiscal';
 import {
   AIDE_DEFAUT, PALIERS_ACHETEURS, PALIER_LABELS,
   composantsActifs, composantsPayload, deriveCompteurs, libelleComposant,
@@ -390,6 +391,8 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     setError(null);
     if (step === 0) {
       if (!nom.trim()) { setError('Le nom du contact est obligatoire.'); return; }
+      // Nom pré-rempli depuis une demande d'accès (jusqu'à 150 caractères) : refusé ici plutôt qu'à la dernière étape.
+      if (nom.trim().length > 100) { setError('Nom du contact : 100 caractères au maximum.'); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email invalide.'); return; }
       if (emailChecking) { setError('Vérification de l\'email en cours…'); return; }
       if (emailCheckFailed) { setError('Impossible de vérifier l\'email — vérifiez votre connexion.'); return; }
@@ -561,12 +564,14 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
               {/* Lot 3, étape 2 : identité légale d'abord (facultative), puis le contact */}
               <div style={sectionTitre}>🏢 Identité légale <span style={sectionAide}>facultative — telle qu'écrite sur la patente</span></div>
               <ClientIdentiteForm value={identite} onChange={(v) => { setIdentite(v); setIdentiteAvert([]); setError(null); }} disabled={controleEnCours} />
-              {identiteAvert.map((a) => <div key={a} style={bannerWarn}>⚠️ {a}</div>)}
+              {/* L'avertissement « sans lettre de clé » est déjà affiché sous le champ du matricule : pas en double */}
+              {identiteAvert.filter((a) => a !== controlerMatriculeFiscal(identite.matriculeFiscal).avertissement)
+                .map((a) => <div key={a} style={bannerWarn}>⚠️ {a}</div>)}
 
               <div style={{ ...sectionTitre, marginTop: 6 }}>👤 Contact <span style={sectionAide}>la personne qui recevra le contrat et les accès</span></div>
               <div>
                 <label style={labelStyle}>Nom du contact *</label>
-                <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Prénom et nom" maxLength={100} style={inputStyle} />
+                <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Prénom et nom" maxLength={100} disabled={controleEnCours} style={inputStyle} />
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
@@ -574,6 +579,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                   <input
                     type="email"
                     value={email}
+                    disabled={controleEnCours}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@exemple.com"
                     style={{
@@ -595,6 +601,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                   <input
                     type="tel"
                     value={tel}
+                    disabled={controleEnCours}
                     onChange={(e) => setTel(e.target.value)}
                     onBlur={() => setTelTouched(true)}
                     placeholder="20 123 456"
