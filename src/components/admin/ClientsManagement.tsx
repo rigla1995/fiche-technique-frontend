@@ -5,6 +5,8 @@ import AddClientModal from './AddClientModal';
 import Pagination from '../common/Pagination';
 import { useConfirm } from '../common/ConfirmDialog';
 import { composantsActifs, palierAcheteurs, type DomaineOption } from './composition';
+import IdentiteClientModal from './IdentiteClientModal';
+import { libelleForme, type IdentiteLegale } from './identiteLegale';
 
 interface Client {
   id: number;
@@ -21,6 +23,10 @@ interface Client {
   /** Domaine d'activité unique du compte (lot 1a). */
   domaineId?: number | null;
   domaineNom?: string | null;
+  /** Lot 3 : identité légale (profil_entreprise), nom affiché (nom commercial › raison sociale › contact). */
+  entreprise?: IdentiteLegale | null;
+  nomAffiche?: string;
+  identiteComplete?: boolean;
 }
 
 const fmtDT = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
@@ -42,6 +48,10 @@ export default function ClientsManagement() {
   // Modal « Consulter » — informations de base en lecture seule
   const [viewClient, setViewClient] = useState<Client | null>(null);
 
+  // Fenêtre « Identité légale » (lot 3, étape 1)
+  const [identiteClient, setIdentiteClient] = useState<Client | null>(null);
+  const titreDe = (c: Client) => c.nomAffiche || c.name;
+
   // Téléchargement du contrat (spinner par client)
   const [contractLoadingId, setContractLoadingId] = useState<number | null>(null);
 
@@ -60,7 +70,9 @@ export default function ClientsManagement() {
 
   const fetchClients = () => {
     setLoading(true);
-    api.get('/admin/clients').then(({ data }) => setClients(data)).finally(() => setLoading(false));
+    api.get('/admin/clients')
+      .then(({ data }) => setClients([...(data as Client[])].sort((a, b) => titreDe(a).localeCompare(titreDe(b), 'fr', { sensitivity: 'base' }))))
+      .finally(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -133,7 +145,7 @@ export default function ClientsManagement() {
     if (editDomaineId === domaineIdOf(editClient)) { closeEdit(); return; }
     const nouveau = domaines.find((d) => d.id === editDomaineId);
     const ok = await confirm({
-      title: `Changer le domaine de « ${editClient.name} » ?`,
+      title: `Changer le domaine de « ${titreDe(editClient)} » ?`,
       message: `Nouveau domaine : ${nouveau?.nom ?? `#${editDomaineId}`}.`,
       details: [
         'La grille tarifaire du nouveau domaine s\'applique dès le prochain paiement (mensualités en attente recalculées).',
@@ -189,10 +201,13 @@ export default function ClientsManagement() {
 
   const filtered = clients.filter((c) => {
     const q = search.toLowerCase();
+    const qMf = q.replace(/[\s./\-_]/g, '');
     const matchSearch =
       c.name.toLowerCase().includes(q) ||
       c.email.toLowerCase().includes(q) ||
-      (c.phone || '').toLowerCase().includes(q);
+      (c.phone || '').toLowerCase().includes(q) ||
+      [c.entreprise?.raisonSociale, c.entreprise?.nomCommercial].some((v) => (v || '').toLowerCase().includes(q)) ||
+      (!!qMf && (c.entreprise?.matriculeFiscal || '').toLowerCase().replace(/\//g, '').includes(qMf));
     const matchStatus =
       filterStatus === '' ||
       (filterStatus === 'active' && !!c.activatedAt) ||
@@ -335,7 +350,8 @@ export default function ClientsManagement() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(310px, 1fr))', gap: 16 }}>
             {paged.map((c) => {
               const domNom = domaineNomOf(c);
-              const av = avatarFor(c.name);
+              const titre = titreDe(c);
+              const av = avatarFor(titre);
               const active = !!c.activatedAt;
               return (
                 <div key={c.id} style={{
@@ -354,8 +370,12 @@ export default function ClientsManagement() {
                   <div style={{ padding: '16px 18px 12px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
                     <div style={{ width: 46, height: 46, borderRadius: 13, background: av.bg, color: av.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 15, flexShrink: 0 }}>{av.initials}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.name}>{c.name}</div>
-                      <div style={{ fontSize: '0.76rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.email}>{c.email}</div>
+                      <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.95rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={titre}>{titre}</div>
+                      {titre !== c.name ? (
+                        <div style={{ fontSize: '0.76rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={`${c.name} · ${c.email}`}>👤 {c.name} · {c.email}</div>
+                      ) : (
+                        <div style={{ fontSize: '0.76rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={c.email}>{c.email}</div>
+                      )}
                       {c.origine === 'site' && (
                         <span title="Client converti depuis une demande d'accès du site vitrine"
                           style={{ display: 'inline-block', marginTop: 4, background: '#f0f9ff', color: '#0369a1', border: '1px solid #bae6fd', fontSize: '0.64rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20 }}>
@@ -388,6 +408,19 @@ export default function ClientsManagement() {
                     >
                       🏷️ {domNom || 'Sans domaine'}
                     </button>
+                    {c.identiteComplete === false && (
+                      <button
+                        onClick={() => setIdentiteClient(c)}
+                        title="Raison sociale, matricule fiscal, adresse ou ville manquant : compléter l'identité légale"
+                        style={{
+                          fontSize: '0.76rem', fontWeight: 700, borderRadius: 8, padding: '3px 9px',
+                          background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a',
+                          cursor: 'pointer', whiteSpace: 'nowrap',
+                        }}
+                      >
+                        🪪 Identité à compléter
+                      </button>
+                    )}
                     {c.createdAt && (
                       <span style={{ fontSize: '0.72rem', color: '#94a3b8', marginLeft: 'auto' }}>
                         Créé le {new Date(c.createdAt).toLocaleDateString('fr-FR')}
@@ -451,8 +484,14 @@ export default function ClientsManagement() {
 
     {/* ── MODAL : Consulter (informations de base, lecture seule) ─────── */}
     {viewClient && (() => {
-      const av = avatarFor(viewClient.name);
+      const titreV = titreDe(viewClient);
+      const av = avatarFor(titreV);
       const activeV = !!viewClient.activatedAt;
+      const ent = viewClient.entreprise;
+      const representant = [ent?.representantNom, ent?.representantQualite].filter(Boolean).join(', ');
+      const sousTitre = (t: string) => (
+        <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '6px 2px 0' }}>{t}</div>
+      );
       const infoRow = (icon: string, label: string, value: string | null | undefined) => (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '11px 14px', background: '#f8fafc', border: '1px solid #eef1f5', borderRadius: 10 }}>
           <span style={{ fontSize: '1rem', lineHeight: 1.4 }}>{icon}</span>
@@ -464,11 +503,11 @@ export default function ClientsManagement() {
       );
       return (
         <div className="modal-overlay" onClick={() => setViewClient(null)}>
-          <div className="modal modal-sm" onClick={(e) => e.stopPropagation()} style={{ borderRadius: 16, overflow: 'hidden' }}>
-            <div style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 14 }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ borderRadius: 16, overflow: 'hidden' }}>
+            <div style={{ background: 'linear-gradient(135deg, #0f766e 0%, #0d9488 55%, #14b8a6 100%)', padding: '20px 22px', display: 'flex', alignItems: 'center', gap: 14, flexShrink: 0 }}>
               <div style={{ width: 48, height: 48, borderRadius: 13, background: 'rgba(255,255,255,0.18)', border: '2px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 16, color: '#fff', flexShrink: 0 }}>{av.initials}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '1.02rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{viewClient.name}</div>
+                <div style={{ fontSize: '1.02rem', fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{titreV}</div>
                 <div style={{ fontSize: '0.74rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>
                   {activeV ? '● Compte activé' : '⏳ En attente d\'activation'}
                   {viewClient.createdAt ? ` · créé le ${new Date(viewClient.createdAt).toLocaleDateString('fr-FR')}` : ''}
@@ -476,14 +515,33 @@ export default function ClientsManagement() {
               </div>
               <button onClick={() => setViewClient(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '5px 9px', lineHeight: 1 }}>✕</button>
             </div>
-            <div style={{ padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {infoRow('👤', 'Nom complet', viewClient.name)}
+            <div style={{ padding: '14px 22px 18px', display: 'flex', flexDirection: 'column', gap: 8, overflowY: 'auto', flex: 1 }}>
+              {sousTitre('Contact')}
+              {infoRow('👤', 'Nom du contact', viewClient.name)}
               {infoRow('📧', 'Email', viewClient.email)}
               {infoRow('📱', 'Téléphone', viewClient.phone)}
-              {infoRow('📍', 'Adresse', viewClient.adresse)}
               {infoRow('🏷️', 'Domaine d\'activité', domaineNomOf(viewClient))}
+              {sousTitre('Identité légale')}
+              {viewClient.identiteComplete === false && (
+                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', lineHeight: 1.5 }}>
+                  🪪 Identité à compléter : raison sociale, matricule fiscal, adresse et ville sont nécessaires aux factures.
+                </div>
+              )}
+              {infoRow('🏢', 'Raison sociale', ent?.raisonSociale)}
+              {ent?.nomCommercial && infoRow('🪧', 'Nom commercial', ent.nomCommercial)}
+              {infoRow('⚖️', 'Forme juridique', libelleForme(ent?.formeJuridique))}
+              {infoRow('🧾', 'Matricule fiscal', ent?.matriculeFiscal)}
+              {infoRow('🗂️', 'Identifiant RNE', ent?.rne)}
+              {infoRow('📍', 'Adresse', [viewClient.adresse, ent?.ville].filter(Boolean).join(', '))}
+              {infoRow('✍️', 'Représentant légal', representant)}
             </div>
-            <div style={{ padding: '12px 22px 18px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <div style={{ padding: '12px 22px 18px', display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap', borderTop: '1px solid #f1f5f9', flexShrink: 0 }}>
+              <button
+                onClick={() => { const c = viewClient; setViewClient(null); setIdentiteClient(c); }}
+                style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #fde68a', background: '#fffbeb', color: '#b45309', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
+              >
+                🪪 Modifier l'identité
+              </button>
               <button
                 onClick={() => { const c = viewClient; setViewClient(null); openEdit(c); }}
                 style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' }}
@@ -504,7 +562,7 @@ export default function ClientsManagement() {
       <div className="modal-overlay" onClick={() => setConfigPopup(null)}>
         <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
           <div className="modal-header" style={{ background: 'linear-gradient(135deg,#1e1b4b,#4338ca)', borderBottom: 'none' }}>
-            <h2 style={{ color: '#fff' }}>⚙️ Configuration — {configPopup.client.name}</h2>
+            <h2 style={{ color: '#fff' }}>⚙️ Configuration — {titreDe(configPopup.client)}</h2>
             <button className="modal-close" style={{ color: '#fff' }} onClick={() => setConfigPopup(null)}>×</button>
           </div>
           <div className="modal-body">
@@ -620,14 +678,14 @@ export default function ClientsManagement() {
               <span style={{ fontSize: 22 }}>⚠️</span>
               <div>
                 <div style={{ fontWeight: 800, color: '#fff', fontSize: 15 }}>Suppression irréversible</div>
-                <div style={{ fontSize: 11, color: '#fca5a5', marginTop: 1 }}>{deleteTarget.name}</div>
+                <div style={{ fontSize: 11, color: '#fca5a5', marginTop: 1 }}>{titreDe(deleteTarget)}{titreDe(deleteTarget) !== deleteTarget.name ? ` · ${deleteTarget.name}` : ''}</div>
               </div>
             </div>
             <button onClick={() => setDeleteTarget(null)} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', borderRadius: '50%', width: 30, height: 30, cursor: 'pointer', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
           </div>
           <div style={{ padding: '18px 22px' }}>
             <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, marginBottom: 14 }}>
-              La suppression de <strong>{deleteTarget.name}</strong> entraînera la suppression définitive et irréversible de toutes les données associées :
+              La suppression de <strong>{titreDe(deleteTarget)}</strong>{titreDe(deleteTarget) !== deleteTarget.name ? ` (contact : ${deleteTarget.name})` : ''} entraînera la suppression définitive et irréversible de toutes les données associées :
             </p>
             <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '12px 14px', marginBottom: 18 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#991b1b', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Données supprimées</div>
@@ -679,7 +737,7 @@ export default function ClientsManagement() {
           <div style={{ background: 'linear-gradient(135deg,#1e3a8a 0%,#1d4ed8 55%,#3b82f6 100%)', padding: '18px 22px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
               <div style={{ fontSize: '0.66rem', fontWeight: 700, color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 3 }}>Domaine d'activité</div>
-              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>🏷️ {editClient.name}</div>
+              <div style={{ fontSize: '1rem', fontWeight: 800, color: '#fff' }}>🏷️ {titreDe(editClient)}</div>
             </div>
             <button onClick={closeEdit} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 8, color: '#fff', fontSize: '1rem', cursor: 'pointer', padding: '5px 9px', lineHeight: 1 }}>✕</button>
           </div>
@@ -736,6 +794,15 @@ export default function ClientsManagement() {
           </form>
         </div>
       </div>
+    )}
+
+    {/* ── MODAL : Identité légale (lot 3, étape 1) ─────────────────────── */}
+    {identiteClient && (
+      <IdentiteClientModal<Client>
+        client={identiteClient}
+        onClose={() => setIdentiteClient(null)}
+        onSaved={(maj) => setClients((cs) => cs.map((c) => (c.id === maj.id ? { ...c, ...maj } : c)))}
+      />
     )}
     </>
   );
