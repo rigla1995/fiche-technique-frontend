@@ -8,11 +8,8 @@ export interface AppNotification {
     | 'new_demande'
     | 'demande_traitee'
     | 'new_inventaire'
-    | 'demande_capacite_validee'
-    | 'demande_gerant_validee'
     | 'nouvelle_commande_acheteur'
-    | 'demande_acces_recue'
-    | 'avenant_signe';
+    | 'demande_acces_recue';
   demandeId?: number;
   refId?: number;
   refKind?: string;
@@ -113,12 +110,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       es.addEventListener('new_inventaire', (e) => {
         try { push('new_inventaire', JSON.parse(e.data)); } catch { /* ignore */ }
       });
-      es.addEventListener('demande_capacite_validee', (e) => {
-        try { push('demande_capacite_validee', JSON.parse(e.data)); } catch { /* ignore */ }
-      });
-      es.addEventListener('demande_gerant_validee', (e) => {
-        try { push('demande_gerant_validee', JSON.parse(e.data)); } catch { /* ignore */ }
-      });
       es.addEventListener('nouvelle_commande_acheteur', (e) => {
         try { push('nouvelle_commande_acheteur', JSON.parse(e.data)); } catch { /* ignore */ }
       });
@@ -126,9 +117,6 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // c'est la cause du « pas instantané » (la notif n'apparaissait qu'au reload).
       es.addEventListener('demande_acces_recue', (e) => {
         try { push('demande_acces_recue', JSON.parse(e.data)); } catch { /* ignore */ }
-      });
-      es.addEventListener('avenant_signe', (e) => {
-        try { push('avenant_signe', JSON.parse(e.data)); } catch { /* ignore */ }
       });
       // Retrait instantané d'une notif « file d'attente » quand l'entité source est
       // traitée côté serveur (ex. demande d'accès passée en contactée/refusée/convertie).

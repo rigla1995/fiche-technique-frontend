@@ -38,15 +38,9 @@ export default function Header() {
       navigate('/client/inventaire/historique?section=activite');
     } else if (eventType === 'nouvelle_commande_acheteur') {
       navigate('/client/acheteurs/commandes?statut=en_attente');
-    } else if (eventType === 'demande_capacite_validee') {
-      navigate('/client/activites');
-    } else if (eventType === 'demande_gerant_validee') {
-      navigate('/client/gerants');
     } else if (eventType === 'demande_acces_recue') {
       // Demande d'accès reçue via le site vitrine → file admin dédiée
       navigate('/admin/site/demandes');
-    } else if (eventType === 'avenant_signe') {
-      navigate('/admin/clients');
     } else {
       navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }
@@ -107,7 +101,7 @@ export default function Header() {
         </div>
 
         {/* Guide de mise en route 🤖 : rôle client uniquement, visible tant que
-            la configuration souscrite n'est pas terminée (réapparaît après avenant) */}
+            la configuration souscrite n'est pas terminée (réapparaît après un ajout de capacité) */}
         {user?.role === 'client' && <AssistantWidget />}
 
         {/* Notification bell */}
@@ -198,8 +192,6 @@ export default function Header() {
                           ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
                           : n.eventType === 'demande_acces_recue'
                           ? 'linear-gradient(135deg,#e0e7ff,#c7d2fe)'
-                          : n.eventType === 'avenant_signe'
-                          ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
                           : n.statut === 'validée'
                           ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
                           : 'linear-gradient(135deg,#fee2e2,#fecaca)',
@@ -208,7 +200,6 @@ export default function Header() {
                           : n.eventType === 'nouvelle_commande_acheteur' ? voc.icon('acheteur')
                           : n.eventType === 'new_demande' ? '📥'
                           : n.eventType === 'demande_acces_recue' ? '🌐'
-                          : n.eventType === 'avenant_signe' ? '✅'
                           : n.statut === 'validée' ? '✅' : '❌'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -221,8 +212,6 @@ export default function Header() {
                             ? `Nouvelle demande — ${typeLabel(n.type)}`
                             : n.eventType === 'demande_acces_recue'
                             ? "Nouvelle demande d'accès"
-                            : n.eventType === 'avenant_signe'
-                            ? 'Avenant signé — capacité ajoutée'
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
                         {n.clientNom && (

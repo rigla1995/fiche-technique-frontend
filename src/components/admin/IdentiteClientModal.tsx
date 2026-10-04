@@ -27,7 +27,7 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
   const [saving, setSaving] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [avertissements, setAvertissements] = useState<string[] | null>(null);
-  // Adresse déjà renseignée puis modifiée : elle est lue telle quelle par les factures et les contrats existants.
+  // Adresse déjà renseignée puis modifiée : elle est lue telle quelle par les factures existantes.
   const adresseDejaImprimee = !!(initiale.adresse ?? '').trim() && (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
 
   const enregistrer = async (e: React.FormEvent) => {

@@ -88,7 +88,6 @@ export interface SupportDemande {
   nbGerantsSupp?: number | null;
   /** Option Acheteurs : QUOTA TOTAL cible (borne de palier 10/20/50/100), pas un incrément. */
   nbAcheteursCible?: number | null;
-  docusealSubmissionId?: string | null;
   description?: string | null;
   notesAdmin?: string | null;
   traitePar?: number | null;
@@ -117,8 +116,6 @@ export interface Abonnement {
   moduleVenteActivatedAt?: string | null;
   moduleAcheteursActif?: boolean;
   moduleAcheteursActivatedAt?: string | null;
-  contratAccepteLe?: string | null;
-  contratAccepteIp?: string | null;
   config?: AbonnementConfig | null;
   paiements?: Paiement[];
   promotions?: Promotion[];

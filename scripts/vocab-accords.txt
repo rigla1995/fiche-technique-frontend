@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1239 unité(s), 60 fichier(s).
+# 1231 unité(s), 59 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -1894,43 +1894,43 @@ src/components/client/MonAbonnementPage.tsx
   l. 19
     défaut : Base acheteurs
     miroir : Base abr-clientes
-  l. 251
+  l. 231
     défaut : jusqu'à ⟦·⟧ acheteurs
     miroir : jusqu'à ⟦·⟧ clientes
-  l. 326
+  l. 299
     défaut : ⟦Activité|Activités@>1⟧
     miroir : ⟦Local|Locaux@>1⟧
-  l. 327
+  l. 300
     défaut : 🏭
     miroir : 🏭
-  l. 327
+  l. 300
     défaut : ⟦Labo|Labos@>1⟧
     miroir : ⟦Usine|Usines@>1⟧
-  l. 328
+  l. 301
     défaut : 👤
     miroir : 👤
-  l. 328
+  l. 301
     défaut : ⟦Gérant|Gérants@>1⟧
     miroir : ⟦Animatrice|Animatrices@>1⟧
-  l. 342
+  l. 315
     défaut : 🤝 Option Acheteurs (palier jusqu'à ⟦·⟧)
     miroir : 🤝 Option Abr-Clientes (palier jusqu'à ⟦·⟧)
-  l. 440
+  l. 413
     défaut : Supplément Activité
     miroir : Supplément Local
-  l. 440
+  l. 413
     défaut : activité
     miroir : local
-  l. 441
+  l. 414
     défaut : Supplément Labo
     miroir : Supplément Usine
-  l. 441
+  l. 414
     défaut : labo
     miroir : usine
-  l. 442
+  l. 415
     défaut : Supplément Gérant
     miroir : Supplément Animatrice
-  l. 442
+  l. 415
     défaut : gérant
     miroir : animatrice
 
@@ -2899,61 +2899,61 @@ src/components/client/SupportPage.tsx
   l. 13
     défaut : Demander l'ajout d'activités, labos, gérants ou de l'option Acheteurs
     miroir : Demander l'ajout de locaux, usines, animatrices ou de l'option Abr-Clientes
-  l. 176
+  l. 182
     défaut : L'option Acheteurs nécessite au moins un labo — ajoutez-en un à votre demande.
     miroir : L'option Abr-Clientes nécessite au moins une usine — ajoutez-en une à votre demande.
-  l. 344
+  l. 334
     défaut : ⟦?Demande déjà envoyée — en attente de validation|Débloquez l'Espace Produit complet : produits composés, fiches techniques, production⟧.
     miroir : ⟦?Demande déjà envoyée — en attente de validation|Débloquez la Zone Invention complète : inventions composées, états techniques, production⟧.
-  l. 374
+  l. 364
     défaut : Configuration actuelle : <strong>⟦·⟧ ⟦activité|activités@≠1⟧⟦? · ⟦·⟧ ⟦labo|labos@≠1⟧|⟧⟦? · ⟦·⟧ ⟦gérant|gérants@≠1⟧|⟧</strong>
     miroir : Configuration actuelle : <strong>⟦·⟧ ⟦local|locaux@≠1⟧⟦? · ⟦·⟧ ⟦usine|usines@≠1⟧|⟧⟦? · ⟦·⟧ ⟦animatrice|animatrices@≠1⟧|⟧</strong>
-  l. 384
+  l. 374
     défaut : activités supplémentaires
     miroir : locaux supplémentaires
-  l. 385
+  l. 375
     défaut : labos supplémentaires
     miroir : usines supplémentaires
-  l. 386
+  l. 376
     défaut : gérants supplémentaires
     miroir : animatrices supplémentaires
-  l. 394
+  l. 384
     défaut : Activités supplémentaires
     miroir : Locaux supplémentaires
-  l. 395
+  l. 385
     défaut : Labos supplémentaires
     miroir : Usines supplémentaires
-  l. 396
+  l. 386
     défaut : Gérants supplémentaires
     miroir : Animatrices supplémentaires
-  l. 439
+  l. 429
     défaut : 🤝 Option Acheteurs⟦·⟧
     miroir : 🤝 Option Abr-Clientes⟦·⟧
-  l. 442
+  l. 432
     défaut : palier actuel : jusqu'à ⟦·⟧ acheteurs
     miroir : palier actuel : jusqu'à ⟦·⟧ clientes
-  l. 447
+  l. 437
     défaut : ⟦?Passez à un palier supérieur — le nouveau palier remplace l'actuel|Activez le carnet d'acheteurs B2B (ventes depuis votre labo, portail de commande)⟧.
     miroir : ⟦?Passez à un palier supérieur — le nouveau palier remplace l'actuel|Activez le carnet de clientes B2B (encaissements depuis votre usine, portail de commande)⟧.
-  l. 453
+  l. 443
     défaut : ⚠️ Nécessite au moins un labo — ajoutez-en un à cette demande pour activer l'option.
     miroir : ⚠️ Nécessite au moins une usine — ajoutez-en une à cette demande pour activer l'option.
-  l. 465
+  l. 455
     défaut : Jusqu'à ⟦·⟧ acheteurs — ⟦·⟧ DT/mois
     miroir : Jusqu'à ⟦·⟧ clientes — ⟦·⟧ DT/mois
-  l. 483
+  l. 473
     défaut : Base : mensualité actuelle (option Acheteurs incluse le cas échéant)
     miroir : Base : mensualité actuelle (option Abr-Clientes incluse le cas échéant)
-  l. 602
+  l. 592
     défaut : ⟦?+⟦·⟧ ⟦activité|activités@>1⟧|⟧
     miroir : ⟦?+⟦·⟧ ⟦local|locaux@>1⟧|⟧
-  l. 603
+  l. 593
     défaut : ⟦?+⟦·⟧ ⟦labo|labos@>1⟧|⟧
     miroir : ⟦?+⟦·⟧ ⟦usine|usines@>1⟧|⟧
-  l. 604
+  l. 594
     défaut : ⟦?+⟦·⟧ ⟦gérant|gérants@>1⟧|⟧
     miroir : ⟦?+⟦·⟧ ⟦animatrice|animatrices@>1⟧|⟧
-  l. 605
+  l. 595
     défaut : ⟦?Option Acheteurs → palier jusqu'à ⟦·⟧|⟧
     miroir : ⟦?Option Abr-Clientes → palier jusqu'à ⟦·⟧|⟧
 
@@ -3476,15 +3476,15 @@ src/components/common/AssistantChat.tsx
     miroir : L'assistant IA n'est pas encore activé pour votre compte : il pourra analyser vos données (armoire, encaissements, abandons…) et répondre à vos questions sur LabFlow. Contactez votre administrateur pour l'activer.
 
 src/components/common/Header.tsx
-  l. 97
+  l. 91
     défaut : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Gérant⟧|Client⟧⟧⟧
     miroir : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Animatrice⟧|Client⟧⟧⟧
-  l. 189
-    défaut : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|⟦?✅|❌⟧⟧⟧⟧⟧⟧
-    miroir : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|⟦?✅|❌⟧⟧⟧⟧⟧⟧
-  l. 215
-    défaut : ⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|⟦?Avenant signé — capacité ajoutée|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧⟧
-    miroir : ⟦?Pesée ajoutée par une animatrice|⟦?Nouvelle commande de la cliente⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|⟦?Avenant signé — capacité ajoutée|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧⟧
+  l. 183
+    défaut : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
+    miroir : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
+  l. 206
+    défaut : ⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
+    miroir : ⟦?Pesée ajoutée par une animatrice|⟦?Nouvelle commande de la cliente⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
 
 src/components/common/Sidebar.tsx
   l. 282
@@ -3817,32 +3817,6 @@ src/i18n/locales/fr.json
   client.labo.col_activite (l. 134)
     défaut : Activité
     miroir : Local
-
-src/utils/contractPdf.ts
-  l. 161
-    défaut : +⟦·⟧ ⟦activité|activités@>1⟧
-    miroir : +⟦·⟧ ⟦local|locaux@>1⟧
-  l. 162
-    défaut : +⟦·⟧ ⟦labo|labos@>1⟧
-    miroir : +⟦·⟧ ⟦usine|usines@>1⟧
-  l. 163
-    défaut : +⟦·⟧ ⟦gérant|gérants@>1⟧
-    miroir : +⟦·⟧ ⟦animatrice|animatrices@>1⟧
-  l. 164
-    défaut : Option Acheteurs : palier ⟦·⟧
-    miroir : Option Abr-Clientes : palier ⟦·⟧
-  l. 203
-    défaut : ⟦Activité|Activités@>1⟧⟦·⟧
-    miroir : ⟦Local|Locaux@>1⟧⟦·⟧
-  l. 205
-    défaut : Labo(s)
-    miroir : Usine(s)
-  l. 206
-    défaut : Gérant(s) sup.
-    miroir : Animatrice(s) sup.
-  l. 209
-    défaut : Option Acheteurs
-    miroir : Option Abr-Clientes
 
 src/utils/manuelPdf.ts
   l. 84

@@ -7,12 +7,14 @@
 // Le PDF du manuel est construit DANS LE NAVIGATEUR (GuidePage → buildManuelPdf(sections, voc), src/utils/manuelPdf.ts) :
 // l'oracle du serveur ne le voit pas. Ce script le construit sous Node (jsPDF, date figée, /ID et /CreationDate masqués,
 // `save` remplacé par une capture de `output()`, `text` capté par instance) :
-//   - restauration (défaut), NON à vide : PDF A = manuelPdf.ts de develop (`--base`, défaut 1683d7b, avec ses imports, comme
-//     controle-avenant.mjs) nourri des fiches d'ORIGINE (fiche-technique-backend/scripts/manuel/origine/manuel/, écrites à
+//   - restauration (défaut), NON à vide : PDF A = manuelPdf.ts de develop (`--base`, défaut 1683d7b, avec ses imports)
+//     nourri des fiches d'ORIGINE (fiche-technique-backend/scripts/manuel/origine/manuel/, écrites à
 //     l'étape M0) dans l'ordre manuel.lecteurs['client.B'] de la référence de l'oracle ; PDF B = manuelPdf.ts COURANT nourri
 //     de la réponse brute, non masquée, du client B (`--brut`, écrite par capture-vocab-baseline.js --brut <dossier>). A et B
 //     doivent être identiques à l'octet après masquage. Deux sources (fichiers d'origine, serveur du 2c), deux versions du
-//     code : le contrôle n'est pas à vide (règle de controle-avenant.mjs) ;
+//     code : le contrôle n'est pas à vide. Une fiche RÉÉCRITE par une migration de maintenance (backend
+//     scripts/manuel/revisions.json, depuis le lot 3 : plus de contrat ni d'avenant) ne se compare plus à l'origine : sa
+//     source A est son texte balisé courant (scripts/manuel/balise/manuel/), rendu avec le vocabulaire par défaut ;
 //   - hotellerie / ceramique (réponse brute du client B d'un passage du domaine, vocabulaire résolu du lexique d'essai,
 //     scripts/vocab-lexiques-test.json, R3.1.1) : chaînes écrites recollées par appel à text(), cherchées avec formesDans
 //     (formes par défaut que le domaine change, passages exclus au balisage retirés) : aucune ; aucun « [[ » ; aucune marque
@@ -108,7 +110,7 @@ const { vocabDefaut, vocabDuLexique, resoudreLexique } = await import(pathToFile
 const { LEXIQUE_DEFAUT } = await import(pathToFileURL(path.join(FRONT, 'src', 'vocab', 'lexiqueDefaut.ts')).href);
 const { formesDans } = await import(pathToFileURL(path.join(ICI, 'vocab-check.mjs')).href);
 const masquer = (pdf) => pdf.replace(/\/ID \[[^\]]*\]/g, '/ID [masqué]').replace(/\/CreationDate \([^)]*\)/g, '/CreationDate (masquée)');
-// Chaîne écrite sur deux octets (octet nul devant chaque lettre) : ligne illisible (controle-avenant.mjs).
+// Chaîne écrite sur deux octets (octet nul devant chaque lettre) : ligne illisible.
 const deuxOctets = (pdf) => (pdf.match(/\((?:[^()\\]|\\.)*\)\s*Tj/g) || []).filter((t) => t.includes('\x00')).length;
 const md5 = (s) => crypto.createHash('md5').update(s, 'utf8').digest('hex');
 
@@ -122,6 +124,13 @@ if (DOMAINE === 'restauration') {
   const ordre = ref.captures && ref.captures.manuel && ref.captures.manuel.lecteurs && ref.captures.manuel.lecteurs['client.B'];
   if (!Array.isArray(ordre) || !ordre.length) { console.log(`ÉCHEC ${REFERENCE} : manuel.lecteurs['client.B'] absent (référence d'avant le lot 2c)`); fin(1); }
   dire(JSON.stringify(brut.map((s) => s.slug)) === JSON.stringify(ordre), `réponse brute du client B : ${brut.length} fiches, mêmes slugs dans le même ordre que la référence (${ordre.length})`);
+  // Fiches réécrites depuis le lot 2c (migrations de maintenance) : texte balisé courant, rendu par défaut.
+  const { rendre } = await import(pathToFileURL(path.join(FRONT, 'src', 'vocab', 'rendre.ts')).href);
+  const MANUEL = path.join(BACK, 'scripts', 'manuel');
+  const fRevisions = path.join(MANUEL, 'revisions.json');
+  const revisees = new Set(fs.existsSync(fRevisions)
+    ? JSON.parse(fs.readFileSync(fRevisions, 'utf8')).migrations.flatMap((m) => (m.manuel || []).map((x) => x.slug))
+    : []);
   const sectionsA = [];
   for (const slug of ordre) {
     const fj = path.join(ORIGINE, `${slug}.json`);
@@ -130,8 +139,15 @@ if (DOMAINE === 'restauration') {
     const o = JSON.parse(fs.readFileSync(fj, 'utf8'));
     const contenu = fs.readFileSync(fm, 'utf8');
     if (o.md5Contenu && md5(contenu) !== o.md5Contenu) dire(false, `origine de « ${slug} » : md5 du .md ≠ md5Contenu du .json`);
+    if (revisees.has(slug)) {
+      const balise = lf(fs.readFileSync(path.join(MANUEL, 'balise', 'manuel', `${slug}.md`), 'utf8'));
+      const titre = JSON.parse(fs.readFileSync(path.join(MANUEL, 'balise', 'manuel', `${slug}.json`), 'utf8')).titre;
+      sectionsA.push({ id: 0, slug, titre: rendre(vocabDefaut, titre), icone: o.icone ?? null, partie: o.partie, ordre: o.ordre, contenu: rendre(vocabDefaut, balise), motsCles: o.mots_cles ?? null });
+      continue;
+    }
     sectionsA.push({ id: 0, slug, titre: o.titre, icone: o.icone ?? null, partie: o.partie, ordre: o.ordre, contenu, motsCles: o.mots_cles ?? null });
   }
+  if (revisees.size) console.log(`     (${revisees.size} fiche(s) réécrite(s) par une migration de maintenance : source A = texte balisé courant, rendu par défaut)`);
   const a = construire(reference, sectionsA, vocabDefaut);
   const b = construire(courant, brut, vocabDefaut);
   const b2 = construire(courant, brut, vocabDefaut);
