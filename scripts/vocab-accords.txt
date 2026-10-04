@@ -1316,61 +1316,61 @@ src/components/client/GerantsPage.tsx
   l. 133
     défaut : Supprimer le gérant « ⟦·⟧ » ?
     miroir : Supprimer l'animatrice « ⟦·⟧ » ?
-  l. 159
+  l. 160
     défaut : ⟦?|Activité #⟧⟦·⟧
     miroir : ⟦?|Local #⟧⟦·⟧
-  l. 160
+  l. 161
     défaut : Labo : ⟦·⟧
     miroir : Usine : ⟦·⟧
-  l. 181
+  l. 182
     défaut : Comptes gérants
     miroir : Comptes abr-animatrices
-  l. 183
+  l. 184
     défaut : Gérez les accès de vos collaborateurs à leurs espaces activités
     miroir : Gérez les accès de vos collaborateurs à leurs zones locaux
-  l. 194
+  l. 195
     défaut : Gérants
     miroir : Animatrices
-  l. 202
+  l. 203
     défaut : Actifs
     miroir : Actives
-  l. 211
+  l. 212
     défaut : + Nouveau gérant
     miroir : + Nouvelle animatrice
-  l. 244
+  l. 245
     défaut : ⟦?Modifier le gérant — accès et affectations|Nouveau gérant — ⟦?payant (80 DT/mois)|inclus dans votre abonnement⟧⟧
     miroir : ⟦?Modifier l'animatrice — accès et affectations|Nouvelle animatrice — ⟦?payante (80 DT/mois)|incluse dans votre abonnement⟧⟧
-  l. 252
+  l. 253
     défaut : ⚠ Vous avez atteint la limite de ⟦·⟧ gérant(s) gratuit(s). Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
     miroir : ⚠ Vous avez atteint la limite de ⟦·⟧ animatrice(s) gratuite(s). Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
-  l. 302
+  l. 303
     défaut : Activités & labos assignés <span>*</span>
     miroir : Locaux & usines assignés <span>*</span>
-  l. 313
+  l. 314
     défaut : 📍 Activités
     miroir : 📍 Locaux
-  l. 325
+  l. 326
     défaut : 🏭 Labos
     miroir : 🏭 Usines
-  l. 345
+  l. 346
     défaut : 🛒 Gestion de la base acheteurs
     miroir : 🛒 Gestion de la base abr-clientes
-  l. 348
+  l. 349
     défaut : ⟦?Le gérant accède à l'Espace Acheteurs (carnet, tarifs, ventes, commandes de ses labos)|Assignez au moins un labo pour pouvoir accorder cet accès⟧.
     miroir : ⟦?L'animatrice accède à la Zone Clientes (carnet, tarifs, encaissements, commandes de ses usines)|Assignez au moins une usine pour pouvoir accorder cet accès⟧.
-  l. 394
+  l. 395
     défaut : Aucun compte gérant
     miroir : Aucun compte abr-animatrice
-  l. 395
+  l. 396
     défaut : ⟦?Votre abonnement inclut ⟦·⟧ compte(s) gérant. Créez un premier compte|Créez un compte gérant⟧ pour donner accès à un collaborateur.
     miroir : ⟦?Votre abonnement inclut ⟦·⟧ compte(s) animatrice. Créez un premier compte|Créez un compte animatrice⟧ pour donner accès à un collaborateur.
-  l. 401
+  l. 402
     défaut : + Créer un gérant
     miroir : + Créer une animatrice
-  l. 426
+  l. 427
     défaut : ⟦?● Actif|○ Inactif⟧
     miroir : ⟦?● Active|○ Inactive⟧
-  l. 436
+  l. 437
     défaut : 🛒 Base acheteurs
     miroir : 🛒 Base abr-clientes
 
