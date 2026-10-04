@@ -4,6 +4,9 @@ import type { Promotion } from '../../types';
 import { MonthPicker } from './MonthPicker';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 import Counter from './Counter';
+import ClientIdentiteForm from './ClientIdentiteForm';
+import { IDENTITE_VIDE, corpsIdentite, identiteDe, type IdentiteLegale } from './identiteLegale';
+import { controlerMatriculeFiscal } from './matriculeFiscal';
 import {
   AIDE_DEFAUT, PALIERS_ACHETEURS, PALIER_LABELS,
   composantsActifs, composantsPayload, deriveCompteurs, libelleComposant,
@@ -43,8 +46,8 @@ interface PromoForm {
 
 const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
 const fmt = (n: number) => `${n.toLocaleString('fr-FR')} DT`;
-// Message d'une erreur API (4xx) — affiché en bandeau inline (jamais alerte() :
-// l'overlay du wizard est au-dessus des dialogues).
+// Message d'une erreur API (4xx) — affiché en bandeau inline dans le wizard (lot 3 : overlay ramené à 400, sous
+// ConfirmDialog 700 ; les messages du wizard restent des bandeaux, ils ne quittent pas l'étape en cours).
 const apiMessage = (err: unknown, fallback: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message || fallback;
 
@@ -217,7 +220,7 @@ interface Props {
   // appelants existants qui ignorent l'argument restent compatibles.
   onCreated: (createdClientId?: number) => void;
   // Pré-remplissage optionnel de l'étape 1 (conversion d'une demande d'accès).
-  initialValues?: { nom?: string; email?: string; telephone?: string };
+  initialValues?: { nom?: string; email?: string; telephone?: string; ville?: string };
 }
 
 export default function AddClientModal({ onClose, onCreated, initialValues }: Props) {
@@ -230,6 +233,10 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const [email, setEmail] = useState(initialValues?.email ?? '');
   const [tel, setTel] = useState(initialValues?.telephone ?? '');
   const [telTouched, setTelTouched] = useState(false);
+  // Lot 3, étape 2 : identité légale (facultative), contrôlée par le serveur au clic sur « Suivant »
+  const [identite, setIdentite] = useState<IdentiteLegale>({ ...IDENTITE_VIDE, ville: initialValues?.ville || null });
+  const [identiteAvert, setIdentiteAvert] = useState<string[]>([]);
+  const [controleEnCours, setControleEnCours] = useState(false);
 
   // Step 2 — domaine + composition par composant (les compteurs sont dérivés)
   const [domaines, setDomaines] = useState<DomaineOption[]>([]);
@@ -339,6 +346,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     setPdfErrorMsg(null);
     api.post('/api/abonnements/contrat-preview', {
       nom, email, telephone: tel,
+      adresse: identite.adresse ?? '',
       domaineId,
       composants: JSON.parse(composantsKey),
       nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs,
@@ -360,7 +368,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
       });
     // mapPromoForApi est stable (fonction pure du composant) — promos suffit en dépendance
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step, nom, email, tel, domaineId, composantsKey, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, promos]);
+  }, [step, nom, email, tel, identite.adresse, domaineId, composantsKey, nbActivites, nbLabos, nbGerants, formuleActivites, nbAcheteurs, montantOnboarding, promos]);
 
   // ── Step validation ──
 
@@ -377,17 +385,37 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const montantObValid = montantOnboarding !== '' && Number.isFinite(montantOb) && montantOb >= 0;
   // Domaine choisi + composition valide (miroir client des règles ; le serveur reste juge) + onboarding saisi
   const step2Valid = domaineId != null && compositionErrors.length === 0 && montantObValid;
-  const nextDisabled = (step === 0 && !step1Valid) || (step === 1 && !step2Valid);
+  const nextDisabled = (step === 0 && (!step1Valid || controleEnCours)) || (step === 1 && !step2Valid);
 
-  const next = () => {
+  const next = async () => {
     setError(null);
     if (step === 0) {
-      if (!nom.trim()) { setError('Le nom est obligatoire.'); return; }
+      if (!nom.trim()) { setError('Le nom du contact est obligatoire.'); return; }
+      // Nom pré-rempli depuis une demande d'accès (jusqu'à 150 caractères) : refusé ici plutôt qu'à la dernière étape.
+      if (nom.trim().length > 100) { setError('Nom du contact : 100 caractères au maximum.'); return; }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Email invalide.'); return; }
       if (emailChecking) { setError('Vérification de l\'email en cours…'); return; }
       if (emailCheckFailed) { setError('Impossible de vérifier l\'email — vérifiez votre connexion.'); return; }
       if (emailExists) { setError('Cet email est déjà utilisé.'); return; }
       if (!telValid) { setError('Téléphone invalide — format tunisien requis (ex: 20 123 456 ou +216 20 123 456).'); return; }
+      // Identité saisie : contrôlée maintenant par le serveur (mêmes règles que la création), pour que l'erreur
+      // s'affiche ici et pas à la dernière étape. Valeurs normalisées reprises (matricule, espaces…).
+      const corps = corpsIdentite(identite);
+      if (Object.values(corps).some(Boolean)) {
+        setControleEnCours(true);
+        try {
+          const { data } = await api.post('/admin/clients/identite/controle', corps);
+          setIdentite(identiteDe(data?.valeurs));
+          setIdentiteAvert(Array.isArray(data?.avertissements) ? data.avertissements : []);
+        } catch (err: unknown) {
+          setError(apiMessage(err, "L'identité n'a pas pu être contrôlée — réessayez."));
+          return;
+        } finally {
+          setControleEnCours(false);
+        }
+      } else {
+        setIdentiteAvert([]);
+      }
     }
     if (step === 1 && !step2Valid) {
       if (domaineId == null) setError('Choisissez le domaine d\'activité du client.');
@@ -465,6 +493,8 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
     try {
       const { data } = await api.post('/admin/clients', {
         nom, email, telephone: tel,
+        // Lot 3 : identité légale (déjà contrôlée à l'étape 1 ; le serveur la recontrôle)
+        ...corpsIdentite(identite),
         domaineId,
         composants: payloadComposants,
         // compteurs dérivés (compat)
@@ -510,7 +540,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const formulesDispo = regles.formules;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: 640, maxHeight: '92vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.22)' }}>
 
         {/* Header */}
@@ -531,16 +561,25 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
           {/* ── STEP 1: Informations ── */}
           {step === 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Lot 3, étape 2 : identité légale d'abord (facultative), puis le contact */}
+              <div style={sectionTitre}>🏢 Identité légale <span style={sectionAide}>facultative — telle qu'écrite sur la patente</span></div>
+              <ClientIdentiteForm value={identite} onChange={(v) => { setIdentite(v); setIdentiteAvert([]); setError(null); }} disabled={controleEnCours} />
+              {/* L'avertissement « sans lettre de clé » est déjà affiché sous le champ du matricule : pas en double */}
+              {identiteAvert.filter((a) => a !== controlerMatriculeFiscal(identite.matriculeFiscal).avertissement)
+                .map((a) => <div key={a} style={bannerWarn}>⚠️ {a}</div>)}
+
+              <div style={{ ...sectionTitre, marginTop: 6 }}>👤 Contact <span style={sectionAide}>la personne qui recevra le contrat et les accès</span></div>
               <div>
-                <label style={labelStyle}>Nom complet *</label>
-                <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Nom du client" style={inputStyle} />
+                <label style={labelStyle}>Nom du contact *</label>
+                <input value={nom} onChange={(e) => setNom(e.target.value)} placeholder="Prénom et nom" maxLength={100} disabled={controleEnCours} style={inputStyle} />
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
                 <div>
                   <label style={labelStyle}>Email *</label>
                   <input
                     type="email"
                     value={email}
+                    disabled={controleEnCours}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="email@exemple.com"
                     style={{
@@ -562,6 +601,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                   <input
                     type="tel"
                     value={tel}
+                    disabled={controleEnCours}
                     onChange={(e) => setTel(e.target.value)}
                     onBlur={() => setTelTouched(true)}
                     placeholder="20 123 456"
@@ -870,8 +910,20 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
               <div style={{ background: 'linear-gradient(135deg,#f0f9ff 0%,#e0f2fe 100%)', border: '1px solid #bae6fd', borderRadius: 14, padding: '14px 18px', marginBottom: 14 }}>
                 <div style={{ fontSize: 13, fontWeight: 800, color: '#0c4a6e', marginBottom: 10 }}>📋 Récapitulatif</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                  {identite.raisonSociale && (
+                    <div style={{ display: 'flex', gap: 8, fontSize: 12, gridColumn: '1 / -1' }}>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>🏢 Raison sociale</span>
+                      <span style={{ color: '#0f172a', fontWeight: 700 }}>{identite.raisonSociale}{identite.matriculeFiscal ? ` · MF ${identite.matriculeFiscal}` : ''}</span>
+                    </div>
+                  )}
+                  {(identite.adresse || identite.ville) && (
+                    <div style={{ display: 'flex', gap: 8, fontSize: 12, gridColumn: '1 / -1' }}>
+                      <span style={{ color: '#64748b', fontWeight: 600 }}>📍 Adresse</span>
+                      <span style={{ color: '#0f172a' }}>{[identite.adresse, identite.ville].filter(Boolean).join(', ')}</span>
+                    </div>
+                  )}
                   <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
-                    <span style={{ color: '#64748b', fontWeight: 600 }}>👤 Client</span>
+                    <span style={{ color: '#64748b', fontWeight: 600 }}>👤 Contact</span>
                     <span style={{ color: '#0f172a', fontWeight: 700 }}>{nom}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 8, fontSize: 12 }}>
@@ -886,6 +938,13 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                     <span style={{ color: '#64748b', fontWeight: 600 }}>🏷️ Domaine</span>
                     <span style={{ color: '#0f172a', fontWeight: 700 }}>{domaine?.nom ?? '—'}</span>
                   </div>
+                  {!(identite.raisonSociale && identite.matriculeFiscal && identite.adresse && identite.ville) && (
+                    <div style={{ ...bannerWarn, gridColumn: '1 / -1', fontWeight: 500 }}>
+                      🪪 Identité à compléter (raison sociale, matricule fiscal, adresse, ville) : le client sera créé, sa fiche
+                      restera marquée « Identité à compléter ».
+                    </div>
+                  )}
+                  {identiteAvert.map((a) => <div key={a} style={{ ...bannerWarn, gridColumn: '1 / -1', fontWeight: 500 }}>⚠️ {a}</div>)}
                   <div style={{ display: 'flex', gap: 8, fontSize: 12, gridColumn: '1 / -1' }}>
                     <span style={{ color: '#64748b', fontWeight: 600 }}>⚙️ Composition</span>
                     <span style={{ color: '#0f172a', fontWeight: 700 }}>{recapComposants.length > 0 ? recapComposants.join(' · ') : '—'}</span>
@@ -956,7 +1015,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
           {step < 3 ? (
             <button onClick={next} disabled={nextDisabled}
               style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: nextDisabled ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: nextDisabled ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: nextDisabled ? 'default' : 'pointer', boxShadow: nextDisabled ? 'none' : '0 4px 14px rgba(99,102,241,0.35)' }}>
-              {step === 0 && emailChecking ? 'Vérification…' : 'Suivant →'}
+              {step === 0 && (emailChecking || controleEnCours) ? 'Vérification…' : 'Suivant →'}
             </button>
           ) : (() => {
             // Désactivé pendant la génération seulement — un échec de génération
@@ -995,7 +1054,14 @@ const selectStyle: React.CSSProperties = {
   ...inputStyle, cursor: 'pointer',
 };
 
-// Bandeaux inline (le wizard n'utilise jamais alerte() : son overlay masquerait le dialogue)
+// Titres de section de l'étape 1 (lot 3)
+const sectionTitre: React.CSSProperties = {
+  fontSize: 12.5, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap',
+  borderBottom: '1px solid #f1f5f9', paddingBottom: 6,
+};
+const sectionAide: React.CSSProperties = { fontSize: 11, fontWeight: 500, color: '#94a3b8' };
+
+// Bandeaux inline (le wizard n'utilise pas alerte() : ses messages restent dans l'étape en cours)
 const bannerWarn: React.CSSProperties = {
   background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600,
 };
