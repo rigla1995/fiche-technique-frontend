@@ -5,6 +5,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 import GuideButton from './GuideButton';
+import MonEntrepriseSection from './MonEntrepriseSection';
 
 interface ProfileForm {
   name: string;
@@ -240,6 +241,9 @@ export default function Profile() {
           {saving ? t('common.loading') : `💾 ${t('client.profile.save')}`}
         </button>
       </form>
+
+      {/* ── Mon entreprise : formulaire séparé (compte client seulement, après le 1er mot de passe) ── */}
+      {user?.role === 'client' && user.onboardingStep !== 1 && <MonEntrepriseSection />}
     </div>
   );
 }

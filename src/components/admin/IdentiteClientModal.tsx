@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import api from '../../api/client';
 import ClientIdentiteForm from './ClientIdentiteForm';
-import { champsModifies, identiteDe, type IdentiteLegale } from './identiteLegale';
+import { champsModifies, identiteDe, type IdentiteLegale } from '../../utils/identiteLegale';
 
 export interface ClientIdentiteSource {
   id: number;
