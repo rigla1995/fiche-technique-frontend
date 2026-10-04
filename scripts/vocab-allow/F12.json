@@ -49,13 +49,6 @@
     "justification": "Espace admin (invariant I4) : auteur d'une demande dans la liste des demandes d'un client, suivi de « (gérant) » quand ce n'est pas le titulaire ; lu par l'administrateur LabFlow. L'écran admin garde le vocabulaire LabFlow."
   },
   {
-    "fichier": "src/utils/contractPdf.ts",
-    "avant": "PRESTATAIRE",
-    "apres": "PRESTATAIRE",
-    "type": "homonyme",
-    "justification": "Bloc de signature de l'avenant : « PRESTATAIRE » désigne la partie au contrat qui fournit le service (LabFlow), en face de « CLIENT ». Ce n'est pas la clé « prestataire » du lexique (prestataire de livraison d'une activité, « Intermédiaire » en Céramique) : par voc, le contrat d'un compte Céramique serait signé par l'« INTERMÉDIAIRE »."
-  },
-  {
     "fichier": "src/components/client/FormuleGuard.tsx",
     "avant": "Labo",
     "apres": "Labo",
