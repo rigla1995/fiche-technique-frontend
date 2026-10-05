@@ -6,10 +6,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   analyserExtraitRne, joindre, lectureExtraitRne, reconnaitre, reconstruireArabe, regrouperEnLignes,
-  LIEN_VERIFICATION_RNE, NOTE_MATRICULE_RACINE,
+  CARACTERES_MAX, LIEN_VERIFICATION_RNE, MORCEAUX_MAX, NOTE_ADRESSE_ENTIERE, NOTE_MATRICULE_RACINE, PAGES_MAX,
 } from '../src/components/admin/patente/rne/analyseur.ts';
-import { decouperAdresse, formeJuridiqueVersCode, normaliser, qualiteVersFrancais } from '../src/components/admin/patente/rne/tables.ts';
-import { lireCasesACocher } from '../src/components/admin/patente/rne/dessins.ts';
+import { decouperAdresse, formeJuridiqueVersCode, normaliser, qualiteVersFrancais, rognerBouts } from '../src/components/admin/patente/rne/tables.ts';
+import { lireCasesACocher, origineDuTexte } from '../src/components/admin/patente/rne/dessins.ts';
 import { lireTextePdf } from '../src/components/admin/patente/rne/lireTextePdf.ts';
 import { imprimable } from '../src/components/admin/patente/types.ts';
 
@@ -210,12 +210,33 @@ test('dénomination absente : vide (ni le libellé suivant, ni la dénomination 
   assert.deepEqual({ ...l.champs, raisonSociale: CHAMPS_ATTENDUS.raisonSociale }, CHAMPS_ATTENDUS, 'les autres champs sont intacts');
 });
 
-test('dénomination écrite en arabe seulement : jamais proposée', () => {
+test('dénomination écrite en arabe seulement, ou dans un autre alphabet : jamais proposée, avertissement', () => {
   const doc = extrait();
   morceau(doc, 1, DENOMINATION).str = 'شركة المثال';
   const l = lectureExtraitRne(doc);
   assert.equal(l.champs.raisonSociale, undefined);
+  assert.deepEqual(l.avertissements, ["Dénomination sociale introuvable sur l'extrait : à saisir à la main."]);
   assert.ok(l.lignes.every((t) => !ARABE.test(t)));
+  // lettres qui ne s'impriment pas sur une facture (hors Windows-1252)
+  const grec = extrait();
+  morceau(grec, 1, DENOMINATION).str = '\u{0395}\u{03A4}\u{0391}\u{0399}\u{03A1}\u{0395}\u{0399}\u{0391}';
+  const g = lectureExtraitRne(grec);
+  assert.equal(g.champs.raisonSociale, undefined);
+  assert.deepEqual(g.avertissements, ["La dénomination sociale n'est pas en lettres latines sur l'extrait : à saisir à la main."]);
+});
+
+test('barrières d’une valeur : un autre libellé sur la ligne, un « : » isolé', () => {
+  // « Enseigne: » et sa valeur posés sur la ligne de « Nom commercial: » : le nom commercial reste vide
+  const voisin = retirer(extrait(), (i) => i.str === 'Enseigne:');
+  voisin[0].morceaux.push(m('Enseigne:', 250, 487.2, 41.3), m('CHEZ EXEMPLE', 300, 487.2, 70));
+  const a = analyserExtraitRne(voisin);
+  assert.equal(a.valeurs.nomCommercial, '');
+  assert.equal(a.valeurs.enseigne, 'CHEZ EXEMPLE');
+  // un « : » isolé (celui d'un libellé arabe) arrête la lecture : le texte qui le suit n'est pas la valeur
+  const deuxPoints = extrait();
+  deuxPoints[0].morceaux.push(m(':', 300, 487.2, 3), m('TEXTE VOISIN', 310, 487.2, 60));
+  assert.equal(analyserExtraitRne(deuxPoints).valeurs.nomCommercial, '');
+  assert.equal(lectureExtraitRne(deuxPoints).champs.nomCommercial, undefined);
 });
 
 test('adresse du siège absente : vide (ni le « 5000 » ni le « 8 » de la ligne arabe, ni l’adresse d’activité)', () => {
@@ -294,10 +315,74 @@ test('valeur sur deux lignes : reprise si elle est alignée, sans aspirer la lig
   const l = lectureExtraitRne(alignee);
   assert.equal(l.champs.adresse.valeur, '12 Avenue des Exemples, Résidence les Oliviers, Bloc B');
   assert.equal(l.champs.ville.valeur, '5000 Monastir');
-  // une ligne qui n'est pas alignée sur le début de la valeur n'est pas une suite
+  // une ligne qui n'est pas alignée sur le début de la valeur n'est pas reprise ; elle en est peut-être la fin : la
+  // valeur est signalée « coupée », l'adresse n'est pas découpée, le champ est à relire
   const decalee = longue();
   decalee[0].morceaux.push(m('5000 Monastir Monastir', 180, 426.9, 95));
-  assert.equal(analyserExtraitRne(decalee).valeurs.adresseSiege, '12 Avenue des Exemples, Résidence les Oliviers, Bloc B');
+  const a = analyserExtraitRne(decalee);
+  assert.equal(a.valeurs.adresseSiege, '12 Avenue des Exemples, Résidence les Oliviers, Bloc B');
+  assert.deepEqual(a.coupees, ['adresseSiege']);
+  const d = lectureExtraitRne(decalee);
+  assert.deepEqual(d.champs.adresse, { valeur: '12 Avenue des Exemples, Résidence les Oliviers, Bloc B', source: 'pdf', aRelire: true, note: NOTE_ADRESSE_ENTIERE });
+  assert.equal(d.champs.ville, undefined);
+  assert.deepEqual(d.avertissements, ['Adresse du siège social : la valeur tient sur plusieurs lignes et a pu être coupée, relisez-la.']);
+});
+
+test('dénomination et nom commercial sur deux lignes : repris en entier si la 2e ligne est alignée', () => {
+  const doc = extrait();
+  Object.assign(morceau(doc, 1, DENOMINATION), { str: 'SOCIETE EXEMPLE DE DISTRIBUTION DE PRODUITS ET', largeur: 260 });
+  doc[0].morceaux.push(
+    m('DE BOISSONS EXEMPLE', 126, 509.5, 110),
+    m('BOUTIQUE EXEMPLE DU CENTRE', 126.2, 487.2, 130), m('VILLE', 126.2, 477.5, 30),
+  );
+  const a = analyserExtraitRne(doc);
+  assert.equal(a.valeurs.denomination, 'SOCIETE EXEMPLE DE DISTRIBUTION DE PRODUITS ET DE BOISSONS EXEMPLE');
+  assert.equal(a.valeurs.nomCommercial, 'BOUTIQUE EXEMPLE DU CENTRE VILLE');
+  assert.deepEqual(a.coupees, []);
+  const l = lectureExtraitRne(doc);
+  assert.deepEqual(l.champs.raisonSociale, { valeur: 'SOCIETE EXEMPLE DE DISTRIBUTION DE PRODUITS ET DE BOISSONS EXEMPLE', source: 'pdf', aRelire: false });
+  assert.deepEqual(l.champs.nomCommercial, { valeur: 'BOUTIQUE EXEMPLE DU CENTRE VILLE', source: 'pdf', aRelire: false });
+  assert.deepEqual(l.avertissements, []);
+  // une valeur absente ne prend toujours pas la ligne du dessous
+  const vide = extrait();
+  vide[0].morceaux.push(m('VILLE', 126.2, 477.5, 30));
+  assert.equal(analyserExtraitRne(vide).valeurs.nomCommercial, '');
+});
+
+test('valeur peut-être coupée (2e ligne non alignée) : 1re ligne seule, champ à relire, avertissement', () => {
+  // retour à la ligne sous le libellé : la suite n'est pas reprise
+  const doc = extrait();
+  Object.assign(morceau(doc, 1, DENOMINATION), { str: 'SOCIETE EXEMPLE DE DISTRIBUTION DE PRODUITS ET', largeur: 260 });
+  doc[0].morceaux.push(m('DE BOISSONS EXEMPLE', 20.2, 509.5, 110));
+  assert.deepEqual(analyserExtraitRne(doc).coupees, ['denomination']);
+  const l = lectureExtraitRne(doc);
+  assert.deepEqual(l.champs.raisonSociale, { valeur: 'SOCIETE EXEMPLE DE DISTRIBUTION DE PRODUITS ET', source: 'pdf', aRelire: true });
+  assert.deepEqual(l.avertissements, ['Dénomination sociale : la valeur tient sur plusieurs lignes et a pu être coupée, relisez-la.']);
+  assert.equal(l.champs.rne.aRelire, false, 'seul le champ concerné est à relire');
+  // même chose pour l'enseigne reprise comme nom commercial, et pour la forme juridique
+  const autres = extrait();
+  autres[0].morceaux.push(m('CHEZ EXEMPLE ET', 126.2, 471.3, 80), m('COMPAGNIE', 20.2, 462.0, 50), m('suite du libellé', 20.2, 365.0, 70));
+  const c = lectureExtraitRne(autres);
+  assert.equal(c.champs.nomCommercial.valeur, 'CHEZ EXEMPLE ET');
+  assert.equal(c.champs.nomCommercial.aRelire, true);
+  assert.equal(c.champs.formeJuridique.aRelire, true);
+  assert.deepEqual(c.avertissements, [
+    'Enseigne : la valeur tient sur plusieurs lignes et a pu être coupée, relisez-la.',
+    'Forme juridique : la valeur tient sur plusieurs lignes et a pu être coupée, relisez-la.',
+  ]);
+  // adresse dont le code postal est sûr, mais suivie d'une ligne non reprise : découpée, rue et ville à relire, un
+  // seul avertissement pour les deux champs
+  const adresse = extrait();
+  adresse[0].morceaux.push(m('Bureau Exemple', 20.2, 428.5, 70));
+  const d = lectureExtraitRne(adresse);
+  assert.deepEqual(d.champs.adresse, { valeur: '8 Rue des Jasmins', source: 'pdf', aRelire: true });
+  assert.deepEqual(d.champs.ville, { valeur: '5000 Monastir', source: 'pdf', aRelire: true });
+  assert.deepEqual(d.avertissements, ['Adresse du siège social : la valeur tient sur plusieurs lignes et a pu être coupée, relisez-la.']);
+  // une ligne latine plus à gauche que le libellé (titre d'un autre bloc) n'est pas une suite : rien n'est signalé
+  const titre = extrait();
+  titre[0].morceaux.push(m('SECTION EXEMPLE', 13, 428.5, 90));
+  assert.deepEqual(analyserExtraitRne(titre).coupees, []);
+  assert.deepEqual(lectureExtraitRne(titre).champs, CHAMPS_ATTENDUS);
 });
 
 test('nom commercial présent : lu ; enseigne seule : reprise avec une note', () => {
@@ -388,32 +473,72 @@ test('table des formes juridiques : libellés français, libellés arabes de sec
     ['Association', 'ASSOCIATION'],
     ["Groupement d'Intérêt Economique (GIE)", 'AUTRE'],
     ['Société civile professionnelle', 'AUTRE'],
-    ['Forme inconnue du registre', 'AUTRE'],
+    // sigles pointés, hors parenthèses
+    ['S.A.R.L', 'SARL'],
+    ['S.U.A.R.L.', 'SUARL'],
+    ['Société Exemple S.A.', 'SA'],
+    // libellé inconnu : jamais « AUTRE » par défaut
+    ['Forme inconnue du registre', ''],
+    ['Fondation', ''],
   ]) assert.equal(formeJuridiqueVersCode(libelle), code, libelle);
   for (const [libelle, code] of [
     ['شركة الشخص الواحد ذات المسؤولية المحدودة', 'SUARL'],
+    ['شركة ذات مسؤولية محدودة ذات شخص واحد', 'SUARL'],
     ['شركة ذات المسؤولية المحدودة', 'SARL'],
+    ['شركة ذات مسؤولية محدودة', 'SARL'], // sans les articles
+    ['شركة ذات مسئولية محدودة', 'SARL'], // autre graphie de la hamza
     ['شركة خفية الاسم', 'SA'],
+    ['شركة خفية الإسم', 'SA'], // alif à hamza, comme dans les libellés de l'extrait
     ['شركة المفاوضة', 'SNC'],
+    ['شركة مفاوضة', 'SNC'],
+    ['المبادر الذاتي', 'AUTO_ENTREPRENEUR'],
+    ['مبادر ذاتي', 'AUTO_ENTREPRENEUR'],
+    ['شخص طبيعي', 'EI'],
+    ['الشخص الطبيعي', 'EI'],
     ['جمعية', 'ASSOCIATION'],
+    ['شركة المقارضة البسيطة', 'AUTRE'],
+    ['شركة المقارضة بالأسهم', 'AUTRE'],
+    ['تجمع المصالح الاقتصادية', 'AUTRE'],
+    ['شركة مدنية', 'AUTRE'],
+    ['شكل غير معروف', ''],
   ]) assert.equal(formeJuridiqueVersCode('', libelle), code, libelle);
+  // le libellé français non reconnu laisse la main au libellé arabe
+  assert.equal(formeJuridiqueVersCode('Forme inconnue du registre', 'شركة خفية الإسم'), 'SA');
   assert.equal(formeJuridiqueVersCode('', ''), '');
   assert.equal(formeJuridiqueVersCode(null, undefined), '');
 });
 
-test('forme juridique : libellé français absent → libellé arabe ; libellé inconnu → AUTRE avec le libellé en note', () => {
+test('forme juridique : libellé arabe en secours ; libellé inconnu → champ absent et avertissement, jamais « Autre » par défaut', () => {
   const arabeSeul = retirer(extrait(), (i) => i.str === FORME);
   assert.equal(analyserExtraitRne(arabeSeul).formeJuridiqueArabe, 'شركة ذات المسؤولية المحدودة');
   assert.deepEqual(lectureExtraitRne(arabeSeul).champs.formeJuridique, { valeur: 'SARL', source: 'pdf', aRelire: false });
+  // variantes du libellé arabe : sans article, alif à hamza
+  for (const [libelle, code] of [['شركة ذات مسؤولية محدودة', 'SARL'], ['شركة خفية الإسم', 'SA']]) {
+    const variante = retirer(extrait(), (i) => i.str === FORME);
+    morceau(variante, 1, 'شركة ذات المسؤولية المحدودة').str = libelle;
+    assert.deepEqual(lectureExtraitRne(variante).champs.formeJuridique, { valeur: code, source: 'pdf', aRelire: false }, libelle);
+  }
+  // libellé français hors table, pas de libellé arabe : le champ n'est pas proposé, l'avertissement cite le libellé
   const inconnue = retirer(extrait(), (i) => Math.abs(i.y - 390.1) < 0.5);
   morceau(inconnue, 1, FORME).str = 'Fondation';
-  const c = lectureExtraitRne(inconnue).champs.formeJuridique;
-  assert.equal(c.valeur, 'AUTRE');
-  assert.match(c.note, /Fondation/);
+  const f = lectureExtraitRne(inconnue);
+  assert.equal(f.champs.formeJuridique, undefined);
+  assert.deepEqual(f.avertissements, ['Forme juridique non reconnue (« Fondation ») : à choisir à la main.']);
+  // libellé arabe hors table, pas de libellé français
+  const arabeInconnu = retirer(extrait(), (i) => i.str === FORME);
+  morceau(arabeInconnu, 1, 'شركة ذات المسؤولية المحدودة').str = 'شكل غير معروف';
+  const g = lectureExtraitRne(arabeInconnu);
+  assert.equal(g.champs.formeJuridique, undefined);
+  assert.deepEqual(g.avertissements, ["Forme juridique non reconnue sur l'extrait : à choisir à la main."]);
+  // forme CONNUE hors de la liste de la fiche : « Autre » est alors une lecture, avec le libellé en note
+  const commandite = extrait();
+  morceau(commandite, 1, FORME).str = 'Société en Commandite Simple (SCS)';
+  assert.deepEqual(lectureExtraitRne(commandite).champs.formeJuridique,
+    { valeur: 'AUTRE', source: 'pdf', aRelire: false, note: "libellé de l'extrait : « Société en Commandite Simple (SCS) »" });
   const aucune = retirer(extrait(), (i) => i.str === FORME || Math.abs(i.y - 390.1) < 0.5);
   const l = lectureExtraitRne(aucune);
   assert.equal(l.champs.formeJuridique, undefined);
-  assert.ok(l.avertissements.some((t) => /Forme juridique introuvable/.test(t)));
+  assert.deepEqual(l.avertissements, ["Forme juridique introuvable sur l'extrait : à choisir à la main."]);
 });
 
 test('table des qualités : arabe → français, jamais d’arabe en sortie', () => {
@@ -422,6 +547,10 @@ test('table des qualités : arabe → français, jamais d’arabe en sortie', ()
   assert.equal(qualiteVersFrancais('رئيس مدير عام'), 'Président directeur général');
   assert.equal(qualiteVersFrancais('مدير عام'), 'Directeur général');
   assert.equal(qualiteVersFrancais('رئيس مجلس الإدارة'), "Président du conseil d'administration");
+  // l'alif s'écrit avec ou sans hamza selon les documents
+  assert.equal(qualiteVersFrancais('رئيس مجلس الادارة'), "Président du conseil d'administration");
+  assert.equal(qualiteVersFrancais('أمين مال'), 'Trésorier');
+  assert.equal(qualiteVersFrancais('امين المال'), 'Trésorier');
   assert.equal(qualiteVersFrancais('Gérante statutaire'), 'Gérant');
   assert.equal(qualiteVersFrancais('Mandataire'), 'Mandataire');
   assert.equal(qualiteVersFrancais('صفة غير معروفة'), '');
@@ -432,7 +561,7 @@ test('table des qualités : arabe → français, jamais d’arabe en sortie', ()
 
 test('représentant : nom proposé seulement en lettres latines ; plusieurs dirigeants → le représentant légal', () => {
   assert.deepEqual(analyserExtraitRne(extrait()).representants, [
-    { qualiteLue: 'وكيل', nationaliteLue: 'تونسية', nomLu: 'فلان الفلاني', qualite: 'Gérant', nationalite: 'Tunisienne', nom: '' },
+    { qualiteLue: 'وكيل', nationaliteLue: 'تونسية', nomLu: 'فلان الفلاني', qualite: 'Gérant', nationalite: 'Tunisienne', nom: '', surPlusieursLignes: false },
   ]);
   const latin = retirer(extrait(), (i, page) => page === 2 && Math.abs(i.y - 615.0) < 0.5 && i.x > 400);
   latin[1].morceaux.push(m('PRENOM', 440, 615.0, 36), m('EXEMPLE', 479, 615.0, 40));
@@ -457,6 +586,84 @@ test('représentant : nom proposé seulement en lettres latines ; plusieurs diri
   assert.ok(q.avertissements.some((t) => /Qualité du représentant non reconnue/.test(t)));
 });
 
+test('tableau de la direction : une cellule sur deux lignes ne fait pas un second dirigeant, mais le représentant est à relire', () => {
+  const sansNom = () => retirer(extrait(), (i, page) => page === 2 && Math.abs(i.y - 615.0) < 0.5 && i.x > 400);
+  const sansRangee = () => retirer(extrait(), (i, page) => page === 2 && Math.abs(i.y - 615.0) < 0.5);
+  const COMPLET = 'PRENOM EXEMPLE DE LA FAMILLE EXEMPLE';
+  // la fusion de deux lignes est une supposition : le nom et la qualité proposés sont à relire, sans avertissement
+  const unSeul = (doc, qualite = 'Gérant', nom = COMPLET) => {
+    const a = analyserExtraitRne(doc);
+    assert.equal(a.representants.length, 1);
+    assert.equal(a.representants[0].nom, nom);
+    assert.equal(a.representants[0].surPlusieursLignes, true);
+    const l = lectureExtraitRne(doc);
+    assert.deepEqual(l.champs.representantNom, { valeur: nom, source: 'pdf', aRelire: true });
+    assert.deepEqual(l.champs.representantQualite, { valeur: qualite, source: 'pdf', aRelire: true });
+    assert.deepEqual(l.avertissements, []);
+    assert.ok(l.lignes.includes(`Qualité : ${qualite} — Nationalité : Tunisienne — Nom et prénom : ${nom}`));
+    // les autres champs ne sont pas touchés
+    assert.deepEqual({ ...l.champs, representantNom: undefined, representantQualite: undefined }, { ...CHAMPS_ATTENDUS, representantNom: undefined, representantQualite: undefined });
+  };
+  // nom sur deux lignes, la 2e ligne ne porte que la suite du nom
+  const nom = sansNom();
+  nom[1].morceaux.push(m('PRENOM EXEMPLE DE LA', 430, 615.0, 110), m('FAMILLE EXEMPLE', 430, 604.0, 85));
+  unSeul(nom);
+  // cellules centrées en hauteur : 1re ligne du nom, puis qualité et nationalité, puis 2e ligne du nom
+  const centre = sansNom();
+  centre[1].morceaux.push(m('PRENOM EXEMPLE DE LA', 430, 621.0, 110), m('FAMILLE EXEMPLE', 430, 609.0, 85));
+  unSeul(centre);
+  // qualité sur deux lignes : lue en entier (« président du conseil d'administration », pas « président »)
+  const qualite = retirer(sansNom(), (i, page) => page === 2 && Math.abs(i.y - 615.0) < 0.5 && i.x < 200);
+  qualite[1].morceaux.push(ar('رئيس مجلس', 85, 615.0, 40), ar('الإدارة', 90, 604.0, 30), m(COMPLET, 420, 615.0, 130));
+  unSeul(qualite, "Président du conseil d'administration");
+  // deux rangées serrées dont la seconde n'a pas de nom : prises pour un seul dirigeant (le nom de la première, la
+  // qualité des deux) — c'est peut-être faux, donc à relire
+  const sansNomDessous = sansRangee();
+  sansNomDessous[1].morceaux.push(
+    ar('متصرف', 95, 615.0, 24), ar('تونسية', 282, 615.0, 22), m('ADMINISTRATEUR EXEMPLE', 420, 615.0, 110),
+    ar('رئيس مدير عام', 80, 603.0, 55), ar('تونسية', 282, 603.0, 22),
+  );
+  unSeul(sansNomDessous, 'Président directeur général', 'ADMINISTRATEUR EXEMPLE');
+  // une mention latine 15 pt sous le nom est collée au nom : à relire aussi
+  const mention = sansNom();
+  mention[1].morceaux.push(m('PRENOM EXEMPLE', 440, 615.0, 80), m('Mention fictive', 440, 600.0, 70));
+  unSeul(mention, 'Gérant', 'PRENOM EXEMPLE Mention fictive');
+  // une ligne complète, ou une ligne éloignée, reste un autre dirigeant : rien n'est fusionné, rien n'est à relire
+  const loin = sansNom();
+  loin[1].morceaux.push(m('DIRIGEANT EXEMPLE', 432, 615.0, 85), m('AUTRE EXEMPLE', 440, 590.5, 70));
+  const l = lectureExtraitRne(loin);
+  assert.deepEqual(analyserExtraitRne(loin).representants.map((r) => r.surPlusieursLignes), [false, false]);
+  assert.deepEqual(l.champs.representantNom, { valeur: 'DIRIGEANT EXEMPLE', source: 'pdf', aRelire: false });
+  assert.deepEqual(l.champs.representantQualite, { valeur: 'Gérant', source: 'pdf', aRelire: false });
+  assert.deepEqual(l.avertissements, ["L'extrait liste plusieurs dirigeants : vérifiez le représentant proposé."]);
+  // deux dirigeants, le nom du premier sur deux lignes : la fusion pèse sur le choix du représentant, à relire lui aussi
+  const deux = sansRangee();
+  deux[1].morceaux.push(
+    ar('متصرف', 95, 615.0, 24), ar('تونسية', 282, 615.0, 22), m('ADMINISTRATEUR EXEMPLE DE LA', 420, 615.0, 130),
+    m('FAMILLE EXEMPLE', 420, 604.0, 85),
+    ar('رئيس مدير عام', 80, 589.0, 55), ar('تونسية', 282, 589.0, 22), m('DIRIGEANT EXEMPLE', 432, 589.0, 85),
+  );
+  assert.deepEqual(analyserExtraitRne(deux).representants.map((r) => [r.nom, r.surPlusieursLignes]), [['ADMINISTRATEUR EXEMPLE DE LA FAMILLE EXEMPLE', true], ['DIRIGEANT EXEMPLE', false]]);
+  const d = lectureExtraitRne(deux);
+  assert.deepEqual(d.champs.representantNom, { valeur: 'DIRIGEANT EXEMPLE', source: 'pdf', aRelire: true });
+  assert.deepEqual(d.champs.representantQualite, { valeur: 'Président directeur général', source: 'pdf', aRelire: true });
+  assert.deepEqual(d.avertissements, ["L'extrait liste plusieurs dirigeants : vérifiez le représentant proposé."]);
+});
+
+test('tableau de la direction : il s’arrête au titre suivant, même avec un accent ou une apostrophe', () => {
+  for (const titre of ['INFORMATIONS RELATIVES A L’ÉTAT DU REGISTRE', "INFORMATIONS RELATIVES A L'ETAT DU REGISTRE", 'SITUATION DE L’ENTREPRISE']) {
+    const doc = extrait();
+    morceau(doc, 2, 'AUTRES INFORMATIONS Y COMPRIS SITUATION FISCALE').str = titre;
+    const a = analyserExtraitRne(doc);
+    assert.equal(a.representants.length, 1, titre);
+    const l = lectureExtraitRne(doc);
+    assert.deepEqual(l.champs, CHAMPS_ATTENDUS, titre);
+    assert.deepEqual(l.avertissements, [], titre);
+    assert.ok(l.lignes.includes('ÉTAT DU REGISTRE : ACTIF'), titre);
+    assert.ok(l.lignes.includes(titre), titre);
+  }
+});
+
 test('découpe de l’adresse : rue / code postal / ville / gouvernorat', () => {
   assert.deepEqual(decouperAdresse(ADRESSE), { rue: '8 Rue des Jasmins', codePostal: '5000', ville: 'Monastir', gouvernorat: 'Monastir' });
   assert.deepEqual(decouperAdresse('12 Avenue des Exemples 2080 Cité Exemple Ariana'), { rue: '12 Avenue des Exemples', codePostal: '2080', ville: 'Cité Exemple', gouvernorat: 'Ariana' });
@@ -468,11 +675,73 @@ test('découpe de l’adresse : rue / code postal / ville / gouvernorat', () => 
   assert.deepEqual(decouperAdresse('Avenue des Exemples'), { rue: 'Avenue des Exemples', codePostal: '', ville: '', gouvernorat: '' });
   assert.deepEqual(decouperAdresse('4 Rue du Test 1000'), { rue: '4 Rue du Test 1000', codePostal: '', ville: '', gouvernorat: '' });
   assert.deepEqual(decouperAdresse(''), { rue: '', codePostal: '', ville: '', gouvernorat: '' });
-  const sansCodePostal = retirer(extrait(), (i, page) => page === 1 && Math.abs(i.y - 438.9) < 0.5 && i.x > 130);
-  sansCodePostal[0].morceaux.push(m('Zone industrielle Exemple', 134, 438.9, 120));
-  const l = lectureExtraitRne(sansCodePostal);
-  assert.equal(l.champs.adresse.valeur, 'Zone industrielle Exemple');
-  assert.equal(l.champs.ville, undefined);
+  assert.deepEqual(decouperAdresse('Avenue 9 Avril 1938 1000 Tunis Tunis'), { rue: 'Avenue 9 Avril 1938', codePostal: '1000', ville: 'Tunis', gouvernorat: 'Tunis' });
+  // rue au nom d'une date : le nombre qui suit le mois est un code postal quand il ne peut pas être une année
+  assert.deepEqual(decouperAdresse('Rue du 2 Mars 4000 Sousse Sousse'), { rue: 'Rue du 2 Mars', codePostal: '4000', ville: 'Sousse', gouvernorat: 'Sousse' });
+  assert.deepEqual(decouperAdresse('5 Rue des Tests, 2080, Cité Exemple, Ariana'), { rue: '5 Rue des Tests', codePostal: '2080', ville: 'Cité Exemple', gouvernorat: 'Ariana' });
+  // quartier numéroté : un numéro de 1 ou 2 chiffres fait partie de la localité
+  assert.deepEqual(decouperAdresse('5 Rue des Tests 2037 Cité Exemple 2 Ariana'), { rue: '5 Rue des Tests', codePostal: '2037', ville: 'Cité Exemple 2', gouvernorat: 'Ariana' });
+  assert.deepEqual(decouperAdresse('12 Rue Exemple 2037 Quartier Exemple 2 Ariana'), { rue: '12 Rue Exemple', codePostal: '2037', ville: 'Quartier Exemple 2', gouvernorat: 'Ariana' });
+  assert.deepEqual(decouperAdresse('12 Rue Exemple 2091 Quartier Exemple 12 Ariana'), { rue: '12 Rue Exemple', codePostal: '2091', ville: 'Quartier Exemple 12', gouvernorat: 'Ariana' });
+  assert.deepEqual(decouperAdresse('12 Rue Exemple 2037 Quartier Exemple 2'), { rue: '12 Rue Exemple', codePostal: '2037', ville: 'Quartier Exemple 2', gouvernorat: '' });
+  // tiret ou barre entre la rue, la ville et le gouvernorat : des séparateurs, jamais repris dans une valeur
+  assert.deepEqual(decouperAdresse('12 Rue Exemple - 4000 Sousse - Sousse'), { rue: '12 Rue Exemple', codePostal: '4000', ville: 'Sousse', gouvernorat: 'Sousse' });
+  assert.deepEqual(decouperAdresse('12 Rue Exemple 4000 Ville Exemple - Sousse'), { rue: '12 Rue Exemple', codePostal: '4000', ville: 'Ville Exemple', gouvernorat: 'Sousse' });
+  assert.deepEqual(decouperAdresse('12 Rue Exemple 4000 Sousse / Sousse'), { rue: '12 Rue Exemple', codePostal: '4000', ville: 'Sousse', gouvernorat: 'Sousse' });
+  assert.deepEqual(decouperAdresse('12 Rue Exemple / 4000 / Ville Exemple/Sousse'), { rue: '12 Rue Exemple', codePostal: '4000', ville: 'Ville Exemple', gouvernorat: 'Sousse' });
+  assert.deepEqual(decouperAdresse('12 Rue Exemple 2037 Quartier Exemple 2 - Ariana'), { rue: '12 Rue Exemple', codePostal: '2037', ville: 'Quartier Exemple 2', gouvernorat: 'Ariana' });
+  // une localité (ville, puis gouvernorat) tient en 60 caractères au plus
+  assert.deepEqual(decouperAdresse(`12 Rue Exemple 4000 ${'Exemple'.padEnd(53, 'e')} Sousse`), { rue: '12 Rue Exemple', codePostal: '4000', ville: 'Exemple'.padEnd(53, 'e'), gouvernorat: 'Sousse' });
+  // sur l'extrait : l'adresse et la ville sont proposées, sans rien à relire
+  const doc = retirer(extrait(), (i, page) => page === 1 && Math.abs(i.y - 438.9) < 0.5 && i.x > 130);
+  doc[0].morceaux.push(m('12 Rue Exemple - 2037 Quartier Exemple 2 - Ariana', 134, 438.9, 220));
+  const l = lectureExtraitRne(doc);
+  assert.deepEqual(l.champs, { ...CHAMPS_ATTENDUS, adresse: { valeur: '12 Rue Exemple', source: 'pdf', aRelire: false }, ville: { valeur: '2037 Quartier Exemple 2', source: 'pdf', aRelire: false } });
+  assert.deepEqual(l.avertissements, []);
+});
+
+test('adresse sans code postal sûr : rien n’est découpé (numéro de voie, année, code postal en fin de ligne)', () => {
+  for (const adresse of [
+    'Rue 8600 Charguia 1 Tunis', // numéro de voie à 4 chiffres
+    'Lot 1234 Zone Exemple Tunis',
+    'Avenue 14 Janvier 2011 Sousse Sousse', // année d'un nom de rue
+    'Avenue du 2 Mars 1934 Tunis',
+    'Avenue 20 Mars 2000 Ville Exemple Tunis', // année ou code postal ? on ne sait pas : pas de découpe
+    'Lot n° 1234, Zone Exemple, Tunis',
+    'Rue 8601 Charguia 1 Tunis 2035', // code postal en fin de ligne : rien ne le suit
+    '8600 Rue des Jasmins Tunis', // rien avant le nombre, et la rue le suit
+    '2080 Ariana', // rien avant le nombre : pas de rue
+    '12 bis 8600 Rue des Jasmins Tunis', // la rue suit le nombre : c'est un numéro
+    'Immeuble 2000 Tunis',
+    '12 Rue Exemple 2000 123 Tunis', // un nombre de 3 chiffres après le code postal : ce n'est pas un quartier numéroté
+    '12 Rue Exemple 2000 Quartier 123 Tunis',
+    'Résidence Exemple 2000 Bloc 3 Tunis', // la voie continue après le nombre
+    '12 Rue Exemple 2083 Cité Exemple Résidence Exemple Ariana',
+    '12 Rue Exemple 8000 Route de Tunis Nabeul',
+    'Avenue 7 Novembre 2080 Ariana', // rue au nom d'une date : année ou code postal ? pas de découpe
+    'Avenue 7 Novembre 2080 Quartier Exemple 2 - Ariana',
+    '12 Rue Exemple 2037 Quartier Exemple 2 (Ariana)', // autre ponctuation : la localité n'est pas sûre
+    `12 Rue Exemple 2037 ${'Quartier Exemple '.repeat(4)}Ariana`, // 9 mots : trop pour une localité
+    `12 Rue Exemple 4000 ${'Exemple'.padEnd(54, 'e')} Sousse`, // 2 mots, mais 61 caractères : trop pour une localité
+  ]) assert.deepEqual(decouperAdresse(adresse), { rue: adresse, codePostal: '', ville: '', gouvernorat: '' }, adresse);
+  // une localité fabriquée (« a-a-a-… » : le tiret est lettre de mot ET séparateur) n'est pas découpée, et sans délai
+  const debutTirets = performance.now();
+  for (const n of [40, 100, 5000]) {
+    const fabriquee = `12 Rue Exemple 5000 ${'a-'.repeat(n)}a!`;
+    assert.deepEqual(decouperAdresse(fabriquee), { rue: fabriquee, codePostal: '', ville: '', gouvernorat: '' });
+  }
+  assert.ok(performance.now() - debutTirets < 1000, 'localité fabriquée : refusée sur sa longueur');
+  // sur l'extrait : l'adresse est la ligne entière, à relire, avec une note ; la ville reste absente, sans avertissement
+  for (const adresse of ['Avenue 14 Janvier 2011 Sousse Sousse', 'Zone industrielle Exemple']) {
+    const doc = retirer(extrait(), (i, page) => page === 1 && Math.abs(i.y - 438.9) < 0.5 && i.x > 130);
+    doc[0].morceaux.push(m(adresse, 134, 438.9, 180));
+    const l = lectureExtraitRne(doc);
+    assert.deepEqual(l.champs.adresse, { valeur: adresse, source: 'pdf', aRelire: true, note: NOTE_ADRESSE_ENTIERE }, adresse);
+    assert.equal(l.champs.ville, undefined);
+    assert.deepEqual(l.avertissements, []);
+    assert.deepEqual({ ...l.champs, adresse: CHAMPS_ATTENDUS.adresse, ville: CHAMPS_ATTENDUS.ville }, CHAMPS_ATTENDUS, 'les autres champs sont intacts');
+  }
+  assert.match(NOTE_ADRESSE_ENTIERE, /^code postal non reconnu/);
 });
 
 // ── Mise en page ───────────────────────────────────────────────────────────────────────────────────────────────────
@@ -509,10 +778,27 @@ test('document non reconnu ou sans couche texte → null', () => {
   assert.equal(lectureExtraitRne(page([m('FACTURE N° 2026-001', 50, 800, 120), m('Client : SOCIETE EXEMPLE', 50, 780, 150), m('Total TTC : 1 250,000 DT', 50, 760, 150)])), null);
   // deux marqueurs seulement (domaine + TUNTRUST)
   assert.equal(lectureExtraitRne(page([m('Voir www.registre-entreprises.tn pour le détail', 50, 800, 250), m('Cachet TUNTRUST', 50, 780, 90)])), null);
-  // trois marqueurs, mais ni le titre ni le domaine du registre
+  // trois marqueurs, mais ni le titre ni le nom arabe du registre
   const sansFort = page([m('IDENTIFIANT UNIQUE', 50, 800, 100), m(IDENTIFIANT, 160, 800, 50), m('NUMÉRO EXTRAIT', 50, 780, 80), m(NUMERO, 140, 780, 70), m('Cachet TUNTRUST', 50, 760, 90)]);
   assert.equal(reconnaitre(sansFort).marqueurs.length, 3);
   assert.equal(lectureExtraitRne(sansFort), null);
+  // un document qui cite le lien de validation : l'adresse du site et son lien ne comptent que pour UN marqueur
+  const facture = page([m('FACTURE N° 2026-001', 50, 800, 120), m('registre-entreprises.tn/rne-public/#/qr-code/validation', 50, 780, 250), m('Signature TUNTRUST', 50, 760, 90)]);
+  assert.deepEqual(reconnaitre(facture).marqueurs, ['domaine', 'lien de validation', 'cachet TUNTRUST']);
+  assert.equal(reconnaitre(facture).estExtraitRne, false);
+  assert.equal(lectureExtraitRne(facture), null);
+  const lien = page([ar('مضمون من السجل الوطني للمؤسسات', 166, 800, 250), m('registre-entreprises.tn/rne-public/#/qr-code/validation', 50, 780, 250)]);
+  assert.equal(reconnaitre(lien).marqueurs.length, 3);
+  assert.equal(reconnaitre(lien).estExtraitRne, false, 'deux marqueurs indépendants seulement');
+  // le domaine ne suffit plus : il faut le titre « EXTRAIT RNE » ou le nom arabe du registre
+  const domaine = page([m('Voir www.registre-entreprises.tn', 50, 800, 150), m('IDENTIFIANT UNIQUE', 50, 780, 100), m(IDENTIFIANT, 160, 780, 50), m('Cachet TUNTRUST', 50, 760, 90), ...glyphes('رقم التثبت من السجل', 440, 740, 5.3)]);
+  assert.equal(reconnaitre(domaine).marqueurs.length, 4);
+  assert.equal(reconnaitre(domaine).estExtraitRne, false);
+  // un autre papier du registre (attestation, récépissé) : ses marqueurs sont ceux d'un extrait, mais il n'en porte
+  // aucun libellé → null, et non un extrait « où rien n'a été lu »
+  const attestation = page([ar('مضمون من السجل الوطني للمؤسسات', 166, 700, 250), m('ATTESTATION FICTIVE DE DEPOT', 200, 650, 180), m('Signature TUNTRUST', 50, 300, 90), m('www.registre-entreprises.tn', 365, 35.6, 110)]);
+  assert.equal(reconnaitre(attestation).estExtraitRne, true);
+  assert.equal(lectureExtraitRne(attestation), null);
   // PDF scanné : aucune couche texte, ou quelques caractères perdus
   assert.equal(lectureExtraitRne(page([])), null);
   assert.equal(lectureExtraitRne([]), null);
@@ -521,11 +807,29 @@ test('document non reconnu ou sans couche texte → null', () => {
 });
 
 // ── Point d'entrée : document pdf.js simulé ────────────────────────────────────────────────────────────────────────
-const OPS = { save: 10, restore: 11, transform: 12, stroke: 20, fill: 22, setStrokeRGBColor: 58, setFillRGBColor: 59, constructPath: 91 };
-function operateurs(cases) {
+const OPS = {
+  save: 10, restore: 11, transform: 12, stroke: 20, fill: 22, setTextRenderingMode: 38, showText: 44, setStrokeRGBColor: 58, setFillRGBColor: 59,
+  paintImageMaskXObject: 83, paintImageXObject: 85, constructPath: 91,
+};
+const VUE = [0, 0, 595, 842];
+// Dessins d'une page, dans l'ordre où ils sont peints : 'texte', 'texteInvisible' (mode de rendu 3), 'image' (page
+// entière), 'logo' (petite image), ou une boîte d'image [x, y, largeur, hauteur]. Puis les cases à cocher.
+function operateurs(cases, dessins = ['logo', 'texte']) {
   const fnArray = [];
   const argsArray = [];
-  const op = (nom, args) => { fnArray.push(OPS[nom]); argsArray.push(args); };
+  const op = (nom, args = null) => { fnArray.push(OPS[nom]); argsArray.push(args); };
+  for (const d of dessins) {
+    if (d === 'texte') for (let k = 0; k < 5; k++) op('showText', [[]]);
+    else if (d === 'texteInvisible') {
+      op('save'); op('setTextRenderingMode', [3]);
+      for (let k = 0; k < 5; k++) op('showText', [[]]);
+      op('restore');
+    } else {
+      // une image se peint dans le carré unité, placé par la matrice courante
+      const [x, y, l, h] = d === 'image' ? [0, 0, 595, 842] : d === 'logo' ? [13, 716, 96, 110] : d;
+      op('save'); op('transform', [l, 0, 0, h, x, y]); op('paintImageXObject', ['img_p0_1', 2, 2]); op('restore');
+    }
+  }
   for (const c of cases) {
     const boite = [c.x0, c.y0, c.x1, c.y1];
     op('setFillRGBColor', ['#eeeeee']); op('constructPath', [OPS.fill, [null], boite]);
@@ -540,7 +844,7 @@ function pdfSimule(pages, { dessinsEnPanne = false } = {}) {
   const pdf = {
     numPages: pages.length,
     getPage: async (n) => ({
-      view: [0, 0, 595, 842],
+      view: VUE,
       getTextContent: async () => {
         appels.texte++;
         return {
@@ -554,12 +858,15 @@ function pdfSimule(pages, { dessinsEnPanne = false } = {}) {
       getOperatorList: async () => {
         appels.dessins++;
         if (dessinsEnPanne) throw new Error('liste d’opérateurs indisponible');
-        return operateurs(pages[n - 1].cases ?? []);
+        return operateurs(pages[n - 1].cases ?? [], pages[n - 1].dessins);
       },
     }),
   };
   return { pdf, appels };
 }
+const lire = (pages, options) => lireTextePdf({ OPS }, pdfSimule(pages, options).pdf);
+const TOUT_A_RELIRE = Object.fromEntries(Object.entries(CHAMPS_ATTENDUS).map(([cle, c]) => [cle, { ...c, aRelire: true }]));
+const AVERTISSEMENT_NUMERISE = 'Ce PDF est peut-être un document numérisé : relisez chaque champ.';
 
 test('lireTextePdf : morceaux et cases tirés du document ouvert ; null sans rien dessiner si non reconnu', async () => {
   const { pdf, appels } = pdfSimule(extrait());
@@ -571,11 +878,7 @@ test('lireTextePdf : morceaux et cases tirés du document ouvert ; null sans rie
 
   const suspendu = extrait();
   suspendu[1].cases = casesEtat({ suspendu: true });
-  assert.deepEqual((await lireTextePdf({ OPS }, pdfSimule(suspendu).pdf)).avertissements, ['Attention : la case « SUSPENDU » est cochée sur l\'extrait.']);
-
-  const panne = await lireTextePdf({ OPS }, pdfSimule(extrait(), { dessinsEnPanne: true }).pdf);
-  assert.deepEqual(panne.champs, CHAMPS_ATTENDUS);
-  assert.match(panne.avertissements[0], /État du registre non lu/);
+  assert.deepEqual((await lire(suspendu)).avertissements, ['Attention : la case « SUSPENDU » est cochée sur l\'extrait.']);
 
   const autre = pdfSimule([{ morceaux: [m('FACTURE N° 2026-001 — Client : SOCIETE EXEMPLE — Total TTC', 50, 800, 300)] }]);
   assert.equal(await lireTextePdf({ OPS }, autre.pdf), null);
@@ -583,4 +886,246 @@ test('lireTextePdf : morceaux et cases tirés du document ouvert ; null sans rie
   const scan = pdfSimule([{ morceaux: [] }, { morceaux: [] }]);
   assert.equal(await lireTextePdf({ OPS }, scan.pdf), null);
   assert.equal(scan.appels.dessins, 0);
+});
+
+// ── Couche texte d'un scanner (page numérisée dont le scanner a reconnu le texte) ──────────────────────────────────
+test('couche texte sans arabe (scanner qui n’a reconnu que les lettres latines) → null', () => {
+  const doc = extrait();
+  const LATIN = ['lJI', 'ujl', 'Jlc', 'aSj'];
+  let k = 0;
+  for (const p of doc) for (const i of p.morceaux) if (ARABE.test(i.str)) i.str = LATIN[k++ % LATIN.length];
+  const r = reconnaitre(doc);
+  assert.deepEqual(r.marqueurs, ['titre', 'domaine', 'lien de validation', 'identifiant unique', 'numéro extrait', 'cachet TUNTRUST']);
+  assert.equal(r.estExtraitRne, false, 'l’extrait officiel est bilingue : sans marqueur arabe, ce n’est pas sa couche texte');
+  assert.equal(lectureExtraitRne(doc), null);
+});
+
+test('origine du texte d’une page : natif, scanner (texte invisible ou caché sous l’image), incertain', () => {
+  const origine = (dessins, vue = VUE) => origineDuTexte(OPS, operateurs([], dessins), vue);
+  assert.equal(origine(['logo', 'texte']), 'natif');
+  assert.equal(origine(['texte']), 'natif');
+  assert.equal(origine([]), 'natif');
+  // la page numérisée type : l'image de la page, et le texte reconnu en mode invisible
+  assert.equal(origine(['image', 'texteInvisible']), 'scanner');
+  assert.equal(origine(['texteInvisible', 'image']), 'scanner');
+  assert.equal(origine(['texteInvisible']), 'scanner');
+  // texte visible, mais peint AVANT l'image qui couvre la page : il est caché dessous
+  assert.equal(origine(['texte', 'image']), 'scanner');
+  // image de page découpée en bandes : c'est la surface cumulée qui compte
+  const bandes = [0, 1, 2, 3].map((k) => [0, k * 210.5, 595, 210.5]);
+  assert.equal(origine([...bandes, 'texteInvisible']), 'scanner');
+  assert.equal(origine([...bandes.slice(0, 3), 'texte']), 'natif', 'trois quarts de la page : pas une image de page entière');
+  // image de page entière SOUS un texte visible (fond, filigrane… ou scan) : on ne sait pas
+  assert.equal(origine(['image', 'texte']), 'incertain');
+  assert.equal(origine([...bandes, 'logo', 'texte']), 'incertain');
+  // une image qui déborde de la page ne compte que pour sa partie dans la page ; page sans surface : natif
+  assert.equal(origine([[500, 0, 2000, 842], 'texte']), 'natif');
+  assert.equal(origine(['image', 'texte'], [0, 0, 0, 0]), 'natif');
+  // le mode de rendu est rétabli par « restore » : le texte qui suit un passage invisible est visible
+  assert.equal(origine(['texteInvisible', 'texte', 'texte']), 'natif');
+  // masque d'image (page numérisée en noir et blanc), peint par-dessus un texte visible
+  const masque = { fnArray: [OPS.showText, OPS.transform, OPS.paintImageMaskXObject], argsArray: [[[]], [595, 0, 0, 842, 0, 0], [{}]] };
+  assert.equal(origineDuTexte(OPS, masque, VUE), 'scanner');
+});
+
+test('lireTextePdf : le texte d’une page numérisée est écarté ; origine incertaine → tous les champs à relire', async () => {
+  // extrait numérisé dont le scanner a reconnu aussi l'arabe : les marqueurs y sont, mais ce n'est pas le texte du PDF
+  const numerise = extrait();
+  for (const p of numerise) p.dessins = ['image', 'texteInvisible'];
+  const simule = pdfSimule(numerise);
+  assert.equal(await lireTextePdf({ OPS }, simule.pdf), null);
+  assert.deepEqual(simule.appels, { texte: 2, dessins: 1 }, 'sans la page 1, ce n’est plus un extrait : on s’arrête');
+  const sousImage = extrait();
+  for (const p of sousImage) p.dessins = ['texte', 'image'];
+  assert.equal(await lire(sousImage), null);
+  // une page numérisée ajoutée à la suite d'un extrait officiel : seul son texte est écarté
+  const suivi = [...extrait(), { largeur: 595, hauteur: 842, morceaux: [m('COPIE NUMERISEE D’UN AUTRE DOCUMENT', 50, 700, 200), m('IDENTIFIANT UNIQUE', 50, 600, 100), m('7654321B', 160, 600, 50)], cases: [], dessins: ['image', 'texteInvisible'] }];
+  const l = await lire(suivi);
+  assert.deepEqual(l.champs, CHAMPS_ATTENDUS);
+  assert.deepEqual(l.avertissements, []);
+  assert.ok(!l.lignes.some((t) => /COPIE NUMERISEE|7654321B/.test(t)));
+  // image de page entière sous un texte visible : lu, mais chaque champ est à relire
+  const incertain = extrait();
+  incertain[0].dessins = ['image', 'texte'];
+  const i = await lire(incertain);
+  assert.deepEqual(i.champs, TOUT_A_RELIRE);
+  assert.deepEqual(i.avertissements, [AVERTISSEMENT_NUMERISE]);
+  // dessins illisibles : l'origine du texte n'est pas établie (à relire), l'état du registre n'est pas lu
+  const panne = await lire(extrait(), { dessinsEnPanne: true });
+  assert.deepEqual(panne.champs, TOUT_A_RELIRE);
+  assert.deepEqual(panne.avertissements, [AVERTISSEMENT_NUMERISE, "État du registre non lu : vérifiez sur l'extrait que la case « ACTIF » est cochée."]);
+  // la même marque, posée par l'appelant sur une page (fonction pure)
+  const douteux = extrait();
+  douteux[1].texteDouteux = true;
+  assert.deepEqual(lectureExtraitRne(douteux).champs, TOUT_A_RELIRE);
+  assert.deepEqual(lectureExtraitRne(douteux).avertissements, [AVERTISSEMENT_NUMERISE]);
+});
+
+// ── Modèle d'extrait inconnu ───────────────────────────────────────────────────────────────────────────────────────
+test('modèle d’extrait autre que « société » : avertissement, et tous les champs à relire', () => {
+  for (const [titre, type, avertissement] of [
+    ['EXTRAIT RNE (PERSONNE PHYSIQUE)', 'PERSONNE PHYSIQUE', 'Extrait de type « PERSONNE PHYSIQUE » : seul le modèle « société » est connu, relisez chaque champ.'],
+    ['EXTRAIT RNE (ASSOCIATION)', 'ASSOCIATION', 'Extrait de type « ASSOCIATION » : seul le modèle « société » est connu, relisez chaque champ.'],
+    ['EXTRAIT RNE', '', "Type d'extrait non lu dans son titre : seul le modèle « société » est connu, relisez chaque champ."],
+  ]) {
+    const doc = extrait();
+    morceau(doc, 1, 'EXTRAIT RNE (SOCIÉTÉ)').str = titre;
+    const r = reconnaitre(doc);
+    assert.equal(r.estExtraitRne, true, titre);
+    assert.equal(r.type, type);
+    const l = lectureExtraitRne(doc);
+    assert.deepEqual(l.champs, TOUT_A_RELIRE, titre);
+    assert.deepEqual(l.avertissements, [avertissement]);
+  }
+  // titre absent : l'extrait reste reconnu par le nom arabe du registre, mais son modèle n'est pas connu
+  const sansTitre = retirer(extrait(), (i) => i.str === 'EXTRAIT RNE (SOCIÉTÉ)');
+  assert.deepEqual(lectureExtraitRne(sansTitre).champs, TOUT_A_RELIRE);
+});
+
+// ── Fichier fabriqué pour être énorme : plafonds, et aucun calcul quadratique ──────────────────────────────────────
+// Ancien regroupement (chaque morceau comparé à toutes les lignes) : la référence du nouveau.
+function regrouperReference(morceaux, tolerance = 2.6) {
+  const tri = morceaux.slice().sort((a, b) => b.y - a.y || a.x - b.x);
+  const lignes = [];
+  for (const i of tri) {
+    let meilleure = null;
+    for (const L of lignes) {
+      const ecart = Math.abs(L.y - i.y);
+      if (ecart <= tolerance && (!meilleure || ecart < Math.abs(meilleure.y - i.y))) meilleure = L;
+    }
+    if (!meilleure) { meilleure = { y: i.y, items: [] }; lignes.push(meilleure); }
+    meilleure.items.push(i);
+  }
+  for (const L of lignes) L.items.sort((a, b) => a.x - b.x);
+  return lignes.sort((a, b) => b.y - a.y);
+}
+
+test('regroupement en lignes : même résultat que la comparaison à toutes les lignes, sans son coût', () => {
+  let graine = 7;
+  const hasard = () => { graine = (graine * 1103515245 + 12345) % 2147483648; return graine / 2147483648; };
+  for (let essai = 0; essai < 200; essai++) {
+    // y resserrés : beaucoup de morceaux tombent à la limite de la tolérance
+    const morceaux = Array.from({ length: 80 }, (_, k) => m(`m${k}`, Math.round(hasard() * 500), Math.round(hasard() * 400) / 10, 10));
+    assert.deepEqual(regrouperEnLignes(morceaux), regrouperReference(morceaux));
+  }
+  for (const p of extrait()) assert.deepEqual(regrouperEnLignes(p.morceaux), regrouperReference(p.morceaux));
+  // 100 000 morceaux sur autant de lignes : une dizaine de secondes avec l'ancien regroupement
+  const debut = performance.now();
+  const lignes = regrouperEnLignes(Array.from({ length: 100_000 }, (_, k) => m('x', 10, k * 3, 5)));
+  assert.equal(lignes.length, 100_000);
+  assert.ok(performance.now() - debut < 2000, 'regroupement linéaire');
+});
+
+test('document hors gabarit (trop de morceaux, de pages, de libellés) → null', async () => {
+  const pageVide = () => ({ largeur: 595, hauteur: 842, morceaux: [], cases: [] });
+  // une page de plus de MORCEAUX_MAX morceaux
+  const gros = extrait();
+  for (let k = 0; k <= MORCEAUX_MAX; k++) gros[1].morceaux.push(m('x', 10 + (k % 100) * 5, 100 + Math.floor(k / 100), 3));
+  assert.equal(reconnaitre(gros).estExtraitRne, false);
+  assert.equal(lectureExtraitRne(gros), null);
+  const simule = pdfSimule([gros[1], gros[0]]);
+  assert.equal(await lireTextePdf({ OPS }, simule.pdf), null);
+  assert.deepEqual(simule.appels, { texte: 1, dessins: 0 }, 'la lecture s’arrête à la page trop chargée');
+  // juste sous le plafond : lu normalement
+  const limite = extrait();
+  while (limite[1].morceaux.length < MORCEAUX_MAX) limite[1].morceaux.push(m(' ', 10, 100, 3));
+  assert.deepEqual(lectureExtraitRne(limite).champs, CHAMPS_ATTENDUS);
+  // plus de PAGES_MAX pages : la fonction pure refuse ; lireTextePdf ne lit que les PAGES_MAX premières
+  const long = [...extrait(), ...Array.from({ length: PAGES_MAX - 1 }, pageVide)];
+  assert.equal(long.length, PAGES_MAX + 1);
+  assert.equal(lectureExtraitRne(long), null);
+  const simuleLong = pdfSimule(long);
+  assert.deepEqual((await lireTextePdf({ OPS }, simuleLong.pdf)).champs, CHAMPS_ATTENDUS);
+  assert.equal(simuleLong.appels.texte, PAGES_MAX);
+  // des centaines de libellés : ce n'est pas un extrait
+  const libelles = extrait();
+  for (let k = 0; k < 250; k++) libelles[1].morceaux.push(m('Enseigne:', 20.2, 500 - k, 41.3));
+  assert.equal(lectureExtraitRne(libelles), null);
+});
+
+test('page hors gabarit par son nombre de caractères (un seul morceau démesuré suffit) → null, sans délai', async () => {
+  const caracteres = (p) => p.morceaux.reduce((n, i) => n + i.str.length, 0);
+  assert.equal(CARACTERES_MAX, 20_000);
+  // UN morceau de 200 000 caractères, collé devant le lien de vérification : le plafond de morceaux ne le voit pas
+  const enorme = extrait();
+  enorme[1].morceaux.push(m(`${':'.repeat(200_000)}x registre-entreprises.tn/rne-public`, 20, 300, 500));
+  assert.ok(enorme[1].morceaux.length < MORCEAUX_MAX);
+  let debut = performance.now();
+  assert.equal(reconnaitre(enorme).estExtraitRne, false);
+  assert.equal(lectureExtraitRne(enorme), null);
+  const simule = pdfSimule([enorme[1], enorme[0]]);
+  assert.equal(await lireTextePdf({ OPS }, simule.pdf), null);
+  assert.deepEqual(simule.appels, { texte: 1, dessins: 0 }, 'la lecture s’arrête à la page trop chargée');
+  assert.ok(performance.now() - debut < 1000, 'un morceau de 200 000 caractères : refusé sans être analysé');
+  // l'adresse du siège suivie de 100 000 virgules : même refus
+  const virgules = `8 Rue des Jasmins 5000 Monastir${', '.repeat(100_000)}1`;
+  const adresse = retirer(extrait(), (i, page) => page === 1 && Math.abs(i.y - 438.9) < 0.5 && i.x > 130);
+  adresse[0].morceaux.push(m(virgules, 134, 438.9, 100));
+  debut = performance.now();
+  assert.equal(lectureExtraitRne(adresse), null);
+  assert.equal(await lire(adresse), null);
+  assert.ok(performance.now() - debut < 1000);
+  // juste au plafond : lu normalement ; un caractère de plus : null
+  const limite = extrait();
+  limite[1].morceaux.push(m('x'.repeat(CARACTERES_MAX - caracteres(limite[1])), 300, 150, 100));
+  assert.equal(caracteres(limite[1]), CARACTERES_MAX);
+  assert.deepEqual(lectureExtraitRne(limite).champs, CHAMPS_ATTENDUS);
+  assert.deepEqual((await lire(limite)).champs, CHAMPS_ATTENDUS);
+  limite[1].morceaux.push(m(' ', 10, 100, 3));
+  assert.equal(lectureExtraitRne(limite), null);
+  assert.equal(await lire(limite), null);
+  // pire cas SOUS le plafond : sur 10 pages, des milliers de deux-points collés devant un lien de vérification
+  const charge = extrait();
+  while (charge.length < PAGES_MAX) charge.push({ largeur: 595, hauteur: 842, morceaux: [], cases: [] });
+  for (const p of charge) {
+    const reste = CARACTERES_MAX - caracteres(p) - 40;
+    p.morceaux.push(m(':'.repeat(reste), 20, 300, 100), m('x registre-entreprises.tn/rne-public', 120.5, 300, 100));
+  }
+  debut = performance.now();
+  assert.deepEqual(lectureExtraitRne(charge).champs, CHAMPS_ATTENDUS);
+  assert.ok(performance.now() - debut < 500, 'aucune expression ancrée sur la fin ne relit la suite de deux-points');
+});
+
+test('rognage en boucle : même résultat qu’une expression ancrée sur la fin, sans son coût', () => {
+  const SEPARATEUR = /[\s,;:/-]/;
+  assert.equal(rognerBouts(' - 8 Rue des Jasmins, ;:/', SEPARATEUR), '8 Rue des Jasmins');
+  assert.equal(rognerBouts('8 Rue, des - Jasmins', SEPARATEUR), '8 Rue, des - Jasmins', 'rien n’est retiré au milieu');
+  assert.equal(rognerBouts(' : lien :: ', /[:\s]/, false), ' : lien', 'la fin seulement');
+  assert.equal(rognerBouts(',,,', /,/), '');
+  assert.equal(rognerBouts(',,,', /,/, false), '');
+  assert.equal(rognerBouts('', /,/), '');
+  for (const s of ['', ':', ' a : b :\t:', '::a', 'a', ' \n ', 'lien : ']) assert.equal(rognerBouts(s, /[:\s]/, false), s.replace(/[:\s]+$/, ''), JSON.stringify(s));
+  // 100 000 séparateurs au MILIEU du texte : une quinzaine de secondes avec l'expression ancrée sur la fin
+  const virgules = `8 Rue des Jasmins 5000 Monastir${', '.repeat(100_000)}1`;
+  const debut = performance.now();
+  assert.equal(rognerBouts(virgules, SEPARATEUR), virgules);
+  assert.deepEqual(decouperAdresse(virgules), { rue: virgules, codePostal: '', ville: '', gouvernorat: '' });
+  assert.ok(performance.now() - debut < 1000);
+});
+
+test('cases à cocher : page saturée de dessins → aucune case, sans calcul quadratique', () => {
+  const carres = (n) => {
+    const fnArray = [];
+    const argsArray = [];
+    for (let k = 0; k < n; k++) {
+      const x = 10 + (k % 50) * 11;
+      const y = 10 + Math.floor(k / 50) * 11;
+      fnArray.push(OPS.constructPath);
+      argsArray.push([OPS.stroke, [null], [x, y, x + 10, y + 10]]);
+    }
+    return { fnArray, argsArray };
+  };
+  assert.equal(lireCasesACocher(OPS, carres(150)).length, 150);
+  assert.deepEqual(lireCasesACocher(OPS, carres(201)), [], 'plus de 200 cases : ce n’est pas une page d’extrait');
+  // 50 000 petits carrés : 12 secondes quand chaque case relisait toute la liste ; elle ne regarde que ses voisins
+  let debut = performance.now();
+  assert.deepEqual(lireCasesACocher(OPS, carres(50_000)), []);
+  assert.ok(performance.now() - debut < 1000);
+  // 50 000 dessins qui ne sont pas des cases (grands cadres) n'empêchent pas de lire celles de l'extrait
+  const cadres = { fnArray: [], argsArray: [] };
+  for (let k = 0; k < 50_000; k++) { cadres.fnArray.push(OPS.constructPath); cadres.argsArray.push([OPS.stroke, [null], [10, 10, 500, 100 + (k % 700)]]); }
+  const etat = operateurs(extrait()[1].cases);
+  debut = performance.now();
+  assert.deepEqual(lireCasesACocher(OPS, { fnArray: [...cadres.fnArray, ...etat.fnArray], argsArray: [...cadres.argsArray, ...etat.argsArray] }), casesEtat());
+  assert.ok(performance.now() - debut < 1000);
 });

@@ -4,8 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// Fichiers de la reconnaissance de caractères (tesseract.js) servis par l'application elle-même sous /ocr/ : rien
-// n'est demandé à un tiers. Pris dans node_modules (versions figées par package-lock.json) : servis tels quels en
+// Fichiers de la reconnaissance de caractères (tesseract.js) et décodeurs de pdf.js servis par l'application
+// elle-même sous /ocr/ et /pdf-wasm/ : rien n'est demandé à un tiers (nginx.conf : 404 si un fichier manque). Pris dans node_modules (versions figées par package-lock.json) : servis tels quels en
 // développement, copiés dans dist/ocr/ à la construction. Lus seulement par la lecture de la patente (espace admin,
 // chargée à la demande — lot 3, étape 7).
 const FICHIERS_OCR: Record<string, string> = {
@@ -14,7 +14,13 @@ const FICHIERS_OCR: Record<string, string> = {
   'ocr/core/tesseract-core-simd-lstm.wasm.js': 'node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js',
   'ocr/core/tesseract-core-lstm.wasm.js': 'node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js',
   'ocr/lang/fra.traineddata.gz': 'node_modules/@tesseract.js-data/fra/4.0.0_best_int/fra.traineddata.gz',
+  // Décodeurs d'images de pdf.js (PDF numérisés en noir et blanc, JPEG 2000), demandés seulement si le PDF en a besoin.
+  'pdf-wasm/jbig2.wasm': 'node_modules/pdfjs-dist/wasm/jbig2.wasm',
+  'pdf-wasm/openjpeg.wasm': 'node_modules/pdfjs-dist/wasm/openjpeg.wasm',
 }
+
+const TYPE_MIME = (cle: string): string =>
+  cle.endsWith('.js') ? 'text/javascript' : cle.endsWith('.wasm') ? 'application/wasm' : 'application/octet-stream'
 
 function ocrAutoHeberge(): Plugin {
   const racine = fileURLToPath(new URL('.', import.meta.url))
@@ -25,7 +31,7 @@ function ocrAutoHeberge(): Plugin {
       server.middlewares.use((req, res, next) => {
         const cle = (req.url ?? '').split('?')[0].replace(/^\//, '')
         if (!(cle in FICHIERS_OCR)) return next()
-        res.setHeader('Content-Type', cle.endsWith('.js') ? 'text/javascript' : 'application/octet-stream')
+        res.setHeader('Content-Type', TYPE_MIME(cle))
         fs.createReadStream(source(cle)).pipe(res)
       })
     },

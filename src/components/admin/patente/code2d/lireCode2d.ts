@@ -8,6 +8,8 @@
 //   - pdf.js remet une image incorporée sous forme d'ImageBitmap (navigateur) ou de données brutes (`data`, `kind`) ;
 //   - le rendu pdf.js ordinaire attend requestAnimationFrame et se fige dans un onglet masqué : `intent: 'print'` ;
 //   - MultiFormatReader remplit la console : DataMatrixReader seul, importé avec les seules classes utiles.
+// La recherche est bornée : nombre de fenêtres du balayage plafonné (fenetres.ts) et durée totale limitée
+// (DUREE_MAX_MS). Passé ce temps, elle s'arrête sans résultat : les autres lectures du document continuent.
 // Le texte lu est ensuite analysé et sa signature vérifiée par analyse2ddoc.ts et signature.ts (fonctions pures).
 import BinaryBitmap from '@zxing/library/esm/core/BinaryBitmap';
 import DecodeHintType from '@zxing/library/esm/core/DecodeHintType';
@@ -19,18 +21,15 @@ import DataMatrixReader from '@zxing/library/esm/core/datamatrix/DataMatrixReade
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist';
 import type { LectureCode2d } from '../types.ts';
 import { interpreterCode2d } from './analyse2ddoc.ts';
+import type { Dimensions, Echeance, Fenetre } from './fenetres.ts';
+import { echeance, fenetresBalayage, fenetresImage } from './fenetres.ts';
 
 type PdfJs = typeof import('pdfjs-dist');
 
 /** Image en niveaux de gris : un octet par pixel, 0 = noir. */
-interface ImageGrise {
-  l: number;
-  h: number;
+interface ImageGrise extends Dimensions {
   gris: Uint8ClampedArray;
 }
-
-/** Fenêtre de recherche, en pixels : x0, y0, x1, y1. Ce qui dépasse de l'image est blanc. */
-type Fenetre = readonly [number, number, number, number];
 
 /** Image incorporée d'un PDF, telle que pdf.js la remet. */
 interface ImagePdf {
@@ -45,16 +44,16 @@ const PIXELS_MAX = 16e6; // au-delà, un essai est sauté (mémoire, durée)
 const COTE_MIN_IMAGE_PDF = 40; // en pixels : plus petit, c'est une puce ou un filet, pas un code
 const IMAGES_PDF_MAX = 12;
 const DELAI_IMAGE_PDF_MS = 5000;
+// Durée totale accordée à la recherche du code dans un document, rendu de la page compris. Un vrai document se lit
+// en moins d'une seconde ; sans code, le pire cas mesuré (grand scan balayé en entier) prend quelques secondes.
+const DUREE_MAX_MS = 15_000;
 // Échelle du rendu d'une page. Le code de l'extrait RNE fait 1,2 point par module : à l'échelle 2 (2,4 px par
 // module), il ne se lit qu'à certaines positions sur la page (une fois sur deux en simulation, selon l'alignement
 // des modules sur les pixels) ; à l'échelle 4 (4,8 px par module), il se lit partout.
 const ECHELLE_RENDU = 4;
 // Page rendue : le coin haut-gauche d'abord (zone de 200 x 160 points où l'extrait RNE porte son code, validée par
-// l'essai), puis un balayage. Centres espacés de 60 points : l'un d'eux tombe dans tout code d'au moins 21 mm de
-// côté ; fenêtres de 260 points : le code entier y tient, avec sa marge blanche, jusqu'à 42 mm de côté.
+// l'essai), puis un balayage (fenetres.ts).
 const COIN_RNE_POINTS = { l: 200, h: 160 };
-const PAS_BALAYAGE_POINTS = 60;
-const COTE_BALAYAGE_POINTS = 260;
 const LARGEUR_A4_POINTS = 595; // une image balayée est supposée montrer une page entière (scan d'un extrait)
 // En dessous de 3,5 px par point (scan à moins de 250 ppp : moins de 4,2 px par module), un code se lit mal à x1 :
 // le balayage réessaie alors, agrandies x2, les fenêtres où un code est vu sans être lu.
@@ -154,29 +153,6 @@ function agrandir(image: ImageGrise, facteur: number): ImageGrise {
 // Recherche du DataMatrix : fenêtres x agrandissements x binariseurs, arrêt au premier succès
 // ---------------------------------------------------------------------------------------------------------------
 
-/** Fenêtres du prototype : image entière, moitié haute (code des cartes), quarts, moitié basse, centre. */
-function fenetresImage({ l, h }: ImageGrise): Fenetre[] {
-  return [
-    [0, 0, l, h], [0, 0, l, h / 2], [0, 0, l / 2, h / 2], [l / 2, 0, l, h / 2],
-    [0, h / 2, l, h], [0, h / 2, l / 2, h], [l / 2, h / 2, l, h], [l / 4, h / 4, (3 * l) / 4, (3 * h) / 4],
-  ];
-}
-
-/**
- * Balayage : fenêtres carrées centrées sur une grille (voir les constantes), pour un code qui n'est au centre
- * d'aucune fenêtre du prototype — en haut à gauche d'une page, par exemple. `pxParPoint` : l'échelle du rendu
- * pour une page de PDF ; pour une image, celle d'une page A4 qui la remplirait.
- */
-function fenetresBalayage({ l, h }: ImageGrise, pxParPoint: number): Fenetre[] {
-  const pas = PAS_BALAYAGE_POINTS * pxParPoint;
-  const demi = (COTE_BALAYAGE_POINTS * pxParPoint) / 2;
-  const fenetres: Fenetre[] = [];
-  for (let cy = pas / 2; cy < h; cy += pas) {
-    for (let cx = pas / 2; cx < l; cx += pas) fenetres.push([cx - demi, cy - demi, cx + demi, cy + demi]);
-  }
-  return fenetres;
-}
-
 function decoder(image: ImageGrise, global: boolean): string {
   const source = new RGBLuminanceSource(image.gris, image.l, image.h);
   const bitmap = new BinaryBitmap(global ? new GlobalHistogramBinarizer(source) : new HybridBinarizer(source));
@@ -200,19 +176,44 @@ const ceder = (): Promise<void> =>
   });
 
 /**
+ * Promesse bornée dans le temps : sa valeur, ou null si elle n'est pas arrivée au bout de `ms` millisecondes.
+ * Un échec arrivé après coup est ignoré.
+ */
+const avecDelai = <T>(promesse: Promise<T>, ms: number): Promise<T | null> =>
+  new Promise((resolve, reject) => {
+    // Au-delà de 2^31 - 1 ms, setTimeout se déclenche tout de suite.
+    const minuterie = setTimeout(() => resolve(null), Math.min(ms, 0x7fffffff));
+    promesse.then(
+      (valeur) => {
+        clearTimeout(minuterie);
+        resolve(valeur);
+      },
+      (erreur) => {
+        clearTimeout(minuterie);
+        reject(erreur);
+      },
+    );
+  });
+
+/**
  * Texte du premier code 2D-DOC lu (il commence par « DC »), ou null. Fenêtres du prototype : chaque fenêtre est
  * essayée à tous les agrandissements. `siVu` (balayage) : une fenêtre n'est agrandie que si le détecteur y a VU un
  * code sans réussir à le lire (Checksum, Format) ; une fenêtre où rien n'est trouvé (NotFound) reste à x1.
+ * `garde` : une fois le temps écoulé, la recherche s'arrête (null), sans essayer les fenêtres restantes.
  */
-async function chercher(image: ImageGrise, fenetres: Fenetre[], agrandissements: number[], siVu = false): Promise<string | null> {
+async function chercher(
+  image: ImageGrise, fenetres: Fenetre[], agrandissements: number[], garde: Echeance, siVu = false,
+): Promise<string | null> {
   let dernierePause = performance.now();
   for (const fenetre of fenetres) {
+    if (garde.expire()) return null;
     const base = extraire(image, fenetre);
     if (!base.l || !base.h) continue;
     let vu = false;
     for (const facteur of agrandissements) {
       if (siVu && facteur > 1 && !vu) break;
       if (base.l * facteur * base.h * facteur > PIXELS_MAX) continue;
+      if (facteur > 1 && garde.expire()) return null;
       const essai = facteur === 1 ? base : agrandir(base, facteur);
       for (const global of [false, true]) {
         try {
@@ -233,17 +234,17 @@ async function chercher(image: ImageGrise, fenetres: Fenetre[], agrandissements:
   return null;
 }
 
-const balayer = (image: ImageGrise, pxParPoint: number): Promise<string | null> =>
-  chercher(image, fenetresBalayage(image, pxParPoint), pxParPoint < BALAYAGE_FIN_PX_PAR_POINT ? [1, 2] : [1], true);
+const balayer = (image: ImageGrise, pxParPoint: number, garde: Echeance): Promise<string | null> =>
+  chercher(image, fenetresBalayage(image, pxParPoint), pxParPoint < BALAYAGE_FIN_PX_PAR_POINT ? [1, 2] : [1], garde, true);
 
 // ---------------------------------------------------------------------------------------------------------------
 // PDF
 // ---------------------------------------------------------------------------------------------------------------
 
-function imageDeLaPage(page: PDFPageProxy, nom: string): Promise<ImagePdf | null> {
+function imageDeLaPage(page: PDFPageProxy, nom: string, delaiMs: number): Promise<ImagePdf | null> {
   const magasin = nom.startsWith('g_') ? page.commonObjs : page.objs;
   return new Promise((resolve) => {
-    const delai = setTimeout(() => resolve(null), DELAI_IMAGE_PDF_MS);
+    const delai = setTimeout(() => resolve(null), delaiMs);
     const rendre = (objet: ImagePdf | null) => {
       clearTimeout(delai);
       resolve(objet ?? null);
@@ -257,17 +258,19 @@ function imageDeLaPage(page: PDFPageProxy, nom: string): Promise<ImagePdf | null
 }
 
 /** Voie préférée : les images incorporées de la page, avec les pixels exacts du code (aucun rééchantillonnage). */
-async function lireImagesIncorporees(pdfjs: PdfJs, page: PDFPageProxy): Promise<LectureCode2d | null> {
-  const operateurs = await page.getOperatorList();
+async function lireImagesIncorporees(pdfjs: PdfJs, page: PDFPageProxy, garde: Echeance): Promise<LectureCode2d | null> {
+  const operateurs = await avecDelai(page.getOperatorList(), garde.reste());
+  if (!operateurs) return null;
   const vues = new Set<string>();
   for (let i = 0; i < operateurs.fnArray.length && vues.size < IMAGES_PDF_MAX; i++) {
     if (operateurs.fnArray[i] !== pdfjs.OPS.paintImageXObject) continue;
     const nom: unknown = operateurs.argsArray[i]?.[0];
     if (typeof nom !== 'string' || vues.has(nom)) continue;
+    if (garde.expire()) return null;
     vues.add(nom);
-    const image = grisDeLImagePdf(pdfjs, await imageDeLaPage(page, nom));
+    const image = grisDeLImagePdf(pdfjs, await imageDeLaPage(page, nom, Math.min(DELAI_IMAGE_PDF_MS, garde.reste())));
     if (!image) continue;
-    const texte = await chercher(image, fenetresImage(image), [1, 2]);
+    const texte = await chercher(image, fenetresImage(image), [1, 2], garde);
     const lecture = texte === null ? null : await interpreterCode2d(texte);
     if (lecture) return lecture;
   }
@@ -275,7 +278,8 @@ async function lireImagesIncorporees(pdfjs: PdfJs, page: PDFPageProxy): Promise<
 }
 
 /** Voie de secours : la page rendue sur un canvas, puis le coin haut-gauche et un balayage. */
-async function lirePageRendue(page: PDFPageProxy): Promise<LectureCode2d | null> {
+async function lirePageRendue(page: PDFPageProxy, garde: Echeance): Promise<LectureCode2d | null> {
+  if (garde.expire()) return null;
   const taille = page.getViewport({ scale: 1 });
   const echelle = Math.min(ECHELLE_RENDU, Math.sqrt(PIXELS_MAX / (taille.width * taille.height)));
   const viewport = page.getViewport({ scale: echelle });
@@ -286,32 +290,42 @@ async function lirePageRendue(page: PDFPageProxy): Promise<LectureCode2d | null>
   try {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     if (!ctx) return null;
-    await page.render({ canvasContext: ctx, canvas, viewport, intent: 'print' }).promise;
+    const rendu = page.render({ canvasContext: ctx, canvas, viewport, intent: 'print' });
+    if ((await avecDelai(rendu.promise.then(() => true), garde.reste())) === null) {
+      rendu.cancel(); // rendu trop long : on l'arrête, la recherche s'arrête sans résultat
+      return null;
+    }
     image = grisDuCanvas(canvas);
   } finally {
     canvas.width = canvas.height = 0;
   }
   if (!image) return null;
   const coin: Fenetre = [0, 0, COIN_RNE_POINTS.l * echelle, COIN_RNE_POINTS.h * echelle];
-  const texte = (await chercher(image, [coin], [1, 2])) ?? (await balayer(image, echelle));
+  const texte = (await chercher(image, [coin], [1, 2], garde)) ?? (await balayer(image, echelle, garde));
   return texte === null ? null : interpreterCode2d(texte);
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Points d'entrée — null quand aucun code 2D-DOC n'est trouvé ; ne lèvent jamais d'exception
+// Points d'entrée — null quand aucun code 2D-DOC n'est trouvé (ou pas dans le temps imparti) ; ne lèvent jamais
+// d'exception. `dureeMaxMs` : durée totale accordée à la recherche (les recettes la raccourcissent).
 // ---------------------------------------------------------------------------------------------------------------
+
+// Trace sans contenu du document : le nom de l'erreur seulement.
+const signaler = (e: unknown): void => console.warn('[patente] cachet électronique : lecture en échec', e instanceof Error ? e.name : '');
 
 /**
  * Code 2D-DOC d'un PDF ouvert par l'appelant (qui le fermera) : les images incorporées de la page 1 d'abord, sinon
  * la page 1 rendue (coin haut-gauche, puis balayage).
  */
-export async function lireCode2dPdf(pdfjs: PdfJs, pdf: PDFDocumentProxy): Promise<LectureCode2d | null> {
+export async function lireCode2dPdf(pdfjs: PdfJs, pdf: PDFDocumentProxy, dureeMaxMs: number = DUREE_MAX_MS): Promise<LectureCode2d | null> {
   try {
-    const page = await pdf.getPage(1);
-    const lecture = await lireImagesIncorporees(pdfjs, page).catch(() => null);
-    return lecture ?? (await lirePageRendue(page));
+    const garde = echeance(dureeMaxMs);
+    const page = await avecDelai(pdf.getPage(1), garde.reste());
+    if (!page) return null;
+    const lecture = await lireImagesIncorporees(pdfjs, page, garde).catch(() => null);
+    return lecture ?? (await lirePageRendue(page, garde));
   } catch (e) {
-    console.warn('[patente] code 2D :', e);
+    signaler(e);
     return null;
   }
 }
@@ -320,16 +334,17 @@ export async function lireCode2dPdf(pdfjs: PdfJs, pdf: PDFDocumentProxy): Promis
  * Code 2D-DOC d'une image que l'appelant a déjà dessinée sur un canvas à fond blanc : les fenêtres du prototype
  * (x1, x2, x3), puis un balayage.
  */
-export async function lireCode2dCanvas(canvas: HTMLCanvasElement): Promise<LectureCode2d | null> {
+export async function lireCode2dCanvas(canvas: HTMLCanvasElement, dureeMaxMs: number = DUREE_MAX_MS): Promise<LectureCode2d | null> {
   try {
+    const garde = echeance(dureeMaxMs);
     const image = grisDuCanvas(canvas);
     if (!image) return null;
     const texte =
-      (await chercher(image, fenetresImage(image), [1, 2, 3])) ??
-      (await balayer(image, Math.min(image.l, image.h) / LARGEUR_A4_POINTS));
+      (await chercher(image, fenetresImage(image), [1, 2, 3], garde)) ??
+      (await balayer(image, Math.min(image.l, image.h) / LARGEUR_A4_POINTS, garde));
     return texte === null ? null : await interpreterCode2d(texte);
   } catch (e) {
-    console.warn('[patente] code 2D :', e);
+    signaler(e);
     return null;
   }
 }

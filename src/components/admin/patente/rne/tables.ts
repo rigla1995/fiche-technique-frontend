@@ -31,19 +31,37 @@ const FORMES_FR: [CodeForme, RegExp][] = [
   ['ASSOCIATION', /ASSOCIATION/],
   ['AUTRE', /COMMANDITE|\bSCS\b|\bSCA\b|GROUPEMENT D'INTERET|\bGIE\b|SOCIETE CIVILE|COOPERATIVE|MUTUELLE|ETABLISSEMENT PUBLIC|SUCCURSALE|SOCIETE ETRANGERE/],
 ];
+// Libellés arabes écrits comme `arabeNu` les rend : alif sans hamza (« الاسم » pour « الإسم »), article facultatif.
 const FORMES_AR: [CodeForme, RegExp][] = [
-  ['SUARL', /الشخص الواحد/],
-  ['SARL', /ذات ال?مسؤولية ال?محدودة/],
+  ['SUARL', /شخص (?:ال)?واحد/],
+  ['SARL', /ذات (?:ال)?مس[ؤئ]ولية (?:ال)?محدودة/],
   ['SA', /خفية الاسم/],
-  ['SNC', /المفاوضة/],
-  ['AUTO_ENTREPRENEUR', /المبادر الذاتي/],
-  ['EI', /شخص طبيعي/],
+  ['SNC', /مفاوضة/],
+  ['AUTO_ENTREPRENEUR', /مبادر (?:ال)?ذاتي/],
+  ['EI', /شخص (?:ال)?طبيعي|مؤسسة فردية/],
   ['ASSOCIATION', /جمعية/],
-  ['AUTRE', /التوصية|مجمع المصلحة الاقتصادية|تعاونية|تعاضدية/],
+  ['AUTRE', /مقارضة|توصية|محاصة|ت?جمع المصالح|مجمع المصلحة|شركة مدنية|تعاونية|تعاضدية/],
 ];
 const SIGLES: CodeForme[] = ['SUARL', 'SARL', 'SA', 'SNC'];
 
-/** Code de la fiche pour un libellé de forme juridique ; '' si les deux libellés sont vides, « AUTRE » si inconnu. */
+/**
+ * Arabe à comparer : formes de présentation → lettres (NFKC), sans voyelles brèves ni trait d'allongement, alif à
+ * hamza ou à madda ramené à l'alif nu (l'extrait écrit « الإسم », d'autres documents « الاسم »).
+ */
+export function arabeNu(s: string | null | undefined): string {
+  return String(s ?? '')
+    .normalize('NFKC')
+    .replace(/[\u{064B}-\u{0652}\u{0670}\u{0640}]/gu, '')
+    .replace(/[\u{0622}\u{0623}\u{0625}\u{0671}]/gu, '\u{0627}')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Code de la fiche pour un libellé de forme juridique (français, puis arabe en secours) ; '' si aucun des deux n'est
+ * reconnu. « AUTRE » n'est rendu que pour une forme CONNUE hors de la liste (commandite, GIE, société civile…) : ce
+ * n'est jamais une valeur par défaut.
+ */
 export function formeJuridiqueVersCode(libelleFr: string | null | undefined, libelleAr: string | null | undefined = ''): CodeForme | '' {
   const n = normaliser(libelleFr);
   // le sigle entre parenthèses en fin de libellé fait foi : « … (SUARL) »
@@ -53,10 +71,13 @@ export function formeJuridiqueVersCode(libelleFr: string | null | undefined, lib
     const connu = SIGLES.find((c) => c === s);
     if (connu) return connu;
   }
-  for (const [code, re] of FORMES_FR) if (n && re.test(n)) return code;
-  const a = String(libelleAr ?? '').normalize('NFKC');
+  // le libellé tel quel, puis sans ses points (« S.A.R.L » hors parenthèses)
+  for (const texte of [n, n.replace(/\./g, '')]) {
+    for (const [code, re] of FORMES_FR) if (texte && re.test(texte)) return code;
+  }
+  const a = arabeNu(libelleAr);
   for (const [code, re] of FORMES_AR) if (a && re.test(a)) return code;
-  return n || a.trim() ? 'AUTRE' : '';
+  return '';
 }
 
 // ── Qualité du représentant : le tableau de la direction est en arabe sur l'extrait ────────────────────────────────
@@ -69,12 +90,13 @@ const QUALITES_FR: [RegExp, string][] = [
   [/ASSOCIE/, 'Associé'], [/TITULAIRE|PROPRIETAIRE|EXPLOITANT/, 'Titulaire'], [/REPRESENTANT LEGAL/, 'Représentant légal'],
   [/LIQUIDATEUR/, 'Liquidateur'], [/^PRESIDENT/, 'Président'],
 ];
+// Écrits comme `arabeNu` les rend (alif sans hamza : « الادارة » pour « الإدارة »).
 const QUALITES_AR: [RegExp, string][] = [
   [/^وكيل/, 'Gérant'], [/^مسير/, 'Gérant'], [/رئيس مدير عام/, 'Président directeur général'],
   [/مدير عام مساعد/, 'Directeur général adjoint'], [/مدير عام/, 'Directeur général'],
-  [/رئيس مجلس الإدارة/, "Président du conseil d'administration"], [/عضو مجلس الإدارة|^متصرف/, 'Administrateur'],
+  [/رئيس مجلس الادارة/, "Président du conseil d'administration"], [/عضو مجلس الادارة|^متصرف/, 'Administrateur'],
   [/^شريك/, 'Associé'], [/^صاحب/, 'Titulaire'], [/ممثل قانوني/, 'Représentant légal'], [/^مصف/, 'Liquidateur'],
-  [/^رئيس/, 'Président'], [/كاتب عام/, 'Secrétaire général'], [/أمين المال|أمين مال/, 'Trésorier'],
+  [/^رئيس/, 'Président'], [/كاتب عام/, 'Secrétaire général'], [/امين (?:ال)?مال/, 'Trésorier'],
 ];
 const traduire = (table: [RegExp, string][], s: string): string => {
   for (const [re, fr] of table) if (re.test(s)) return fr;
@@ -85,7 +107,7 @@ const traduire = (table: [RegExp, string][], s: string): string => {
 export function qualiteVersFrancais(q: string | null | undefined): string {
   const lu = String(q ?? '').normalize('NFKC').replace(/\s+/g, ' ').trim();
   if (!lu) return '';
-  if (estArabe(lu)) return traduire(QUALITES_AR, lu);
+  if (estArabe(lu)) return traduire(QUALITES_AR, arabeNu(lu));
   return traduire(QUALITES_FR, normaliser(lu)) || texteChamp(lu);
 }
 
@@ -108,26 +130,62 @@ const GOUVERNORATS = [
   'Le Kef', 'Kef', 'Siliana', 'Sousse', 'Monastir', 'Mahdia', 'Sfax', 'Kairouan', 'Kasserine', 'Sidi Bouzid', 'Gabès',
   'Gabes', 'Médenine', 'Medenine', 'Tataouine', 'Gafsa', 'Tozeur', 'Kébili', 'Kebili',
 ];
-const rogner = (s: string): string => s.replace(/^[\s,;:-]+|[\s,;:-]+$/g, '');
+/**
+ * Retire de la fin de `s` — et de son début si `auDebut` — les caractères que reconnaît `aRetirer` (expression d'UN
+ * caractère, sans drapeau g). En boucle : une expression ancrée sur la fin (« [\s,]+$ ») relit, depuis chacun de ses
+ * caractères, toute suite de séparateurs placée au MILIEU du texte — coût quadratique sur un texte fabriqué.
+ */
+export function rognerBouts(s: string, aRetirer: RegExp, auDebut = true): string {
+  let debut = 0;
+  let fin = s.length;
+  while (fin > 0 && aRetirer.test(s[fin - 1])) fin--;
+  if (auDebut) while (debut < fin && aRetirer.test(s[debut])) debut++;
+  return s.slice(debut, fin);
+}
+// Séparateurs retirés aux deux bouts d'une rue ou d'une localité.
+const SEPARATEUR_D_ADRESSE = /[\s,;:/-]/;
+const rogner = (s: string): string => rognerBouts(s, SEPARATEUR_D_ADRESSE);
+
+// Mots de voie (texte passé par `normaliser`). Juste AVANT un nombre de 4 chiffres, ils en font un numéro (« Rue
+// 8600 », « Lot 1234 ») ; APRÈS lui, ils disent que la rue continue. Un mois juste avant en fait une année (« 14
+// Janvier 2011 »), si le nombre peut en être une.
+const MOTS_DE_VOIE = 'RUE|AVENUE|AV|BOULEVARD|BD|ROUTE|RTE|IMPASSE|PLACE|LOT|LOTISSEMENT|BLOC|IMMEUBLE|IMM|RESIDENCE|KM|BP|N°|NO|NUMERO'
+  + '|APPARTEMENT|APP|ETAGE|BUREAU|LOCAL|VILLA';
+const MOIS = 'JANVIER|FEVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOUT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DECEMBRE';
+const APRES_UN_MOT_DE_VOIE = new RegExp(`(^|[^A-Z])(${MOTS_DE_VOIE})[\\s.,:;-]*$`);
+const APRES_UN_MOIS = new RegExp(`(^|[^A-Z])(${MOIS})[\\s.,:;-]*$`);
+const CONTIENT_UN_MOT_DE_VOIE = new RegExp(`(^|[^A-Z])(${MOTS_DE_VOIE})([^A-Z]|$)`);
+// Nom de localité (ville, puis gouvernorat) : quelques mots faits de lettres, séparés par des espaces, des virgules, un
+// tiret ou une barre (« Sousse - Sousse ») ; un numéro de 1 ou 2 chiffres y est admis (« Quartier Exemple 2 Ariana »).
+const LOCALITE = /^\p{L}[\p{L}'’.-]*(?:[\s,/-]+(?:\p{L}[\p{L}'’.-]*|\d{1,2})){0,6}$/u;
+// Plus long, ce n'est pas un nom de localité. Le plafond borne aussi le coût de l'expression : le tiret y est à la fois
+// une lettre de mot et un séparateur, et sur une suite fabriquée (« a-a-a-… ») elle essaierait toutes les découpes.
+const LOCALITE_MAX = 60;
 
 /**
  * « 8 Rue des Jasmins 5000 Monastir Monastir » → rue « 8 Rue des Jasmins », code postal 5000, ville « Monastir »,
- * gouvernorat « Monastir ». Le code postal est le DERNIER nombre de 4 chiffres suivi d'un nom (une rue peut porter un
- * numéro à 4 chiffres : « Rue 8600 »). Sans code postal suivi d'une ville, rien n'est découpé : tout reste dans `rue`.
+ * gouvernorat « Monastir ». Le code postal n'est retenu que s'il est SÛR : le dernier nombre de 4 chiffres de
+ * l'adresse, précédé d'une rue, suivi jusqu'à la fin d'un nom de localité, et qui n'est ni un numéro de voie ni une
+ * année. Sinon rien n'est découpé : tout reste dans `rue` (« Rue 8600 Charguia 1 Tunis », « Avenue 14 Janvier 2011
+ * Sousse Sousse », code postal en fin de ligne).
  */
 export function decouperAdresse(adresse: string | null | undefined): AdresseDecoupee {
   const a = String(adresse ?? '').replace(/\s+/g, ' ').trim();
+  const entiere: AdresseDecoupee = { rue: a, codePostal: '', ville: '', gouvernorat: '' };
   const re = /(^|[^\p{L}\d])(\d{4})(?![\p{L}\d])/gu;
   let debut = -1;
-  for (let m = re.exec(a); m; m = re.exec(a)) {
-    const position = m.index + m[1].length;
-    if (/\p{L}/u.test(a.slice(position + 4))) debut = position;
-  }
-  if (debut < 0) return { rue: a, codePostal: '', ville: '', gouvernorat: '' };
-  let ville = rogner(a.slice(debut + 4));
+  for (let m = re.exec(a); m; m = re.exec(a)) debut = m.index + m[1].length;
+  if (debut < 0) return entiere;
+  const avant = normaliser(a.slice(0, debut));
+  const nombre = Number(a.slice(debut, debut + 4));
+  const suite = rogner(a.slice(debut + 4));
+  if (!rogner(avant) || APRES_UN_MOT_DE_VOIE.test(avant)) return entiere;
+  if (nombre >= 1800 && nombre <= 2099 && APRES_UN_MOIS.test(avant)) return entiere;
+  if (suite.length > LOCALITE_MAX || !LOCALITE.test(suite) || CONTIENT_UN_MOT_DE_VOIE.test(normaliser(suite))) return entiere;
+  let ville = suite;
   let gouvernorat = '';
   for (const g of GOUVERNORATS) {
-    const fin = new RegExp(`(^|[\\s,-])${g}$`, 'i');
+    const fin = new RegExp(`(^|[\\s,/-])${g}$`, 'i');
     if (!fin.test(ville)) continue;
     gouvernorat = g;
     const sans = rogner(ville.replace(fin, ''));

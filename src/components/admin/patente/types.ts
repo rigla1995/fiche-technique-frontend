@@ -40,6 +40,8 @@ export interface Cachet {
   emisLe: string | null;
   /** Identifiant unique porté par le code (7 chiffres + 1 lettre), ou null. */
   identifiant: string | null;
+  /** Courte raison, en français, pour laquelle le cachet n'est pas « valide » (affichée telle quelle par l'écran). */
+  motif?: string;
 }
 
 /** Couche « cachet » : le cachet et les champs que le code porte en lettres latines. */
@@ -68,13 +70,26 @@ export type SuiviLecture = (etape: string, avancement?: number) => void;
 const HORS_W1252 = /[^\x20-\x7E\xA0-\xFF€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ]/u;
 export const imprimable = (s: string): boolean => !HORS_W1252.test(s);
 
-/** Texte d'un champ : espaces réduits, rognés ; '' si la valeur n'est pas imprimable. */
+// Même nettoyage que le serveur AVANT de juger une valeur (src/utils/identite.js, fonction texte) : un texte latin
+// copié d'un PDF n'est pas écarté pour une ligature, un tiret typographique ou un caractère invisible.
+const LIGATURES: Record<string, string> = {
+  '\u{FB00}': 'ff', '\u{FB01}': 'fi', '\u{FB02}': 'fl', '\u{FB03}': 'ffi', '\u{FB04}': 'ffl', '\u{FB05}': 'st', '\u{FB06}': 'st',
+};
+
+/** Texte d'un champ : nettoyé comme au serveur, espaces réduits, rogné ; '' si la valeur n'est pas imprimable. */
 export const texteChamp = (s: string | null | undefined): string => {
-  const t = String(s ?? '').normalize('NFC').replace(/\s+/g, ' ').trim();
+  const t = String(s ?? '')
+    .normalize('NFC')
+    .replace(/[\u{FB00}-\u{FB06}]/gu, (c) => LIGATURES[c])
+    .replace(/[\u{AD}\u{200B}-\u{200D}\u{2060}\u{FEFF}]/gu, '')
+    .replace(/[\u{2010}-\u{2012}\u{2212}]/gu, '-')
+    .replace(/[\u{7F}-\u{9F}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   return t && imprimable(t) ? t : '';
 };
 
 // Matricule fiscal LU par une machine : forme stricte (la clé est exigée quand le suffixe est présent). La saisie à la
 // main reste tolérante (src/components/admin/matriculeFiscal.ts : clé absente = avertissement) ; une lecture, non :
-// « 1961453/A/M/006 » est une erreur d'OCR typique qui passerait la forme tolérante.
+// « 1234567/A/M/006 » (clé perdue, zéro lu 6) est une erreur de lecture typique qui passerait la forme tolérante.
 export const MATRICULE_LU = /^\d{7}[A-Z](\/[A-Z]\/[A-Z]\/\d{3})?$/;

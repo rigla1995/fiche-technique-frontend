@@ -11,11 +11,15 @@
 //   cases à cocher        dessins (dessins.ts) ; le libellé d'une case est le texte le plus proche à sa gauche
 // Arabe : un morceau par glyphe, en formes de présentation et en ordre visuel → tri par x décroissant puis NFKC.
 // Il ne sert qu'à reconnaître (libellés, tables de correspondance) : aucune valeur arabe n'est proposée ni affichée.
+// Prudence : ces dispositions sont celles du modèle « société », seul connu. Une lecture qui n'est pas sûre est posée
+// « à relire » (autre modèle, couche texte peut-être issue d'un scanner, valeur peut-être coupée, adresse non
+// découpée, dirigeant lu sur plusieurs lignes) ; une lecture qui ne serait qu'une valeur par défaut n'est pas posée du
+// tout (forme juridique inconnue).
 import type { ChampIdentite, ChampLu, LectureTextePdf } from '../types.ts';
 import { texteChamp } from '../types.ts';
 import {
   decouperAdresse, estArabe, formeJuridiqueVersCode, nationaliteVersFrancais, normaliser, qualiteVersFrancais,
-  typeRegistreVersFrancais,
+  rognerBouts, typeRegistreVersFrancais,
 } from './tables.ts';
 
 /** Morceau de texte positionné (repère PDF : origine en bas à gauche, en points). */
@@ -41,6 +45,11 @@ export interface PageTexte {
   morceaux: Morceau[];
   /** Cases à cocher de la page ; null ou absent : dessins non lus (l'état du registre est alors signalé « non lu »). */
   cases?: CaseACocher[] | null;
+  /**
+   * true : rien n'établit que la couche texte est celle du PDF officiel (image de page entière sous le texte, dessins
+   * illisibles) — c'est peut-être le texte reconnu par un scanner : tous les champs sont posés « à relire ».
+   */
+  texteDouteux?: boolean;
 }
 
 export interface LigneTexte<T extends Morceau = Morceau> {
@@ -51,6 +60,7 @@ export interface LigneTexte<T extends Morceau = Morceau> {
 /** Lien officiel de vérification d'un extrait. Constante : jamais repris du document qu'on cherche à vérifier. */
 export const LIEN_VERIFICATION_RNE = 'https://www.registre-entreprises.tn/rne-public/#/qr-code/validation';
 export const NOTE_MATRICULE_RACINE = "racine seulement : le complément (/A/M/000) figure sur la carte d'identification fiscale";
+export const NOTE_ADRESSE_ENTIERE = 'code postal non reconnu : adresse reprise en entier, ville à saisir';
 
 const RE_IDENTIFIANT = /^\d{7}[A-Z]$/;
 const RE_CODE_VERIFICATION = /^[A-Z0-9]{14}$/;
@@ -59,8 +69,19 @@ const AVEC_LETTRE = /\p{L}/u;
 const PIED_DE_PAGE = 0.12;
 // En dessous, la page n'a pas de couche texte exploitable (PDF scanné).
 const CARACTERES_MIN = 30;
+// Gabarit d'un extrait : quelques pages, un millier de morceaux et quelques milliers de caractères par page (l'arabe
+// vient glyphe par glyphe), une trentaine de libellés. Au-delà de ces plafonds, le document n'est pas lu (résultat
+// null) : un fichier fabriqué pour être énorme ne fige pas l'onglet. Le plafond de caractères compte aussi pour un
+// SEUL morceau démesuré, que le plafond de morceaux ne voit pas.
+export const PAGES_MAX = 10;
+export const MORCEAUX_MAX = 8000;
+export const CARACTERES_MAX = 20_000;
+const LIBELLES_MAX = 200;
 
 const estBlanc = (s: string): boolean => s.trim() === '';
+const DEUX_POINTS_OU_BLANC = /[:\s]/;
+/** Nombre de caractères du texte d'une page (tous ses morceaux, blancs compris). */
+const longueurDuTexte = (morceaux: readonly Morceau[]): number => morceaux.reduce((n, m) => n + (typeof m.str === 'string' ? m.str.length : 0), 0);
 
 // ── 1. Mise en page : lignes, jointure latine, reconstruction de l'arabe ───────────────────────────────────────────
 
@@ -68,20 +89,17 @@ const estBlanc = (s: string): boolean => s.trim() === '';
 export function regrouperEnLignes<T extends Morceau>(morceaux: readonly T[], tolerance = 2.6): LigneTexte<T>[] {
   const tri = morceaux.slice().sort((a, b) => b.y - a.y || a.x - b.x);
   const lignes: LigneTexte<T>[] = [];
+  let courante: LigneTexte<T> | null = null;
   for (const m of tri) {
-    let meilleure: LigneTexte<T> | null = null;
-    for (const L of lignes) {
-      const ecart = Math.abs(L.y - m.y);
-      if (ecart <= tolerance && (!meilleure || ecart < Math.abs(meilleure.y - m.y))) meilleure = L;
+    // tri par y décroissant : la dernière ligne ouverte est la seule qui puisse être à moins de `tolerance` au-dessus
+    if (!courante || courante.y - m.y > tolerance) {
+      courante = { y: m.y, items: [] };
+      lignes.push(courante);
     }
-    if (!meilleure) {
-      meilleure = { y: m.y, items: [] };
-      lignes.push(meilleure);
-    }
-    meilleure.items.push(m);
+    courante.items.push(m);
   }
   for (const L of lignes) L.items.sort((a, b) => a.x - b.x);
-  return lignes.sort((a, b) => b.y - a.y);
+  return lignes;
 }
 
 /** Jointure de morceaux latins, de gauche à droite : une espace quand l'écart horizontal dépasse 1 pt. */
@@ -108,6 +126,8 @@ export function reconstruireArabe(morceaux: readonly Morceau[]): string {
 interface Item extends Morceau {
   blanc: boolean;
   ar: boolean;
+  /** Le morceau est, à lui seul, un libellé de l'extrait. */
+  lib: boolean;
 }
 type Ligne = LigneTexte<Item>;
 interface Page {
@@ -119,10 +139,16 @@ interface Page {
 }
 
 function preparer(pages: readonly PageTexte[]): Page[] {
+  // hors gabarit : rien n'est lu
+  if (pages.length > PAGES_MAX || pages.some((p) => p.morceaux.length > MORCEAUX_MAX || longueurDuTexte(p.morceaux) > CARACTERES_MAX)) return [];
   return pages.map((p, k) => {
     const items: Item[] = p.morceaux
       .filter((m) => typeof m.str === 'string' && m.str !== '')
-      .map((m) => ({ str: m.str, x: m.x, y: m.y, largeur: m.largeur, blanc: estBlanc(m.str), ar: estArabe(m.str) }));
+      .map((m) => {
+        const blanc = estBlanc(m.str);
+        const ar = estArabe(m.str);
+        return { str: m.str, x: m.x, y: m.y, largeur: m.largeur, blanc, ar, lib: !blanc && !ar && estLibelle(m.str) };
+      });
     return { numero: k + 1, hauteur: p.hauteur, items, lignes: regrouperEnLignes(items), cases: p.cases ?? null };
   });
 }
@@ -162,9 +188,9 @@ const CHAMPS: DefChamp[] = [
   { cle: 'numeroExtrait', libelle: /^NUMERO EXTRAIT$/, mode: 'empile' },
   { cle: 'typeRegistre', libelle: /^TYPE DE REGISTRE$/, mode: 'empile' },
   { cle: 'numeroGestion', libelle: /^N.? ?DE GESTION INTERNE$/, mode: 'empile' },
-  { cle: 'denomination', libelle: /^DENOMINATION SOCIALE ?:?$/, mode: 'droite' },
-  { cle: 'nomCommercial', libelle: /^NOM COMMERCIAL ?:?$/, mode: 'droite' },
-  { cle: 'enseigne', libelle: /^ENSEIGNE ?:?$/, mode: 'droite' },
+  { cle: 'denomination', libelle: /^DENOMINATION SOCIALE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
+  { cle: 'nomCommercial', libelle: /^NOM COMMERCIAL ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
+  { cle: 'enseigne', libelle: /^ENSEIGNE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
   { cle: 'adresseSiege', libelle: /^ADRESSE DU SIEGE SOCIAL ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
   { cle: 'adresseActivite', libelle: /^ADRESSE ACTIVITE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
   { cle: 'formeJuridique', libelle: /^FORME JURIDIQUE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
@@ -203,8 +229,10 @@ interface Valeur {
   valeur: string;
   morceaux: Item[];
   arabe: boolean;
+  /** Une ligne qui n'a pas été reprise suit la valeur et pourrait en être la fin : la valeur a pu être coupée. */
+  coupee: boolean;
 }
-const SANS_VALEUR: Valeur = { valeur: '', morceaux: [], arabe: false };
+const SANS_VALEUR: Valeur = { valeur: '', morceaux: [], arabe: false, coupee: false };
 
 // Libellés d'une ligne : jusqu'à 4 morceaux latins qui se suivent (« DATE D'ÉDITION DE » + « L'EXTRAIT »).
 function trouverLibelles(L: Ligne, page: Page): Libelle[] {
@@ -231,19 +259,21 @@ function jumeauArabe(lab: Libelle): Jumeau | null {
 
 // Valeur à droite du libellé, sur sa ligne. Barrières : une lettre arabe, un « : » isolé, un autre libellé — une
 // valeur absente ressort vide, sans prendre le voisin.
-function valeurDroite(lab: Libelle): Valeur {
+function valeurDroite(lab: Libelle, lignesDeLibelles: ReadonlySet<Ligne>): Valeur {
   const L = lab.ligne;
   const morceaux: Item[] = [];
   for (const it of L.items) {
     if (it.x < lab.x1 - 0.5 || it.blanc || lab.membres.includes(it)) continue;
-    if (it.ar || it.str.trim() === ':' || estLibelle(it.str)) break;
+    if (it.ar || it.str.trim() === ':' || it.lib) break;
     morceaux.push(it);
   }
   if (!morceaux.length) return SANS_VALEUR;
   const textes = [joindre(morceaux)];
+  let coupee = false;
   if (lab.def.multiLigne) {
-    // la valeur déborde sur la ligne suivante : reprise seulement si elle est alignée sur le début de la valeur,
-    // sans lettre arabe et sans libellé
+    // La valeur déborde sur la ligne suivante : reprise seulement si elle est alignée sur le début de la valeur, sans
+    // lettre arabe et sans libellé. Une ligne latine sans libellé qui n'est PAS alignée (retour à la ligne sous le
+    // libellé, par exemple) n'est pas reprise, mais elle est peut-être la suite : la valeur est signalée « coupée ».
     const x0 = morceaux[0].x;
     let yPrec = L.y;
     for (const suivante of lab.page.lignes) {
@@ -251,12 +281,16 @@ function valeurDroite(lab: Libelle): Valeur {
       if (yPrec - suivante.y > 22) break;
       const pleins = suivante.items.filter((i) => !i.blanc);
       if (!pleins.length) continue;
-      if (pleins.some((i) => i.ar || estLibelle(i.str)) || Math.abs(pleins[0].x - x0) > 4) break;
+      if (lignesDeLibelles.has(suivante) || pleins.some((i) => i.ar || i.lib)) break;
+      if (Math.abs(pleins[0].x - x0) > 4) {
+        coupee = pleins[0].x >= lab.x0 - 4; // plus à gauche que le libellé : un autre bloc (titre de section)
+        break;
+      }
       textes.push(joindre(pleins));
       yPrec = suivante.y;
     }
   }
-  return { valeur: textes.join(lab.def.jointure ?? ' ; ').replace(/\s*:\s*$/, '').trim(), morceaux, arabe: false };
+  return { valeur: textes.join(lab.def.jointure ?? ' ; ').replace(/\s*:\s*$/, '').trim(), morceaux, arabe: false, coupee };
 }
 
 // Valeur d'un libellé empilé : entre la ligne arabe et la ligne française, à gauche du libellé, sans dépasser le
@@ -277,12 +311,16 @@ function valeurEmpilee(lab: Libelle, tous: readonly Libelle[]): Valeur {
   if (!morceaux.length) return SANS_VALEUR;
   const arabe = morceaux.some((i) => i.ar) && morceaux.every((i) => i.ar || /^[\d\s]+$/.test(i.str));
   const texte = arabe ? reconstruireArabe(lab.page.items.filter(dansZone)) : joindre(morceaux.filter((i) => !i.ar));
-  return { valeur: texte.replace(/\s*:\s*$/, '').trim(), morceaux, arabe };
+  return { valeur: texte.replace(/\s*:\s*$/, '').trim(), morceaux, arabe, coupee: false };
 }
 
 // ── 3. Reconnaissance du document ──────────────────────────────────────────────────────────────────────────────────
 export interface Reconnaissance {
-  /** Au moins 3 marqueurs, dont le titre « EXTRAIT RNE » ou le domaine du registre. */
+  /**
+   * Au moins 3 marqueurs indépendants (l'adresse du site et son lien de validation ne comptent que pour un), dont le
+   * titre « EXTRAIT RNE » ou le nom arabe du registre, ET un marqueur arabe : l'extrait officiel est bilingue, une
+   * couche texte sans arabe est celle d'un scanner qui n'a reconnu que les lettres latines.
+   */
   estExtraitRne: boolean;
   /** Type lu dans la parenthèse du titre, normalisé (« SOCIETE ») ; '' s'il est absent. */
   type: string;
@@ -304,9 +342,12 @@ function reconnaitrePages(pages: readonly Page[]): Reconnaissance {
   if (/السجل الوطني للمؤسسات/.test(arabe)) marqueurs.push('nom arabe du registre');
   if (/رقم التثبت/.test(arabe)) marqueurs.push('code de vérification');
   if (/TUNTRUST/.test(latin)) marqueurs.push('cachet TUNTRUST');
-  const fort = marqueurs.includes('titre') || marqueurs.includes('domaine');
+  const a = (marqueur: string): boolean => marqueurs.includes(marqueur);
+  const fort = a('titre') || a('nom arabe du registre');
+  const natif = a('nom arabe du registre') || a('code de vérification');
+  const independants = marqueurs.length - (a('domaine') && a('lien de validation') ? 1 : 0);
   const titre = /EXTRAIT RNE \(([^)]+)\)/.exec(latin);
-  return { estExtraitRne: nbCaracteres >= CARACTERES_MIN && fort && marqueurs.length >= 3, type: titre ? titre[1].trim() : '', marqueurs, nbCaracteres };
+  return { estExtraitRne: nbCaracteres >= CARACTERES_MIN && fort && natif && independants >= 3, type: titre ? titre[1].trim() : '', marqueurs, nbCaracteres };
 }
 
 /** Le document est-il un extrait RNE ? (PDF sans couche texte ou autre document : `estExtraitRne` à false.) */
@@ -325,6 +366,11 @@ export interface Representant {
   nationalite: string;
   /** Nom proposé : seulement s'il est écrit en lettres latines imprimables, sinon ''. */
   nom: string;
+  /**
+   * true : une ligne voisine a été prise pour la suite d'une cellule de ce dirigeant (nom ou qualité sur deux lignes).
+   * C'est une supposition — la ligne était peut-être un autre dirigeant : le représentant proposé est « à relire ».
+   */
+  surPlusieursLignes: boolean;
 }
 
 export interface CaseLue {
@@ -345,6 +391,8 @@ export interface AnalyseRne {
   valeurs: Record<CleRne, string>;
   /** Libellés dont les occurrences ne concordent pas (l'identifiant est répété en tête de chaque page). */
   divergents: CleRne[];
+  /** Libellés dont la valeur a pu être coupée : une ligne non reprise la suit et pourrait en être la fin. */
+  coupees: CleRne[];
   /** Code lu à côté du libellé arabe du code de vérification, sans contrôle de forme ('' s'il est absent). */
   codeVerification: string;
   formeJuridiqueArabe: string;
@@ -391,16 +439,20 @@ export function analyserExtraitRne(pagesTexte: readonly PageTexte[]): AnalyseRne
   // 4a. libellés français et leur valeur
   const libelles: Libelle[] = [];
   for (const page of pages) for (const L of page.lignes) libelles.push(...trouverLibelles(L, page));
+  if (libelles.length > LIBELLES_MAX) return analyserExtraitRne([]); // hors gabarit : rien n'est lu
   for (const lab of libelles) lab.jumeau = jumeauArabe(lab);
+  const lignesDeLibelles = new Set(libelles.map((lab) => lab.ligne));
   const occurrences = new Map<CleRne, string[]>();
+  const coupees = new Set<CleRne>();
   for (const lab of libelles) {
     const { def } = lab;
-    let lue = def.mode === 'empile' ? SANS_VALEUR : valeurDroite(lab);
+    let lue = def.mode === 'empile' ? SANS_VALEUR : valeurDroite(lab, lignesDeLibelles);
     let empilee = false;
     if (def.mode !== 'droite' && !lue.valeur) {
       lue = valeurEmpilee(lab, libelles);
       empilee = true;
     }
+    if (lue.coupee) coupees.add(def.cle);
     const liste = occurrences.get(def.cle);
     if (liste) liste.push(lue.valeur);
     else occurrences.set(def.cle, [lue.valeur]);
@@ -430,7 +482,7 @@ export function analyserExtraitRne(pagesTexte: readonly PageTexte[]): AnalyseRne
       const latins = L.items.filter((i) => !i.ar && !i.blanc);
       if (/registre-entreprises\.tn\/rne-public/i.test(joindre(latins))) {
         consommer(latins);
-        ajouter(L, latins[0].x, `Lien de vérification : ${joindre(latins).replace(/[:\s]+$/, '')}`);
+        ajouter(L, latins[0].x, `Lien de vérification : ${rognerBouts(joindre(latins), DEUX_POINTS_OU_BLANC, false)}`);
         continue;
       }
       const arabes = L.items.filter((i) => i.ar);
@@ -475,12 +527,15 @@ export function analyserExtraitRne(pagesTexte: readonly PageTexte[]): AnalyseRne
     });
     if (!colonnes.length) continue;
     consommer(entete.items);
+    const dirigeants: { lu: Record<'qualite' | 'nationalite' | 'nom', string>; ligne: Ligne; surPlusieursLignes: boolean }[] = [];
     let yPrec = entete.y;
     for (const L of page.lignes) {
       if (L.y >= entete.y - 3) continue;
-      if (yPrec - L.y > 50) break;
+      const ecart = yPrec - L.y;
+      if (ecart > 50) break;
       const pleins = L.items.filter((i) => !i.blanc);
-      if (pleins.some((i) => !i.ar && /^[A-Z ]{8,}$/.test(i.str) && i.x < 20)) break; // titre de la section suivante
+      // titre de la section suivante : capitales (accents et apostrophes compris), contre la marge gauche
+      if (pleins.some((i) => !i.ar && /^[\p{Lu}'’ ]{8,}$/u.test(i.str) && i.x < 20)) break;
       const cellules: Record<'qualite' | 'nationalite' | 'nom', Item[]> = { qualite: [], nationalite: [], nom: [] };
       for (const it of L.items) {
         const milieu = it.x + it.largeur / 2;
@@ -488,25 +543,35 @@ export function analyserExtraitRne(pagesTexte: readonly PageTexte[]): AnalyseRne
         cellules[colonne.cle].push(it);
       }
       const texte = (cellule: Item[]): string => (cellule.some((i) => i.ar) ? reconstruireArabe(cellule) : joindre(cellule));
-      const qualiteLue = texte(cellules.qualite);
-      const nationaliteLue = texte(cellules.nationalite);
-      const nomLu = texte(cellules.nom);
-      if (!nomLu && !qualiteLue) continue;
+      const lu = { qualite: texte(cellules.qualite), nationalite: texte(cellules.nationalite), nom: texte(cellules.nom) };
+      if (!lu.nom && !lu.qualite) continue;
+      // Cellule écrite sur deux lignes : une ligne proche qui n'a pas de nom, ou qui n'a que lui, continue le dirigeant
+      // du dessus — ce n'est pas un autre dirigeant. La fusion reste une supposition : elle est notée sur le dirigeant.
+      const dessus = dirigeants[dirigeants.length - 1];
+      if (dessus && ecart <= 22 && (!lu.nom || (!lu.qualite && !lu.nationalite))) {
+        for (const cle of ['qualite', 'nationalite', 'nom'] as const) dessus.lu[cle] = [dessus.lu[cle], lu[cle]].filter(Boolean).join(' ');
+        dessus.surPlusieursLignes = true;
+      } else {
+        dirigeants.push({ lu, ligne: L, surPlusieursLignes: false });
+      }
+      consommer(L.items);
+      yPrec = L.y;
+    }
+    for (const { lu, ligne, surPlusieursLignes } of dirigeants) {
       const rep: Representant = {
-        qualiteLue, nationaliteLue, nomLu,
-        qualite: qualiteVersFrancais(qualiteLue),
-        nationalite: nationaliteVersFrancais(nationaliteLue),
-        nom: estArabe(nomLu) ? '' : texteChamp(nomLu),
+        qualiteLue: lu.qualite, nationaliteLue: lu.nationalite, nomLu: lu.nom,
+        qualite: qualiteVersFrancais(lu.qualite),
+        nationalite: nationaliteVersFrancais(lu.nationalite),
+        nom: estArabe(lu.nom) ? '' : texteChamp(lu.nom),
+        surPlusieursLignes,
       };
       representants.push(rep);
-      consommer(L.items);
-      const montrer = (lu: string, fr: string): string => fr || (estArabe(lu) ? EN_ARABE : lu);
+      const montrer = (texteLu: string, fr: string): string => fr || (estArabe(texteLu) ? EN_ARABE : texteLu);
       const parties: string[] = [];
-      if (qualiteLue) parties.push(`Qualité : ${montrer(qualiteLue, rep.qualite)}`);
-      if (nationaliteLue) parties.push(`Nationalité : ${montrer(nationaliteLue, rep.nationalite)}`);
-      if (nomLu) parties.push(`Nom et prénom : ${montrer(nomLu, rep.nom)}`);
-      ajouter(L, 0, parties.join(' — '));
-      yPrec = L.y;
+      if (lu.qualite) parties.push(`Qualité : ${montrer(lu.qualite, rep.qualite)}`);
+      if (lu.nationalite) parties.push(`Nationalité : ${montrer(lu.nationalite, rep.nationalite)}`);
+      if (lu.nom) parties.push(`Nom et prénom : ${montrer(lu.nom, rep.nom)}`);
+      ajouter(ligne, 0, parties.join(' — '));
     }
   }
 
@@ -594,7 +659,7 @@ export function analyserExtraitRne(pagesTexte: readonly PageTexte[]): AnalyseRne
   }
 
   return {
-    reconnaissance, valeurs, divergents, codeVerification, formeJuridiqueArabe, representants,
+    reconnaissance, valeurs, divergents, coupees: [...coupees], codeVerification, formeJuridiqueArabe, representants,
     cases: cases ? cases.map(({ page, libelle, cochee }) => ({ page, libelle, cochee })) : null,
     etat, lignes,
   };
@@ -624,42 +689,74 @@ function texteBrut(L: Ligne, consommes: ReadonlySet<Item>): Fragment | null {
 }
 
 // ── 5. Résultat remis à l'écran ────────────────────────────────────────────────────────────────────────────────────
+// Libellés nommés à l'admin quand leur valeur a pu être coupée.
+const LIBELLES_COUPES: Partial<Record<CleRne, string>> = {
+  denomination: 'Dénomination sociale', nomCommercial: 'Nom commercial', enseigne: 'Enseigne',
+  adresseSiege: 'Adresse du siège social', formeJuridique: 'Forme juridique',
+};
 // Qualités qui désignent le représentant légal, quand l'extrait liste plusieurs dirigeants.
 const QUALITES_DE_REPRESENTANT = ['Gérant', 'Cogérant', 'Président directeur général', 'Directeur général', 'Président', 'Titulaire', 'Représentant légal'];
 
 /**
  * Lecture d'un extrait RNE : champs de la fiche d'identité légale, texte reconnu, mises en garde.
- * `null` si le PDF n'a pas de couche texte ou n'est pas reconnu comme un extrait RNE.
+ * `null` si le PDF n'a pas de couche texte, n'est pas reconnu comme un extrait RNE (ou n'en porte aucun libellé), ou
+ * dépasse le gabarit d'un extrait (PAGES_MAX, MORCEAUX_MAX, CARACTERES_MAX).
  */
 export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureTextePdf | null {
   const a = analyserExtraitRne(pagesTexte);
-  if (!a.reconnaissance.estExtraitRne) return null;
+  // un papier du registre qui ne porte aucun libellé de l'extrait (attestation, récépissé) n'est pas un extrait
+  if (!a.reconnaissance.estExtraitRne || !Object.values(a.valeurs).some(Boolean)) return null;
   const v = a.valeurs;
   const champs: Partial<Record<ChampIdentite, ChampLu>> = {};
   const avertissements: string[] = [];
-  // une valeur non imprimable en Windows-1252 (l'arabe) n'est jamais proposée : le champ reste absent
-  const poser = (cle: ChampIdentite, brut: string, note?: string): boolean => {
+
+  // Tous les champs sont « à relire » quand les dispositions lues ne sont pas sûrement celles du document : modèle
+  // d'extrait autre que « société » (le seul connu), ou couche texte qui est peut-être celle d'un scanner.
+  const { type } = a.reconnaissance;
+  const modeleInconnu = type !== 'SOCIETE';
+  const texteDouteux = pagesTexte.some((p) => p.texteDouteux);
+  if (modeleInconnu) {
+    avertissements.push(type
+      ? `Extrait de type « ${type} » : seul le modèle « société » est connu, relisez chaque champ.`
+      : "Type d'extrait non lu dans son titre : seul le modèle « société » est connu, relisez chaque champ.");
+  }
+  if (texteDouteux) avertissements.push('Ce PDF est peut-être un document numérisé : relisez chaque champ.');
+
+  // Pose un champ. Une valeur non imprimable en Windows-1252 (l'arabe) n'est jamais proposée : le champ reste absent.
+  // `ligne` : libellé de l'extrait d'où vient la valeur ; si elle a pu y être coupée (une ligne non reprise la suit),
+  // le champ est à relire et l'admin en est averti, une fois par libellé.
+  const coupeesDites = new Set<CleRne>();
+  const poser = (cle: ChampIdentite, brut: string, options: { note?: string; aRelire?: boolean; ligne?: CleRne } = {}): boolean => {
     const valeur = texteChamp(brut);
     if (!valeur) return false;
-    champs[cle] = note ? { valeur, source: 'pdf', aRelire: false, note } : { valeur, source: 'pdf', aRelire: false };
+    const { ligne } = options;
+    const coupee = ligne !== undefined && a.coupees.includes(ligne);
+    if (ligne !== undefined && coupee && !coupeesDites.has(ligne)) {
+      coupeesDites.add(ligne);
+      avertissements.push(`${LIBELLES_COUPES[ligne] ?? ligne} : la valeur tient sur plusieurs lignes et a pu être coupée, relisez-la.`);
+    }
+    const lu: ChampLu = { valeur, source: 'pdf', aRelire: modeleInconnu || texteDouteux || coupee || options.aRelire === true };
+    if (options.note) lu.note = options.note;
+    champs[cle] = lu;
     return true;
   };
 
-  if (a.reconnaissance.type && a.reconnaissance.type !== 'SOCIETE') {
-    avertissements.push(`Extrait de type « ${a.reconnaissance.type} » : seul le modèle « société » est connu, relisez chaque champ.`);
-  }
-
-  if (!poser('raisonSociale', v.denomination)) {
+  if (!poser('raisonSociale', v.denomination, { ligne: 'denomination' })) {
     avertissements.push(v.denomination
       ? "La dénomination sociale n'est pas en lettres latines sur l'extrait : à saisir à la main."
       : "Dénomination sociale introuvable sur l'extrait : à saisir à la main.");
   }
-  if (!poser('nomCommercial', v.nomCommercial)) poser('nomCommercial', v.enseigne, "repris de la ligne « Enseigne » de l'extrait");
+  if (!poser('nomCommercial', v.nomCommercial, { ligne: 'nomCommercial' })) {
+    poser('nomCommercial', v.enseigne, { ligne: 'enseigne', note: "repris de la ligne « Enseigne » de l'extrait" });
+  }
 
   const forme = formeJuridiqueVersCode(v.formeJuridique, a.formeJuridiqueArabe);
+  const libelleForme = texteChamp(v.formeJuridique);
   if (forme) {
-    const libelle = texteChamp(v.formeJuridique);
-    poser('formeJuridique', forme, forme === 'AUTRE' && libelle ? `libellé de l'extrait : « ${libelle} »` : undefined);
+    poser('formeJuridique', forme, { ligne: 'formeJuridique', note: forme === 'AUTRE' && libelleForme ? `libellé de l'extrait : « ${libelleForme} »` : undefined });
+  } else if (v.formeJuridique || a.formeJuridiqueArabe) {
+    // libellé présent mais hors des tables : « Autre » ne serait pas une lecture, le champ n'est pas proposé
+    avertissements.push(`Forme juridique non reconnue ${libelleForme ? `(« ${libelleForme} »)` : "sur l'extrait"} : à choisir à la main.`);
   } else {
     avertissements.push("Forme juridique introuvable sur l'extrait : à choisir à la main.");
   }
@@ -667,7 +764,7 @@ export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureText
   if (a.divergents.includes('identifiantUnique')) {
     avertissements.push("L'identifiant unique n'est pas le même partout sur l'extrait : il n'est pas proposé, vérifiez le document.");
   } else if (RE_IDENTIFIANT.test(v.identifiantUnique)) {
-    poser('matriculeFiscal', v.identifiantUnique, NOTE_MATRICULE_RACINE);
+    poser('matriculeFiscal', v.identifiantUnique, { note: NOTE_MATRICULE_RACINE });
     poser('rne', v.identifiantUnique);
   } else {
     avertissements.push(v.identifiantUnique
@@ -678,10 +775,11 @@ export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureText
   if (v.adresseSiege) {
     const adresse = decouperAdresse(v.adresseSiege);
     if (adresse.codePostal && adresse.ville) {
-      poser('adresse', adresse.rue);
-      poser('ville', `${adresse.codePostal} ${adresse.ville}`);
+      poser('adresse', adresse.rue, { ligne: 'adresseSiege' });
+      poser('ville', `${adresse.codePostal} ${adresse.ville}`, { ligne: 'adresseSiege' });
     } else {
-      poser('adresse', v.adresseSiege);
+      // pas de code postal sûr : la ligne n'est pas découpée, la ville reste à saisir
+      poser('adresse', v.adresseSiege, { ligne: 'adresseSiege', aRelire: true, note: NOTE_ADRESSE_ENTIERE });
     }
   } else {
     avertissements.push("Adresse du siège social introuvable sur l'extrait : à saisir à la main.");
@@ -689,8 +787,11 @@ export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureText
 
   const representant = a.representants.find((r) => QUALITES_DE_REPRESENTANT.includes(r.qualite)) ?? a.representants[0];
   if (representant) {
-    poser('representantNom', representant.nom);
-    if (!poser('representantQualite', representant.qualite) && representant.qualiteLue) {
+    // Un dirigeant complété par une ligne voisine : la fusion est une supposition (la ligne était peut-être un autre
+    // dirigeant, et le choix du représentant en dépend) — le nom et la qualité proposés sont à relire.
+    const aRelire = a.representants.some((r) => r.surPlusieursLignes);
+    poser('representantNom', representant.nom, { aRelire });
+    if (!poser('representantQualite', representant.qualite, { aRelire }) && representant.qualiteLue) {
       avertissements.push("Qualité du représentant non reconnue sur l'extrait : à saisir à la main.");
     }
     if (a.representants.length > 1) avertissements.push("L'extrait liste plusieurs dirigeants : vérifiez le représentant proposé.");

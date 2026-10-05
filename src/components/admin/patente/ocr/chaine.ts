@@ -2,17 +2,23 @@
 // Sans DOM ni tesseract : l'image (`Source`) et la reconnaissance (`Moteur`) sont fournies par l'appelant — un canvas et
 // tesseract.js dans le navigateur (lireOcr.ts). Chaîne validée par l'essai du 04/10/2026 :
 //   passe 0  redressement (l'analyse de mise en page donne l'angle, la source est tournée) ;
-//   passe 1  page entière en gris normalisé, puis type du document et extraction géométrique ;
+//   passe 1  page entière en gris normalisé ; une photo couchée d'un quart de tour s'arrête là, sans aucun champ ;
+//            sinon type du document et extraction géométrique ;
 //   carte d'identification fiscale : passe « bande du matricule » — 24 lectures (2 binarisations × 4 échelles ×
-//            3 cadrages), glyphe par glyphe avec l'alphabet attendu, puis vote par segment ;
+//            3 cadrages), glyphe par glyphe avec l'alphabet attendu, puis vote : identifiant et lettre-clé sur les
+//            lectures dont la lettre est cohérente avec les 7 chiffres, fin du matricule sur toutes les lectures
+//            complètes ; fin indécise → l'identifiant seul ;
 //   carte auto-entrepreneur (texte blanc sur bleu) : deuxième passe sur le canal rouge inversé, pour combler un vide
 //            et signaler les désaccords.
+// Les textes rendus (avertissements, notes) sont affichés tels quels à l'admin : phrases courtes, sans jargon.
 import { texteChamp } from '../types.ts';
 import type { ChampIdentite, ChampLu, ResultatCouche, SuiviLecture } from '../types.ts';
-import { cadreBande, construireRangees, extraireCarteAutoEntrepreneur, extraireCarteFiscale, ligneLue, reconnaitreDocument } from './extraction.ts';
+import {
+  cadreBande, construireRangees, extraireCarteAutoEntrepreneur, extraireCarteFiscale, ligneLue, photoCouchee, reconnaitreDocument,
+} from './extraction.ts';
 import type { MotOcr, Zone } from './extraction.ts';
-import { ALPHABET_CLE, CHIFFRES, CODES_CATEGORIE, CODES_TVA, voterMatricule } from './matricule.ts';
-import type { VoteMatricule } from './matricule.ts';
+import { ALPHABET_CLE, CHIFFRES, CODES_CATEGORIE, CODES_TVA, cleCoherente, voterMatricule } from './matricule.ts';
+import type { CandidatMatricule, VoteMatricule } from './matricule.ts';
 import { binariser, couperEnJetons, decouperGlyphes, etirer, gris, inverser, nettoyerBande, seuilOtsu } from './pixels.ts';
 import type { Cadre, Glyphes, Pixels } from './pixels.ts';
 
@@ -38,6 +44,12 @@ export interface Moteur {
 
 export const ETAPE = 'Reconnaissance des caractères…';
 const CONSEIL = "Déposez plutôt l'original, à plat, sans ombre, plus de 1500 px de large.";
+export const PHOTO_COUCHEE = 'La photo semble couchée : redressez-la, puis recommencez.';
+// Notes affichées sous le champ : la lettre-clé est contrôlée par le calcul, la fin du matricule ne l'est pas.
+const NOTE_CLE = 'Lettre-clé cohérente avec les 7 chiffres.';
+const noteMatricule = (matricule: string): string => `Lettre-clé cohérente avec les 7 chiffres ; relisez la fin (${matricule.slice(8)}).`;
+// Fin indécise : seuls les 8 premiers caractères sont posés. « /A/M/000 » montre la forme à compléter, pas une lecture.
+const NOTE_FIN_NON_LUE = "Fin du matricule (/A/M/000) non lue : complétez-la d'après la carte.";
 
 const COTE_NORMAL = 2000; // plus grand côté de la page lue : une photo de 4000 px est réduite, une capture de 900 px agrandie
 const ANGLE_MIN = 0.005; // en radians (~0,3°) : en dessous, on ne tourne pas
@@ -66,7 +78,7 @@ async function normaliser(source: Source): Promise<PageLue> {
   return { rgba, grise: etirer(gris(rgba)), echelle };
 }
 
-/** Une lecture de la bande, valeur par valeur : « 1234567A/A/M/000 », ou null si les quatre valeurs ne sont pas isolées. */
+/** Une lecture de la bande, valeur par valeur : « 1234567R/A/M/000 », ou null si les quatre valeurs ne sont pas isolées. */
 async function lireBande(moteur: Moteur, bande: Glyphes): Promise<string | null> {
   if (bande.glyphes.length < 4) return null;
   // Ordre imprimé, de gauche à droite : établissement | catégorie | TVA | matricule.
@@ -83,7 +95,7 @@ async function lireBande(moteur: Moteur, bande: Glyphes): Promise<string | null>
     categorie: await code(categorie, CODES_CATEGORIE),
     tva: await code(tva, CODES_TVA),
     identifiant: matricule.length > 1 ? await lire(matricule.slice(0, -1), 'ligne', CHIFFRES) : '',
-    cle: await lire(matricule.slice(-1), 'caractere', ALPHABET_CLE), // lettres seules : jamais « corrigée », toujours votée
+    cle: await lire(matricule.slice(-1), 'caractere', ALPHABET_CLE), // lettres seules : jamais « corrigée », contrôlée par le calcul
   };
   return `${lu.identifiant}${lu.cle}/${lu.tva}/${lu.categorie}/${lu.etablissement}`;
 }
@@ -108,20 +120,20 @@ async function lireBandes(source: Source, moteur: Moteur, zone: Zone, avance: (p
   return lectures;
 }
 
-const pourcent = (part: number): string => `${Math.round(part * 100)} %`;
-// « 1234567A/A/M/000 » → ordre imprimé sur la carte : « 000 M A 1234567A ».
+// « 1234567R/A/M/000 » → ordre imprimé sur la carte : « 000 M A 1234567R ».
 const ordreImprime = (matricule: string): string => matricule.split('/').reverse().join(' ');
 
-function noteVote(vote: VoteMatricule): string {
-  const autre = vote.candidats.find((c) => c.valeur !== vote.matricule);
-  return `Voté sur ${vote.completes} lectures (accord ${pourcent(vote.accord)})${autre ? ` ; autre lecture : ${autre.valeur}` : ''}. Relisez la lettre-clé.`;
-}
-
-function matriculeIndecis(vote: VoteMatricule, lecturePage: string | undefined): string {
-  const candidats = vote.candidats.slice(0, 3).map((c) => `${c.valeur} (${c.voix} lecture${c.voix > 1 ? 's' : ''})`);
-  if (lecturePage && !vote.candidats.some((c) => c.valeur === lecturePage)) candidats.push(`${lecturePage} (page entière)`);
-  if (!candidats.length) return 'Matricule fiscal illisible (le filet du tableau barre les valeurs) : saisissez-le à la main, en relisant la lettre-clé.';
-  return `Matricule fiscal indécis, non rempli. Lectures : ${candidats.join(', ')}. Relisez-le sur le document, surtout la lettre-clé.`;
+// Matricule non rempli : les lectures sont citées (trois au plus), celles dont la lettre-clé est cohérente d'abord.
+// `lecturePage` : la rangée lue avec le reste de la page — peu fiable, une lecture de plus, jamais une voix.
+function matriculeNonRempli(vote: VoteMatricule, lecturePage: string | undefined): string {
+  const lectures: CandidatMatricule[] = [...vote.candidats];
+  if (lecturePage && !lectures.some((c) => c.valeur === lecturePage)) lectures.push({ valeur: lecturePage, voix: 1, cleCoherente: cleCoherente(lecturePage) });
+  if (!lectures.length) return 'Matricule fiscal illisible : saisissez-le à la main, en relisant la lettre-clé.';
+  const citer = (liste: CandidatMatricule[]): string => liste.slice(0, 3).map((c) => `${c.valeur} (${c.voix} lecture${c.voix > 1 ? 's' : ''})`).join(', ');
+  const coherentes = lectures.filter((c) => c.cleCoherente);
+  return coherentes.length
+    ? `Matricule fiscal indécis, non rempli. Lectures : ${citer(coherentes)}. Relisez-le sur le document.`
+    : `Matricule fiscal non rempli : la lettre-clé lue ne correspond pas aux 7 chiffres. Lectures : ${citer(lectures)}. Relisez-le sur le document.`;
 }
 
 // Ce qui diffère entre deux lectures d'une même valeur (les mots communs du début et de la fin sont retirés).
@@ -161,9 +173,15 @@ export async function lireDocument(source: Source, moteur: Moteur, suivi: SuiviL
   suivi(ETAPE, 0.55);
   const largeur = page.grise.width;
   const { rangees, hauteurMediane } = construireRangees(mots);
+  let lignes = rangees.map(ligneLue);
+  // Photo couchée d'un quart de tour : le titre se lit encore, mais les rangées se mélangent et les champs sortiraient
+  // faux. On s'arrête avant d'extraire : aucun champ, le texte lu tel quel, et la marche à suivre.
+  if (photoCouchee(mots)) {
+    suivi(ETAPE, 1);
+    return { document: 'inconnu', champs, lignes: lignes.filter(Boolean), avertissements: [PHOTO_COUCHEE] };
+  }
   const texte = mots.map((m) => m.t).join(' ');
   const document = reconnaitreDocument(texte);
-  let lignes = rangees.map(ligneLue);
 
   if (document === 'carte_fiscale') {
     const lu = extraireCarteFiscale(rangees, largeur);
@@ -171,17 +189,21 @@ export async function lireDocument(source: Source, moteur: Moteur, suivi: SuiviL
     poser('adresse', lu.adresse?.rue);
     poser('ville', [lu.adresse?.codePostal, lu.adresse?.ville].filter(Boolean).join(' '));
     // La passe 1 ne lit jamais bien la rangée du matricule (le filet du tableau barre le haut des valeurs) : on relit
-    // la bande dans l'image d'origine, et l'on ne remplit le champ que si les lectures s'accordent.
+    // la bande dans l'image d'origine, et l'on ne remplit le champ que si assez de lectures à lettre-clé cohérente
+    // s'accordent. La fin du matricule (/TVA/catégorie/établissement) n'a pas de clé : la note demande de la relire ;
+    // si les lectures ne s'accordent pas sur elle, seul l'identifiant est posé et la note demande de la compléter.
     const zone = cadreBande(rangees, hauteurMediane, largeur, page.echelle, droite);
     const vote = voterMatricule(zone ? await lireBandes(droite, moteur, zone, (part) => suivi(ETAPE, 0.55 + 0.45 * part)) : []);
-    if (vote.matricule) poser('matriculeFiscal', vote.matricule, noteVote(vote));
-    else avertissements.push(matriculeIndecis(vote, lu.matriculePage));
-    // Texte affiché : la rangée du matricule lue par la passe 1 est fausse, on montre à sa place la lecture votée.
+    if (vote.matricule) poser('matriculeFiscal', vote.matricule, noteMatricule(vote.matricule));
+    else if (vote.identifiant) poser('matriculeFiscal', vote.identifiant, NOTE_FIN_NON_LUE);
+    else avertissements.push(matriculeNonRempli(vote, lu.matriculePage));
+    // Texte affiché : la rangée du matricule lue par la passe 1 est fausse, on montre à sa place la lecture retenue.
     const tableau = lu.tableau;
+    const retenu = vote.matricule ?? vote.identifiant;
     if (tableau) {
       lignes = rangees.flatMap((r, i) => {
         if (i > tableau.entete && i < tableau.nom) return [];
-        return i === tableau.entete && vote.matricule ? [ligneLue(r), ordreImprime(vote.matricule)] : [ligneLue(r)];
+        return i === tableau.entete && retenu ? [ligneLue(r), ordreImprime(retenu)] : [ligneLue(r)];
       });
     }
   } else if (document === 'carte_auto_entrepreneur') {
@@ -204,13 +226,17 @@ export async function lireDocument(source: Source, moteur: Moteur, suivi: SuiviL
     poser('raisonSociale', titulaire, noteTitulaire);
     poser('representantNom', titulaire, noteTitulaire);
     poser('formeJuridique', 'AUTO_ENTREPRENEUR');
-    // Identifiant : la lettre-clé se confond à basse résolution (A/B) et les deux formes sont valides.
+    // Identifiant : la lettre-clé se confond à basse résolution (A/B). Seule une lecture dont la lettre est cohérente
+    // avec les 7 chiffres est proposée ; une lecture incohérente est seulement citée.
     const identifiant = l1.identifiant || l2.identifiant;
+    const incoherents = [...new Set([l1.identifiantIncoherent, l2.identifiantIncoherent])].filter((v): v is string => Boolean(v));
     if (differe('identifiant')) {
-      avertissements.push(`Identifiant indécis, non rempli. Lectures : ${l1.identifiant}, ${l2.identifiant}. Relisez-le sur la carte, surtout la lettre-clé.`);
+      avertissements.push(`Identifiant indécis, non rempli. Lectures : ${l1.identifiant}, ${l2.identifiant}. Relisez-le sur la carte.`);
     } else if (identifiant) {
-      poser('matriculeFiscal', identifiant, 'Relisez la lettre-clé.');
-      poser('rne', identifiant, 'Relisez la lettre-clé.');
+      poser('matriculeFiscal', identifiant, NOTE_CLE);
+      poser('rne', identifiant, NOTE_CLE);
+    } else if (incoherents.length) {
+      avertissements.push(`Identifiant non rempli : la lettre-clé lue ne correspond pas aux 7 chiffres. Lecture${incoherents.length > 1 ? 's' : ''} : ${incoherents.join(', ')}. Relisez-le sur la carte.`);
     } else {
       avertissements.push('Identifiant unique illisible : saisissez-le à la main, en relisant la lettre-clé.');
     }

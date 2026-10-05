@@ -5,13 +5,16 @@
 import { useState } from 'react';
 import { FORMES_JURIDIQUES, formeIndividuelle, type IdentiteLegale } from '../../utils/identiteLegale';
 import { controlerMatriculeFiscal } from './matriculeFiscal';
-import LecturePatente, { PastilleLu } from './patente/LecturePatente';
+import LecturePatente, { NoteLu, PastilleLu } from './patente/LecturePatente';
+import { valeurRecopiee } from './patente/fusion';
 import type { ChampIdentite, ChampLu } from './patente/types';
 
 interface Props {
   value: IdentiteLegale;
   onChange: (v: IdentiteLegale) => void;
   disabled?: boolean;
+  /** Lecture de la patente en cours (début true, fin false). */
+  onLecture?: (enCours: boolean) => void;
 }
 
 const labelStyle: React.CSSProperties = {
@@ -25,7 +28,7 @@ const inputStyle: React.CSSProperties = {
 const aide: React.CSSProperties = { fontSize: 11, marginTop: 4, lineHeight: 1.4 };
 const grille: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 };
 
-export default function ClientIdentiteForm({ value, onChange, disabled }: Props) {
+export default function ClientIdentiteForm({ value, onChange, disabled, onLecture }: Props) {
   const [enseigne, setEnseigne] = useState(!!value.nomCommercial);
   // Lecture de la patente : d'où vient chaque valeur lue (pastille), et dernier champ où le curseur s'est posé.
   const [lus, setLus] = useState<Partial<Record<ChampIdentite, ChampLu>>>({});
@@ -43,38 +46,57 @@ export default function ClientIdentiteForm({ value, onChange, disabled }: Props)
     const qualite = !value.representantQualite || anciennes.includes(value.representantQualite)
       ? proposee : value.representantQualite;
     onChange({ ...value, formeJuridique: forme, representantQualite: qualite });
-    setLus((l) => { const reste = { ...l }; delete reste.formeJuridique; return reste; });
+    // La forme n'est plus « lue » ; la qualité non plus si elle vient d'être réécrite.
+    setLus((l) => {
+      const reste = { ...l };
+      delete reste.formeJuridique;
+      if (reste.representantQualite && reste.representantQualite.valeur !== qualite) delete reste.representantQualite;
+      return reste;
+    });
   };
 
   // Champs lus sur la patente : écrits dans la fiche (le panneau n'envoie que des champs vides, ou un remplacement
-  // demandé). Une forme lue propose la qualité comme un choix à la main ; un nom commercial lu ouvre son champ.
+  // demandé). Une forme lue propose la qualité comme un choix à la main (sauf qualité lue dans le même geste, qui
+  // gagne) ; un nom commercial lu ouvre son champ.
   const remplir = (champs: Partial<IdentiteLegale>, nouveaux: Partial<Record<ChampIdentite, ChampLu>>) => {
     const suivant = { ...value, ...champs };
+    const lusSuivants = { ...lus, ...nouveaux };
     if (champs.matriculeFiscal) suivant.matriculeFiscal = controlerMatriculeFiscal(champs.matriculeFiscal).valeur;
-    if (champs.formeJuridique && !suivant.representantQualite) {
+    const proposees = FORMES_JURIDIQUES.map((x) => x.qualite);
+    if (champs.formeJuridique && !champs.representantQualite && (!value.representantQualite || proposees.includes(value.representantQualite))) {
       suivant.representantQualite = FORMES_JURIDIQUES.find((x) => x.value === champs.formeJuridique)?.qualite ?? '';
+      delete lusSuivants.representantQualite; // qualité proposée d'après la forme, pas lue
     }
     if (champs.nomCommercial) setEnseigne(true);
     onChange(suivant);
-    setLus((l) => ({ ...l, ...nouveaux }));
+    setLus(lusSuivants);
+  };
+
+  // Recopie d'une ligne du texte lu dans le champ actif : libellé retiré, matricule remis dans l'ordre de saisie.
+  const recopier = (ligne: string) => {
+    if (!champActif) return;
+    const valeur = valeurRecopiee(champActif, ligne);
+    set(champActif, champActif === 'matriculeFiscal' ? controlerMatriculeFiscal(valeur).valeur : valeur);
   };
 
   const input = (k: keyof IdentiteLegale, placeholder = '', extra: React.InputHTMLAttributes<HTMLInputElement> = {}) => (
-    <input
-      value={value[k] ?? ''}
-      onChange={(e) => set(k, e.target.value)}
-      onFocus={() => setChampActif(k)}
-      placeholder={placeholder}
-      disabled={disabled}
-      style={inputStyle}
-      {...extra}
-    />
+    <>
+      <input
+        value={value[k] ?? ''}
+        onChange={(e) => set(k, e.target.value)}
+        onFocus={() => setChampActif(k)}
+        placeholder={placeholder}
+        disabled={disabled}
+        style={inputStyle}
+        {...extra}
+      />
+      <NoteLu lu={lus[k]} />
+    </>
   );
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <LecturePatente valeur={value} disabled={disabled} champActif={champActif} onRemplir={remplir}
-        onRecopier={(ligne) => { if (champActif) set(champActif, ligne); }} />
+      <LecturePatente valeur={value} disabled={disabled} champActif={champActif} onRemplir={remplir} onRecopier={recopier} onLecture={onLecture} />
       <div style={grille}>
         <div>
           <label style={labelStyle}>{formeIndividuelle(value.formeJuridique) ? 'Nom du titulaire' : 'Raison sociale'}<PastilleLu lu={lus.raisonSociale} /></label>
@@ -91,6 +113,7 @@ export default function ClientIdentiteForm({ value, onChange, disabled }: Props)
             <option value="">— Choisir —</option>
             {FORMES_JURIDIQUES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
           </select>
+          <NoteLu lu={lus.formeJuridique} />
         </div>
       </div>
 
@@ -99,7 +122,13 @@ export default function ClientIdentiteForm({ value, onChange, disabled }: Props)
           type="checkbox"
           checked={enseigne}
           disabled={disabled}
-          onChange={(e) => { setEnseigne(e.target.checked); if (!e.target.checked) set('nomCommercial', ''); }}
+          onChange={(e) => {
+            setEnseigne(e.target.checked);
+            if (!e.target.checked) {
+              set('nomCommercial', '');
+              if (champActif === 'nomCommercial') setChampActif(null); // champ masqué : plus de recopie vers lui
+            }
+          }}
         />
         {"L'enseigne (nom commercial) diffère de la raison sociale"}
       </label>

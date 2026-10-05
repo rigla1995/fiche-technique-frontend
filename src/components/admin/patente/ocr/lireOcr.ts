@@ -2,7 +2,8 @@
 // Reconnaissance de caractères par tesseract.js (modèle « fra » seul : « ara » coûte 1,6 Mo et 2,5 à 3 fois le temps,
 // sans rien apporter — l'arabe n'est pas imprimable sur les factures). Tout est servi par l'application sous /ocr/ :
 // rien n'est demandé ni envoyé à un tiers. Ce fichier ne porte que le canvas et le worker ; la chaîne de lecture est
-// dans chaine.ts, les fonctions pures dans pixels.ts, extraction.ts et matricule.ts.
+// dans chaine.ts, les fonctions pures dans pixels.ts, extraction.ts et matricule.ts, le cycle de vie du worker (arrêt
+// garanti, délai de 90 s) dans travailleur.ts.
 import { createWorker } from 'tesseract.js';
 import type { PSM, Worker as TravailleurOcr } from 'tesseract.js';
 import type { ResultatCouche, SuiviLecture } from '../types.ts';
@@ -11,9 +12,16 @@ import type { Moteur, Source } from './chaine.ts';
 import { motsDePage } from './extraction.ts';
 import { versRgba } from './pixels.ts';
 import type { Pixels } from './pixels.ts';
+import { avecTravailleur, noterWorker } from './travailleur.ts';
+import type { Arretable } from './travailleur.ts';
 
 // Fichiers copiés depuis node_modules par vite.config.ts (versions figées par package-lock.json).
-const FICHIERS = { workerPath: '/ocr/worker.min.js', corePath: '/ocr/core/', langPath: '/ocr/lang/', gzip: true, workerBlobURL: false };
+// `cacheMethod: 'none'` : par défaut, tesseract.js garde le modèle de langue dans IndexedDB sous une clé fixe, sans
+// jamais le revalider. Ici rien n'est conservé par l'application : le modèle est tenu par le cache HTTP du navigateur,
+// que le serveur revalide à chaque usage.
+const FICHIERS = {
+  workerPath: '/ocr/worker.min.js', corePath: '/ocr/core/', langPath: '/ocr/lang/', gzip: true, workerBlobURL: false, cacheMethod: 'none',
+};
 
 function toile(largeur: number, hauteur: number): { canvas: HTMLCanvasElement; ctx: CanvasRenderingContext2D } {
   const canvas = document.createElement('canvas');
@@ -81,32 +89,43 @@ function moteurTesseract(travailleur: TravailleurOcr): Moteur {
   };
 }
 
-// Le premier usage télécharge le cœur et le modèle (~2 Mo) : leur avancement occupe le premier dixième du suivi.
-// Une panne après le chargement du cœur (modèle introuvable, initialisation refusée) n'est signalée par tesseract.js
-// qu'à `errorHandler` — sa promesse ne se termine jamais : on la fait donc échouer nous-mêmes. (Dans ce seul cas,
-// tesseract.js ne rend pas son worker : il reste inactif jusqu'à la fermeture de la page.)
-function creerTravailleur(suivi: SuiviLecture): Promise<TravailleurOcr> {
-  return new Promise((resoudre, rejeter) => {
-    createWorker('fra', 1, {
-      ...FICHIERS,
-      logger: (m) => { if (m.status === 'loading language traineddata') suivi(ETAPE, 0.1 * m.progress); },
-      errorHandler: (e) => rejeter(new Error(String(e))),
-    }).then(resoudre, (e) => rejeter(e instanceof Error ? e : new Error(String(e))));
-  });
+// Le premier usage télécharge le cœur et le modèle (~2 Mo), les suivants les reprennent du cache HTTP : leur
+// avancement occupe le premier dixième du suivi.
+// Pannes de chargement, telles que tesseract.js les signale :
+//   cœur introuvable            sa promesse échoue ;
+//   modèle introuvable, initialisation refusée   `errorHandler` seulement — sa promesse ne se termine jamais ;
+//   cœur qui ne démarre pas, réseau figé         rien du tout : seul le délai de la lecture y met fin.
+// Dans les trois cas tesseract.js ne rend pas son worker : on note donc le Worker qu'il ouvre (`noterWorker`), pour
+// pouvoir l'arrêter quand même.
+function ouvrirTravailleur(suivi: SuiviLecture): { pret: Promise<TravailleurOcr>; ouvert: Arretable | null } {
+  const enErreur = (raison: unknown): Error => (raison instanceof Error ? raison : new Error(String(raison)));
+  let signaler: (raison: unknown) => void = () => {};
+  const panne = new Promise<never>((_, rejeter) => { signaler = (raison) => rejeter(enErreur(raison)); });
+  const { rendu, ouvert } = noterWorker(globalThis, () => createWorker('fra', 1, {
+    ...FICHIERS,
+    logger: (m) => { if (m.status === 'loading language traineddata') suivi(ETAPE, 0.1 * m.progress); },
+    errorHandler: signaler,
+  }));
+  return { pret: Promise.race([rendu.catch((raison) => { throw enErreur(raison); }), panne]), ouvert };
 }
 
 /**
  * Lit par reconnaissance de caractères un document dessiné sur fond blanc (image déposée, ou page 1 d'un PDF sans
  * texte) : carte d'identification fiscale ou carte auto-entrepreneur. Tous les champs rendus sont « à relire ».
  * Un document illisible ne lève pas d'exception : `document: 'inconnu'`, les lignes lues et un avertissement.
+ * Une panne de chargement ou une lecture de plus de 90 s lève une exception ; le worker est arrêté dans tous les cas.
  * `suivi` reçoit un avancement de 0 à 1.
  */
 export async function lireOcr(canvas: HTMLCanvasElement, suivi: SuiviLecture = () => {}): Promise<ResultatCouche> {
-  suivi(ETAPE, 0);
-  const travailleur = await creerTravailleur(suivi);
+  let finie = false;
+  const suiviVivant: SuiviLecture = (etape, avancement) => { if (!finie) suivi(etape, avancement); };
+  suiviVivant(ETAPE, 0);
   try {
-    return await lireDocument(sourceCanvas(canvas), moteurTesseract(travailleur), suivi);
+    return await avecTravailleur(
+      () => ouvrirTravailleur(suiviVivant),
+      (travailleur) => lireDocument(sourceCanvas(canvas), moteurTesseract(travailleur), suiviVivant),
+    );
   } finally {
-    await travailleur.terminate().catch(() => {}); // toujours libérer le worker, même en erreur
+    finie = true; // une lecture abandonnée (délai dépassé) ne fait plus bouger le suivi
   }
 }

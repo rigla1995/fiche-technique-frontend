@@ -10,7 +10,7 @@
 // Les dates de l'en-tête sont des nombres de jours depuis le 01/01/2000 (« FFFF » : pas de date).
 // Structure et étiquettes DÉDUITES de deux documents réels (un extrait RNE, une carte d'auto-entrepreneur) : elles
 // ne viennent d'aucune norme publiée. Dans le code, les noms, adresses et qualités sont en arabe seulement.
-import type { ChampIdentite, ChampLu, LectureCode2d, TypeDocument } from '../types.ts';
+import type { Cachet, ChampIdentite, ChampLu, LectureCode2d, TypeDocument } from '../types.ts';
 import { texteChamp } from '../types.ts';
 import type { MotifSignature } from './signature.ts';
 import { CLES_PUBLIQUES, verifierSignature } from './signature.ts';
@@ -116,13 +116,17 @@ const LIBELLES: Readonly<Record<string, string>> = {
 const QUALITES: Readonly<Record<string, string>> = { 'وكيل': 'Gérant' };
 
 const IDENTIFIANT_UNIQUE = /^\d{7}[A-Z]$/;
+// Extrait RNE : l'identifiant unique n'est que le début du matricule fiscal. Sur une carte d'auto-entrepreneur,
+// l'identifiant EST le matricule : pas de note.
 const NOTE_MATRICULE = "racine seulement : le complément (/A/M/000) figure sur la carte d'identification fiscale";
 
-const AVERTISSEMENTS: Readonly<Record<Exclude<MotifSignature, 'certificat_inconnu'>, string>> = {
-  verification_indisponible: "La signature du code 2D n'a pas pu être vérifiée dans ce navigateur.",
-  signature_absente: 'Code 2D sans signature : ses données ne sont pas reprises.',
-  signature_illisible: 'Signature du code 2D illisible : ses données ne sont pas reprises.',
-  signature_fausse: 'Signature du code 2D invalide : ses données ne sont pas reprises.',
+// Raison d'un cachet qui n'est pas « valide », telle que l'écran l'affiche (Cachet.motif) : quelques mots, sans jargon.
+const MOTIFS: Readonly<Record<MotifSignature, string>> = {
+  certificat_inconnu: 'certificat inconnu',
+  verification_indisponible: 'vérification impossible sur ce navigateur',
+  signature_absente: 'signature absente',
+  signature_illisible: 'signature illisible',
+  signature_fausse: 'signature incorrecte',
 };
 
 /** « aaaa-mm-jj » ou « jj-mm-aaaa » → « jj/mm/aaaa » ; toute autre forme reste telle quelle. */
@@ -133,13 +137,16 @@ const dateFr = (v: string): string => {
   return fr ? `${fr[1]}/${fr[2]}/${fr[3]}` : v;
 };
 
-const champ = (valeur: string, note?: string): ChampLu =>
-  note ? { valeur, source: 'cachet', aRelire: false, note } : { valeur, source: 'cachet', aRelire: false };
-
 /**
  * Texte lu dans le DataMatrix → cachet, champs de la fiche, lignes lisibles, avertissements.
  * null si le texte n'est pas un code 2D-DOC. `cles` : table des clés publiques (par défaut la table intégrée).
- * Une signature « invalide » ne propose AUCUN champ : un code modifié ne remplit pas la fiche. Ne lève rien.
+ * Ne lève rien. Selon l'état du cachet :
+ *   - « invalide » : RIEN n'est repris du code — ni champ, ni ligne, ni type de document, ni avertissement (l'écran
+ *     en affiche un seul, d'après l'état du cachet ; la raison est dans `cachet.motif`) ;
+ *   - « non_verifiable » : les champs sont proposés, tous « à relire » ; la raison est dans `cachet.motif`, pas dans
+ *     les avertissements (un seul message à l'écran) ;
+ *   - « valide » : les champs sont sûrs pour les deux types de document connus (H1, DP) ; pour un autre type, ils
+ *     sont « à relire », le sens des étiquettes n'étant établi que pour ces deux-là.
  */
 export async function interpreterCode2d(
   texte: string,
@@ -154,33 +161,40 @@ export async function interpreterCode2d(
   // Valeur imprimable d'une étiquette ('' si elle est absente ou en arabe) : toute valeur passe par texteChamp.
   const valeurDe = (etiquette: string): string => texteChamp(donnees.find((d) => d.etiquette === etiquette)?.valeur);
 
-  const avertissements: string[] = [];
-  if (motif === 'certificat_inconnu') {
-    avertissements.push(`Certificat ${entete.autorite}/${entete.certificat} inconnu : la signature du code 2D n'a pas pu être vérifiée.`);
-  } else if (motif) {
-    avertissements.push(AVERTISSEMENTS[motif]);
-  }
-  if (!analyse.ok) avertissements.push("Le contenu du code 2D n'a pas pu être lu.");
-
   const identifiantLu = valeurDe(ETIQUETTE_IDENTIFIANT).toUpperCase();
   const identifiant = IDENTIFIANT_UNIQUE.test(identifiantLu) ? identifiantLu : null;
+  const cachet: Cachet = {
+    etat,
+    autorite: entete.autorite,
+    certificat: entete.certificat,
+    typeDocument: entete.typeDocument,
+    emisLe: entete.dateEmission ? dateFr(entete.dateEmission) : null,
+    identifiant,
+  };
+  if (motif) cachet.motif = MOTIFS[motif];
+  if (etat === 'invalide') return { document: 'inconnu', champs: {}, lignes: [], avertissements: [], cachet };
+
   const document: TypeDocument = TYPES_DOCUMENT[entete.typeDocument] ?? 'inconnu';
+  const aRelire = etat !== 'valide' || document === 'inconnu';
+  const champ = (valeur: string, note?: string): ChampLu =>
+    note ? { valeur, source: 'cachet', aRelire, note } : { valeur, source: 'cachet', aRelire };
   const qualiteArabe = donnees.find((d) => d.etiquette === ETIQUETTE_QUALITE)?.valeur.normalize('NFC').replace(/\s+/g, ' ').trim();
   const qualite = texteChamp(qualiteArabe && Object.hasOwn(QUALITES, qualiteArabe) ? QUALITES[qualiteArabe] : '');
 
+  const avertissements: string[] = [];
+  if (!analyse.ok) avertissements.push("Le contenu du cachet électronique n'a pas pu être lu.");
+
   const champs: Partial<Record<ChampIdentite, ChampLu>> = {};
-  if (etat !== 'invalide') {
-    if (identifiant) {
-      champs.matriculeFiscal = champ(identifiant, NOTE_MATRICULE);
-      champs.rne = champ(identifiant);
-    } else if (analyse.ok && document !== 'inconnu') {
-      avertissements.push("Le code 2D ne donne pas d'identifiant unique.");
-    }
-    const denomination = valeurDe(ETIQUETTE_DENOMINATION);
-    if (denomination) champs.raisonSociale = champ(denomination);
-    if (document === 'carte_auto_entrepreneur') champs.formeJuridique = champ('AUTO_ENTREPRENEUR');
-    if (qualite) champs.representantQualite = champ(qualite);
+  if (identifiant) {
+    champs.matriculeFiscal = champ(identifiant, document === 'extrait_rne' ? NOTE_MATRICULE : undefined);
+    champs.rne = champ(identifiant);
+  } else if (analyse.ok && document !== 'inconnu') {
+    avertissements.push("Le cachet électronique ne donne pas d'identifiant unique.");
   }
+  const denomination = valeurDe(ETIQUETTE_DENOMINATION);
+  if (denomination) champs.raisonSociale = champ(denomination);
+  if (document === 'carte_auto_entrepreneur') champs.formeJuridique = champ('AUTO_ENTREPRENEUR');
+  if (qualite) champs.representantQualite = champ(qualite);
 
   // Contenu lisible du code : une ligne par donnée en lettres latines, dans l'ordre du code.
   const lignes: string[] = [];
@@ -195,18 +209,5 @@ export async function interpreterCode2d(
     lignes.push(`${libelle} : ${ETIQUETTES_DATE.includes(etiquette) ? dateFr(lisible) : lisible}`);
   }
 
-  return {
-    document,
-    champs,
-    lignes,
-    avertissements,
-    cachet: {
-      etat,
-      autorite: entete.autorite,
-      certificat: entete.certificat,
-      typeDocument: entete.typeDocument,
-      emisLe: entete.dateEmission ? dateFr(entete.dateEmission) : null,
-      identifiant,
-    },
-  };
+  return { document, champs, lignes, avertissements, cachet };
 }
