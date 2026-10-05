@@ -2,9 +2,10 @@
 // Formulaire SÉPARÉ de celui du profil, avec son propre bouton (l'envoi du profil avance la mise en route).
 // Le client modifie l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture
 // (renseigné par l'équipe LabFlow). PUT /api/entreprise/identite ne reçoit que les champs modifiés.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
+import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { champsModifies, formeIndividuelle, identiteDe, libelleForme, type IdentiteLegale } from '../../utils/identiteLegale';
 
 type ChampClient = 'adresse' | 'ville' | 'representantNom' | 'representantQualite';
@@ -13,7 +14,11 @@ const vide = (v: string | null | undefined) => !(v ?? '').trim();
 
 export default function MonEntrepriseSection() {
   const { canWrite } = useAuth();
+  const voc = useVocabulaire();
+  const section = useRef<HTMLFormElement>(null);
   const [initiale, setInitiale] = useState<IdentiteLegale | null>(null);
+  // Nombre de factures émises avant la copie figée de l'identité : elles lisent encore l'adresse de la fiche.
+  const [facturesNonFigees, setFacturesNonFigees] = useState(0);
   const [valeur, setValeur] = useState<IdentiteLegale | null>(null);
   const [saving, setSaving] = useState(false);
   const [succes, setSucces] = useState(false);
@@ -28,10 +33,17 @@ export default function MonEntrepriseSection() {
         const identite = identiteDe(data?.identite);
         setInitiale(identite);
         setValeur(identite);
+        setFacturesNonFigees(Number.isInteger(data?.facturesNonFigees) ? data.facturesNonFigees : 0);
       })
       .catch(() => { /* réseau coupé : pas de section, le reste du profil reste utilisable */ });
     return () => { actif = false; };
   }, []);
+
+  // Arrivée par le lien du bandeau « identité incomplète » : la section est au bas du profil.
+  const chargee = !!initiale;
+  useEffect(() => {
+    if (chargee && window.location.hash === '#mon-entreprise') section.current?.scrollIntoView({ block: 'start' });
+  }, [chargee]);
 
   if (!initiale || !valeur) return null;
 
@@ -41,8 +53,9 @@ export default function MonEntrepriseSection() {
   // Ce que seule l'équipe LabFlow renseigne (d'après la patente) / ce que le client renseigne lui-même.
   const manqueLabFlow = vide(initiale.raisonSociale) || vide(initiale.matriculeFiscal);
   const manqueClient = vide(initiale.adresse) || vide(initiale.ville);
-  // Adresse déjà renseignée puis modifiée : elle est lue telle quelle par les factures existantes.
-  const adresseDejaImprimee = !vide(initiale.adresse) && (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
+  // Une facture émise garde l'adresse du jour de son émission (copie figée, étape 8) : rien à dire. Seules les
+  // factures d'avant la copie lisent encore l'adresse de la fiche : on le dit quand l'adresse change.
+  const anciennesSuivent = facturesNonFigees > 0 && (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
 
   const set = (k: ChampClient, v: string) => { setValeur({ ...valeur, [k]: v }); setSucces(false); setErreur(null); };
 
@@ -86,7 +99,7 @@ export default function MonEntrepriseSection() {
   );
 
   return (
-    <form onSubmit={enregistrer} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginTop: 28 }}>
+    <form ref={section} id="mon-entreprise" onSubmit={enregistrer} style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)', marginTop: 28 }}>
       <div style={{ background: 'linear-gradient(135deg,#fffbeb,#fef3c7)', padding: '14px 20px', borderBottom: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: '1rem' }}>🏢</span>
         <span style={{ fontWeight: 800, fontSize: '0.88rem', color: '#92400e' }}>Mon entreprise</span>
@@ -123,10 +136,11 @@ export default function MonEntrepriseSection() {
           </div>
         </div>
 
-        {adresseDejaImprimee && (
+        {anciennesSuivent && (
           <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', lineHeight: 1.5 }}>
-            ⚠️ Vos factures déjà émises porteront aussi la nouvelle adresse si vous les téléchargez de nouveau.
-            La ville n'y est pas encore imprimée : si elle figure dans votre adresse, laissez-la.
+            {facturesNonFigees === 1
+              ? <>⚠️ 1 facture ancienne émise à {voc.votre('acheteur', true)} suivra ce changement d'adresse si vous la téléchargez de nouveau.</>
+              : <>⚠️ {facturesNonFigees} factures anciennes émises à {voc.votre('acheteur', true)} suivront ce changement d'adresse si vous les téléchargez de nouveau.</>}
           </div>
         )}
         {succes && (
