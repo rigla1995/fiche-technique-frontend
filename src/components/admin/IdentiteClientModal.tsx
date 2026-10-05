@@ -28,8 +28,9 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
   const [lectureEnCours, setLectureEnCours] = useState(false); // lecture de la patente : pas d'enregistrement avant sa fin
   const [erreur, setErreur] = useState<string | null>(null);
   const [avertissements, setAvertissements] = useState<string[] | null>(null);
-  // Adresse déjà renseignée puis modifiée : elle est lue telle quelle par les factures existantes.
-  const adresseDejaImprimee = !!(initiale.adresse ?? '').trim() && (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
+  // Adresse modifiée : les factures de vente d'avant la copie figée (étape 8) et les factures d'approvisionnement
+  // la lisent encore sur la fiche.
+  const adresseDejaImprimee = (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
 
   const enregistrer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,14 +84,16 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
           <form onSubmit={enregistrer} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
             <div className="modal-body">
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 14px', lineHeight: 1.55 }}>
-                Telle qu'elle figure sur la patente. Elle figurera sur les factures.
+                Telle qu'elle figure sur la patente. Elle figurera sur les prochaines factures de vente et
+                d'abonnement ; celles déjà émises ne changent pas.
                 Un champ peut rester vide : la fiche reste marquée « Identité à compléter ».
               </p>
               <ClientIdentiteForm value={valeur} onChange={(v) => { setValeur(v); setErreur(null); }} disabled={saving} onLecture={setLectureEnCours} />
               {adresseDejaImprimee && (
                 <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', marginTop: 14, lineHeight: 1.5 }}>
-                  ⚠️ L'adresse actuelle est déjà imprimée sur les factures de ce client : une facture déjà émise,
-                  téléchargée de nouveau, portera la nouvelle adresse.
+                  ⚠️ Les factures de vente d'avant la mise à jour d'octobre 2026 et les factures
+                  d'approvisionnement lisent encore l'adresse de la fiche : téléchargées de nouveau, elles suivront
+                  ce changement.
                 </div>
               )}
               {erreur && (

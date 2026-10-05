@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1231 unité(s), 59 fichier(s).
+# 1233 unité(s), 60 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -22,25 +22,25 @@ src/components/client/AbonnementGerantPage.tsx
     miroir : 👤
 
 src/components/client/AcheteursGuard.tsx
-  l. 49
+  l. 53
     défaut : Espace Acheteurs non autorisé
     miroir : Zone Clientes non autorisée
-  l. 52
+  l. 56
     défaut : Cet espace n'est pas activé pour votre compte gérant. Demandez au titulaire du compte de vous accorder l'accès à la base acheteurs (un labo affecté est également requis).
     miroir : Cet espace n'est pas activé pour votre compte animatrice. Demandez au titulaire du compte de vous accorder l'accès à la base des clientes (une usine affectée est également requise).
-  l. 89
+  l. 105
     défaut : 🤝
     miroir : 🤝
-  l. 90
+  l. 106
     défaut : Module Acheteurs
     miroir : Module Abr-Clientes
-  l. 91
+  l. 107
     défaut : Gérez votre carnet d'acheteurs B2B et vendez les articles et produits composés de votre stock labo.
     miroir : Gérez votre carnet de clientes B2B et vendez les denrées et inventions composées de votre armoire de l'usine.
-  l. 100
+  l. 116
     défaut : Module Acheteurs non activé
     miroir : Module Abr-Clientes non activé
-  l. 103
+  l. 119
     défaut : Ce module est disponible en option. Envoyez une demande d'activation à l'administrateur et votre espace acheteurs sera activé sous 24h.
     miroir : Ce module est disponible en option. Envoyez une demande d'activation à l'administrateur et votre zone clientes sera activée sous 24h.
 
@@ -1933,6 +1933,14 @@ src/components/client/MonAbonnementPage.tsx
   l. 415
     défaut : gérant
     miroir : animatrice
+
+src/components/client/MonEntrepriseSection.tsx
+  l. 142
+    défaut : ⚠️ 1 facture ancienne émise à vos acheteurs suivra ce changement d'adresse si vous la téléchargez de nouveau.
+    miroir : ⚠️ 1 facture ancienne émise à vos clientes suivra ce changement d'adresse si vous la téléchargez de nouveau.
+  l. 143
+    défaut : ⚠️ ⟦·⟧ factures anciennes émises à vos acheteurs suivront ce changement d'adresse si vous les téléchargez de nouveau.
+    miroir : ⚠️ ⟦·⟧ factures anciennes émises à vos clientes suivront ce changement d'adresse si vous les téléchargez de nouveau.
 
 src/components/client/OnboardingChecklist.tsx
   l. 119

@@ -1713,15 +1713,114 @@
   {
     "fichier": "src/components/client/MonEntrepriseSection.tsx",
     "avant": null,
-    "apres": "⚠️ Vos factures déjà émises porteront aussi la nouvelle adresse si vous les téléchargez de nouveau. La ville n'y est pas encore imprimée : si elle figure dans votre adresse, laissez-la.",
+    "apres": "⟦?#e5e7eb|linear-gradient(135deg,#92400e,#b45309)⟧",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "#fffbeb",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "1px solid #fde68a",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "#92400e",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "10px 14px",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "0.84rem",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "⚠️ Identité de votre entreprise incomplète : une facture émise maintenant restera sans toutes ses mentions légales. ⟦?⟦<Link>⟧|Prévenez le titulaire du compte.⟧",
     "type": "ajoute",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : texte NOUVEAU et visible de la section « Mon entreprise » du profil (le client complète l'adresse, la ville et le représentant ; le reste de l'identité légale est en lecture). Aucun terme du lexique : identique dans tous les domaines."
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : texte NOUVEAU et visible — bandeau « identité incomplète » affiché au-dessus des pages Acheteurs quand l'identité légale du compte est incomplète (spec docs/lot-3-spec.md §6). Aucun terme du lexique : identique dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "client",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "/client/profile#mon-entreprise",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "Voir « Mon entreprise »",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : texte NOUVEAU et visible — bandeau « identité incomplète » affiché au-dessus des pages Acheteurs quand l'identité légale du compte est incomplète (spec docs/lot-3-spec.md §6). Aucun terme du lexique : identique dans tous les domaines."
+  },
+  {
+    "fichier": "src/components/client/AcheteursGuard.tsx",
+    "avant": null,
+    "apres": "page-content",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
   },
   {
     "fichier": "src/components/client/MonEntrepriseSection.tsx",
     "avant": null,
-    "apres": "⟦?#e5e7eb|linear-gradient(135deg,#92400e,#b45309)⟧",
+    "apres": "#mon-entreprise",
     "type": "discriminant",
-    "justification": "Lot 3, étape 6 — « Mon entreprise » côté client (découpage validé par le client le 04/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, chemin d'API, nom de champ, rôle)."
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "start",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "mon-entreprise",
+    "type": "discriminant",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : chaîne technique jamais lue comme un texte (valeur CSS, classe, chemin et ancre de la section, identifiant HTML, rôle comparé, option de défilement)."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "⚠️ 1 facture ancienne émise à vos acheteurs suivra ce changement d'adresse si vous la téléchargez de nouveau.",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : texte NOUVEAU et visible — message de la section « Mon entreprise » quand l'adresse change sur un compte qui a des factures émises avant la copie figée (elles lisent encore la fiche). Le seul terme du lexique y passe par le moteur (voc.votre('acheteur', true))."
+  },
+  {
+    "fichier": "src/components/client/MonEntrepriseSection.tsx",
+    "avant": null,
+    "apres": "⚠️ ⟦·⟧ factures anciennes émises à vos acheteurs suivront ce changement d'adresse si vous les téléchargez de nouveau.",
+    "type": "ajoute",
+    "justification": "Lot 3, étape 8 — factures : identité figée (découpage et décisions du client du 05/10/2026) : texte NOUVEAU et visible — message de la section « Mon entreprise » quand l'adresse change sur un compte qui a des factures émises avant la copie figée (elles lisent encore la fiche). Le seul terme du lexique y passe par le moteur (voc.votre('acheteur', true))."
   }
 ]
