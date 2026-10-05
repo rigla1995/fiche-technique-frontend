@@ -238,6 +238,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const [identite, setIdentite] = useState<IdentiteLegale>({ ...IDENTITE_VIDE, ville: initialValues?.ville || null });
   const [identiteAvert, setIdentiteAvert] = useState<string[]>([]);
   const [controleEnCours, setControleEnCours] = useState(false);
+  const [lectureEnCours, setLectureEnCours] = useState(false); // lecture de la patente : pas de « Suivant » avant sa fin
 
   // Step 2 — domaine + composition par composant (les compteurs sont dérivés)
   const [domaines, setDomaines] = useState<DomaineOption[]>([]);
@@ -347,7 +348,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const montantObValid = montantOnboarding !== '' && Number.isFinite(montantOb) && montantOb >= 0;
   // Domaine choisi + composition valide (miroir client des règles ; le serveur reste juge) + onboarding saisi
   const step2Valid = domaineId != null && compositionErrors.length === 0 && montantObValid;
-  const nextDisabled = (step === 0 && (!step1Valid || controleEnCours)) || (step === 1 && !step2Valid);
+  const nextDisabled = (step === 0 && (!step1Valid || controleEnCours || lectureEnCours)) || (step === 1 && !step2Valid);
 
   const next = async () => {
     setError(null);
@@ -504,11 +505,11 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
         <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1 }}>
 
           {/* ── STEP 1: Informations ── */}
-          {step === 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+          {/* Gardée montée (masquée aux étapes suivantes) : le compte rendu de la lecture de la patente et ses pastilles sont encore là au retour. */}
+          <div style={{ display: step === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 16 }}>
               {/* Lot 3, étape 2 : identité légale d'abord (facultative), puis le contact */}
               <div style={sectionTitre}>🏢 Identité légale <span style={sectionAide}>facultative — telle qu'écrite sur la patente</span></div>
-              <ClientIdentiteForm value={identite} onChange={(v) => { setIdentite(v); setIdentiteAvert([]); setError(null); }} disabled={controleEnCours} />
+              <ClientIdentiteForm value={identite} onChange={(v) => { setIdentite(v); setIdentiteAvert([]); setError(null); }} disabled={controleEnCours} onLecture={setLectureEnCours} />
               {/* L'avertissement « sans lettre de clé » est déjà affiché sous le champ du matricule : pas en double */}
               {identiteAvert.filter((a) => a !== controlerMatriculeFiscal(identite.matriculeFiscal).avertissement)
                 .map((a) => <div key={a} style={bannerWarn}>⚠️ {a}</div>)}
@@ -563,8 +564,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                   )}
                 </div>
               </div>
-            </div>
-          )}
+          </div>
 
           {/* ── STEP 2: Configuration ── */}
           {step === 1 && (
