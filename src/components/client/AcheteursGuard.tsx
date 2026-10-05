@@ -19,6 +19,9 @@ export default function AcheteursGuard() {
     && !(user.gerantAccesAcheteurs && (user.gerantLaboIds?.length ?? 0) > 0);
   const [status, setStatus] = useState<'loading' | 'active' | 'inactive'>('loading');
   const [hasPending, setHasPending] = useState(false);
+  // Identité légale incomplète : une facture émise garde l'identité du jour de son émission, donc reste sans
+  // toutes ses mentions légales (lot 3, étape 8).
+  const [identiteIncomplete, setIdentiteIncomplete] = useState(false);
   const [requesting, setRequesting] = useState(false);
   const [requested, setRequested] = useState(false);
   const [error, setError] = useState('');
@@ -34,6 +37,7 @@ export default function AcheteursGuard() {
         .some(d => d.typeDemande === 'activer_module_acheteurs' && d.statut === 'en_attente');
       setStatus(actif ? 'active' : 'inactive');
       setHasPending(pending);
+      setIdentiteIncomplete(pe.data?.identiteComplete === false);
     }).catch(() => setStatus('inactive'));
   }, [gerantBlocked]);
 
@@ -76,7 +80,19 @@ export default function AcheteursGuard() {
   }
 
   if (status === 'active') {
-    return <Outlet />;
+    return (
+      <>
+        {identiteIncomplete && (
+          <div className="page-content" style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 10, padding: '10px 14px', fontSize: '0.84rem', lineHeight: 1.5, marginBottom: 16 }}>
+            ⚠️ Identité de votre entreprise incomplète : une facture émise maintenant restera sans toutes ses mentions légales.{' '}
+            {user?.role === 'client'
+              ? <Link to="/client/profile#mon-entreprise" style={{ color: '#92400e', fontWeight: 700 }}>Voir « Mon entreprise »</Link>
+              : 'Prévenez le titulaire du compte.'}
+          </div>
+        )}
+        <Outlet />
+      </>
+    );
   }
 
   return (
