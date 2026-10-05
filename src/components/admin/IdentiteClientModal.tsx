@@ -25,6 +25,7 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
   const initiale = identiteDe(client.entreprise);
   const [valeur, setValeur] = useState<IdentiteLegale>(initiale);
   const [saving, setSaving] = useState(false);
+  const [lectureEnCours, setLectureEnCours] = useState(false); // lecture de la patente : pas d'enregistrement avant sa fin
   const [erreur, setErreur] = useState<string | null>(null);
   const [avertissements, setAvertissements] = useState<string[] | null>(null);
   // Adresse déjà renseignée puis modifiée : elle est lue telle quelle par les factures existantes.
@@ -32,7 +33,7 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
 
   const enregistrer = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (saving) return;
+    if (saving || lectureEnCours) return;
     const corps = champsModifies(valeur, initiale);
     if (Object.keys(corps).length === 0) { onClose(); return; }
     setSaving(true);
@@ -85,7 +86,7 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
                 Telle qu'elle figure sur la patente. Elle figurera sur les factures.
                 Un champ peut rester vide : la fiche reste marquée « Identité à compléter ».
               </p>
-              <ClientIdentiteForm value={valeur} onChange={(v) => { setValeur(v); setErreur(null); }} disabled={saving} />
+              <ClientIdentiteForm value={valeur} onChange={(v) => { setValeur(v); setErreur(null); }} disabled={saving} onLecture={setLectureEnCours} />
               {adresseDejaImprimee && (
                 <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', marginTop: 14, lineHeight: 1.5 }}>
                   ⚠️ L'adresse actuelle est déjà imprimée sur les factures de ce client : une facture déjà émise,
@@ -100,7 +101,7 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
             </div>
             <div className="modal-footer">
               <button type="button" onClick={onClose} style={{ padding: '9px 18px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
-              <button type="submit" disabled={saving}
+              <button type="submit" disabled={saving || lectureEnCours}
                 style={{ padding: '9px 20px', borderRadius: 9, border: 'none', background: saving ? '#fcd34d' : 'linear-gradient(135deg,#b45309,#f59e0b)', color: '#fff', fontSize: '0.82rem', fontWeight: 700, cursor: saving ? 'default' : 'pointer' }}>
                 {saving ? 'Enregistrement…' : '✓ Enregistrer'}
               </button>
