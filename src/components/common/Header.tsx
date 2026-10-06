@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState, useRef, useEffect } from 'react';
 import LabFlowLogo from './LabFlowLogo';
 import AssistantWidget from './AssistantWidget';
+import { LienComptabilite } from '../../compta/LiensEspace';
 
 // Barre du haut. Sur téléphone (≤ 768 px, index.css) : le bouton de menu ouvre le menu de gauche, replié à cette
 // largeur ; le logo est réduit, le nom et la déconnexion passent dans le menu (Sidebar) pour que la barre tienne sans
@@ -86,6 +87,8 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
 
       {/* Right */}
       <div className="header-right">
+        {/* LabFlow Compta (S3a) : passage vers la comptabilité, sans ressaisie */}
+        <LienComptabilite />
         {/* User chip */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{

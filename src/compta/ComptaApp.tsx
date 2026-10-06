@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { MANUEL_COMPTA } from './manuelCompta';
+import { estTitulaireCabinet, useAccesCompta } from './accesCompta';
 
 // ── Coquille de LabFlow Compta (SPEC-SOCLE D11, étape S1) ─────────────────────────────────────────────────────────
 // Ses propres routes, chargées à la demande : la connexion, l'activation et le mot de passe oublié reprennent les
@@ -18,6 +19,9 @@ const ComptaCabinet = lazy(() => import('./pages/ComptaCabinet'));
 const ComptaAbonnement = lazy(() => import('./pages/ComptaAbonnement'));
 // Étape S2c : la comptabilité d'un client LabFlow qui a le module Comptabilité
 const ComptaMaComptabilite = lazy(() => import('./pages/ComptaMaComptabilite'));
+// Étape S3a : passage sans ressaisie entre les deux adresses, et écran de choix après la connexion
+const PassagePage = lazy(() => import('./pages/PassagePage'));
+const ChoixEspace = lazy(() => import('./pages/ChoixEspace'));
 // Le manuel de LabFlow Compta s'affiche dans la page du manuel de LabFlow (même présentation), réglée sur le produit.
 const GuidePage = lazy(() => import('../components/client/GuidePage'));
 const InvitePage = lazy(() => import('../components/auth/InvitePage'));
@@ -30,10 +34,12 @@ export const Chargement = () => (
   </div>
 );
 
-// Pages du cabinet : réservées à son titulaire (rôle « comptable ») ; tout autre compte revient à l'accueil.
+// Pages du cabinet : réservées à son titulaire (S3a : vérifié sur ses accès, plus sur le rôle « comptable ») ; tout
+// autre compte revient à l'accueil.
 function ReserveCabinet({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth();
-  if (user && user.role !== 'comptable') return <Navigate to="/" replace />;
+  const { acces, erreur } = useAccesCompta();
+  if (!acces && !erreur) return <div className="loading-text">Chargement…</div>;
+  if (!estTitulaireCabinet(acces)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -59,6 +65,8 @@ export default function ComptaApp() {
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
             <Route path="/error/:code" element={<ComptaErreur />} />
+            <Route path="/passage" element={<PassagePage />} />
+            <Route path="/choix" element={<ChoixEspace />} />
             <Route element={<LayoutCompta />}>
               <Route path="/" element={<ComptaAccueil />} />
               <Route path="/manuel" element={<GuidePage manuel={MANUEL_COMPTA} />} />

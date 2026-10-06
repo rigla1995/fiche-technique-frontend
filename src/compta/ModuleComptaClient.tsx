@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
-import { adresseCompta } from './produit';
+import { allerVers } from './passage';
 
 // LabFlow Compta, étape S2c : carte « Module Comptabilité » de « Mon abonnement ». Cachée tant que le module n'est pas
 // proposé (tarif à 0) ; sinon son prix et « Demander l'activation » (validée par l'équipe LabFlow), ou, une fois actif,
@@ -40,6 +40,18 @@ export default function ModuleComptaClient() {
   const [etat, setEtat] = useState<EtatModule | null>(null);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
+  const [ouverture, setOuverture] = useState(false);
+  const ouvrir = async () => {
+    if (ouverture) return;
+    setOuverture(true);
+    setErreur('');
+    try {
+      await allerVers('compta');
+    } catch {
+      setErreur('Ouverture impossible pour le moment, réessayez.');
+      setOuverture(false);
+    }
+  };
 
   // Rechargée au retour sur l'onglet, comme le reste de « Mon abonnement » (ex. demande validée entre-temps).
   useEffect(() => {
@@ -92,11 +104,12 @@ export default function ModuleComptaClient() {
             <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
               Actif depuis le {fmtDate(etat.activeLe)} · facturé avec votre abonnement à partir de {fmtMois(etat.factureAPartirDe)}.
             </div>
-            <a href={adresseCompta()} target="_blank" rel="noopener noreferrer" aria-label="Ouvrir LabFlow Compta (nouvel onglet)"
-              style={{ alignSelf: 'flex-start', textDecoration: 'none', padding: '9px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#312e81,#4338ca)', color: '#fff', fontSize: '0.82rem', fontWeight: 700 }}>
-              Ouvrir LabFlow Compta →
-            </a>
-            <div style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Connectez-vous avec la même adresse email et le même mot de passe.</div>
+            {/* S3a : passage sans ressaisie du mot de passe (même onglet, comme le bouton « Comptabilité » de la barre). */}
+            <button type="button" onClick={ouvrir} disabled={ouverture}
+              style={{ alignSelf: 'flex-start', border: 'none', cursor: ouverture ? 'default' : 'pointer', opacity: ouverture ? 0.7 : 1, padding: '9px 16px', borderRadius: 8, background: 'linear-gradient(135deg,#312e81,#4338ca)', color: '#fff', fontSize: '0.82rem', fontWeight: 700 }}>
+              {ouverture ? 'Ouverture…' : 'Ouvrir LabFlow Compta →'}
+            </button>
+            {erreur && <div style={{ color: '#dc2626', fontSize: '0.78rem' }}>{erreur}</div>}
           </>
         ) : etat.demandeEnCours ? (
           <div style={{ background: '#fef9c3', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#854d0e', fontWeight: 600 }}>

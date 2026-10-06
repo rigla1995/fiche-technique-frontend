@@ -12,6 +12,8 @@ interface AuthContextType {
   token: string | null;
   canWrite: boolean;
   login: (email: string, password: string) => Promise<User>;
+  /** LabFlow Compta (S3a) : session reçue d'un passage entre les deux adresses (même réponse qu'une connexion). */
+  ouvrirSession: (data: { token: string; user: User }) => User;
   logout: () => void;
   updateUser: (patch: Partial<User>) => void;
   advanceOnboarding: (step: number) => Promise<void>;
@@ -81,12 +83,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(storedToken);
       dernierAuthMeRef.current = Date.now();
       // Always refresh from server so onboardingStep is never stale
+      // LabFlow Compta (S3a) : une réponse qui arrive après qu'une autre session a été ouverte (page d'arrivée d'un
+      // passage) est ignorée — elle ne doit ni effacer ni écraser la nouvelle session.
+      const toujoursLaMeme = () => localStorage.getItem('token') === storedToken;
       api.get('/auth/me')
         .then(({ data }) => {
+          if (!toujoursLaMeme()) return;
           appliquerUser(data);
           localStorage.setItem('user', JSON.stringify(data));
         })
         .catch(() => {
+          if (!toujoursLaMeme()) return;
           setToken(null);
           localStorage.removeItem('token');
           localStorage.removeItem('user');
@@ -138,8 +145,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, [token, appliquerUser]);
 
-  const login = async (email: string, password: string): Promise<User> => {
-    const { data } = await api.post('/auth/login', { email, password });
+  const ouvrirSession = useCallback((data: { token: string; user: User }): User => {
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(data.user));
     dernierAuthMeRef.current = Date.now();
@@ -147,7 +153,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(data.token);
       appliquerUser(data.user);
     });
-    return data.user as User;
+    return data.user;
+  }, [appliquerUser]);
+
+  const login = async (email: string, password: string): Promise<User> => {
+    const { data } = await api.post('/auth/login', { email, password });
+    return ouvrirSession(data as { token: string; user: User });
   };
 
   const logout = () => {
@@ -173,7 +184,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canWrite = user !== null && (user.role === 'super_admin' || user.role === 'boss' || (user.modeCompte ?? 'actif') === 'actif');
 
   return (
-    <AuthContext.Provider value={{ user, token, canWrite, login, logout, updateUser, advanceOnboarding, isLoading }}>
+    <AuthContext.Provider value={{ user, token, canWrite, login, ouvrirSession, logout, updateUser, advanceOnboarding, isLoading }}>
       <VocabContext.Provider value={voc}>
         {children}
       </VocabContext.Provider>
