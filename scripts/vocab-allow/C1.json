@@ -40,5 +40,75 @@
     "apres": "⟦?⟦·⟧|LabFlow-Manuel-utilisation.pdf⟧",
     "type": "discriminant",
     "justification": "Chantier Achats & Comptabilité, présentation de LabFlow Compta (demande du client du 06/10/2026 : même affichage du manuel que LabFlow) : nom du fichier PDF du manuel, choisi par le produit. Le texte de LabFlow est inchangé quand la page sert le manuel de LabFlow ; l'autre branche est le texte de LabFlow Compta, passé par la coquille Compta (src/compta/manuelCompta.ts, vocabulaire comptable fixe, hors périmètre). PDF de LabFlow identique (scripts/controle-manuel-pdf.mjs)."
+  },
+  {
+    "fichier": "src/App.tsx",
+    "avant": null,
+    "apres": "comptable",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : code du rôle « comptable » (LabFlow Compta) : un comptable connecté sur app. est renvoyé vers compta. ; jamais affiché."
+  },
+  {
+    "fichier": "src/App.tsx",
+    "avant": null,
+    "apres": "/admin/comptables",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : route de la page admin des cabinets comptables ; jamais affichée."
+  },
+  {
+    "fichier": "src/components/common/Layout.tsx",
+    "avant": "/⟦?admin|⟦?portail|client⟧⟧",
+    "apres": "/⟦?admin|⟦?portail|⟦?|client⟧⟧⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : maison du rôle « comptable » = « / » (aiguillage vers compta.), sinon boucle sur /client ; chemin, jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Layout.tsx",
+    "avant": null,
+    "apres": "comptable",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : code du rôle « comptable » (LabFlow Compta) : un comptable connecté sur app. est renvoyé vers compta. ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "/admin/comptables",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : entrée « Comptables » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/comptables, page sous <Layout requireRole=\"super_admin\"> dont l'API est gardée par requireSuperAdmin (src/compta/adminRoutes.js du serveur) ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "sidebar-link ⟦?active|⟧",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : entrée « Comptables » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/comptables, page sous <Layout requireRole=\"super_admin\"> dont l'API est gardée par requireSuperAdmin (src/compta/adminRoutes.js du serveur) ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "link-icon",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : entrée « Comptables » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/comptables, page sous <Layout requireRole=\"super_admin\"> dont l'API est gardée par requireSuperAdmin (src/compta/adminRoutes.js du serveur) ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "📒",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : entrée « Comptables » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/comptables, page sous <Layout requireRole=\"super_admin\"> dont l'API est gardée par requireSuperAdmin (src/compta/adminRoutes.js du serveur) ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "link-label",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : entrée « Comptables » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/comptables, page sous <Layout requireRole=\"super_admin\"> dont l'API est gardée par requireSuperAdmin (src/compta/adminRoutes.js du serveur) ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "Comptables",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : entrée « Comptables » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/comptables, page sous <Layout requireRole=\"super_admin\"> dont l'API est gardée par requireSuperAdmin (src/compta/adminRoutes.js du serveur) ; jamais lue par un client."
   }
 ]

@@ -11,8 +11,9 @@ interface LayoutProps {
 }
 
 // Espace « maison » de chaque rôle (cible de redirection quand l'accès est refusé).
+// Comptable (LabFlow Compta, S2b) : « / », où l'aiguillage d'accueil le renvoie vers compta. (sinon boucle sur /client).
 const homeOf = (role: string) =>
-  role === 'super_admin' || role === 'boss' ? '/admin' : role === 'acheteur' ? '/portail' : '/client';
+  role === 'super_admin' || role === 'boss' ? '/admin' : role === 'acheteur' ? '/portail' : role === 'comptable' ? '/' : '/client';
 
 export default function Layout({ requireRole }: LayoutProps) {
   const { user, isLoading } = useAuth();

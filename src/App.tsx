@@ -7,6 +7,7 @@ import Layout from './components/common/Layout';
 import VenteGuard from './components/client/VenteGuard';
 import AcheteursGuard from './components/client/AcheteursGuard';
 import FormuleGuard from './components/client/FormuleGuard';
+import VersCompta from './compta/VersCompta';
 import './i18n';
 import './index.css';
 
@@ -51,6 +52,8 @@ const HistoriquePaiementsAdmin = lazy(() => import('./components/admin/Historiqu
 const HistoriquePromotionsAdmin = lazy(() => import('./components/admin/HistoriquePromotionsAdmin'));
 const TarifsConfig = lazy(() => import('./components/admin/TarifsConfig'));
 const DemandesManagement = lazy(() => import('./components/admin/DemandesManagement'));
+// LabFlow Compta (étape S2b) : cabinets comptables
+const ComptablesManagement = lazy(() => import('./components/admin/ComptablesManagement'));
 const AdminRapportsPage = lazy(() => import('./components/admin/AdminRapportsPage'));
 const AdminKnowledgeBasePage = lazy(() => import('./components/admin/AdminKnowledgeBasePage'));
 const AdminManuelPage = lazy(() => import('./components/admin/AdminManuelPage'));
@@ -122,6 +125,8 @@ function RootRedirect() {
   const { user, isLoading } = useAuth();
   if (isLoading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
+  // LabFlow Compta (étape S2b) : un comptable n'utilise que compta. — il y est renvoyé.
+  if (user.role === 'comptable') return <VersCompta />;
   if (user.role === 'super_admin' || user.role === 'boss') return <Navigate to="/admin" replace />;
   // Acheteur : son portail dédié
   if (user.role === 'acheteur') return <Navigate to="/portail" replace />;
@@ -164,6 +169,7 @@ export default function App() {
             <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
             <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
             <Route path="/admin/clients" element={<ClientsManagement />} />
+            <Route path="/admin/comptables" element={<ComptablesManagement />} />
             <Route path="/admin/rapports" element={<AdminRapportsPage />} />
             <Route path="/admin/domaines" element={<AdminDomainesPage />} />
             <Route path="/admin/domaines/:id" element={<AdminDomaineEditPage />} />
