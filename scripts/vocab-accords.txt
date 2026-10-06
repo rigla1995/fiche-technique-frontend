@@ -3827,6 +3827,6 @@ src/i18n/locales/fr.json
     miroir : Local
 
 src/utils/manuelPdf.ts
-  l. 84
-    défaut : Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur de stock, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.
-    miroir : Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur d'armoire, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.
+  l. 92
+    défaut : ⟦?⟦·⟧|Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur de stock, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.⟧
+    miroir : ⟦?⟦·⟧|Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur d'armoire, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.⟧

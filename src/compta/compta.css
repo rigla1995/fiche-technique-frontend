@@ -1,0 +1,13 @@
+/* LabFlow Compta : la coquille reprend les classes de LabFlow (src/index.css : .header, .sidebar, .main-content…).
+   Ajouts pour le téléphone (≤ 768 px, où le menu de gauche est replié comme dans LabFlow) : le bouton du menu ; la barre
+   du haut allégée (logo réduit, nom et déconnexion déplacés dans le menu) pour tenir sans défilement horizontal. */
+.menu-toggle.compta-menu-toggle { display: none; }
+.compta-mobile-seul { display: none; }
+@media (max-width: 768px) {
+  .menu-toggle.compta-menu-toggle { display: flex; }
+  .header.compta-entete { padding: 0 12px; }
+  .compta-entete .header-left { gap: 8px; }
+  .compta-logo svg { height: 28px !important; }
+  .compta-bureau-seul { display: none !important; }
+  .compta-mobile-seul { display: block; }
+}

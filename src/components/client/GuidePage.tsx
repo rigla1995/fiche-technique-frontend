@@ -4,6 +4,7 @@ import api from '../../api/client';
 import MarkdownView from '../common/MarkdownView';
 import OnboardingChecklist from './OnboardingChecklist';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import type { TextesManuelPdf } from '../../utils/manuelPdf';
 // jsPDF (~113 Ko gzip) ne se charge qu'au clic « Export PDF » (import dynamique).
 
 /**
@@ -22,7 +23,17 @@ export interface ManuelSection {
   motsCles: string | null;
 }
 
-export default function GuidePage() {
+/**
+ * Manuel d'un autre produit servi par la même page (LabFlow Compta, src/compta/manuelCompta.ts) : ses fiches
+ * (GET /api/manuel?produit=…), son sous-titre et les textes de son PDF. Absent : le manuel de LabFlow, inchangé.
+ */
+export interface ManuelProduit {
+  produit: 'compta';
+  sousTitre: string;
+  pdf: TextesManuelPdf;
+}
+
+export default function GuidePage({ manuel }: { manuel?: ManuelProduit }) {
   const location = useLocation();
   const voc = useVocabulaire();
   const [sections, setSections] = useState<ManuelSection[]>([]);
@@ -33,11 +44,11 @@ export default function GuidePage() {
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    api.get('/api/manuel')
+    api.get('/api/manuel', manuel ? { params: { produit: manuel.produit } } : undefined)
       .then(({ data }) => setSections(data))
       .catch(() => setError(true))
       .finally(() => setLoading(false));
-  }, []);
+  }, [manuel]);
 
   // Deep-link #slug (HelpButton, GuideButton, liens internes)
   useEffect(() => {
@@ -86,11 +97,11 @@ export default function GuidePage() {
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#fff' }}>Manuel d'utilisation</h1>
-            <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>Guide complet de l'application LabFlow</p>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'rgba(255,255,255,0.75)', marginTop: 2 }}>{manuel ? manuel.sousTitre : 'Guide complet de l\'application LabFlow'}</p>
           </div>
         </div>
         <button
-          onClick={async () => { const { buildManuelPdf } = await import('../../utils/manuelPdf'); buildManuelPdf(sections, voc); }}
+          onClick={async () => { const { buildManuelPdf } = await import('../../utils/manuelPdf'); buildManuelPdf(sections, voc, manuel?.pdf); }}
           disabled={loading || sections.length === 0}
           style={{
             background: 'rgba(255,255,255,0.16)', color: '#fff', border: '1px solid rgba(255,255,255,0.45)',
