@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
+import { PRODUIT } from '../../compta/produit';
 import { AuthShell, authInput, authLabel, authSubmit, authErrorBox, onAuthFocus, onAuthBlur } from './AuthShell';
 
 export default function ForgotPasswordPage() {
@@ -16,7 +17,8 @@ export default function ForgotPasswordPage() {
     setErr('');
     try {
       // Le serveur répond toujours ok (aucune indication qu'un compte existe ou non).
-      await api.post('/auth/forgot-password', { email });
+      // Depuis LabFlow Compta, le lien de l'email doit ramener sur compta.labflow-tn.com (SPEC-SOCLE D13).
+      await api.post('/auth/forgot-password', PRODUIT === 'compta' ? { email, produit: 'compta' } : { email });
       setSent(true);
     } catch (e: unknown) {
       setErr((e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible d\'envoyer la demande, veuillez réessayer.');

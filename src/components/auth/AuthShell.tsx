@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import LabFlowLogo from '../common/LabFlowLogo';
+import { PRODUIT } from '../../compta/produit';
+import PastilleCompta from '../../compta/PastilleCompta';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Habillage commun des pages d'authentification hors connexion (activation,
@@ -80,8 +82,9 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
       padding: 24,
     }}>
       <div style={{ width: '100%', maxWidth: 424 }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 22 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 10, marginBottom: 22 }}>
           <LabFlowLogo height={34} variant="light" />
+          {PRODUIT === 'compta' && <PastilleCompta />}
         </div>
         <div style={{
           background: 'rgba(255,255,255,0.035)', border: '1px solid rgba(255,255,255,0.10)',
@@ -94,7 +97,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         <p style={{ textAlign: 'center', fontSize: '0.72rem', color: '#7C84A0', margin: '18px 0 0' }}>
-          🔒 Connexion sécurisée · LabFlow · <span style={{ color: '#A6ACC4' }}>Conçu en Tunisie <FlagTN /></span>
+          🔒 Connexion sécurisée · {PRODUIT === 'compta' ? 'LabFlow Compta' : 'LabFlow'} · <span style={{ color: '#A6ACC4' }}>Conçu en Tunisie <FlagTN /></span>
         </p>
       </div>
     </div>
