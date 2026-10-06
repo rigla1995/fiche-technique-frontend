@@ -110,5 +110,75 @@
     "apres": "Comptables",
     "type": "admin",
     "justification": "Chantier Achats & Comptabilité, étape S2b (cabinet comptable, découpage validé par le client le 06/10/2026) : entrée « Comptables » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/comptables, page sous <Layout requireRole=\"super_admin\"> dont l'API est gardée par requireSuperAdmin (src/compta/adminRoutes.js du serveur) ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "activer_module_compta",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : type de la demande (activer_module_compta) comparé pour choisir la page et le libellé de la notification ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "/admin/demandes",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : notification « Nouvelle demande — Module Comptabilité » envoyée aux seuls admins (pushToAdmins / saveNotificationToAdmins, POST /api/abonnements/demandes) ; son clic mène à /admin/demandes, page dont l'API est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "activer_module_compta",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : type de la demande (activer_module_compta) comparé pour choisir la page et le libellé de la notification ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "Module Comptabilité",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : notification « Nouvelle demande — Module Comptabilité » envoyée aux seuls admins (pushToAdmins / saveNotificationToAdmins, POST /api/abonnements/demandes) ; son clic mène à /admin/demandes, page dont l'API est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "/admin/demandes",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : entrée « Demandes d'activation » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/demandes, page sous <Layout requireRole=\"super_admin\"> dont l'API (/api/abonnements/admin/demandes) est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "sidebar-link ⟦?active|⟧",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : entrée « Demandes d'activation » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/demandes, page sous <Layout requireRole=\"super_admin\"> dont l'API (/api/abonnements/admin/demandes) est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "link-icon",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : entrée « Demandes d'activation » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/demandes, page sous <Layout requireRole=\"super_admin\"> dont l'API (/api/abonnements/admin/demandes) est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "📨",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : entrée « Demandes d'activation » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/demandes, page sous <Layout requireRole=\"super_admin\"> dont l'API (/api/abonnements/admin/demandes) est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "link-label",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : entrée « Demandes d'activation » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/demandes, page sous <Layout requireRole=\"super_admin\"> dont l'API (/api/abonnements/admin/demandes) est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "Demandes d'activation",
+    "type": "admin",
+    "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : entrée « Demandes d'activation » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/demandes, page sous <Layout requireRole=\"super_admin\"> dont l'API (/api/abonnements/admin/demandes) est gardée par requireSuperAdmin ; jamais lue par un client."
   }
 ]

@@ -35,9 +35,12 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
     if (!open) markSeen();
   };
 
-  const handleNotifClick = (eventType: string) => {
+  const handleNotifClick = (eventType: string, type?: string) => {
     setOpen(false);
-    if (eventType === 'new_inventaire') {
+    if (type === 'activer_module_compta') {
+      // LabFlow Compta, étape S2c : demande d'activation du module Comptabilité → page des demandes d'activation.
+      navigate('/admin/demandes');
+    } else if (eventType === 'new_inventaire') {
       navigate('/client/inventaire/historique?section=activite');
     } else if (eventType === 'nouvelle_commande_acheteur') {
       navigate('/client/acheteurs/commandes?statut=en_attente');
@@ -56,6 +59,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
   };
 
   const typeLabel = (type: string) => {
+    if (type === 'activer_module_compta') return 'Module Comptabilité';
     if (type === 'supplement') return 'Ajout de capacité';
     return 'Aide';
   };
@@ -175,7 +179,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                 notifications.map((n) => (
                   <div
                     key={n.id}
-                    onClick={() => handleNotifClick(n.eventType)}
+                    onClick={() => handleNotifClick(n.eventType, n.type)}
                     style={{
                       padding: '11px 16px',
                       borderBottom: '1px solid #f8fafc',

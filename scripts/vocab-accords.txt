@@ -1873,64 +1873,64 @@ src/components/client/LaboVentesPage.tsx
     miroir : ⟦?Cession interne vers une usine rattachée|Expédition vers un local⟧
 
 src/components/client/MonAbonnementPage.tsx
-  l. 14
+  l. 15
     défaut : 🏭
     miroir : 🏭
-  l. 14
+  l. 15
     défaut : 👤
     miroir : 👤
-  l. 14
+  l. 15
     défaut : 🤝
     miroir : 🤝
-  l. 16
+  l. 17
     défaut : Activité
     miroir : Local
-  l. 17
+  l. 18
     défaut : Labo
     miroir : Usine
-  l. 18
+  l. 19
     défaut : Gérant
     miroir : Animatrice
-  l. 19
+  l. 20
     défaut : Base acheteurs
     miroir : Base abr-clientes
-  l. 231
+  l. 232
     défaut : jusqu'à ⟦·⟧ acheteurs
     miroir : jusqu'à ⟦·⟧ clientes
-  l. 299
+  l. 300
     défaut : ⟦Activité|Activités@>1⟧
     miroir : ⟦Local|Locaux@>1⟧
-  l. 300
+  l. 301
     défaut : 🏭
     miroir : 🏭
-  l. 300
+  l. 301
     défaut : ⟦Labo|Labos@>1⟧
     miroir : ⟦Usine|Usines@>1⟧
-  l. 301
+  l. 302
     défaut : 👤
     miroir : 👤
-  l. 301
+  l. 302
     défaut : ⟦Gérant|Gérants@>1⟧
     miroir : ⟦Animatrice|Animatrices@>1⟧
-  l. 315
+  l. 316
     défaut : 🤝 Option Acheteurs (palier jusqu'à ⟦·⟧)
     miroir : 🤝 Option Abr-Clientes (palier jusqu'à ⟦·⟧)
-  l. 413
+  l. 419
     défaut : Supplément Activité
     miroir : Supplément Local
-  l. 413
+  l. 419
     défaut : activité
     miroir : local
-  l. 414
+  l. 420
     défaut : Supplément Labo
     miroir : Supplément Usine
-  l. 414
+  l. 420
     défaut : labo
     miroir : usine
-  l. 415
+  l. 421
     défaut : Supplément Gérant
     miroir : Supplément Animatrice
-  l. 415
+  l. 421
     défaut : gérant
     miroir : animatrice
 
@@ -3484,13 +3484,13 @@ src/components/common/AssistantChat.tsx
     miroir : L'assistant IA n'est pas encore activé pour votre compte : il pourra analyser vos données (armoire, encaissements, abandons…) et répondre à vos questions sur LabFlow. Contactez votre administrateur pour l'activer.
 
 src/components/common/Header.tsx
-  l. 98
+  l. 102
     défaut : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Gérant⟧|Client⟧⟧⟧
     miroir : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Animatrice⟧|Client⟧⟧⟧
-  l. 190
+  l. 194
     défaut : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
     miroir : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
-  l. 213
+  l. 217
     défaut : ⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
     miroir : ⟦?Pesée ajoutée par une animatrice|⟦?Nouvelle commande de la cliente⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
 
@@ -3501,148 +3501,148 @@ src/components/common/Sidebar.tsx
   l. 289
     défaut : 📚 Créez vos articles dans le référentiel et assignez-les pour débloquer les espaces.
     miroir : 📚 Créez vos denrées dans l'encyclopédie et assignez-les pour débloquer les espaces.
-  l. 463
+  l. 470
     défaut : Référentiel
     miroir : Encyclopédie
-  l. 463
+  l. 470
     défaut : 📚
     miroir : 📚
-  l. 469
+  l. 476
     défaut : Articles
     miroir : Denrées
-  l. 483
+  l. 490
     défaut : Espace Activités
     miroir : Zone Locaux
-  l. 488
+  l. 495
     défaut : 📦
     miroir : 📦
-  l. 488
+  l. 495
     défaut : Stock Activités
     miroir : Armoire Abr-Locaux
-  l. 493
+  l. 500
     défaut : Historique Appro
     miroir : Historique Abr-Rentrée
-  l. 503
+  l. 510
     défaut : Historique Pertes
     miroir : Historique Abr-Abandons
-  l. 508
+  l. 515
     défaut : Inventaire
     miroir : Pesée
-  l. 513
+  l. 520
     défaut : Historique Inventaire
     miroir : Historique Abr-Pesée
-  l. 527
+  l. 534
     défaut : Espace Labo
     miroir : Zone Usine
-  l. 527
+  l. 534
     défaut : 🏭
     miroir : 🏭
-  l. 530
+  l. 537
     défaut : 📦
     miroir : 📦
-  l. 530
+  l. 537
     défaut : Stock Labo
     miroir : Armoire Abr-Usine
-  l. 531
+  l. 538
     défaut : Historique Appro
     miroir : Historique Abr-Rentrée
-  l. 533
+  l. 540
     défaut : Historique Pertes
     miroir : Historique Abr-Abandons
-  l. 538
+  l. 545
     défaut : Transferts
     miroir : Expéditions
-  l. 539
+  l. 546
     défaut : Historique Transferts
     miroir : Historique Abr-Expéditions
-  l. 542
+  l. 549
     défaut : Inventaire
     miroir : Pesée
-  l. 543
+  l. 550
     défaut : Historique Inventaire
     miroir : Historique Abr-Pesée
-  l. 559
+  l. 566
     défaut : Espace Vente
     miroir : Zone Encaissement
-  l. 562
+  l. 569
     défaut : 🛵
     miroir : 🛵
-  l. 562
+  l. 569
     défaut : Config Prestataires
     miroir : Config Abr-Agences
-  l. 564
+  l. 571
     défaut : Configuration Vente
     miroir : Configuration Abr-Encaissement
-  l. 565
+  l. 572
     défaut : Ventes Activités
     miroir : Encaissements Abr-Locaux
-  l. 567
+  l. 574
     défaut : 🏭
     miroir : 🏭
-  l. 567
+  l. 574
     défaut : Ventes Labo
     miroir : Encaissements Abr-Usine
-  l. 579
+  l. 586
     défaut : Espace Acheteurs
     miroir : Zone Clientes
-  l. 579
+  l. 586
     défaut : 🤝
     miroir : 🤝
-  l. 582
+  l. 589
     défaut : 🤝
     miroir : 🤝
-  l. 582
+  l. 589
     défaut : Carnet d'Acheteurs
     miroir : Carnet de Clientes
-  l. 584
+  l. 591
     défaut : Tarifs Acheteurs
     miroir : Tarifs Abr-Clientes
-  l. 585
+  l. 592
     défaut : Nouvelle Vente
     miroir : Nouvel Encaissement
-  l. 586
+  l. 593
     défaut : Ventes Acheteurs
     miroir : Encaissements Abr-Clientes
-  l. 595
+  l. 602
     défaut : Espace Produits
     miroir : Espace Inventions
-  l. 595
+  l. 602
     défaut : 🍔
     miroir : 🍔
-  l. 600
+  l. 607
     défaut : Catégories Produits
     miroir : Catégories Abr-Inventions
-  l. 614
+  l. 621
     défaut : 🍔
     miroir : 🍔
-  l. 614
+  l. 621
     défaut : Produits Vendables
     miroir : Inventions Vendues
-  l. 620
+  l. 627
     défaut : Produits Utilisables
     miroir : Inventions Utiles
-  l. 627
+  l. 634
     défaut : 💎
     miroir : 💎
-  l. 627
+  l. 634
     défaut : Produits Valorisés
     miroir : Inventions Valorisées
-  l. 638
+  l. 645
     défaut : Fournisseurs
     miroir : Enseignes
-  l. 638
+  l. 645
     défaut : Créez une activité ou un labo pour débloquer
     miroir : Créez un local ou une usine pour débloquer
-  l. 639
+  l. 646
     défaut : Fournisseurs
     miroir : Enseignes
-  l. 651
+  l. 658
     défaut : Gérants
     miroir : Animatrices
-  l. 654
+  l. 661
     défaut : Gérants
     miroir : Animatrices
-  l. 654
+  l. 661
     défaut : Créez une activité ou un labo pour débloquer
     miroir : Créez un local ou une usine pour débloquer
 

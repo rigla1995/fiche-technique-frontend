@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import type { Demande } from '../../types';
 import HistoryFilterBar, { FilterField, FilterSegmented } from '../common/HistoryFilterBar';
+import { useConfirm } from '../common/ConfirmDialog';
 
 const STATUT_COLORS: Record<string, { bg: string; color: string }> = {
   en_attente:  { bg: '#fef9c3', color: '#854d0e' },
@@ -15,7 +16,11 @@ const TYPE_LABELS: Record<string, string> = {
   activer_module_vente:     'Activation Module Vente',
   activer_module_acheteurs: 'Activation du module Acheteurs',
   passer_formule_premium:   'Passage en formule Activité Premium',
+  activer_module_compta:    'Activation du module Comptabilité',
 };
+
+const messageDe = (err: unknown, defaut: string) =>
+  (err as { response?: { data?: { message?: string } } })?.response?.data?.message || defaut;
 
 const STATUT_OPTIONS = [
   { value: '',           label: 'Toutes' },
@@ -32,6 +37,7 @@ export default function DemandesManagement() {
   const [filterStatut, setFilterStatut] = useState('en_attente');
   const [traiting, setTraiting] = useState<Record<number, boolean>>({});
   const [notes, setNotes] = useState<Record<number, string>>({});
+  const { alerte } = useConfirm();
 
   useEffect(() => { fetchDemandes(); }, [filterStatut]);
 
@@ -52,6 +58,10 @@ export default function DemandesManagement() {
       const payload: Record<string, unknown> = { statut, notesAdmin: notes[id] || undefined };
       await api.put(`/api/abonnements/admin/demandes/${id}`, payload);
       fetchDemandes();
+    } catch (err) {
+      // Ex. module Comptabilité : tarif encore à 0, demande déjà traitée.
+      alerte({ title: statut === 'validée' ? 'Validation impossible' : 'Refus impossible', message: messageDe(err, 'Erreur lors du traitement de la demande'), tone: 'danger' });
+      fetchDemandes(); // ex. déjà traitée ailleurs : la liste suit
     } finally {
       setTraiting((t) => ({ ...t, [id]: false }));
     }
@@ -66,7 +76,7 @@ export default function DemandesManagement() {
         display: 'flex', alignItems: 'center', gap: 12,
       }}>
         <div style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📨</div>
-        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Demandes clients</h1>
+        <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Demandes d'activation</h1>
       </div>
 
       {/* Barre de filtres (composant partagé) */}

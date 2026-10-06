@@ -40,6 +40,15 @@ export default function MenuCompta({ ouvert, onFermer }: { ouvert: boolean; onFe
               </li>
             </>
           )}
+          {/* Étape S2c : un client LabFlow (module Comptabilité) */}
+          {user?.role === 'client' && (
+            <li>
+              <NavLink to="/ma-comptabilite" className={classeLien} onClick={onFermer}>
+                <span className="link-icon">🧮</span>
+                <span className="link-label">Ma comptabilité</span>
+              </NavLink>
+            </li>
+          )}
         </ul>
         <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
           <li>
