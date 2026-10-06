@@ -2,7 +2,8 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  role: 'super_admin' | 'boss' | 'client' | 'gerant' | 'acheteur';
+  /** 'comptable' (LabFlow Compta, étape S2b) : n'utilise que compta.labflow-tn.com. */
+  role: 'super_admin' | 'boss' | 'client' | 'gerant' | 'acheteur' | 'comptable';
   onboardingStep?: number;
   phone?: string;
   entrepriseName?: string | null;
@@ -72,8 +73,18 @@ export interface AbonnementConfig {
   domaineSlug?: string | null;
   domaineNom?: string | null;
   composants?: ComposantConfig[];
+  /** LabFlow Compta (S2b) : présents seulement pour un cabinet ou un client qui a le module. */
+  moduleComptaActif?: boolean;
+  nbGerantsCompta?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Poste LabFlow Compta d'une mensualité (cabinet : abonnement + gérants ; client : module + gérants comptables). */
+export interface PosteCompta {
+  code: string;
+  libelle: string;
+  montant: number;
 }
 
 export interface SupportDemande {
@@ -116,6 +127,8 @@ export interface Abonnement {
   moduleVenteActivatedAt?: string | null;
   moduleAcheteursActif?: boolean;
   moduleAcheteursActivatedAt?: string | null;
+  /** LabFlow Compta (S2b) : 'compta' pour un cabinet comptable ; absent = LabFlow. */
+  produit?: 'compta';
   config?: AbonnementConfig | null;
   paiements?: Paiement[];
   promotions?: Promotion[];
@@ -136,6 +149,8 @@ export interface Abonnement {
       prixLaboSup: number;
       prixGerantSup: number;
     };
+    /** LabFlow Compta (S2b) : postes du cabinet ou du module, s'il y en a. */
+    compta?: { postes: PosteCompta[] };
   };
   createdAt: string;
   updatedAt: string;

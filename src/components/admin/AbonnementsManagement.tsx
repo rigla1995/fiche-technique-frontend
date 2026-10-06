@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import type { Abonnement, Promotion } from '../../types';
 import { MonthPicker } from './MonthPicker';
@@ -342,6 +343,12 @@ export default function AbonnementsManagement() {
 
   const [search, setSearch] = useState('');
   const [filterMode, setFilterMode] = useState('actif');
+  // LabFlow Compta (étape S2b) : '' = tous, 'labflow', 'compta' (cabinets comptables). ?client=<id> (page Comptables)
+  // ouvre directement la fiche de ce compte.
+  const [filterProduit, setFilterProduit] = useState('');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const clientDemande = searchParams.get('client');
 
   useEffect(() => { fetchList(); }, []);
 
@@ -390,6 +397,19 @@ export default function AbonnementsManagement() {
       setDetailLoading(false);
     }
   }, []);
+
+  // Ouverture directe (page Comptables, bouton « Abonnement ») : la fiche du compte demandé, une seule fois, dès que la
+  // liste est chargée (le filtre de statut le laisse toujours visible).
+  const ouvertureFaite = useRef(false);
+  useEffect(() => {
+    if (ouvertureFaite.current || !clientDemande || !abonnements.length) return;
+    const ab = abonnements.find((a) => String(a.clientId) === clientDemande);
+    if (!ab) return;
+    ouvertureFaite.current = true;
+    // Ouverture hors du corps de l'effet : la fiche se charge exactement comme après un clic dans la liste ; l'adresse
+    // perd ensuite ?client= (un rechargement ne rouvre rien, les filtres redeviennent libres).
+    void Promise.resolve().then(() => { openDetail(ab); navigate('/admin/abonnements', { replace: true }); });
+  }, [clientDemande, abonnements, openDetail, navigate]);
 
   const toggleModuleVente = async (newActif: boolean) => {
     if (!selected || moduleVenteSaving) return;
@@ -793,9 +813,11 @@ export default function AbonnementsManagement() {
     const matchSearch = !search ||
       a.clientNom?.toLowerCase().includes(search.toLowerCase()) ||
       a.clientEmail?.toLowerCase().includes(search.toLowerCase());
-    const matchMode = !filterMode || a.modeCompte === filterMode;
-    return matchSearch && matchMode;
+    const matchMode = !filterMode || a.modeCompte === filterMode || (!!clientDemande && String(a.clientId) === clientDemande);
+    const matchProduit = !filterProduit || (filterProduit === 'compta' ? a.produit === 'compta' : a.produit !== 'compta');
+    return matchSearch && matchMode && matchProduit;
   });
+  const nbCabinets = abonnements.filter((a) => a.produit === 'compta').length;
 
   // Affichage global (vue d'ensemble) — stats aérées + filtres par statut.
   const countMode = (mode: string) => abonnements.filter((a) => a.modeCompte === mode).length;
@@ -847,7 +869,9 @@ export default function AbonnementsManagement() {
     (!hideGerantPermanent || editingPromo?.appliesTo === 'supplement_gerant') ? { value: 'supplement_gerant', label: 'Supplément Gérant' } : null,
     (!hideLaboPermanent || editingPromo?.appliesTo === 'supplement_labo') ? { value: 'supplement_labo', label: 'Supplément Labo' } : null,
     (!hideActivitePermanent || editingPromo?.appliesTo === 'supplement_activite') ? { value: 'supplement_activite', label: 'Supplément Activité' } : null,
-  ].filter(Boolean) as { value: string; label: string }[];
+  ].filter(Boolean)
+    // Cabinet LabFlow Compta (S2b) : ses gérants sont dans la mensualité ; les promotions de supplément n'y auraient aucun effet.
+    .filter((o) => !(selected?.produit === 'compta' && o!.value.startsWith('supplement'))) as { value: string; label: string }[];
 
   // Compute months blocked by existing promos for the current promoAppliesTo
   const conflictAppliesMap: Record<string, string[]> = {
@@ -918,8 +942,8 @@ export default function AbonnementsManagement() {
             accentDark="#0f766e"
             compact
             subtitle={`${filtered.length} résultat${filtered.length !== 1 ? 's' : ''}`}
-            onReset={() => { setSearch(''); setFilterMode('actif'); }}
-            showReset={!!search || filterMode !== 'actif'}
+            onReset={() => { setSearch(''); setFilterMode('actif'); setFilterProduit(''); }}
+            showReset={!!search || filterMode !== 'actif' || !!filterProduit}
           >
             <FilterField label="🔍 Recherche" span>
               <FilterInput
@@ -937,6 +961,20 @@ export default function AbonnementsManagement() {
                 accent="#0d9488"
               />
             </FilterField>
+            {nbCabinets > 0 && (
+              <FilterField label="📦 Produit" span>
+                <FilterSegmented
+                  options={[
+                    { value: '', label: 'Tous', count: abonnements.length },
+                    { value: 'labflow', label: 'LabFlow', count: abonnements.length - nbCabinets },
+                    { value: 'compta', label: 'LabFlow Compta', count: nbCabinets },
+                  ]}
+                  value={filterProduit}
+                  onChange={(v) => setFilterProduit(v)}
+                  accent="#4338ca"
+                />
+              </FilterField>
+            )}
           </HistoryFilterBar>
         </div>
         {/* Client list */}
@@ -970,6 +1008,7 @@ export default function AbonnementsManagement() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: m.color + '18', color: m.color, whiteSpace: 'nowrap' }}>{m.label}</span>
+                    {ab.produit === 'compta' && <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 8, background: '#eef2ff', color: '#4338ca', whiteSpace: 'nowrap' }}>📒 Compta</span>}
                     {ab.hasActivePromo && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️</span>}
                   </div>
                 </div>
@@ -1001,7 +1040,7 @@ export default function AbonnementsManagement() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 17, fontWeight: 800, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.clientNom}</div>
                     <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{selected.clientEmail}</div>
-                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>Client depuis {fmtDate(selected.dateDebut)}</div>
+                    <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginTop: 2 }}>{selected.produit === 'compta' ? 'Cabinet LabFlow Compta depuis' : 'Client depuis'} {fmtDate(selected.dateDebut)}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-end', flexShrink: 0 }}>
                     <span style={{ fontSize: 12, fontWeight: 700, padding: '5px 14px', borderRadius: 20, background: 'rgba(255,255,255,0.15)', color: '#fff', border: `1.5px solid ${detailM.color}60` }}>
@@ -1019,13 +1058,14 @@ export default function AbonnementsManagement() {
             {/* ── Tab bar ────────────────────────────────────────────── */}
             {(() => {
               const TAB_COLOR = '#0d9488';
+              // Un cabinet LabFlow Compta n'a pas les modules de LabFlow : pas d'onglet Activation.
               const tabs: { key: typeof activeDetailTab; label: string }[] = [
                 { key: 'configuration', label: 'Configuration' },
                 { key: 'paiements', label: 'Paiements et Promotions' },
                 { key: 'activation', label: 'Activation' },
                 { key: 'promotions', label: 'Promotions' },
                 { key: 'paiement', label: 'Paiement' },
-              ];
+              ].filter((t) => !(selected.produit === 'compta' && t.key === 'activation')) as { key: typeof activeDetailTab; label: string }[];
               return (
                 <div style={{ display: 'flex', gap: 2, borderBottom: '2px solid #e2e8f0', marginBottom: 20 }}>
                   {tabs.map((t) => {
@@ -1050,8 +1090,41 @@ export default function AbonnementsManagement() {
             {/* ── Tab 1: Configuration ───────────────────────────────── */}
             {activeDetailTab === 'configuration' && (
               <>
+            {/* ── Cabinet LabFlow Compta (S2b) : ses postes, ses gérants ; identité et gérants modifiés dans Comptables ── */}
+            {selected.produit === 'compta' && (() => {
+              const postes = selected.pricing?.compta?.postes ?? [];
+              const total = Math.round(postes.reduce((s, p) => s + p.montant, 0) * 100) / 100;
+              return (
+                <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #c7d2fe', marginBottom: 20, overflow: 'hidden' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 18px', background: 'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', borderBottom: '1px solid #c7d2fe' }}>
+                    <span style={{ fontSize: 18 }}>📒</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: '#3730a3' }}>Abonnement LabFlow Compta</div>
+                      <div style={{ fontSize: 11, color: '#4338ca', marginTop: 1 }}>{selected.config?.nbGerantsCompta ?? 0} gérant{(selected.config?.nbGerantsCompta ?? 0) > 1 ? 's' : ''} acheté{(selected.config?.nbGerantsCompta ?? 0) > 1 ? 's' : ''}</div>
+                    </div>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: '#3730a3' }}>{total} DT/mois</span>
+                  </div>
+                  <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {postes.map((p) => (
+                      <div key={p.code} style={{ display: 'flex', justifyContent: 'space-between', gap: 10, fontSize: 13, color: '#374151' }}>
+                        <span>{p.libelle}</span><span style={{ fontWeight: 700 }}>{p.montant} DT</span>
+                      </div>
+                    ))}
+                    <div style={{ borderTop: '1px solid #e0e7ff', paddingTop: 10, marginTop: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 11, color: '#4338ca', fontWeight: 700 }}>Frais de mise en route (une fois)</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, color: '#3730a3' }}>{selected.pricing?.effectifOnboarding ?? selected.montantOnboarding} DT</span>
+                    </div>
+                    <button type="button" onClick={() => navigate('/admin/comptables')}
+                      style={{ alignSelf: 'flex-start', marginTop: 6, fontSize: 11, padding: '5px 12px', borderRadius: 8, border: '1px solid #c7d2fe', background: '#fff', color: '#4338ca', cursor: 'pointer', fontWeight: 700 }}>
+                      📒 Identité et gérants : page Comptables
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* ── Configuration Souscrite ────────────────────────────── */}
-            {selected.config && (() => {
+            {selected.config && selected.produit !== 'compta' && (() => {
               const cfg = selected.config!;
               const bd = selected.pricing?.configBreakdown;
               // Use real breakdown totals from API; fall back to pricing.baseMensuel
@@ -1616,6 +1689,11 @@ export default function AbonnementsManagement() {
                         {(() => {
                           const mens = pMontantInfo.breakdown.mensualite;
                           const cfg = selected.config;
+                          // Cabinet LabFlow Compta (S2b) : sa mensualité porte ses postes Compta, pas d'activité.
+                          const nbGC = cfg?.nbGerantsCompta ?? 0;
+                          const libelleBase = selected.produit === 'compta'
+                            ? `LabFlow Compta${nbGC > 0 ? ` + ${nbGC} gérant${nbGC > 1 ? 's' : ''}` : ''}`
+                            : (cfg ? `Activités (×${cfg.nbActivites})` : 'Activités');
                           if (mens.coversAll) {
                             // Show individual component rows + a discount row
                             const sg = pMontantInfo.breakdown.supplementGerant;
@@ -1625,7 +1703,7 @@ export default function AbonnementsManagement() {
                               ? mens.baseActivite
                               : mens.base - (sg.active ? sg.base : 0) - (sl.active ? sl.base : 0);
                             const compRows = [
-                              { label: cfg ? `Activités (×${cfg.nbActivites})` : 'Activités', base: baseActivite, show: true },
+                              { label: libelleBase, base: baseActivite, show: true },
                               { label: cfg && sg.active ? `Gérant(s) (×${cfg.nbGerants})` : 'Gérant(s)', base: sg.base, show: sg.active },
                               { label: cfg && sl.active ? `Labo(s) (×${cfg.nbLabos})` : 'Labo(s)', base: sl.base, show: sl.active },
                             ].filter((r) => r.show);
@@ -1661,7 +1739,7 @@ export default function AbonnementsManagement() {
                           }
                           // Normal breakdown (no global promo or per-component promos)
                           return [
-                            { label: cfg ? `Activités (×${cfg.nbActivites})` : 'Activités', ...mens, show: true },
+                            { label: libelleBase, ...mens, show: true },
                             { label: cfg && pMontantInfo.breakdown.supplementGerant.active ? `Gérant(s) (×${cfg.nbGerants})` : 'Gérant(s)', ...pMontantInfo.breakdown.supplementGerant, show: pMontantInfo.breakdown.supplementGerant.active },
                             { label: cfg && pMontantInfo.breakdown.supplementLabo.active ? `Labo(s) (×${cfg.nbLabos})` : 'Labo(s)', ...pMontantInfo.breakdown.supplementLabo, show: pMontantInfo.breakdown.supplementLabo.active },
                           ].filter((i) => i.show).map((item, idx, arr) => {

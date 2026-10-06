@@ -908,7 +908,7 @@ export default function AdminDomaineEditPage() {
             {nbClients > 0 ? <> — <strong>{nbClients} compte{nbClients > 1 ? 's' : ''}</strong> {nbClients > 1 ? 'seront' : 'sera'} re-tarifé{nbClients > 1 ? 's' : ''} dès le prochain paiement.</> : ' (aucun compte rattaché pour l\'instant).'}
             {' '}Surcharges actives : <strong>{nbSurcharges}</strong>.
           </div>
-          {TARIF_SECTIONS.map((s) => (
+          {TARIF_SECTIONS.filter((s) => !s.generaleSeulement).map((s) => (
             <div key={s.key} style={tarifCardStyle}>
               <TarifSectionHeader icon={s.icon} title={s.title} subtitle={s.subtitle} gradient={s.gradient} textColor={s.textColor} />
               {s.fields.map((f) => {

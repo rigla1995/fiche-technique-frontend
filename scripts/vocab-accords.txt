@@ -3501,148 +3501,148 @@ src/components/common/Sidebar.tsx
   l. 289
     défaut : 📚 Créez vos articles dans le référentiel et assignez-les pour débloquer les espaces.
     miroir : 📚 Créez vos denrées dans l'encyclopédie et assignez-les pour débloquer les espaces.
-  l. 456
+  l. 463
     défaut : Référentiel
     miroir : Encyclopédie
-  l. 456
+  l. 463
     défaut : 📚
     miroir : 📚
-  l. 462
+  l. 469
     défaut : Articles
     miroir : Denrées
-  l. 476
+  l. 483
     défaut : Espace Activités
     miroir : Zone Locaux
-  l. 481
+  l. 488
     défaut : 📦
     miroir : 📦
-  l. 481
+  l. 488
     défaut : Stock Activités
     miroir : Armoire Abr-Locaux
-  l. 486
+  l. 493
     défaut : Historique Appro
     miroir : Historique Abr-Rentrée
-  l. 496
+  l. 503
     défaut : Historique Pertes
     miroir : Historique Abr-Abandons
-  l. 501
+  l. 508
     défaut : Inventaire
     miroir : Pesée
-  l. 506
+  l. 513
     défaut : Historique Inventaire
     miroir : Historique Abr-Pesée
-  l. 520
+  l. 527
     défaut : Espace Labo
     miroir : Zone Usine
-  l. 520
+  l. 527
     défaut : 🏭
     miroir : 🏭
-  l. 523
+  l. 530
     défaut : 📦
     miroir : 📦
-  l. 523
+  l. 530
     défaut : Stock Labo
     miroir : Armoire Abr-Usine
-  l. 524
+  l. 531
     défaut : Historique Appro
     miroir : Historique Abr-Rentrée
-  l. 526
+  l. 533
     défaut : Historique Pertes
     miroir : Historique Abr-Abandons
-  l. 531
+  l. 538
     défaut : Transferts
     miroir : Expéditions
-  l. 532
+  l. 539
     défaut : Historique Transferts
     miroir : Historique Abr-Expéditions
-  l. 535
+  l. 542
     défaut : Inventaire
     miroir : Pesée
-  l. 536
+  l. 543
     défaut : Historique Inventaire
     miroir : Historique Abr-Pesée
-  l. 552
+  l. 559
     défaut : Espace Vente
     miroir : Zone Encaissement
-  l. 555
+  l. 562
     défaut : 🛵
     miroir : 🛵
-  l. 555
+  l. 562
     défaut : Config Prestataires
     miroir : Config Abr-Agences
-  l. 557
+  l. 564
     défaut : Configuration Vente
     miroir : Configuration Abr-Encaissement
-  l. 558
+  l. 565
     défaut : Ventes Activités
     miroir : Encaissements Abr-Locaux
-  l. 560
+  l. 567
     défaut : 🏭
     miroir : 🏭
-  l. 560
+  l. 567
     défaut : Ventes Labo
     miroir : Encaissements Abr-Usine
-  l. 572
+  l. 579
     défaut : Espace Acheteurs
     miroir : Zone Clientes
-  l. 572
+  l. 579
     défaut : 🤝
     miroir : 🤝
-  l. 575
+  l. 582
     défaut : 🤝
     miroir : 🤝
-  l. 575
+  l. 582
     défaut : Carnet d'Acheteurs
     miroir : Carnet de Clientes
-  l. 577
+  l. 584
     défaut : Tarifs Acheteurs
     miroir : Tarifs Abr-Clientes
-  l. 578
+  l. 585
     défaut : Nouvelle Vente
     miroir : Nouvel Encaissement
-  l. 579
+  l. 586
     défaut : Ventes Acheteurs
     miroir : Encaissements Abr-Clientes
-  l. 588
+  l. 595
     défaut : Espace Produits
     miroir : Espace Inventions
-  l. 588
+  l. 595
     défaut : 🍔
     miroir : 🍔
-  l. 593
+  l. 600
     défaut : Catégories Produits
     miroir : Catégories Abr-Inventions
-  l. 607
+  l. 614
     défaut : 🍔
     miroir : 🍔
-  l. 607
+  l. 614
     défaut : Produits Vendables
     miroir : Inventions Vendues
-  l. 613
+  l. 620
     défaut : Produits Utilisables
     miroir : Inventions Utiles
-  l. 620
+  l. 627
     défaut : 💎
     miroir : 💎
-  l. 620
+  l. 627
     défaut : Produits Valorisés
     miroir : Inventions Valorisées
-  l. 631
+  l. 638
     défaut : Fournisseurs
     miroir : Enseignes
-  l. 631
+  l. 638
     défaut : Créez une activité ou un labo pour débloquer
     miroir : Créez un local ou une usine pour débloquer
-  l. 632
+  l. 639
     défaut : Fournisseurs
     miroir : Enseignes
-  l. 644
+  l. 651
     défaut : Gérants
     miroir : Animatrices
-  l. 647
+  l. 654
     défaut : Gérants
     miroir : Animatrices
-  l. 647
+  l. 654
     défaut : Créez une activité ou un labo pour débloquer
     miroir : Créez un local ou une usine pour débloquer
 

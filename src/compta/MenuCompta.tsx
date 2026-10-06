@@ -23,6 +23,23 @@ export default function MenuCompta({ ouvert, onFermer }: { ouvert: boolean; onFe
               <span className="link-label">Vos comptabilités</span>
             </NavLink>
           </li>
+          {/* Étape S2b : le titulaire d'un cabinet (rôle « comptable ») */}
+          {user?.role === 'comptable' && (
+            <>
+              <li>
+                <NavLink to="/cabinet" className={classeLien} onClick={onFermer}>
+                  <span className="link-icon">🏢</span>
+                  <span className="link-label">Mon cabinet</span>
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/abonnement" className={classeLien} onClick={onFermer}>
+                  <span className="link-icon">💳</span>
+                  <span className="link-label">Abonnement et factures</span>
+                </NavLink>
+              </li>
+            </>
+          )}
         </ul>
         <ul className="sidebar-nav" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
           <li>
