@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import api from '../../api/client';
-import { useAuth } from '../../context/AuthContext';
-import LabFlowLogo from '../../components/common/LabFlowLogo';
-import PastilleCompta from '../PastilleCompta';
+import EnteteCompta from '../EnteteCompta';
 
 // Accueil de LabFlow Compta : les comptabilités de la personne, en trois groupes TOUJOURS distincts (exigence du client,
 // CADRAGE §2) — son cabinet, sa comptabilité de client LabFlow, celles que des clients LabFlow lui ont confiées.
@@ -18,8 +15,6 @@ const GROUPES: { cle: keyof Acces; titre: string; badge: string; couleur: string
 ];
 
 export default function ComptaAccueil() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
   const [acces, setAcces] = useState<Acces | null>(null);
   const [erreur, setErreur] = useState(false);
 
@@ -31,24 +26,11 @@ export default function ComptaAccueil() {
   }, []);
   useEffect(() => { charger(); }, [charger]);
 
-  const seDeconnecter = () => { logout(); navigate('/login', { replace: true }); };
   const vide = acces && GROUPES.every((g) => (acces[g.cle] || []).length === 0);
 
   return (
     <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <header style={{ background: 'linear-gradient(120deg, #04050B 0%, #111436 100%)', borderBottom: '3px solid transparent', borderImage: 'linear-gradient(120deg, #0EA5E9 0%, #6366F1 52%, #A855F7 100%) 1' }}>
-        <div style={{ maxWidth: 1080, margin: '0 auto', padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <LabFlowLogo height={28} variant="light" />
-          <PastilleCompta taille="petite" />
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ color: '#D4D9EC', fontSize: '0.85rem', fontWeight: 600 }}>{user?.name}</span>
-            <button type="button" onClick={seDeconnecter}
-              style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.18)', color: '#F2F4FF', borderRadius: 10, padding: '7px 14px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer' }}>
-              Se déconnecter
-            </button>
-          </div>
-        </div>
-      </header>
+      <EnteteCompta aide="compta-bienvenue" />
 
       <main style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 20px 48px' }}>
         <h1 style={{ margin: '0 0 6px', fontSize: '1.45rem', fontWeight: 900, color: '#0f172a' }}>Vos comptabilités</h1>
