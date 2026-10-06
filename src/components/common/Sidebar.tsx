@@ -109,8 +109,9 @@ function SubNavLink({ to, icon, label, isActive, onClick }: {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const voc = useVocabulaire();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const handleLogout = () => { onClose(); logout(); navigate('/login'); };
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
   const [labos, setLabos] = useState<Labo[]>([]);
   const [aboConfig, setAboConfig] = useState<AbonnementConfig | null>(null);
@@ -717,6 +718,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </li>
           </ul>
         )}
+
+        {/* Téléphone seulement : nom et déconnexion, retirés de la barre du haut faute de place (index.css). */}
+        <ul className="sidebar-nav mobile-seul" style={{ borderTop: '1px solid var(--border)', paddingTop: 4 }}>
+          <li>
+            <div style={{ padding: '10px 12px 4px', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text)' }}>{user?.name}</div>
+          </li>
+          <li>
+            <button type="button" className="sidebar-link" onClick={handleLogout}
+              style={{ width: '100%', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}>
+              <span className="link-icon">🚪</span>
+              <span className="link-label">Déconnexion</span>
+            </button>
+          </li>
+        </ul>
       </nav>
     </>
   );

@@ -6,7 +6,10 @@ import { useState, useRef, useEffect } from 'react';
 import LabFlowLogo from './LabFlowLogo';
 import AssistantWidget from './AssistantWidget';
 
-export default function Header() {
+// Barre du haut. Sur téléphone (≤ 768 px, index.css) : le bouton de menu ouvre le menu de gauche, replié à cette
+// largeur ; le logo est réduit, le nom et la déconnexion passent dans le menu (Sidebar) pour que la barre tienne sans
+// défilement horizontal (classes bureau-seul / mobile-seul). Même principe que LabFlow Compta (src/compta/EnteteCompta.tsx).
+export default function Header({ onMenu }: { onMenu: () => void }) {
   const { user, logout } = useAuth();
   const voc = useVocabulaire();
   const navigate = useNavigate();
@@ -62,9 +65,13 @@ export default function Header() {
 
   return (
     <header className="header">
-      {/* Left — logo cliquable */}
+      {/* Left — bouton de menu (téléphone seulement) + logo cliquable */}
       <div className="header-left">
+        <button type="button" className="menu-toggle" onClick={onMenu} aria-label="Ouvrir le menu">
+          <span /><span /><span />
+        </button>
         <button
+          className="header-logo"
           onClick={handleLogoClick}
           title="Accueil"
           style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center' }}
@@ -86,7 +93,7 @@ export default function Header() {
           }}>
             {initials(user?.name)}
           </div>
-          <div style={{ lineHeight: 1.25 }}>
+          <div className="bureau-seul" style={{ lineHeight: 1.25 }}>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>{user?.name}</div>
             <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500, letterSpacing: '0.03em' }}>
               {user?.role === 'boss'
@@ -240,7 +247,7 @@ export default function Header() {
         </div>
 
         {/* Logout */}
-        <button className="btn btn-ghost btn-sm" onClick={handleLogout} style={{ fontWeight: 600 }}>
+        <button className="btn btn-ghost btn-sm bureau-seul" onClick={handleLogout} style={{ fontWeight: 600 }}>
           Déconnexion
         </button>
       </div>
