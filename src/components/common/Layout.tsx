@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, Navigate } from 'react-router-dom';
+import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
 import ReadOnlyBanner from './ReadOnlyBanner';
@@ -16,7 +16,12 @@ const homeOf = (role: string) =>
 
 export default function Layout({ requireRole }: LayoutProps) {
   const { user, isLoading } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // Menu de gauche sur téléphone (≤ 768 px, replié par index.css) : ouvert par le bouton de la barre du haut, il ne
+  // reste ouvert que sur la page où on l'a ouvert — tout changement de page le referme (lien du menu, logo, notification,
+  // retour arrière).
+  const location = useLocation();
+  const [menuOuvertSur, setMenuOuvertSur] = useState<string | null>(null);
+  const sidebarOpen = menuOuvertSur === location.key;
 
   if (isLoading) {
     return <div className="page-loading"><div className="spinner" /></div>;
@@ -36,10 +41,10 @@ export default function Layout({ requireRole }: LayoutProps) {
   return (
     <SelectionProvider>
     <div className="app-layout">
-      <Header />
+      <Header onMenu={() => setMenuOuvertSur(sidebarOpen ? null : location.key)} />
       <ReadOnlyBanner />
       <div className="layout-body">
-        <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        <Sidebar isOpen={sidebarOpen} onClose={() => setMenuOuvertSur(null)} />
         <main className="main-content">
           <Outlet />
         </main>
