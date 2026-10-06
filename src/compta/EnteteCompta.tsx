@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import LabFlowLogo from '../components/common/LabFlowLogo';
 import PastilleCompta from './PastilleCompta';
+import { LienStockVente } from './LiensEspace';
 
 // Barre du haut de LabFlow Compta : celle de LabFlow (src/components/common/Header.tsx, classes .header), logo suivi de
 // la pastille « Compta », personne connectée et déconnexion. Ni cloche ni guide de mise en route : LabFlow Compta n'a
@@ -37,6 +38,8 @@ export default function EnteteCompta({ onMenu }: { onMenu: () => void }) {
       </div>
 
       <div className="header-right">
+        {/* Étape S3a : retour à l'espace Stock / Vente sans ressaisie (client ou gérant) */}
+        <LienStockVente />
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{
             width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.92)',

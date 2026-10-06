@@ -180,5 +180,40 @@
     "apres": "Demandes d'activation",
     "type": "admin",
     "justification": "Chantier Achats & Comptabilité, étape S2c (module Comptabilité chez un client, découpage validé par le client le 06/10/2026) : entrée « Demandes d'activation » du menu de l'espace admin (bloc isAdmin de Sidebar.tsx) vers /admin/demandes, page sous <Layout requireRole=\"super_admin\"> dont l'API (/api/abonnements/admin/demandes) est gardée par requireSuperAdmin ; jamais lue par un client."
+  },
+  {
+    "fichier": "src/App.tsx",
+    "avant": null,
+    "apres": "/passage",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3a (passage entre LabFlow et LabFlow Compta, découpage validé par le client le 06/10/2026) : chemin de la page d'arrivée d'un passage (code à usage unique, SPEC-SOCLE D12) ; jamais affiché."
+  },
+  {
+    "fichier": "src/App.tsx",
+    "avant": null,
+    "apres": "/choix",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3a (passage entre LabFlow et LabFlow Compta, découpage validé par le client le 06/10/2026) : chemin de l'écran de choix après la connexion (SPEC-SOCLE D11bis) ; jamais affiché."
+  },
+  {
+    "fichier": "src/api/client.ts",
+    "avant": null,
+    "apres": "token",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3a (passage entre LabFlow et LabFlow Compta, découpage validé par le client le 06/10/2026) : clé du stockage de la session, relue pour comparer le jeton refusé (401) au jeton en place : une réponse tardive d'une ancienne session n'efface pas la nouvelle ; jamais affiché."
+  },
+  {
+    "fichier": "src/api/client.ts",
+    "avant": null,
+    "apres": "/passage",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3a (passage entre LabFlow et LabFlow Compta, découpage validé par le client le 06/10/2026) : chemin de la page d'arrivée d'un passage, ajouté aux pages publiques de la garde 401 ; jamais affiché."
+  },
+  {
+    "fichier": "src/context/AuthContext.tsx",
+    "avant": null,
+    "apres": "token",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3a (passage entre LabFlow et LabFlow Compta, découpage validé par le client le 06/10/2026) : clé du stockage de la session, relue pour ignorer la réponse de /auth/me d'une session déjà remplacée (page d'arrivée d'un passage) ; jamais affiché."
   }
 ]

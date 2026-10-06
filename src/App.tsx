@@ -16,6 +16,9 @@ import './index.css';
 // ne contient plus que le shell (providers + Layout + guards). Les vendors lourds
 // (recharts, jspdf…) suivent automatiquement leurs pages dans des chunks async.
 const LoginPage = lazy(() => import('./components/auth/LoginPage'));
+// LabFlow Compta, étape S3a : arrivée d'un passage sans ressaisie, écran de choix après la connexion.
+const PassagePage = lazy(() => import('./compta/pages/PassagePage'));
+const ChoixEspace = lazy(() => import('./compta/pages/ChoixEspace'));
 const InvitePage = lazy(() => import('./components/auth/InvitePage'));
 const ForgotPasswordPage = lazy(() => import('./components/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('./components/auth/ResetPasswordPage'));
@@ -155,6 +158,8 @@ export default function App() {
         <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/passage" element={<PassagePage />} />
+          <Route path="/choix" element={<ChoixEspace />} />
           <Route path="/invite/:token" element={<InvitePage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password/:token" element={<ResetPasswordPage />} />

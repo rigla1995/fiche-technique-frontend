@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LabFlowLogo from '../common/LabFlowLogo';
 import { FlagTN } from './AuthShell';
+import { destinationApresConnexion } from '../../compta/passage';
 
 // Piliers du site vitrine (hero) — pas de chiffres inventés (règles de véracité).
 const PILIERS = [
@@ -40,7 +41,11 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const loggedUser = await login(email, password);
-      if (loggedUser.role === 'gerant') {
+      // LabFlow Compta (S3a, D11bis) : qui a aussi une comptabilité choisit son espace.
+      const choix = await destinationApresConnexion(loggedUser.role);
+      if (choix) {
+        navigate(choix, { replace: true });
+      } else if (loggedUser.role === 'gerant') {
         // Pas de tableau de bord pour un gérant : atterrissage sur le Référentiel
         navigate('/client/referentiel/unites', { replace: true });
       } else if (loggedUser.role === 'super_admin' || loggedUser.role === 'boss') {

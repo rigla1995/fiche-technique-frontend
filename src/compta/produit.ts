@@ -18,3 +18,13 @@ export const adresseCompta = (lieu: Pick<Location, 'protocol' | 'hostname'> = wi
   if (lieu.hostname === 'localhost' || lieu.hostname === '127.0.0.1') return `${lieu.protocol}//${lieu.hostname}:5174`;
   return `${lieu.protocol}//compta.${lieu.hostname}`;
 };
+
+// Adresse de LabFlow (Stock / Vente) vue depuis LabFlow Compta (étape S3a : passage sans ressaisie) : app.<domaine> en
+// production (compta.labflow-tn.com → app.labflow-tn.com) ; en local, VITE_URL_APP ou le port 5173 de `npm run dev`.
+export const adresseApp = (lieu: Pick<Location, 'protocol' | 'hostname'> = window.location): string => {
+  const fixe = import.meta.env.VITE_URL_APP as string | undefined;
+  if (fixe) return fixe.replace(/\/$/, '');
+  if (/^compta\./i.test(lieu.hostname)) return `${lieu.protocol}//${lieu.hostname.replace(/^compta\./i, 'app.')}`;
+  if (lieu.hostname === 'localhost' || lieu.hostname === '127.0.0.1') return `${lieu.protocol}//${lieu.hostname}:5173`;
+  return `${lieu.protocol}//${lieu.hostname}`;
+};
