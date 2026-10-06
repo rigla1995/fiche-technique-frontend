@@ -334,6 +334,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <span className="link-label">Demandes</span>
                 </NavLink>
               </li>
+              {/* LabFlow Compta, étape S2c : demandes d'activation (module Comptabilité…), hors menu jusque-là. */}
+              <li>
+                <NavLink to="/admin/demandes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
+                  <span className="link-icon">📨</span>
+                  <span className="link-label">Demandes d'activation</span>
+                </NavLink>
+              </li>
               <li>
                 <NavLink to="/admin/rapports" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}>
                   <span className="link-icon">📈</span>

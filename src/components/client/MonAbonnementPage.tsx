@@ -6,6 +6,7 @@ import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Vocab } from '../../vocab/vocab';
 import { libelleComposant } from '../../vocab/composants';
 import GuideButton from './GuideButton';
+import ModuleComptaClient, { LignesModuleCompta } from '../../compta/ModuleComptaClient';
 
 // Lignes de capacité de « Votre configuration » : MENU du domaine (composants actifs) avec la
 // quantité souscrite (0 = « Non inclus », comme les 4 lignes historiques), complété par les
@@ -318,6 +319,8 @@ export default function MonAbonnementPage() {
                         <span style={{ fontWeight: 700, color: '#111827' }}>{breakdown.acheteurs.total.toFixed(2)} DT</span>
                       </div>
                     )}
+                    {/* LabFlow Compta (S2c) : le module Comptabilité, à plein tarif, hors promotion */}
+                    <LignesModuleCompta postes={pricing.compta?.postes} />
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 4 }}>
                       <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1e40af' }}>Total mensuel</span>
                       <div style={{ textAlign: 'right' }}>
@@ -407,6 +410,9 @@ export default function MonAbonnementPage() {
           </div>
         )}
       </div>
+
+      {/* LabFlow Compta (S2c) : module Comptabilité — demande d'activation, puis lien vers LabFlow Compta */}
+      <ModuleComptaClient />
 
       {/* Supplement promo banners (activité / labo / gérant) */}
       {([
