@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from '../context/AuthContext';
+import { AuthProvider, useAuth } from '../context/AuthContext';
 import { MANUEL_COMPTA } from './manuelCompta';
 
 // ── Coquille de LabFlow Compta (SPEC-SOCLE D11, étape S1) ─────────────────────────────────────────────────────────
@@ -13,6 +13,9 @@ const ComptaLoginPage = lazy(() => import('./pages/ComptaLoginPage'));
 const ComptaAccueil = lazy(() => import('./pages/ComptaAccueil'));
 const ComptaErreur = lazy(() => import('./pages/ComptaErreur'));
 const LayoutCompta = lazy(() => import('./LayoutCompta'));
+// Étape S2b : les pages du cabinet, pour son titulaire (rôle « comptable »)
+const ComptaCabinet = lazy(() => import('./pages/ComptaCabinet'));
+const ComptaAbonnement = lazy(() => import('./pages/ComptaAbonnement'));
 // Le manuel de LabFlow Compta s'affiche dans la page du manuel de LabFlow (même présentation), réglée sur le produit.
 const GuidePage = lazy(() => import('../components/client/GuidePage'));
 const InvitePage = lazy(() => import('../components/auth/InvitePage'));
@@ -24,6 +27,13 @@ export const Chargement = () => (
     <div style={{ width: 34, height: 34, border: '3px solid rgba(165,180,252,0.25)', borderTopColor: '#A5B4FC', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
   </div>
 );
+
+// Pages du cabinet : réservées à son titulaire (rôle « comptable ») ; tout autre compte revient à l'accueil.
+function ReserveCabinet({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user && user.role !== 'comptable') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 export default function ComptaApp() {
   useEffect(() => {
@@ -43,6 +53,8 @@ export default function ComptaApp() {
             <Route element={<LayoutCompta />}>
               <Route path="/" element={<ComptaAccueil />} />
               <Route path="/manuel" element={<GuidePage manuel={MANUEL_COMPTA} />} />
+              <Route path="/cabinet" element={<ReserveCabinet><ComptaCabinet /></ReserveCabinet>} />
+              <Route path="/abonnement" element={<ReserveCabinet><ComptaAbonnement /></ReserveCabinet>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

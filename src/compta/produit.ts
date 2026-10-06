@@ -7,3 +7,14 @@ export const produitDeLHote = (hote: string, mode?: string): Produit =>
   mode === 'compta' || /^compta\./i.test(hote) ? 'compta' : 'labflow';
 
 export const PRODUIT: Produit = produitDeLHote(window.location.hostname, import.meta.env.MODE);
+
+// Adresse de LabFlow Compta vue depuis LabFlow (étape S2b : un compte « comptable » connecté sur app. y est renvoyé) :
+// compta.<domaine> en production (app.labflow-tn.com → compta.labflow-tn.com) ; en local, VITE_URL_COMPTA ou le port
+// 5174 de `npm run dev:compta`.
+export const adresseCompta = (lieu: Pick<Location, 'protocol' | 'hostname'> = window.location): string => {
+  const fixe = import.meta.env.VITE_URL_COMPTA as string | undefined;
+  if (fixe) return fixe.replace(/\/$/, '');
+  if (/^app\./i.test(lieu.hostname)) return `${lieu.protocol}//${lieu.hostname.replace(/^app\./i, 'compta.')}`;
+  if (lieu.hostname === 'localhost' || lieu.hostname === '127.0.0.1') return `${lieu.protocol}//${lieu.hostname}:5174`;
+  return `${lieu.protocol}//compta.${lieu.hostname}`;
+};

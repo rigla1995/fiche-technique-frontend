@@ -10,7 +10,7 @@ interface AnnuaireRow {
   id: number;
   nom: string;
   email: string;
-  role: 'client' | 'gerant' | 'acheteur';
+  role: 'client' | 'gerant' | 'acheteur' | 'comptable';
   actif: boolean;
   parentNom: string | null;
   motDePasseHash: string | null;
@@ -21,12 +21,14 @@ interface AnnuaireRow {
 const apiErr = (e: unknown) =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
 
-const ROLE_LABEL: Record<string, string> = { client: 'Client', gerant: 'Gérant', acheteur: 'Acheteur' };
+// LabFlow Compta (S2b) : + les titulaires de cabinets comptables.
+const ROLE_LABEL: Record<string, string> = { client: 'Client', gerant: 'Gérant', acheteur: 'Acheteur', comptable: 'Comptable' };
 const ROLE_FILTERS = [
   { key: '', label: 'Tous' },
   { key: 'client', label: 'Clients' },
   { key: 'gerant', label: 'Gérants' },
   { key: 'acheteur', label: 'Acheteurs' },
+  { key: 'comptable', label: 'Comptables' },
 ];
 
 export default function BossAnnuairePage() {
@@ -124,7 +126,7 @@ export default function BossAnnuairePage() {
         <div style={{ flex: 1, minWidth: 240 }}>
           <h1 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#fff', margin: 0, lineHeight: 1.1 }}>Annuaire identifiants</h1>
           <p style={{ margin: '4px 0 0', fontSize: '0.82rem', color: 'rgba(255,255,255,0.82)', lineHeight: 1.5, maxWidth: 640 }}>
-            Emails et mots de passe (hashés) des comptes clients, gérants et acheteurs. La révélation d'un mot de passe est protégée par un code envoyé à votre email et n'apparaît que 2 minutes.
+            Emails et mots de passe (hashés) des comptes clients, gérants, acheteurs et comptables (LabFlow Compta). La révélation d'un mot de passe est protégée par un code envoyé à votre email et n'apparaît que 2 minutes.
           </p>
         </div>
         <div style={{ background: 'rgba(255,255,255,0.12)', borderRadius: 10, padding: '8px 14px', textAlign: 'center' }}>

@@ -12,6 +12,7 @@ const libelleRole = (role?: string) =>
     : role === 'super_admin' ? 'Administrateur'
     : role === 'gerant' ? 'Gérant'
     : role === 'acheteur' ? 'Acheteur'
+    : role === 'comptable' ? 'Cabinet comptable'
     : 'Client';
 
 const initiales = (nom?: string) =>
