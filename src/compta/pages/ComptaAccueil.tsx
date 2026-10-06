@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import BoutonAide from '../BoutonAide';
 
@@ -7,7 +8,8 @@ import BoutonAide from '../BoutonAide';
 // Étape S1 : aucune comptabilité n'existe encore (le serveur renvoie trois listes vides).
 // Présentation de LabFlow (demande du client du 06/10) : page dans la mise en page commune (LayoutCompta), bandeau
 // coloré en tête avec son « ? », comme chaque page de LabFlow.
-type Comptabilite = { id: number; nom: string };
+// `lien` (étape S2b) : page ouverte par la carte (le cabinet de son titulaire) ; absent = carte sans lien à cette étape.
+type Comptabilite = { id: number; nom: string; lien?: string | null };
 type Acces = { cabinets: Comptabilite[]; maComptabilite: Comptabilite[]; confiees: Comptabilite[] };
 
 const GROUPES: { cle: keyof Acces; titre: string; badge: string; couleur: string }[] = [
@@ -74,11 +76,16 @@ export default function ComptaAccueil() {
               <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#fff', background: g.couleur, borderRadius: 999, padding: '3px 9px' }}>{g.badge}</span>
             </h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
-              {acces[g.cle].map((c) => (
-                <div key={`${g.cle}-${c.id}`} style={{ background: '#fff', border: '1px solid #e2e8f0', borderLeft: `4px solid ${g.couleur}`, borderRadius: 12, padding: '14px 16px', fontWeight: 700, color: '#0f172a' }}>
-                  {c.nom}
-                </div>
-              ))}
+              {acces[g.cle].map((c) => {
+                const style: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid #e2e8f0', borderLeft: `4px solid ${g.couleur}`, borderRadius: 12, padding: '14px 16px', fontWeight: 700, color: '#0f172a', textDecoration: 'none' };
+                return c.lien ? (
+                  <Link key={`${g.cle}-${c.id}`} to={c.lien} style={style}>
+                    <span>{c.nom}</span><span style={{ color: g.couleur, fontSize: '0.85rem' }}>Ouvrir →</span>
+                  </Link>
+                ) : (
+                  <div key={`${g.cle}-${c.id}`} style={style}>{c.nom}</div>
+                );
+              })}
             </div>
           </section>
         ))}

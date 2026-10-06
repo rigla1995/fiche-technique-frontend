@@ -19,9 +19,11 @@ interface Props<T> {
   onClose: () => void;
   /** Client renvoyé par le serveur après l'enregistrement (liste à mettre à jour). */
   onSaved: (client: T) => void;
+  /** Cabinet LabFlow Compta (étape S2b) : PUT /admin/comptables/:id/identite ; seules ses factures d'abonnement l'impriment. */
+  cabinet?: boolean;
 }
 
-export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Props<T>) {
+export default function IdentiteClientModal<T>({ client, onClose, onSaved, cabinet = false }: Props<T>) {
   const initiale = identiteDe(client.entreprise);
   const [valeur, setValeur] = useState<IdentiteLegale>(initiale);
   const [saving, setSaving] = useState(false);
@@ -30,7 +32,7 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
   const [avertissements, setAvertissements] = useState<string[] | null>(null);
   // Adresse modifiée : les factures de vente d'avant la copie figée (étape 8) et les factures d'approvisionnement
   // la lisent encore sur la fiche.
-  const adresseDejaImprimee = (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
+  const adresseDejaImprimee = !cabinet && (valeur.adresse ?? '').trim() !== (initiale.adresse ?? '').trim();
 
   const enregistrer = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +42,7 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
     setSaving(true);
     setErreur(null);
     try {
-      const { data } = await api.put(`/admin/clients/${client.id}/identite`, corps);
+      const { data } = await api.put(`/admin/${cabinet ? 'comptables' : 'clients'}/${client.id}/identite`, corps);
       onSaved(data as T);
       const av: string[] = Array.isArray(data?.avertissements) ? data.avertissements : [];
       if (av.length) setAvertissements(av);
@@ -84,8 +86,8 @@ export default function IdentiteClientModal<T>({ client, onClose, onSaved }: Pro
           <form onSubmit={enregistrer} style={{ display: 'flex', flexDirection: 'column', minHeight: 0, flex: 1 }}>
             <div className="modal-body">
               <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 14px', lineHeight: 1.55 }}>
-                Telle qu'elle figure sur la patente. Elle figurera sur les prochaines factures de vente et
-                d'abonnement ; celles déjà émises ne changent pas.
+                Telle qu'elle figure sur la patente. Elle figurera sur les prochaines factures
+                {cabinet ? ' d\'abonnement à LabFlow Compta' : ' de vente et d\'abonnement'} ; celles déjà émises ne changent pas.
                 Un champ peut rester vide : la fiche reste marquée « Identité à compléter ».
               </p>
               <ClientIdentiteForm value={valeur} onChange={(v) => { setValeur(v); setErreur(null); }} disabled={saving} onLecture={setLectureEnCours} />
