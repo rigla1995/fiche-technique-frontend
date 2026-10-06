@@ -5,5 +5,40 @@
     "apres": "compta",
     "type": "discriminant",
     "justification": "Chantier Achats & Comptabilité, étape S1 (SPEC-SOCLE D11) : valeur du produit (« compta ») comparée au démarrage pour choisir la coquille LabFlow Compta ; jamais affichée."
+  },
+  {
+    "fichier": "src/components/client/GuidePage.tsx",
+    "avant": "Guide complet de l'application LabFlow",
+    "apres": "⟦?⟦·⟧|Guide complet de l'application LabFlow⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, présentation de LabFlow Compta (demande du client du 06/10/2026 : même affichage du manuel que LabFlow) : sous-titre du bandeau du manuel, choisi par le produit du manuel affiché. Le texte de LabFlow est inchangé quand la page sert le manuel de LabFlow ; l'autre branche est le texte de LabFlow Compta, passé par la coquille Compta (src/compta/manuelCompta.ts, vocabulaire comptable fixe, hors périmètre). PDF de LabFlow identique (scripts/controle-manuel-pdf.mjs)."
+  },
+  {
+    "fichier": "src/utils/manuelPdf.ts",
+    "avant": "LabFlow — Guide complet de l'application",
+    "apres": "⟦?⟦·⟧|LabFlow — Guide complet de l'application⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, présentation de LabFlow Compta (demande du client du 06/10/2026 : même affichage du manuel que LabFlow) : sous-titre de la couverture du PDF du manuel, choisi par le produit. Le texte de LabFlow est inchangé quand la page sert le manuel de LabFlow ; l'autre branche est le texte de LabFlow Compta, passé par la coquille Compta (src/compta/manuelCompta.ts, vocabulaire comptable fixe, hors périmètre). PDF de LabFlow identique (scripts/controle-manuel-pdf.mjs)."
+  },
+  {
+    "fichier": "src/utils/manuelPdf.ts",
+    "avant": "Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur de stock, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.",
+    "apres": "⟦?⟦·⟧|Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs utilisés (coûts de revient, valeur de stock, prix moyens pondérés…). La version en ligne, accessible depuis le menu « Manuel d'utilisation », reste la référence la plus à jour.⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, présentation de LabFlow Compta (demande du client du 06/10/2026 : même affichage du manuel que LabFlow) : introduction de la couverture du PDF du manuel, choisie par le produit. Le texte de LabFlow est inchangé quand la page sert le manuel de LabFlow ; l'autre branche est le texte de LabFlow Compta, passé par la coquille Compta (src/compta/manuelCompta.ts, vocabulaire comptable fixe, hors périmètre). PDF de LabFlow identique (scripts/controle-manuel-pdf.mjs)."
+  },
+  {
+    "fichier": "src/utils/manuelPdf.ts",
+    "avant": "LabFlow — Manuel d'utilisation",
+    "apres": "⟦?⟦·⟧|LabFlow — Manuel d'utilisation⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, présentation de LabFlow Compta (demande du client du 06/10/2026 : même affichage du manuel que LabFlow) : pied de page du PDF du manuel, choisi par le produit. Le texte de LabFlow est inchangé quand la page sert le manuel de LabFlow ; l'autre branche est le texte de LabFlow Compta, passé par la coquille Compta (src/compta/manuelCompta.ts, vocabulaire comptable fixe, hors périmètre). PDF de LabFlow identique (scripts/controle-manuel-pdf.mjs)."
+  },
+  {
+    "fichier": "src/utils/manuelPdf.ts",
+    "avant": "LabFlow-Manuel-utilisation.pdf",
+    "apres": "⟦?⟦·⟧|LabFlow-Manuel-utilisation.pdf⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, présentation de LabFlow Compta (demande du client du 06/10/2026 : même affichage du manuel que LabFlow) : nom du fichier PDF du manuel, choisi par le produit. Le texte de LabFlow est inchangé quand la page sert le manuel de LabFlow ; l'autre branche est le texte de LabFlow Compta, passé par la coquille Compta (src/compta/manuelCompta.ts, vocabulaire comptable fixe, hors périmètre). PDF de LabFlow identique (scripts/controle-manuel-pdf.mjs)."
   }
 ]
