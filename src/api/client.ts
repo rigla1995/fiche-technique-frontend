@@ -28,13 +28,19 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     if (status === 401) {
+      // LabFlow Compta (S3a) : un 401 reçu par un ANCIEN jeton (réponse tardive, alors qu'une autre session vient d'être
+      // ouverte par un passage) ne touche pas à la session en place.
+      const jetonRefuse = String(error.config?.headers?.Authorization || '').replace(/^Bearer /, '');
+      const jetonActuel = localStorage.getItem('token') || '';
+      if (jetonRefuse && jetonActuel && jetonRefuse !== jetonActuel) return Promise.reject(error);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       // Sur les pages auth publiques (reset, invitation…), un vieux JWT expiré en
       // localStorage provoque un 401 de /auth/me : purger sans arracher l'utilisateur
       // de la page (sinon le 1er clic sur un lien email atterrit sur /login).
+      // S3a : la page d'arrivée d'un passage aussi (elle ouvre elle-même la nouvelle session).
       const path = window.location.pathname;
-      const publicAuthPrefixes = ['/login', '/forgot-password', '/reset-password', '/invite'];
+      const publicAuthPrefixes = ['/login', '/forgot-password', '/reset-password', '/invite', '/passage'];
       const onPublicAuthPage = publicAuthPrefixes.some((p) => path === p || path.startsWith(p + '/'));
       if (!onPublicAuthPage) {
         window.location.href = '/login';

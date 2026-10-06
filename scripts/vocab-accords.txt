@@ -3484,13 +3484,13 @@ src/components/common/AssistantChat.tsx
     miroir : L'assistant IA n'est pas encore activé pour votre compte : il pourra analyser vos données (armoire, encaissements, abandons…) et répondre à vos questions sur LabFlow. Contactez votre administrateur pour l'activer.
 
 src/components/common/Header.tsx
-  l. 102
+  l. 105
     défaut : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Gérant⟧|Client⟧⟧⟧
     miroir : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Animatrice⟧|Client⟧⟧⟧
-  l. 194
+  l. 197
     défaut : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
     miroir : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
-  l. 217
+  l. 220
     défaut : ⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
     miroir : ⟦?Pesée ajoutée par une animatrice|⟦?Nouvelle commande de la cliente⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
 

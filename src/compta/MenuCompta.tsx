@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { estTitulaireCabinet, useAccesCompta } from './accesCompta';
 
 // Menu de gauche de LabFlow Compta : celui de LabFlow (src/components/common/Sidebar.tsx, classes .sidebar et
 // .sidebar-link) ; en haut les pages de travail, en bas l'aide (comme « Mon abonnement » et le manuel dans LabFlow).
@@ -9,6 +10,7 @@ const classeLien = ({ isActive }: { isActive: boolean }) => `sidebar-link ${isAc
 
 export default function MenuCompta({ ouvert, onFermer }: { ouvert: boolean; onFermer: () => void }) {
   const { user, logout } = useAuth();
+  const { acces } = useAccesCompta();
   const navigate = useNavigate();
   const seDeconnecter = () => { onFermer(); logout(); navigate('/login', { replace: true }); };
 
@@ -23,8 +25,8 @@ export default function MenuCompta({ ouvert, onFermer }: { ouvert: boolean; onFe
               <span className="link-label">Vos comptabilités</span>
             </NavLink>
           </li>
-          {/* Étape S2b : le titulaire d'un cabinet (rôle « comptable ») */}
-          {user?.role === 'comptable' && (
+          {/* Étape S2b : le titulaire d'un cabinet (S3a : vérifié sur ses accès, plus sur son rôle) */}
+          {estTitulaireCabinet(acces) && (
             <>
               <li>
                 <NavLink to="/cabinet" className={classeLien} onClick={onFermer}>
@@ -40,8 +42,8 @@ export default function MenuCompta({ ouvert, onFermer }: { ouvert: boolean; onFe
               </li>
             </>
           )}
-          {/* Étape S2c : un client LabFlow (module Comptabilité) */}
-          {user?.role === 'client' && (
+          {/* Étape S2c : un client LabFlow titulaire de sa comptabilité (module Comptabilité ; S3a : sur ses accès) */}
+          {(acces?.maComptabilite.length ?? 0) > 0 && (
             <li>
               <NavLink to="/ma-comptabilite" className={classeLien} onClick={onFermer}>
                 <span className="link-icon">🧮</span>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { AuthShell, authInput, authLabel, authSubmit, authErrorBox, onAuthFocus, onAuthBlur } from '../../components/auth/AuthShell';
+import { destinationApresConnexion } from '../passage';
 
 // Connexion à LabFlow Compta (SPEC-SOCLE, étape S1) : même compte, même mot de passe que LabFlow ; la coquille Compta
 // garde sa propre session (une session par adresse). Après connexion : l'accueil « Vos comptabilités ».
@@ -28,8 +29,9 @@ export default function ComptaLoginPage() {
     setErreur('');
     setEnvoi(true);
     try {
-      await login(email, password);
-      navigate('/', { replace: true });
+      const u = await login(email, password);
+      // S3a (D11bis) : un client ou un gérant qui a aussi une comptabilité choisit son espace.
+      navigate((await destinationApresConnexion(u.role)) || '/', { replace: true });
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setErreur(msg === 'invite_pending'
