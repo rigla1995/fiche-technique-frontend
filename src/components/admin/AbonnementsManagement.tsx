@@ -6,6 +6,7 @@ import { MonthPicker } from './MonthPicker';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSegmented } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
 import Counter from './Counter';
+import ModuleComptaCard from './ModuleComptaCard';
 import {
   AIDE_DEFAUT, PALIERS_ACHETEURS, PALIER_LABELS,
   composantsActifs, deriveCompteurs, libelleComposant, palierAcheteurs, resoudreRegles, validerCompositionClient,
@@ -254,6 +255,8 @@ interface MontantMoisInfo {
     supplementGerant: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
     supplementLabo: { base: number; effectif: number; active: boolean; hasPromo: boolean; promoType: string | null };
     optionAcheteurs?: { base: number; effectif: number; active: boolean; palier: number | null };
+    /** LabFlow Compta : postes du mois (cabinet, ou module d'un client à partir du mois qui suit son activation). */
+    compta?: { postes: { code: string; libelle: string; montant: number }[] };
   };
   total: number;
 }
@@ -1009,6 +1012,7 @@ export default function AbonnementsManagement() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end', flexShrink: 0 }}>
                     <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 10, background: m.color + '18', color: m.color, whiteSpace: 'nowrap' }}>{m.label}</span>
                     {ab.produit === 'compta' && <span style={{ fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 8, background: '#eef2ff', color: '#4338ca', whiteSpace: 'nowrap' }}>📒 Compta</span>}
+                    {ab.moduleComptaActif && <span title="Module Comptabilité actif" style={{ fontSize: 9, fontWeight: 800, padding: '2px 6px', borderRadius: 8, background: '#eef2ff', color: '#4338ca', whiteSpace: 'nowrap' }}>📒 Module</span>}
                     {ab.hasActivePromo && <span style={{ fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 8, background: '#fef3c7', color: '#92400e' }}>🏷️</span>}
                   </div>
                 </div>
@@ -1132,8 +1136,10 @@ export default function AbonnementsManagement() {
               const totalLabo     = bd?.labo.total     ?? 0;
               const totalGerant   = bd?.gerant.total   ?? 0;
               const totalAcheteurs = bd?.acheteurs?.total ?? 0;
+              // LabFlow Compta (S2c) : le module Comptabilité et ses gérants comptables, à plein tarif.
+              const totalModule = Math.round((selected.pricing?.compta?.postes ?? []).reduce((s, p) => s + p.montant, 0) * 100) / 100;
               const totalMensuel  = bd
-                ? (bd.activite.total + bd.labo.total + bd.gerant.total + totalAcheteurs)
+                ? Math.round((bd.activite.total + bd.labo.total + bd.gerant.total + totalAcheteurs + totalModule) * 100) / 100
                 : (selected.pricing?.baseMensuel ?? 0);
               const pLaboUnit   = bd?.prixLaboSup;
               const pGerantUnit = bd?.prixGerantSup;
@@ -1162,7 +1168,7 @@ export default function AbonnementsManagement() {
                     <span style={{ fontSize: 18 }}>⚙️</span>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 13, fontWeight: 700, color: '#4c1d95' }}>Configuration souscrite</div>
-                      <div style={{ fontSize: 11, color: '#6d28d9', marginTop: 1 }}>Capacité configurée par l'administrateur</div>
+                      <div style={{ fontSize: 11, color: '#6d28d9', marginTop: 1 }}>Capacité configurée par l'administrateur{totalModule > 0 ? ` · dont Module Comptabilité ${totalModule} DT (onglet Activation)` : ''}</div>
                     </div>
                     <span style={{ fontSize: 14, fontWeight: 800, color: '#4c1d95' }}>{totalMensuel} DT/mois</span>
                   </div>
@@ -1776,6 +1782,16 @@ export default function AbonnementsManagement() {
                           );
                         })()}
 
+                        {/* Module Comptabilité d'un client (LabFlow Compta, S2c) : à plein tarif, hors promotion */}
+                        {selected.produit !== 'compta' && (pMontantInfo.breakdown.compta?.postes ?? []).map((p) => (
+                          <div key={p.code} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0, padding: '10px 14px', borderTop: '1px solid #e2e8f0', background: '#fff' }}>
+                            <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 13, fontWeight: 600, color: '#0f172a' }}>📒 {p.libelle}</span></div>
+                            <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 13, color: '#374151' }}>{p.montant} DT</span></div>
+                            <div style={{ display: 'flex', alignItems: 'center' }}><span style={{ fontSize: 11, color: '#cbd5e1' }}>—</span></div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}><span style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{p.montant} DT</span></div>
+                          </div>
+                        ))}
+
                         {/* Total row */}
                         <div style={{
                           display: 'grid', gridTemplateColumns: '1fr 80px 1fr 90px', gap: 0,
@@ -1936,6 +1952,15 @@ export default function AbonnementsManagement() {
                 {moduleAcheteursError && <span style={{ fontSize: 11, color: '#dc2626' }}>{moduleAcheteursError}</span>}
               </div>
             </div>
+
+            {/* ── Module Comptabilité (LabFlow Compta, étape S2c) ─────── */}
+            <ModuleComptaCard key={selected.clientId} clientId={selected.clientId} onChange={() => {
+              // Total mensuel de la carte « Configuration » et badge de la liste.
+              // Réponse appliquée seulement si la fiche affichée est toujours celle de ce client.
+              api.get(`/api/abonnements/client/${selected.clientId}?withPricing=1`)
+                .then((r) => setSelected((s) => (s && s.clientId === r.data.clientId ? r.data : s))).catch(() => {});
+              fetchList();
+            }} />
 
             {/* ── Assistant IA ────────────────────────────────────────── */}
             <div style={{ background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden', marginBottom: 20 }}>

@@ -75,6 +75,8 @@ export interface AbonnementConfig {
   composants?: ComposantConfig[];
   /** LabFlow Compta (S2b) : présents seulement pour un cabinet ou un client qui a le module. */
   moduleComptaActif?: boolean;
+  /** S2c : date d'activation du module chez un client (facturé à partir du mois suivant). */
+  moduleComptaActiveLe?: string | null;
   nbGerantsCompta?: number;
   createdAt: string;
   updatedAt: string;
@@ -129,6 +131,8 @@ export interface Abonnement {
   moduleAcheteursActivatedAt?: string | null;
   /** LabFlow Compta (S2b) : 'compta' pour un cabinet comptable ; absent = LabFlow. */
   produit?: 'compta';
+  /** S2c : liste des abonnements, présent (true) seulement quand le module Comptabilité est actif. */
+  moduleComptaActif?: boolean;
   config?: AbonnementConfig | null;
   paiements?: Paiement[];
   promotions?: Promotion[];

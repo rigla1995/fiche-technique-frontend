@@ -16,6 +16,8 @@ const LayoutCompta = lazy(() => import('./LayoutCompta'));
 // Étape S2b : les pages du cabinet, pour son titulaire (rôle « comptable »)
 const ComptaCabinet = lazy(() => import('./pages/ComptaCabinet'));
 const ComptaAbonnement = lazy(() => import('./pages/ComptaAbonnement'));
+// Étape S2c : la comptabilité d'un client LabFlow qui a le module Comptabilité
+const ComptaMaComptabilite = lazy(() => import('./pages/ComptaMaComptabilite'));
 // Le manuel de LabFlow Compta s'affiche dans la page du manuel de LabFlow (même présentation), réglée sur le produit.
 const GuidePage = lazy(() => import('../components/client/GuidePage'));
 const InvitePage = lazy(() => import('../components/auth/InvitePage'));
@@ -32,6 +34,13 @@ export const Chargement = () => (
 function ReserveCabinet({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   if (user && user.role !== 'comptable') return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
+
+// « Ma comptabilité » : un client LabFlow (le serveur vérifie qu'il est titulaire de la comptabilité).
+function ReserveClient({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  if (user && user.role !== 'client') return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 
@@ -55,6 +64,7 @@ export default function ComptaApp() {
               <Route path="/manuel" element={<GuidePage manuel={MANUEL_COMPTA} />} />
               <Route path="/cabinet" element={<ReserveCabinet><ComptaCabinet /></ReserveCabinet>} />
               <Route path="/abonnement" element={<ReserveCabinet><ComptaAbonnement /></ReserveCabinet>} />
+              <Route path="/ma-comptabilite" element={<ReserveClient><ComptaMaComptabilite /></ReserveClient>} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
