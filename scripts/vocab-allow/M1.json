@@ -1,0 +1,164 @@
+[
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "button",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "menu-toggle",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "Ouvrir le menu",
+    "type": "ajoute",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : nom lu par les lecteurs d'écran du nouveau bouton de menu de la barre du haut (aria-label, même texte que dans LabFlow Compta) ; aucun terme du lexique."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "header-logo",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "bureau-seul",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": "btn btn-ghost btn-sm",
+    "apres": "btn btn-ghost btn-sm bureau-seul",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : classe CSS ajoutée au bouton « Déconnexion » de la barre du haut pour le masquer sur téléphone (il passe dans le menu) ; jamais affichée."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "/login",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "sidebar-nav mobile-seul",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "1px solid var(--border)",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "10px 12px 4px",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "0.8rem",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "var(--text)",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "button",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "sidebar-link",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "100%",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "none",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route).",
+    "occurrences": 2
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "pointer",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "left",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "inherit",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "link-icon",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "🚪",
+    "type": "ajoute",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : icône de l'entrée « Déconnexion » ajoutée au bas du menu, sur téléphone seulement (même icône que LabFlow Compta)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "link-label",
+    "type": "discriminant",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : chaîne technique jamais lue comme un texte (classe CSS, valeur de style, type de bouton, route)."
+  },
+  {
+    "fichier": "src/components/common/Sidebar.tsx",
+    "avant": null,
+    "apres": "Déconnexion",
+    "type": "ajoute",
+    "justification": "Correctif du 06/10/2026, menu sur téléphone (sous 768 px, le menu de gauche est replié et rien ne permettait de l'ouvrir ; même principe que LabFlow Compta, déjà en production) : sur téléphone, la déconnexion passe de la barre du haut (texte inchangé dans Header.tsx, qui le garde sur ordinateur) au bas du menu de gauche ; aucun terme du lexique."
+  }
+]
