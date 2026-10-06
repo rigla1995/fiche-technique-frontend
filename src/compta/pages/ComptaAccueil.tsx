@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 import api from '../../api/client';
-import EnteteCompta from '../EnteteCompta';
+import BoutonAide from '../BoutonAide';
 
 // Accueil de LabFlow Compta : les comptabilités de la personne, en trois groupes TOUJOURS distincts (exigence du client,
 // CADRAGE §2) — son cabinet, sa comptabilité de client LabFlow, celles que des clients LabFlow lui ont confiées.
 // Étape S1 : aucune comptabilité n'existe encore (le serveur renvoie trois listes vides).
+// Présentation de LabFlow (demande du client du 06/10) : page dans la mise en page commune (LayoutCompta), bandeau
+// coloré en tête avec son « ? », comme chaque page de LabFlow.
 type Comptabilite = { id: number; nom: string };
 type Acces = { cabinets: Comptabilite[]; maComptabilite: Comptabilite[]; confiees: Comptabilite[] };
 
@@ -29,12 +31,22 @@ export default function ComptaAccueil() {
   const vide = acces && GROUPES.every((g) => (acces[g.cle] || []).length === 0);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8fafc' }}>
-      <EnteteCompta aide="compta-bienvenue" />
-
-      <main style={{ maxWidth: 1080, margin: '0 auto', padding: '28px 20px 48px' }}>
-        <h1 style={{ margin: '0 0 6px', fontSize: '1.45rem', fontWeight: 900, color: '#0f172a' }}>Vos comptabilités</h1>
-        <p style={{ margin: '0 0 24px', color: '#64748b', fontSize: '0.9rem' }}>Choisissez la comptabilité à ouvrir.</p>
+    <div className="page">
+      <div style={{
+        background: 'linear-gradient(135deg, #1e1b4b 0%, #4338ca 55%, #7c3aed 100%)',
+        borderRadius: 18, padding: '24px 28px', marginBottom: 24,
+        boxShadow: '0 8px 32px rgba(67,56,202,0.28)',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 16,
+      }}>
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>📒</div>
+            <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Vos comptabilités</h1>
+          </div>
+          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Choisissez la comptabilité à ouvrir.</p>
+        </div>
+        <BoutonAide section="compta-bienvenue" />
+      </div>
 
         {erreur && (
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -70,7 +82,6 @@ export default function ComptaAccueil() {
             </div>
           </section>
         ))}
-      </main>
     </div>
   );
 }

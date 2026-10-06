@@ -50,7 +50,15 @@ const CALLOUT_PDF: Record<CalloutKind, { bg: string; color: string; label: strin
   exemple: { bg: '#fefce8', color: '#854d0e', label: 'EXEMPLE' },
 };
 
-export function buildManuelPdf(sections: ManuelSection[], voc: Vocab): void {
+/** Textes propres à un autre produit (LabFlow Compta) : couverture, pied de page, nom du fichier. Absents : ceux de LabFlow. */
+export interface TextesManuelPdf {
+  sousTitre: string;
+  intro: string;
+  pied: string;
+  fichier: string;
+}
+
+export function buildManuelPdf(sections: ManuelSection[], voc: Vocab, textes?: TextesManuelPdf): void {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   let y = 0;
 
@@ -76,14 +84,15 @@ export function buildManuelPdf(sections: ManuelSection[], voc: Vocab): void {
   setFont(30, 'bold', '#ffffff');
   doc.text('Manuel d\'utilisation', PW / 2, 55, { align: 'center' });
   setFont(14, 'normal', '#dbeafe');
-  doc.text('LabFlow — Guide complet de l\'application', PW / 2, 68, { align: 'center' });
+  doc.text(textes ? textes.sousTitre : 'LabFlow — Guide complet de l\'application', PW / 2, 68, { align: 'center' });
   setFont(10, 'normal', '#bfdbfe');
   doc.text(`Édition du ${new Date().toLocaleDateString('fr-FR')}`, PW / 2, 80, { align: 'center' });
   setFont(10, 'normal', '#475569');
   const intro = doc.splitTextToSize(
-    'Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs '
-    + `utilisés (coûts de revient, valeur ${voc.de('stock')}, prix moyens pondérés…). La version en ligne, `
-    + 'accessible depuis le menu « Manuel d\'utilisation », reste la référence la plus à jour.',
+    textes ? textes.intro
+      : 'Ce manuel présente LabFlow, son vocabulaire, chacun de ses écrans et le détail des calculs '
+      + `utilisés (coûts de revient, valeur ${voc.de('stock')}, prix moyens pondérés…). La version en ligne, `
+      + 'accessible depuis le menu « Manuel d\'utilisation », reste la référence la plus à jour.',
     CW
   );
   doc.text(intro, ML, 130);
@@ -264,9 +273,9 @@ export function buildManuelPdf(sections: ManuelSection[], voc: Vocab): void {
   for (let p = 2; p <= total; p++) {
     doc.setPage(p);
     setFont(7.5, 'normal', '#94a3b8');
-    doc.text('LabFlow — Manuel d\'utilisation', ML, PH - 8);
+    doc.text(textes ? textes.pied : 'LabFlow — Manuel d\'utilisation', ML, PH - 8);
     doc.text(`${p} / ${total}`, PW - MR, PH - 8, { align: 'right' });
   }
 
-  doc.save('LabFlow-Manuel-utilisation.pdf');
+  doc.save(textes ? textes.fichier : 'LabFlow-Manuel-utilisation.pdf');
 }
