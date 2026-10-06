@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:compta": "vite --port 5174 --strictPort --mode compta",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",

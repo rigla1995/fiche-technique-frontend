@@ -204,7 +204,9 @@ const ACCORD_MOTEUR = new Set(['acc', 'accN']);
 
 // Périmètre par défaut : `src`, hors espace admin et pages publiques (spec I4, §3 règle 8), hors moteur
 // (src/vocab : c'est la référence de l'outil, prouvée par scripts/vocab.test.mjs) et hors copies générées.
-const HORS_VOCABULAIRE = ['src/components/admin/', 'src/components/auth/'];
+// LabFlow Compta (chantier Achats & Comptabilité, SPEC-SOCLE §0) : `src/compta/` parle le vocabulaire COMPTABLE fixe
+// (fournisseur, client, vente au sens comptable), jamais traduit par le domaine du compte — hors moteur, comme l'admin.
+const HORS_VOCABULAIRE = ['src/components/admin/', 'src/components/auth/', 'src/compta/'];
 const EXCLUS_DEFAUT = [...HORS_VOCABULAIRE, 'src/vocab/', 'src/config/lexiqueDefaut.js', 'src/utils/vocab.js'];
 const FR_JSON = 'src/i18n/locales/fr.json';
 const EXTENSIONS = /\.(?:tsx?|jsx?|mjs|cjs)$/;

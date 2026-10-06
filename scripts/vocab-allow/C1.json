@@ -1,0 +1,9 @@
+[
+  {
+    "fichier": "src/main.tsx",
+    "avant": null,
+    "apres": "compta",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S1 (SPEC-SOCLE D11) : valeur du produit (« compta ») comparée au démarrage pour choisir la coquille LabFlow Compta ; jamais affichée."
+  }
+]
