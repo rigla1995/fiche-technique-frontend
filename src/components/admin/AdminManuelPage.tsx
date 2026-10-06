@@ -28,8 +28,12 @@ interface ManuelSection {
   modifie: boolean;
   /** Un champ porte des mots du lexique en clair, sans balise (R5.7.2). */
   sansBalises?: boolean;
+  /** LabFlow Compta, S2a : produit de la fiche (manuel de app. ou de compta.). */
+  produit?: Produit;
   updatedAt: string;
 }
+
+type Produit = 'labflow' | 'compta';
 
 interface Variante {
   id: number;
@@ -65,7 +69,7 @@ const messageServeur = (e: unknown, defaut: string) =>
 
 const emptyForm = {
   slug: '', titre: '', icone: '', partie: '', ordre: 0,
-  contenu: '', motsCles: '', visibleGerant: true, actif: true,
+  contenu: '', motsCles: '', visibleGerant: true, actif: true, produit: 'labflow' as Produit,
 };
 
 const MD_HELP = '## Titre · ### Sous-titre · **gras** · *italique* · `code` · [lien](#slug) · - liste · 1. étapes · | tableau | · :::astuce / :::attention / :::regle / :::exemple … ::: · :::formule Libellé … note: … :::';
@@ -146,6 +150,7 @@ export default function AdminManuelPage() {
   const openEdit = (s: ManuelSection) => ouvrir(s, {
     slug: s.slug, titre: s.titre, icone: s.icone || '', partie: s.partie, ordre: s.ordre,
     contenu: s.contenu, motsCles: s.motsCles || '', visibleGerant: s.visibleGerant, actif: s.actif,
+    produit: s.produit ?? 'labflow',
   });
 
   // Onglet actif, aperçu et contrôle des balises de l'onglet (R6.1.2, R6.1.4, R6.1.5).
@@ -192,7 +197,8 @@ export default function AdminManuelPage() {
   };
 
   const save = async () => {
-    const aEnregistrer = edits.filter(varianteModifiee);
+    // Une fiche de LabFlow Compta n'a pas de variante par domaine (le serveur les refuse) : aucune n'est envoyée.
+    const aEnregistrer = form.produit === 'compta' ? [] : edits.filter(varianteModifiee);
     const communModifie = !editing || JSON.stringify(form) !== JSON.stringify(formInitial);
     const sauverCommun = communModifie || aEnregistrer.length === 0;
     if (sauverCommun) {
@@ -213,6 +219,7 @@ export default function AdminManuelPage() {
         slug: form.slug.trim(), titre: form.titre.trim(), icone: form.icone.trim() || null,
         partie: form.partie.trim(), ordre: Number(form.ordre) || 0, contenu: form.contenu,
         motsCles: form.motsCles.trim() || null, visibleGerant: form.visibleGerant, actif: form.actif,
+        produit: form.produit,
       };
       try {
         if (editing) await api.put(`/admin/manuel/${editing.id}`, payload);
@@ -355,6 +362,7 @@ export default function AdminManuelPage() {
                           <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#64748b', background: '#f1f5f9', borderRadius: 20, padding: '2px 9px', fontFamily: 'monospace' }}>#{s.slug}</span>
                           <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#94a3b8' }}>ordre {s.ordre}</span>
                           {s.modifie && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', borderRadius: 20, padding: '2px 9px' }}>modifié</span>}
+                          {s.produit === 'compta' && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#3730a3', background: '#e0e7ff', borderRadius: 20, padding: '2px 9px' }}>LabFlow Compta</span>}
                           {s.sansBalises && <BadgeSansBalises />}
                           {nbVariantes > 0 && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#0f766e', background: '#ccfbf1', borderRadius: 20, padding: '2px 9px' }}>{nbVariantes} variante{nbVariantes > 1 ? 's' : ''}</span>}
                           {!s.visibleGerant && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#7c3aed', background: '#f3e8ff', borderRadius: 20, padding: '2px 9px' }}>masqué gérant</span>}
@@ -391,7 +399,8 @@ export default function AdminManuelPage() {
             </div>
             <div style={{ padding: '22px 24px' }}>
               {/* Onglets : texte commun, puis une variante par domaine (R6.1.5) */}
-              {editing && (edits.length > 0 || domainesPourVariante.length > 0) && (
+              {/* Une fiche de LabFlow Compta (vocabulaire comptable fixe) n'a pas de variante par domaine. */}
+              {editing && form.produit !== 'compta' && (edits.length > 0 || domainesPourVariante.length > 0) && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', borderBottom: '1px solid #e5e7eb', paddingBottom: 10, marginBottom: 4 }}>
                   <button onClick={() => { setOnglet(''); setErr(''); }} style={onglet === '' ? tabOn : tabOff}>Commun</button>
                   {edits.map((e) => (
@@ -460,7 +469,7 @@ export default function AdminManuelPage() {
 
               <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
                 <label style={lbl}>Contenu * (markdown)</label>
-                <SelecteurDomaine domaines={domaines} value={slugApercu} onChange={setApercuDomaine} disabled={!!editActif} />
+                {form.produit !== 'compta' && <SelecteurDomaine domaines={domaines} value={slugApercu} onChange={setApercuDomaine} disabled={!!editActif} />}
               </div>
               {preview ? (
                 <div style={{ border: '1px solid #e5e7eb', borderRadius: 9, padding: '16px 18px', minHeight: 280, maxHeight: 440, overflowY: 'auto', background: '#fff' }}>
@@ -486,7 +495,11 @@ export default function AdminManuelPage() {
               )}
               <FautesBalises fautes={fautes} />
               <p style={{ margin: '6px 0 0', fontSize: '0.7rem', color: '#94a3b8', lineHeight: 1.6 }}>{MD_HELP}</p>
-              <LegendeBalises voc={vocApercu} nomDomaine={nomDomaine(slugApercu)} />
+              {form.produit === 'compta' ? (
+                <p style={{ margin: '6px 0 0', fontSize: '0.72rem', color: '#4338ca', lineHeight: 1.6 }}>Fiche de LabFlow Compta : vocabulaire comptable fixe, sans balise de vocabulaire ni variante par domaine.</p>
+              ) : (
+                <LegendeBalises voc={vocApercu} nomDomaine={nomDomaine(slugApercu)} />
+              )}
 
               {editActif ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 20, marginTop: 14, flexWrap: 'wrap' }}>
@@ -505,6 +518,14 @@ export default function AdminManuelPage() {
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem', cursor: 'pointer' }}>
                     <input type="checkbox" checked={form.visibleGerant} onChange={(e) => setForm({ ...form, visibleGerant: e.target.checked })} />
                     Visible par les gérants
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.88rem' }}>
+                    Manuel de
+                    <select value={form.produit} onChange={(e) => setForm({ ...form, produit: e.target.value as Produit })}
+                      style={{ padding: '5px 8px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: '0.85rem', fontFamily: 'inherit' }}>
+                      <option value="labflow">LabFlow</option>
+                      <option value="compta">LabFlow Compta</option>
+                    </select>
                   </label>
                 </div>
               )}

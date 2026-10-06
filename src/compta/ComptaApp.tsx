@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '../context/AuthContext';
 const ComptaLoginPage = lazy(() => import('./pages/ComptaLoginPage'));
 const ComptaAccueil = lazy(() => import('./pages/ComptaAccueil'));
 const ComptaErreur = lazy(() => import('./pages/ComptaErreur'));
+const ComptaManuel = lazy(() => import('./pages/ComptaManuel'));
 const InvitePage = lazy(() => import('../components/auth/InvitePage'));
 const ForgotPasswordPage = lazy(() => import('../components/auth/ForgotPasswordPage'));
 const ResetPasswordPage = lazy(() => import('../components/auth/ResetPasswordPage'));
@@ -43,6 +44,7 @@ export default function ComptaApp() {
             <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
             <Route path="/error/:code" element={<ComptaErreur />} />
             <Route path="/" element={<RequireConnexion><ComptaAccueil /></RequireConnexion>} />
+            <Route path="/manuel" element={<RequireConnexion><ComptaManuel /></RequireConnexion>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
