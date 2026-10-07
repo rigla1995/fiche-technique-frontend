@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import BoutonAide from '../BoutonAide';
+import ListeDossiers from '../ListeDossiers';
 import { allerVers } from '../passage';
 import { libelleNiveau } from '../comptables';
 
@@ -80,6 +81,7 @@ export default function ComptaMaComptabilite() {
       )}
 
       {etat === 'pret' && donnees && (
+        <>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
           <Carte titre="📒 Votre module" sousTitre="Facturé avec votre abonnement LabFlow, à plein tarif">
             {(module?.postes || []).map((p) => <Ligne key={p.code} libelle={p.libelle} valeur={`${p.montant.toFixed(2)} DT/mois`} />)}
@@ -129,6 +131,11 @@ export default function ComptaMaComptabilite() {
             </Carte>
           </div>
         </div>
+        {/* S4b : le dossier « Mon entreprise » (créé d'office) et les autres entités du client, même assistant que les cabinets. */}
+        <div style={{ marginTop: 24 }}>
+          <ListeDossiers espaceId={donnees.espace.id} titre="📁 Mes dossiers" />
+        </div>
+        </>
       )}
     </div>
   );

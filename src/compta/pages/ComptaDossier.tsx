@@ -103,11 +103,38 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
     }
   };
 
+  // S4b : le dossier « Mon entreprise » d'un client LabFlow recopie l'identité du compte LabFlow (règle PLAN-S4 §4 :
+  // copie à la création, puis indépendante ; recopie à la demande).
+  const reprendre = async () => {
+    if (!fiche || occupeRef.current) return;
+    const ok = await confirm({
+      title: 'Reprendre l\'identité de LabFlow ?',
+      message: 'Les champs que LabFlow connaît (page Mon entreprise) remplaceront ceux de ce dossier. Un champ vide dans LabFlow n\'efface rien ici. Le compte LabFlow, lui, ne change pas.',
+      tone: 'primary',
+      confirmLabel: 'Reprendre',
+      icon: '🔄',
+    });
+    if (!ok || occupeRef.current) return;
+    occupeRef.current = true;
+    setOccupe(true);
+    try {
+      const { data } = await api.post(`/api/compta/dossiers/${fiche.id}/reprendre-identite`);
+      const f = data as FicheDossier;
+      const n = f.reprise ?? 0;
+      appliquer(f, n === 0 ? 'Identité déjà identique à celle de LabFlow : rien à reprendre.' : `Identité reprise de LabFlow : ${n} champ${n > 1 ? 's' : ''} mis à jour.`);
+    } catch (err) {
+      if (!refus(err)) setErreur(messageDossier(err, 'Reprise impossible, réessayez.', role));
+    } finally {
+      occupeRef.current = false;
+      setOccupe(false);
+    }
+  };
+
   const supprimer = async () => {
     if (!fiche || occupeRef.current) return;
     const ok = await confirm({
       title: 'Supprimer ce dossier ?',
-      message: `« ${fiche.nom} » n'a aucune écriture : il sera supprimé avec son exercice et ses périodes. Le journal du cabinet en garde la trace.`,
+      message: `« ${fiche.nom} » n'a aucune écriture : il sera supprimé avec son exercice et ses périodes. Le journal de la comptabilité en garde la trace.`,
       details: ['Un dossier qui a des écritures ne se supprime jamais : il s\'archive.'],
       tone: 'danger',
       confirmLabel: 'Supprimer',
@@ -148,6 +175,7 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '6px 0', flexWrap: 'wrap' }}>
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 10, padding: '7px 9px', fontSize: '1.2rem' }}>🗂️</div>
             <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0, overflowWrap: 'anywhere' }}>{fiche ? fiche.nom : 'Dossier'}</h1>
+            {fiche?.source === 'labflow' && <span style={pastille('rgba(255,255,255,0.25)', '#fff')} title="Dossier « Mon entreprise », créé d'après l'identité du compte LabFlow">LabFlow</span>}
             {fiche?.etat === 'archive' && <span style={pastille('rgba(255,255,255,0.25)', '#fff')}>Archivé</span>}
             {fiche && !fiche.identiteComplete && <span style={pastille('#fef3c7', '#92400e')}>Identité à compléter</span>}
           </div>
@@ -196,9 +224,16 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 20 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <Carte titre="🪪 Identité" sousTitre="Telle qu'écrite sur la patente">
+              <Carte titre="🪪 Identité" sousTitre={fiche.source === 'labflow' ? 'Dossier « Mon entreprise » : reprise du compte LabFlow à la demande' : "Telle qu'écrite sur la patente"}>
                 {lignesIdentite.map(([l, v]) => <Ligne key={l} libelle={l} valeur={v || '—'} />)}
-                {modifiable && <button type="button" onClick={() => { setInfo(''); setFenetre('identite'); }} style={{ ...petit('#f0f9ff', '#0369a1', '#bae6fd'), marginTop: 12 }}>✏️ Modifier</button>}
+                {modifiable && (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+                    <button type="button" onClick={() => { setInfo(''); setFenetre('identite'); }} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>✏️ Modifier</button>
+                    {fiche.source === 'labflow' && (
+                      <button type="button" onClick={reprendre} disabled={occupe} style={petit('#f0fdf4', '#166534', '#bbf7d0')}>↺ Reprendre l'identité de LabFlow</button>
+                    )}
+                  </div>
+                )}
               </Carte>
               <Carte titre="⚖️ Régime fiscal" sousTitre="Servira aux taxes et aux déclarations">
                 <Ligne libelle="Personne" valeur={libellePersonne(fiche.regime.personne)} />
@@ -244,12 +279,14 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                     {fiche.etat === 'actif'
                       ? <button type="button" onClick={() => basculer('archiver')} disabled={occupe || !ouvert} style={{ ...bouton('#fff', '#475569', '#cbd5e1'), ...(ouvert ? {} : inactif) }}>📦 Archiver</button>
                       : <button type="button" onClick={() => basculer('desarchiver')} disabled={occupe || !ouvert} style={{ ...bouton('#eef2ff', '#4338ca', '#c7d2fe'), ...(ouvert ? {} : inactif) }}>📂 Désarchiver</button>}
-                    {fiche.droits.supprimer && !fiche.mouvemente && (
+                    {fiche.droits.supprimer && !fiche.mouvemente && fiche.source !== 'labflow' && (
                       <button type="button" onClick={supprimer} disabled={occupe || !ouvert} style={{ ...bouton('#fff', '#be123c', '#fecdd3'), ...(ouvert ? {} : inactif) }}>🗑 Supprimer</button>
                     )}
                   </div>
                   <p style={{ margin: '10px 0 0', fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5 }}>
-                    Archiver retire le dossier de la liste courante sans rien effacer. Supprimer n'est possible que pour un dossier sans écriture.
+                    {fiche.source === 'labflow'
+                      ? 'Archiver retire le dossier de la liste courante sans rien effacer. Le dossier « Mon entreprise » ne se supprime pas : il s\'archive.'
+                      : 'Archiver retire le dossier de la liste courante sans rien effacer. Supprimer n\'est possible que pour un dossier sans écriture.'}
                   </p>
                 </Carte>
               )}

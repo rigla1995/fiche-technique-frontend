@@ -6,10 +6,11 @@ import NouveauDossier from './NouveauDossier';
 import { fmtDate, texteEtatAbonnement, type LigneDossier, type ListeDossiersReponse } from './dossiers';
 import { bouton, inp, pastille } from './styles';
 
-// Les dossiers d'une comptabilité ouverts à la personne (LabFlow Compta, étape S4a) : recherche (nom, raison sociale,
-// matricule), archivés sur demande, « + Dossier » selon ses droits (titulaire ou gérant de niveau Complet) et l'état de
-// l'abonnement. Page « Dossiers » du titulaire ; carte « Dossiers » de la page « Cabinet » du collaborateur (qui a déjà
-// son bandeau d'abonnement : `bandeau={false}`).
+// Les dossiers d'une comptabilité ouverts à la personne (LabFlow Compta, étapes S4a et S4b) : recherche (nom, raison
+// sociale, matricule), archivés sur demande, « + Dossier » selon ses droits (titulaire ou gérant de niveau Complet) et
+// l'état de l'abonnement. Quatre pages : « Dossiers » du titulaire d'un cabinet et « Ma comptabilité » du client LabFlow
+// (bandeau d'abonnement ici) ; « Cabinet » du collaborateur et « Comptabilité de … » du comptable (la page a déjà son
+// bandeau : `bandeau={false}`). Le dossier « Mon entreprise » d'un client (source labflow) porte sa mention.
 export default function ListeDossiers({ espaceId, titre = 'Vos dossiers', bandeau = true }: { espaceId: number; titre?: string; bandeau?: boolean }) {
   const [etat, setEtat] = useState<ListeDossiersReponse | null>(null);
   const [chargement, setChargement] = useState<'en_cours' | 'pret' | 'erreur'>('en_cours');
@@ -90,7 +91,7 @@ export default function ListeDossiers({ espaceId, titre = 'Vos dossiers', bandea
           )}
         </>
       )}
-      {assistant && <NouveauDossier espaceId={espaceId} dossiers={etat?.dossiers} onClose={() => setAssistant(false)} />}
+      {assistant && <NouveauDossier espaceId={espaceId} dossiers={etat?.dossiers} role={etat?.espace.role} onClose={() => setAssistant(false)} />}
     </div>
   );
 }
@@ -101,6 +102,7 @@ function CarteDossier({ d }: { d: LigneDossier }) {
     <Link to={`/dossiers/${d.id}`} style={{ display: 'block', background: archive ? '#f8fafc' : '#fff', borderRadius: 14, border: '1px solid #e5e7eb', borderLeft: `4px solid ${archive ? '#94a3b8' : '#4338ca'}`, padding: '14px 16px', textDecoration: 'none', color: '#0f172a', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
         <span style={{ fontWeight: 800, fontSize: '0.92rem', color: archive ? '#64748b' : '#0f172a', overflowWrap: 'anywhere' }}>{d.nom}</span>
+        {d.source === 'labflow' && <span style={pastille('#dcfce7', '#166534')} title="Dossier créé d'après l'identité du compte LabFlow">Mon entreprise · LabFlow</span>}
         {archive && <span style={pastille('#e2e8f0', '#475569')}>Archivé</span>}
         {!d.identiteComplete && <span style={pastille('#fef3c7', '#92400e')}>Identité à compléter</span>}
       </div>

@@ -46,7 +46,7 @@ function StepIndicator({ current }: { current: number }) {
 
 // `dossiers` : ceux que la personne voit déjà — l'avertissement « matricule déjà porté » se donne dès l'étape Identité
 // (le serveur le redit à la création, parmi les dossiers ouverts à la personne).
-export default function NouveauDossier({ espaceId, onClose, dossiers = [] }: { espaceId: number; onClose: () => void; dossiers?: LigneDossier[] }) {
+export default function NouveauDossier({ espaceId, onClose, dossiers = [], role = 'titulaire' }: { espaceId: number; onClose: () => void; dossiers?: LigneDossier[]; role?: 'titulaire' | 'gerant' }) {
   const navigate = useNavigate();
   const { alerte } = useConfirm();
   const [step, setStep] = useState(0);
@@ -100,7 +100,7 @@ export default function NouveauDossier({ espaceId, onClose, dossiers = [] }: { e
       onClose();
       navigate(`/dossiers/${fiche.id}`);
     } catch (err) {
-      setError(messageDossier(err, 'Le dossier n\'a pas pu être créé — réessayez.'));
+      setError(messageDossier(err, 'Le dossier n\'a pas pu être créé — réessayez.', role));
       setSaving(false);
     }
   };

@@ -37,6 +37,8 @@ export interface FicheDossier {
   acces: { role: 'titulaire' | 'gerant'; niveau: string; nom: string | null; email: string | null }[];
   droits: Droits; mouvemente: boolean; creeLe: string; modifieLe: string; etatAbonnement: EtatAbonnement;
   avertissements?: string[];
+  // S4b : « Reprendre l'identité de LabFlow » — nombre de champs repris (0 = identique).
+  reprise?: number;
 }
 
 // Libellés des listes fermées du régime fiscal (SPEC-SOCLE §3.2).
