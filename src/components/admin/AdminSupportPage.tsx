@@ -60,21 +60,38 @@ function DetailsPopup({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // LabFlow Compta (S3c) : demande d'un cabinet — ses gérants, chiffrés par l'abonnement du cabinet (fiche du cabinet et
+  // aperçu du prix de l'assistant « Nouveau comptable », hors promotion), jamais par les tarifs de LabFlow.
+  const estCabinet = !!demande.cabinetNom;
+  const [prixCabinet, setPrixCabinet] = useState<{ nbGerants: number; actuel: number; nouveau: number } | null>(null);
   useEffect(() => {
-    if (demande.type === 'supplement') {
+    if (!estCabinet || demande.type !== 'supplement') return;
+    let annule = false;
+    api.get(`/admin/comptables/${demande.clientId}`)
+      .then(async ({ data }) => {
+        const nbGerants = Number(data?.abonnement?.nbGerants) || 0;
+        const apercu = await api.get('/admin/comptables/apercu-prix', { params: { nbGerants: nbGerants + (demande.nbGerantsComptaSupp || 0) } });
+        if (!annule) setPrixCabinet({ nbGerants, actuel: Number(data?.abonnement?.totalMensuel) || 0, nouveau: Number(apercu.data?.totalMensuel) || 0 });
+      })
+      .catch(() => {});
+    return () => { annule = true; };
+  }, [estCabinet, demande.clientId, demande.type, demande.nbGerantsComptaSupp]);
+
+  useEffect(() => {
+    if (demande.type === 'supplement' && !estCabinet) {
       api.get(`/api/abonnements/client/${demande.clientId}/supplement-pricing`)
         .then(({ data }) => setPricing(data)).catch(() => {});
     }
-  }, [demande.clientId, demande.type]);
+  }, [demande.clientId, demande.type, estCabinet]);
   // LabFlow Compta (S3b) : prix d'un gérant comptable supplémentaire (module à plein tarif).
   // null tant que le prix n'est pas lu : pas de total estimé faux (relecture de S3b).
   const [prixGerantCompta, setPrixGerantCompta] = useState<number | null>(null);
   useEffect(() => {
-    if (demande.type === 'supplement' && (demande.nbGerantsComptaSupp || 0) > 0) {
+    if (demande.type === 'supplement' && !estCabinet && (demande.nbGerantsComptaSupp || 0) > 0) {
       api.get(`/api/abonnements/client/${demande.clientId}/module-compta`)
         .then(({ data }) => setPrixGerantCompta(Number((data as { prixGerant?: number }).prixGerant) || 0)).catch(() => {});
     }
-  }, [demande.clientId, demande.type, demande.nbGerantsComptaSupp]);
+  }, [demande.clientId, demande.type, demande.nbGerantsComptaSupp, estCabinet]);
 
   const handleAction = async (statut: 'validée' | 'refusée') => {
     setSaving(true);
@@ -100,6 +117,9 @@ function DetailsPopup({
       + (demande.nbGerantsComptaSupp || 0) * (prixGerantCompta ?? 0)
     : null;
   const newTotal = pricing && pricingDelta !== null ? pricing.currentMensuel + pricingDelta : null;
+  // Cabinet (S3c) : nouveau total et écart lus sur l'abonnement du cabinet.
+  const totalAffiche = estCabinet ? (prixCabinet ? prixCabinet.nouveau : null) : newTotal;
+  const ecartAffiche = estCabinet ? (prixCabinet ? prixCabinet.nouveau - prixCabinet.actuel : null) : pricingDelta;
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
@@ -120,8 +140,9 @@ function DetailsPopup({
         <div style={{ overflowY: 'auto', flex: 1, padding: 22, display: 'flex', flexDirection: 'column', gap: 16 }}>
           {/* Bloc info client */}
           <div style={{ background: '#f8fafc', borderRadius: 12, padding: '14px 16px', border: '1px solid #e2e8f0' }}>
-            <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>Client</div>
+            <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>{estCabinet ? 'Cabinet LabFlow Compta' : 'Client'}</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 16px', fontSize: '0.83rem' }}>
+              {estCabinet && <div style={{ gridColumn: '1/-1' }}><span style={{ color: '#94a3b8', fontWeight: 600 }}>Cabinet : </span><span style={{ fontWeight: 700, color: '#0f172a' }}>{demande.cabinetNom}</span></div>}
               <div><span style={{ color: '#94a3b8', fontWeight: 600 }}>Nom : </span><span style={{ fontWeight: 700, color: '#0f172a' }}>{demande.clientNom || '—'}</span></div>
               <div><span style={{ color: '#94a3b8', fontWeight: 600 }}>Email : </span><span style={{ color: '#1e40af' }}>{demande.clientEmail || '—'}</span></div>
               <div style={{ gridColumn: '1/-1' }}>
@@ -144,7 +165,16 @@ function DetailsPopup({
               {/* Supplement */}
               {demande.type === 'supplement' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {isPending && pricing && (
+                  {isPending && estCabinet && prixCabinet && (
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem' }}>
+                      <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 6 }}>Abonnement actuel (LabFlow Compta)</div>
+                      <div style={{ color: '#1e40af' }}>
+                        Cabinet · {prixCabinet.nbGerants} gérant{prixCabinet.nbGerants !== 1 ? 's' : ''}
+                        <span style={{ fontWeight: 700, marginLeft: 8 }}>{prixCabinet.actuel} DT/mois</span>
+                      </div>
+                    </div>
+                  )}
+                  {isPending && !estCabinet && pricing && (
                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem' }}>
                       <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 6 }}>Abonnement actuel</div>
                       <div style={{ color: '#1e40af' }}>
@@ -162,16 +192,18 @@ function DetailsPopup({
                       demande.nbLabosSupp && `+${demande.nbLabosSupp} labo${(demande.nbLabosSupp || 0) > 1 ? 's' : ''}`,
                       demande.nbGerantsSupp && `+${demande.nbGerantsSupp} gérant${(demande.nbGerantsSupp || 0) > 1 ? 's' : ''}`,
                       demande.nbAcheteursCible && `Option Acheteurs → palier jusqu'à ${demande.nbAcheteursCible} acheteurs`,
-                      demande.nbGerantsComptaSupp && `+${demande.nbGerantsComptaSupp} gérant${(demande.nbGerantsComptaSupp || 0) > 1 ? 's' : ''} comptable${(demande.nbGerantsComptaSupp || 0) > 1 ? 's' : ''} (module Comptabilité)`,
+                      demande.nbGerantsComptaSupp && (estCabinet
+                        ? `+${demande.nbGerantsComptaSupp} gérant${(demande.nbGerantsComptaSupp || 0) > 1 ? 's' : ''} du cabinet (LabFlow Compta)`
+                        : `+${demande.nbGerantsComptaSupp} gérant${(demande.nbGerantsComptaSupp || 0) > 1 ? 's' : ''} comptable${(demande.nbGerantsComptaSupp || 0) > 1 ? 's' : ''} (module Comptabilité)`),
                     ].filter(Boolean).map((part, i) => <div key={i} style={{ color: '#15803d', fontWeight: 600 }}>{part}</div>)}
                   </div>
-                  {isPending && newTotal !== null && pricingDelta !== null && (
+                  {isPending && totalAffiche !== null && ecartAffiche !== null && (
                     <div style={{ background: 'linear-gradient(135deg, #f5f3ff, #ede9fe)', border: '1px solid #ddd6fe', borderRadius: 10, padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div style={{ fontSize: '0.82rem' }}>
-                        <div style={{ fontWeight: 700, color: '#6d28d9' }}>Nouveau total mensuel</div>
-                        <div style={{ color: '#7c3aed', fontSize: '0.75rem', marginTop: 2 }}>+{pricingDelta.toFixed(0)} DT/mois</div>
+                        <div style={{ fontWeight: 700, color: '#6d28d9' }}>Nouveau total mensuel{estCabinet ? ' (hors promotion)' : ''}</div>
+                        <div style={{ color: '#7c3aed', fontSize: '0.75rem', marginTop: 2 }}>+{ecartAffiche.toFixed(0)} DT/mois{estCabinet ? ', à partir du mois suivant' : ''}</div>
                       </div>
-                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#4c1d95' }}>{newTotal.toFixed(0)} DT<span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/mois</span></div>
+                      <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#4c1d95' }}>{totalAffiche.toFixed(0)} DT<span style={{ fontSize: '0.75rem', fontWeight: 500 }}>/mois</span></div>
                     </div>
                   )}
                   {isPending && (

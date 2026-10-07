@@ -6,6 +6,7 @@ import { useAccesCompta } from '../accesCompta';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { libelleNiveau } from '../comptables';
 import { libelleForme } from '../../utils/identiteLegale';
+import { Carte, Ligne } from '../ui';
 
 // « Comptabilité de … » (LabFlow Compta, étape S3b ; réponse du client du 07/10) : la comptabilité qu'un client LabFlow
 // a confiée à la personne connectée — identité et contact du client, son accès (niveau, confiée le), « Quitter cet
@@ -142,24 +143,3 @@ function ComptaConfiee({ espaceId }: { espaceId?: string }) {
 }
 
 const alerte: React.CSSProperties = { background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 12, padding: '14px 18px', fontWeight: 600, fontSize: '0.86rem' };
-
-function Carte({ titre, sousTitre, children }: { titre: string; sousTitre: string; children: React.ReactNode }) {
-  return (
-    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <div style={{ padding: '14px 18px', borderBottom: '1px solid #eef2ff', background: 'linear-gradient(135deg,#f8faff,#eef2ff)' }}>
-        <div style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.95rem' }}>{titre}</div>
-        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>{sousTitre}</div>
-      </div>
-      <div style={{ padding: '14px 18px' }}>{children}</div>
-    </div>
-  );
-}
-
-function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
-      <span style={{ color: '#64748b' }}>{libelle}</span>
-      <span style={{ color: '#0f172a', fontWeight: 600, textAlign: 'right', overflowWrap: 'anywhere' }}>{valeur}</span>
-    </div>
-  );
-}

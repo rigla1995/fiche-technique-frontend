@@ -1,7 +1,9 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import api from '../api/client';
 import { useConfirm } from '../components/common/ConfirmDialog';
-import { NIVEAUX, libelleNiveau, useModuleCompta, type Niveau } from './comptables';
+import { libelleNiveau, useModuleCompta, type Niveau } from './comptables';
+import { ChoixNiveau } from './ui';
+import { bouton, inp, lbl, pastille, petit, rond } from './styles';
 
 // LabFlow Compta, étape S3b (labflow-reprise/achats-compta/PLAN-S3b.md) : partie « Gérants Comptabilité » de la page
 // Gérants de LabFlow, pour le titulaire d'un compte qui a le module Comptabilité. Son comptable (accès compris dans le
@@ -247,19 +249,7 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
               <input id="gc-email" type="email" value={form.email} onChange={(e) => setForm((f) => (f ? { ...f, email: e.target.value } : f))} style={inp} placeholder="comptable@exemple.tn" maxLength={255} required autoComplete="email" />
             </div>
           </div>
-          <div style={{ marginBottom: 12 }}>
-            <div id="gc-niveau" style={lbl}>Niveau</div>
-            <div role="radiogroup" aria-labelledby="gc-niveau" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {NIVEAUX.map((n) => (
-                <button key={n.valeur} type="button" role="radio" aria-checked={form.niveau === n.valeur} onClick={() => setForm((f) => (f ? { ...f, niveau: n.valeur } : f))}
-                  style={{ flex: '1 1 180px', textAlign: 'left', padding: '9px 12px', borderRadius: 10, cursor: 'pointer', border: `1.5px solid ${form.niveau === n.valeur ? '#4338ca' : '#e2e8f0'}`, background: form.niveau === n.valeur ? '#eef2ff' : '#fff' }}>
-                  <div style={{ fontWeight: 800, fontSize: '0.82rem', color: form.niveau === n.valeur ? '#3730a3' : '#374151' }}>{form.niveau === n.valeur ? '✓ ' : ''}{n.libelle}</div>
-                  <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 2 }}>{n.aide}</div>
-                </button>
-              ))}
-            </div>
-            <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 6 }}>Les niveaux prendront effet avec les dossiers et la saisie.</div>
-          </div>
+          <ChoixNiveau id="gc-niveau" valeur={form.niveau} onChange={(niveau) => setForm((f) => (f ? { ...f, niveau } : f))} />
           <div style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5, marginBottom: 12 }}>
             Une adresse inconnue reçoit une invitation à activer son compte LabFlow Compta ; une adresse déjà connue reçoit l'accès tout de suite.
             {form.emailInitial ? ' Une autre adresse donne l\'accès à une autre personne : l\'actuelle le perd, sans en être prévenue.' : ''}
@@ -347,13 +337,6 @@ function Carte({ c, titre, occupe, onModifier, onRetirer, onRenvoyer }: {
     </div>
   );
 }
-
-const bouton = (fond: string, texte: string, bord: string): React.CSSProperties => ({ padding: '8px 16px', borderRadius: 9, border: `1.5px solid ${bord}`, background: fond, color: texte, fontSize: '0.82rem', fontWeight: 700, cursor: 'pointer' });
-const petit = (fond: string, texte: string, bord: string): React.CSSProperties => ({ padding: '6px 12px', background: fond, border: `1px solid ${bord}`, borderRadius: 8, fontSize: '0.78rem', cursor: 'pointer', color: texte, fontWeight: 700 });
-const pastille = (fond: string, texte: string): React.CSSProperties => ({ fontSize: '0.7rem', fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: fond, color: texte });
-const rond: React.CSSProperties = { width: 32, height: 32, borderRadius: '50%', border: '1.5px solid #4338ca', background: '#fff', color: '#4338ca', fontSize: '1rem', cursor: 'pointer' };
-const lbl: React.CSSProperties = { fontSize: '0.72rem', fontWeight: 700, color: '#374151', display: 'block', marginBottom: 5, textTransform: 'uppercase', letterSpacing: '0.04em' };
-const inp: React.CSSProperties = { width: '100%', padding: '9px 12px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: '0.85rem', color: '#0f172a', outline: 'none', boxSizing: 'border-box', background: '#fff' };
 
 // Choix du type d'un nouveau gérant quand le module Comptabilité est actif (page Gérants, bouton « + Nouveau … »).
 // `nomGerant` et `espaces` : mots du vocabulaire du compte, fournis par la page Gérants (le bouton qui ouvre ce choix est

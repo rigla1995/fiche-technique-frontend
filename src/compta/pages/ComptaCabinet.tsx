@@ -1,16 +1,20 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import { libelleForme } from '../../utils/identiteLegale';
 import BoutonAide from '../BoutonAide';
+import { Carte, Ligne } from '../ui';
 
 // « Mon cabinet » (LabFlow Compta, étape S2b) : le cabinet tel que LabFlow le connaît — identité (celle de ses
-// factures d'abonnement, saisie par l'admin), titulaire, gérants prévus. Lecture seule à cette étape.
+// factures d'abonnement, saisie par l'admin), titulaire, gérants. S3c : gérants en place (désactivés compris) sur les
+// gérants prévus, et le lien vers « Mes gérants ».
 interface Cabinet {
   espace: { id: number; nom: string; etat: string };
   nomAffiche: string;
   identite: Record<string, string | null>;
   contact: { nom: string; email: string; telephone: string | null };
   nbGerants: number;
+  gerantsEnPlace: number;
 }
 
 export default function ComptaCabinet() {
@@ -66,36 +70,22 @@ export default function ComptaCabinet() {
               <Ligne libelle="Email" valeur={cabinet.contact.email} />
               <Ligne libelle="Téléphone" valeur={cabinet.contact.telephone || '—'} />
             </Carte>
-            <Carte titre="👥 Gérants" sousTitre="Comptes de vos collaborateurs, prévus dans votre abonnement">
-              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#3730a3' }}>{cabinet.nbGerants}</div>
-              <p style={{ margin: '4px 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>
-                {cabinet.nbGerants > 0 ? `gérant${cabinet.nbGerants > 1 ? 's' : ''} prévu${cabinet.nbGerants > 1 ? 's' : ''} ; leurs accès s'ouvriront à une prochaine étape.` : 'Aucun gérant prévu : contactez l\'équipe LabFlow pour en ajouter.'}
+            <Carte titre="👥 Gérants" sousTitre="Accès de vos collaborateurs, prévus dans votre abonnement">
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#3730a3' }}>
+                {cabinet.gerantsEnPlace}<span style={{ fontSize: '0.95rem', fontWeight: 600, color: '#64748b' }}> / {cabinet.nbGerants}</span>
+              </div>
+              <p style={{ margin: '4px 0 12px', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>
+                {cabinet.nbGerants > 0
+                  ? `gérant${cabinet.gerantsEnPlace > 1 ? 's' : ''} en place sur ${cabinet.nbGerants} prévu${cabinet.nbGerants > 1 ? 's' : ''}.`
+                  : 'Aucun gérant prévu : vous pouvez en demander à l\'équipe LabFlow.'}
               </p>
+              <Link to="/gerants" style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 9, background: '#4338ca', color: '#fff', fontSize: '0.82rem', fontWeight: 700, textDecoration: 'none' }}>
+                Gérer mes gérants →
+              </Link>
             </Carte>
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-function Carte({ titre, sousTitre, children }: { titre: string; sousTitre: string; children: React.ReactNode }) {
-  return (
-    <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <div style={{ padding: '14px 18px', borderBottom: '1px solid #eef2ff', background: 'linear-gradient(135deg,#f8faff,#eef2ff)' }}>
-        <div style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.95rem' }}>{titre}</div>
-        <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: 2 }}>{sousTitre}</div>
-      </div>
-      <div style={{ padding: '14px 18px' }}>{children}</div>
-    </div>
-  );
-}
-
-function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
-      <span style={{ color: '#64748b' }}>{libelle}</span>
-      <span style={{ color: '#0f172a', fontWeight: 600, textAlign: 'right', overflowWrap: 'anywhere' }}>{valeur}</span>
     </div>
   );
 }

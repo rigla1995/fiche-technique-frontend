@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import api from '../../api/client';
 import type { PosteCompta, Promotion } from '../../types';
 import { MonthPicker } from './MonthPicker';
-import { useEmailCheck } from '../../hooks/useEmailCheck';
 import Counter from './Counter';
 import ClientIdentiteForm from './ClientIdentiteForm';
 import { IDENTITE_VIDE, corpsIdentite, identiteDe, type IdentiteLegale } from '../../utils/identiteLegale';
@@ -16,6 +15,29 @@ import { controlerMatriculeFiscal } from './matriculeFiscal';
 const STEPS = ['Informations', 'Abonnement', 'Promotions', 'Récapitulatif'];
 const NB_GERANTS_MAX = 50;
 const TUNISIAN_PHONE = /^(\+216[\s-]?)?[2579]\d{7}$/;
+const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Étape S3c (réponse du client du 07/10) : l'adresse du titulaire est libre, déjà prise, ou celle d'un compte LabFlow
+// Compta sans cabinet ni abonnement — le cabinet lui est alors rattaché (GET /admin/comptables/adresse). Vérifiée après
+// une courte pause de saisie, comme useEmailCheck ; une réponse tardive pour une ancienne adresse est ignorée.
+type EtatAdresse = { etat: 'libre' } | { etat: 'prise' } | { etat: 'rattachable'; nom: string; active: boolean };
+function useAdresseCabinet(email: string) {
+  // Réponse (ou échec) rangée avec l'adresse vérifiée : tant qu'elle ne porte pas sur l'adresse saisie, la vérification
+  // est « en cours ».
+  const [reponse, setReponse] = useState<{ email: string; adresse: EtatAdresse | null; echec: boolean } | null>(null);
+  useEffect(() => {
+    if (!RE_EMAIL.test(email)) return;
+    let annule = false;
+    const minuterie = setTimeout(() => {
+      api.get('/admin/comptables/adresse', { params: { email } })
+        .then(({ data }) => { if (!annule) setReponse({ email, adresse: data as EtatAdresse, echec: false }); })
+        .catch(() => { if (!annule) setReponse({ email, adresse: null, echec: true }); });
+    }, 400);
+    return () => { annule = true; clearTimeout(minuterie); };
+  }, [email]);
+  const courante = reponse?.email === email ? reponse : null;
+  return { adresse: courante?.adresse ?? null, emailChecking: RE_EMAIL.test(email) && !courante, emailCheckFailed: !!courante?.echec };
+}
 
 interface PromoForm {
   type: Promotion['type'];
@@ -117,9 +139,11 @@ export default function NouveauComptableModal({ onClose, onCreated }: { onClose:
   const [promoForm, setPromoForm] = useState<PromoForm>(PROMO_VIDE);
   const [promoError, setPromoError] = useState<string | null>(null);
 
-  const { emailExists, emailChecking, emailCheckFailed } = useEmailCheck(email);
+  const { adresse, emailChecking, emailCheckFailed } = useAdresseCabinet(email);
+  const emailExists = adresse?.etat === 'prise';
+  const rattache = adresse?.etat === 'rattachable' ? adresse : null;
   const telValid = TUNISIAN_PHONE.test(tel.replace(/\s/g, ''));
-  const step1Valid = nom.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && !emailExists && !emailChecking && !emailCheckFailed && telValid;
+  const step1Valid = nom.trim().length > 0 && RE_EMAIL.test(email) && !!adresse && !emailExists && !emailChecking && !emailCheckFailed && telValid;
   const montantMer = parseFloat(miseEnRoute);
   const merValid = miseEnRoute !== '' && Number.isFinite(montantMer) && montantMer >= 0;
   const step2Valid = !!apercu && !apercu.tarifManquant && merValid;
@@ -280,6 +304,12 @@ export default function NouveauComptableModal({ onClose, onCreated }: { onClose:
                 {emailChecking && <div style={{ fontSize: 11, color: '#6366f1', marginTop: 3 }}>⏳ Vérification en cours…</div>}
                 {!emailChecking && emailExists && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3, fontWeight: 600 }}>❌ Cet email est déjà associé à un compte (une adresse ne sert qu'à un compte).</div>}
                 {!emailChecking && emailCheckFailed && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3, fontWeight: 600 }}>❌ Impossible de vérifier cet email — réessayez.</div>}
+                {!emailChecking && rattache && (
+                  <div style={{ ...bannerInfo, marginTop: 6 }}>
+                    🔗 Compte LabFlow Compta existant ({rattache.nom}) : le cabinet lui sera rattaché. La personne garde son mot de passe et
+                    les comptabilités qu'on lui a confiées ; elle recevra {rattache.active ? 'un email « votre cabinet est ouvert »' : 'l\'email d\'activation'}.
+                  </div>
+                )}
               </div>
               <div>
                 <label style={labelStyle}>Téléphone * <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#94a3b8' }}>(format tunisien)</span></label>
@@ -378,7 +408,7 @@ export default function NouveauComptableModal({ onClose, onCreated }: { onClose:
                     <div style={{ gridColumn: '1 / -1' }}><span style={{ color: '#64748b', fontWeight: 600 }}>📍 </span>{[identite.adresse, identite.ville].filter(Boolean).join(', ')}</div>
                   )}
                   <div><span style={{ color: '#64748b', fontWeight: 600 }}>👤 </span><strong>{nom}</strong></div>
-                  <div><span style={{ color: '#64748b', fontWeight: 600 }}>📧 </span>{email}</div>
+                  <div><span style={{ color: '#64748b', fontWeight: 600 }}>📧 </span>{email}{rattache ? ' (compte existant, rattaché)' : ''}</div>
                   <div><span style={{ color: '#64748b', fontWeight: 600 }}>📱 </span>{tel}</div>
                   <div><span style={{ color: '#64748b', fontWeight: 600 }}>👥 Gérants </span><strong>{nbGerants}</strong></div>
                   {!(identite.raisonSociale && identite.matriculeFiscal && identite.adresse && identite.ville) && (
@@ -433,4 +463,5 @@ const selectStyle: React.CSSProperties = { ...inputStyle, cursor: 'pointer' };
 const sectionTitre: React.CSSProperties = { fontSize: 12.5, fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', borderBottom: '1px solid #f1f5f9', paddingBottom: 6 };
 const sectionAide: React.CSSProperties = { fontSize: 11, fontWeight: 500, color: '#94a3b8' };
 const bannerWarn: React.CSSProperties = { background: '#fef3c7', border: '1px solid #fcd34d', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#92400e', fontWeight: 600 };
+const bannerInfo: React.CSSProperties = { background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 12px', fontSize: '0.76rem', color: '#3730a3', fontWeight: 600, lineHeight: 1.45 };
 const bannerDanger: React.CSSProperties = { background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#dc2626', fontWeight: 600 };

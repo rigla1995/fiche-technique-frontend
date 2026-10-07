@@ -44,15 +44,26 @@ const NotificationContext = createContext<NotificationContextValue>({
   clearByEventType: async () => {},
 });
 
-export function NotificationProvider({ children }: { children: React.ReactNode }) {
+// LabFlow Compta (étape S3c) : `produit="compta"` donne la cloche de LabFlow Compta. Le serveur ne sert alors que ses
+// notifications (`?produit=compta` sur la liste, « vues » et l'effacement : celles de LabFlow ne sont jamais touchées) ;
+// le flux instantané, commun, est filtré de même (notificationAcceptee). Sans `produit` : la cloche de LabFlow, inchangée.
+type Produit = 'labflow' | 'compta';
+// Types de notification de LabFlow Compta pour une personne qui n'est pas « comptable » : aucun encore (ils seront
+// choisis avec le client, le module fini) — même liste que le serveur (notificationController.TYPES_COMPTA).
+const TYPES_COMPTA: string[] = [];
+const notificationAcceptee = (produit: Produit, role: string | undefined, eventType: string) =>
+  produit !== 'compta' || role === 'comptable' || TYPES_COMPTA.includes(eventType);
+
+export function NotificationProvider({ children, produit = 'labflow' }: { children: React.ReactNode; produit?: Produit }) {
   const { user } = useAuth();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const esRef = useRef<EventSource | null>(null);
+  const suffixe = produit === 'compta' ? '?produit=compta' : '';
 
   // Load persisted notifications from DB on login
   useEffect(() => {
     if (!user) { setNotifications([]); return; }
-    api.get('/api/notifications').then(({ data }) => {
+    api.get(`/api/notifications${suffixe}`).then(({ data }) => {
       const mapped: AppNotification[] = data.map((r: {
         id: number; eventType: string; demandeId?: number; refId?: number; refKind?: string;
         type: string; clientNom?: string; statut?: string; notesAdmin?: string | null;
@@ -74,7 +85,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     }).catch(() => {});
   }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const role = user?.role;
   const push = useCallback((eventType: AppNotification['eventType'], data: Record<string, unknown>) => {
+    if (!notificationAcceptee(produit, role, eventType)) return;
     const notif: AppNotification = {
       id: `${Date.now()}-${Math.random()}`,
       eventType,
@@ -89,7 +102,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       createdAt: Date.now(),
     };
     setNotifications((prev) => [notif, ...prev].slice(0, 50));
-  }, []);
+  }, [produit, role]);
 
   useEffect(() => {
     if (!user) return;
@@ -154,20 +167,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // l'affichage local pour la session en cours pour que les clics fonctionnent encore.
   const markSeen = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? Date.now() })));
-    api.post('/api/notifications/seen').catch(() => {});
-  }, []);
+    api.post(`/api/notifications/seen${suffixe}`).catch(() => {});
+  }, [suffixe]);
 
   const clear = useCallback(() => setNotifications([]), []);
 
   const clearAllFromDB = useCallback(async () => {
-    await api.delete('/api/notifications').catch(() => {});
+    await api.delete(`/api/notifications${suffixe}`).catch(() => {});
     setNotifications([]);
-  }, []);
+  }, [suffixe]);
 
   const clearByEventType = useCallback(async (eventType: string) => {
-    await api.delete(`/api/notifications?eventType=${encodeURIComponent(eventType)}`).catch(() => {});
+    await api.delete(`/api/notifications?eventType=${encodeURIComponent(eventType)}${suffixe ? `&${suffixe.slice(1)}` : ''}`).catch(() => {});
     setNotifications((prev) => prev.filter((n) => n.eventType !== eventType));
-  }, []);
+  }, [suffixe]);
 
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 

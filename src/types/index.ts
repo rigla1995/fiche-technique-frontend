@@ -101,6 +101,8 @@ export interface SupportDemande {
   nbGerantsSupp?: number | null;
   // LabFlow Compta (S3b) : gérants comptables supplémentaires demandés
   nbGerantsComptaSupp?: number | null;
+  // LabFlow Compta (S3c) : demande d'un cabinet (ses gérants) — nom du cabinet, sinon null
+  cabinetNom?: string | null;
   /** Option Acheteurs : QUOTA TOTAL cible (borne de palier 10/20/50/100), pas un incrément. */
   nbAcheteursCible?: number | null;
   description?: string | null;
