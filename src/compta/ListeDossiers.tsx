@@ -1,49 +1,66 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import api from '../api/client';
 import { libelleForme } from '../utils/identiteLegale';
 import NouveauDossier from './NouveauDossier';
-import { fmtDate, texteEtatAbonnement, type LigneDossier, type ListeDossiersReponse } from './dossiers';
+import { PAGE_DOSSIERS, fmtDate, lirePageDossiers, texteEtatAbonnement, type LigneDossier, type ListeDossiersReponse } from './dossiers';
 import { bouton, inp, pastille } from './styles';
 
 // Les dossiers d'une comptabilité ouverts à la personne (LabFlow Compta, étapes S4a et S4b) : recherche (nom, raison
-// sociale, matricule), archivés sur demande, « + Dossier » selon ses droits (titulaire ou gérant de niveau Complet) et
-// l'état de l'abonnement. Quatre pages : « Dossiers » du titulaire d'un cabinet et « Ma comptabilité » du client LabFlow
-// (bandeau d'abonnement ici) ; « Cabinet » du collaborateur et « Comptabilité de … » du comptable (la page a déjà son
-// bandeau : `bandeau={false}`). Le dossier « Mon entreprise » d'un client (source labflow) porte sa mention.
+// sociale, nom commercial, matricule), archivés sur demande, « + Dossier » selon ses droits (titulaire ou gérant de
+// niveau Complet) et l'état de l'abonnement. Quatre pages : « Dossiers » du titulaire d'un cabinet et « Ma comptabilité »
+// du client LabFlow (bandeau d'abonnement ici) ; « Cabinet » du collaborateur et « Comptabilité de … » du comptable (la
+// page a déjà son bandeau : `bandeau={false}`). Le dossier « Mon entreprise » d'un client (source labflow) porte sa
+// mention. S4d « grands cabinets » (remarque du client du 07/10) : la liste se lit PAR PAGES de 25 (« Afficher plus »)
+// et la recherche se fait côté serveur, sur tous les dossiers ouverts à la personne.
 export default function ListeDossiers({ espaceId, titre = 'Vos dossiers', bandeau = true }: { espaceId: number; titre?: string; bandeau?: boolean }) {
-  const [etat, setEtat] = useState<ListeDossiersReponse | null>(null);
-  const [chargement, setChargement] = useState<'en_cours' | 'pret' | 'erreur'>('en_cours');
+  // `lu` : la dernière réponse (en-tête, droits, total), les lignes accumulées depuis la page 1, et la recherche qu'elle
+  // sert — une relecture en route se voit à la différence avec la recherche en cours (état dérivé, pas d'effet).
+  const [lu, setLu] = useState<{ cle: string; etat: ListeDossiersReponse; lignes: LigneDossier[] } | null>(null);
+  const [erreur, setErreur] = useState(false);
+  const [plus, setPlus] = useState(false);
   const [recherche, setRecherche] = useState('');
+  const [q, setQ] = useState('');
   const [archives, setArchives] = useState(false);
   const [assistant, setAssistant] = useState(false);
+  // Lectures numérotées : une lecture partie avant la dernière réponse reçue ne l'écrase jamais.
+  const tour = useRef(0);
+  const cle = `${archives ? 1 : 0}\u0000${q}`;
 
-  const charger = useCallback(() => {
-    let annule = false;
-    api.get(`/api/compta/espaces/${espaceId}/dossiers`)
-      .then(({ data }) => { if (!annule) { setEtat(data as ListeDossiersReponse); setChargement('pret'); } })
-      .catch(() => { if (!annule) setChargement('erreur'); });
-    return () => { annule = true; };
-  }, [espaceId]);
-  useEffect(() => charger(), [charger]);
+  useEffect(() => { const t = setTimeout(() => setQ(recherche.trim()), 300); return () => clearTimeout(t); }, [recherche]);
+  const charger = useCallback((page: number) => {
+    const moi = ++tour.current;
+    lirePageDossiers(espaceId, { q, archives, page, limite: PAGE_DOSSIERS })
+      .then((r) => {
+        if (moi !== tour.current) return;
+        // Pages cumulées pour la même recherche, dédoublonnées par identifiant (un dossier créé entre deux pages décale
+        // la suivante) ; une autre recherche repart de sa page 1.
+        setLu((prev) => {
+          const reprise = page === 1 || !prev || prev.cle !== cle;
+          const vus = new Set(reprise ? [] : prev.lignes.map((d) => d.id));
+          return { cle, etat: r, lignes: reprise ? r.dossiers : [...prev.lignes, ...r.dossiers.filter((d) => !vus.has(d.id))] };
+        });
+        setErreur(false);
+      })
+      .catch(() => { if (moi === tour.current) setErreur(true); })
+      .finally(() => { if (moi === tour.current) setPlus(false); });
+  }, [espaceId, q, archives, cle]);
+  useEffect(() => { charger(1); }, [charger]);
 
-  const visibles = useMemo(() => {
-    const q = recherche.trim().toLowerCase();
-    return (etat?.dossiers || []).filter((d) => (archives || d.etat === 'actif')
-      && (!q || [d.nom, d.raisonSociale, d.nomCommercial, d.matriculeFiscal].some((v) => (v || '').toLowerCase().includes(q))));
-  }, [etat, recherche, archives]);
-  const nbArchives = etat?.dossiers.filter((d) => d.etat === 'archive').length ?? 0;
-  const nbActifs = (etat?.dossiers.length ?? 0) - nbArchives;
+  const etat = lu?.etat ?? null;
+  const lignes = lu?.lignes ?? [];
+  // La réponse affichée sert-elle encore la recherche en cours ? Sinon, une relecture est en route (ou a échoué).
+  const relecture = !!lu && lu.cle !== cle;
   const ouvert = etat?.etatAbonnement === 'actif';
   const peutCreer = !!etat?.droits.creer;
+  const nbTotal = (etat?.nbActifs ?? 0) + (etat?.nbArchives ?? 0);
 
   return (
     <div>
-      {chargement === 'en_cours' && <div className="loading-text">Chargement…</div>}
-      {chargement === 'erreur' && (
-        <div role="alert" style={{ ...alerte, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span>Impossible de charger les dossiers.</span>
-          <button type="button" onClick={() => { setChargement('en_cours'); charger(); }} style={bouton('#b91c1c', '#fff', '#b91c1c')}>Réessayer</button>
+      {!lu && !erreur && <div className="loading-text">Chargement…</div>}
+      {erreur && (
+        <div role="alert" style={{ ...alerte, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: lu ? 12 : 0 }}>
+          <span>{lu ? 'Impossible de relire les dossiers.' : 'Impossible de charger les dossiers.'}</span>
+          <button type="button" onClick={() => charger(lu && lu.cle === cle ? lu.etat.page + 1 : 1)} style={bouton('#b91c1c', '#fff', '#b91c1c')}>Réessayer</button>
         </div>
       )}
       {etat && (
@@ -56,15 +73,17 @@ export default function ListeDossiers({ espaceId, titre = 'Vos dossiers', bandea
           <div style={{ background: 'linear-gradient(135deg, #eef2ff, #e0e7ff)', border: '1px solid #c7d2fe', borderRadius: 14, padding: '14px 18px', marginBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ minWidth: 0 }}>
               <h2 style={{ fontWeight: 900, fontSize: '1rem', color: '#312e81', margin: 0 }}>{titre}</h2>
-              <div style={{ fontSize: '0.78rem', color: '#4338ca', marginTop: 3 }}>
-                {nbActifs} dossier{nbActifs > 1 ? 's' : ''}{nbArchives ? ` · ${nbArchives} archivé${nbArchives > 1 ? 's' : ''}` : ''}
+              <div style={{ fontSize: '0.78rem', color: '#4338ca', marginTop: 3 }} aria-live="polite">
+                {etat.nbActifs} dossier{etat.nbActifs > 1 ? 's' : ''}{etat.nbArchives ? ` · ${etat.nbArchives} archivé${etat.nbArchives > 1 ? 's' : ''}` : ''}
                 {etat.espace.role === 'gerant' ? ' · ceux qui vous sont ouverts' : ''}
+                {q && !relecture ? ` · ${etat.total} résultat${etat.total > 1 ? 's' : ''}` : ''}
+                {relecture && !erreur ? ' · lecture…' : ''}
               </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher (nom, matricule)" aria-label="Rechercher un dossier"
-                style={{ ...inp, width: 220, maxWidth: '100%' }} />
-              {nbArchives > 0 && (
+              <input type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Rechercher (nom, raison sociale, matricule)" aria-label="Rechercher un dossier"
+                style={{ ...inp, width: 260, maxWidth: '100%' }} autoComplete="off" />
+              {etat.nbArchives > 0 && (
                 <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: '#374151', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <input type="checkbox" checked={archives} onChange={(e) => setArchives(e.target.checked)} />
                   Afficher les archivés
@@ -77,23 +96,32 @@ export default function ListeDossiers({ espaceId, titre = 'Vos dossiers', bandea
             </div>
           </div>
 
-          {visibles.length === 0 ? (
+          {lignes.length === 0 ? (
             <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '22px 20px', textAlign: 'center', fontSize: '0.86rem', color: '#64748b', lineHeight: 1.6 }}>
-              {etat.dossiers.length === 0
+              {relecture ? (erreur ? 'Liste impossible à relire.' : 'Lecture…') : nbTotal === 0
                 ? (etat.espace.role === 'gerant'
                   // S4c : un gérant ne voit que ses dossiers ; sans aucun, la page le dit (sa carte reste sur l'accueil).
                   ? `Aucun dossier ne vous est ouvert pour l'instant : adressez-vous ${etat.espace.type === 'cabinet' ? 'au titulaire du cabinet' : 'au client'}${peutCreer && ouvert ? ', ou créez-en un (« + Dossier ») : il vous sera ouvert.' : '.'}`
                   : peutCreer && ouvert ? 'Aucun dossier pour l\'instant : cliquez sur « + Dossier » pour créer le premier.' : 'Aucun dossier pour l\'instant.')
-                : recherche.trim() ? 'Aucun dossier ne correspond à cette recherche.' : 'Tous les dossiers sont archivés : cochez « Afficher les archivés ».'}
+                : q ? 'Aucun dossier ne correspond à cette recherche.' : 'Tous les dossiers sont archivés : cochez « Afficher les archivés ».'}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 12 }}>
-              {visibles.map((d) => <CarteDossier key={d.id} d={d} />)}
-            </div>
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(280px, 100%), 1fr))', gap: 12, opacity: relecture ? 0.6 : 1 }}>
+                {lignes.map((d) => <CarteDossier key={d.id} d={d} />)}
+              </div>
+              {!relecture && lignes.length < etat.total && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 14 }}>
+                  <button type="button" onClick={() => { setPlus(true); charger(etat.page + 1); }} disabled={plus} style={{ ...bouton('#fff', '#4338ca', '#c7d2fe'), opacity: plus ? 0.7 : 1 }}>
+                    {plus ? 'Lecture…' : `Afficher plus (${etat.total - lignes.length} autre${etat.total - lignes.length > 1 ? 's' : ''})`}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </>
       )}
-      {assistant && <NouveauDossier espaceId={espaceId} dossiers={etat?.dossiers} role={etat?.espace.role} onClose={() => setAssistant(false)} />}
+      {assistant && <NouveauDossier espaceId={espaceId} role={etat?.espace.role} onClose={() => setAssistant(false)} />}
     </div>
   );
 }
