@@ -72,7 +72,8 @@ export default function GerantsPage() {
   const ouvrirComptabilite = () => {
     setChoixType(false);
     refCompta.current?.nouveau();
-    window.setTimeout(() => document.getElementById('gerants-comptabilite')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    // Après le rendu du formulaire (sinon le défilement doux est interrompu par la mise à jour de la page).
+    window.setTimeout(() => document.getElementById('gerants-comptabilite')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
   };
   const nouveauGerant = () => {
     if (!compta.actif) { ouvrirStockVente(); return; }

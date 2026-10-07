@@ -19,7 +19,8 @@ interface Etat {
   emailEnvoye?: boolean | null;
   nouvelle?: boolean;
 }
-interface Formulaire { id: number | null; obligatoire: boolean; nom: string; email: string; niveau: Niveau }
+// emailInitial : adresse de la personne à l'ouverture (vide = désignation), pour le titre et l'avertissement.
+interface Formulaire { id: number | null; obligatoire: boolean; nom: string; email: string; emailInitial: string; niveau: Niveau }
 
 const messageDe = (err: unknown, defaut: string) =>
   (err as { response?: { data?: { message?: string } } })?.response?.data?.message || defaut;
@@ -69,7 +70,7 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
     if (limiteAtteinte && etat.demandeEnCours) { setForm(null); setInfo('Votre demande de gérants comptables est en attente de validation par l\'équipe LabFlow.'); return; }
     if (limiteAtteinte) { setForm(null); setDemande({ nombre: 1 }); return; }
     setDemande(null);
-    setForm({ id: null, obligatoire: false, nom: '', email: '', niveau: 'complet' });
+    setForm({ id: null, obligatoire: false, nom: '', email: '', emailInitial: '', niveau: 'complet' });
   };
   useImperativeHandle(ref, () => ({ nouveau }));
 
@@ -81,7 +82,7 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
     setInfo('');
     setErreur('');
     setDemande(null);
-    setForm({ id: c.id, obligatoire: c.obligatoire, nom: c.nom || '', email: c.email || '', niveau: c.niveau });
+    setForm({ id: c.id, obligatoire: c.obligatoire, nom: c.nom || '', email: c.email || '', emailInitial: c.email || '', niveau: c.niveau });
   };
 
   const enregistrer = async () => {
@@ -97,7 +98,7 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
       const e = data as Etat;
       appliquer(e);
       if (e.nouvelle === true) setInfo(`Invitation envoyée à ${corps.email} : la personne active son compte LabFlow Compta (lien valable 48 heures).`);
-      else if (e.nouvelle === false) setInfo(`Accès ouvert à ${corps.email} : cette adresse a déjà un compte, l'accès s'ajoute aux siens.`);
+      else if (e.nouvelle === false) setInfo(`Accès ouvert à ${corps.email.toLowerCase()} : cette adresse a déjà un compte, l'accès s'ajoute aux siens.`);
       else setInfo('Modifications enregistrées.');
       if (e.emailEnvoye === false) setInfo((i) => `${i} L'email n'a pas pu partir : utilisez « Renvoyer » plus tard.`);
       setForm(null);
@@ -114,7 +115,7 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
       title: c.obligatoire ? 'Retirer votre comptable ?' : 'Retirer ce gérant comptable ?',
       message: c.obligatoire
         ? `${c.nom || c.email} n'aura plus accès à votre comptabilité. L'accès de votre comptable redevient « À désigner ».`
-        : `${c.nom || c.email} n'aura plus accès à votre comptabilité.`,
+        : c.etat === 'a_attribuer' ? 'Cet accès libéré sera supprimé.' : `${c.nom || c.email} n'aura plus accès à votre comptabilité.`,
       tone: 'danger',
       confirmLabel: 'Retirer',
     });
@@ -187,7 +188,7 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
       {form && (
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #c7d2fe', padding: 18, marginBottom: 14, boxShadow: '0 4px 20px rgba(67,56,202,0.08)' }}>
           <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#312e81', marginBottom: 12 }}>
-            {form.obligatoire ? (form.email ? '✏️ Votre comptable' : '👤 Désigner votre comptable') : form.id ? '✏️ Gérant comptable' : '👤 Nouveau gérant comptable'}
+            {form.obligatoire ? (form.emailInitial ? '✏️ Votre comptable' : '👤 Désigner votre comptable') : form.emailInitial ? '✏️ Gérant comptable' : '👤 Nouveau gérant comptable'}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12, marginBottom: 12 }}>
             <div>
@@ -214,7 +215,7 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
           </div>
           <div style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5, marginBottom: 12 }}>
             Une adresse inconnue reçoit une invitation à activer son compte LabFlow Compta ; une adresse déjà connue reçoit l'accès tout de suite.
-            {form.id && form.email ? ' Une autre adresse donne l\'accès à une autre personne : l\'actuelle le perd.' : ''}
+            {form.emailInitial ? ' Une autre adresse donne l\'accès à une autre personne : l\'actuelle le perd.' : ''}
           </div>
           {erreur && <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '9px 13px', fontSize: '0.82rem', color: '#dc2626', marginBottom: 12 }}>{erreur}</div>}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -270,18 +271,23 @@ function Carte({ c, titre, onModifier, onRetirer, onRenvoyer }: {
     <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #e5e7eb', borderLeft: `4px solid ${vide ? '#f59e0b' : '#4338ca'}`, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <div style={{ flex: '1 1 220px', minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 4 }}>
-          <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', overflowWrap: 'anywhere' }}>{titre ? `${titre}${!vide && c.nom ? ` — ${c.nom}` : ''}` : c.nom}</span>
+          <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a', overflowWrap: 'anywhere' }}>{titre ? `${titre}${!vide && c.nom ? ` — ${c.nom}` : ''}` : (c.nom || 'Gérant comptable')}</span>
           {titre && <span style={pastille('#eef2ff', '#3730a3')}>Compris dans le module</span>}
           {vide ? <span style={pastille('#fef3c7', '#92400e')}>À désigner</span> : <span style={pastille('#f1f5f9', '#334155')}>{libelleNiveau(c.niveau)}</span>}
           {!vide && (c.invitationEnAttente ? <span style={pastille('#fef3c7', '#92400e')}>⏳ Invitation envoyée</span> : <span style={pastille('#dcfce7', '#166534')}>● Actif</span>)}
         </div>
         <div style={{ fontSize: '0.8rem', color: '#6b7280', overflowWrap: 'anywhere' }}>
-          {vide ? 'Indiquez le nom et l\'adresse email de votre comptable : il recevra son accès.' : `📧 ${c.email}`}
+          {!vide ? `📧 ${c.email}` : c.obligatoire
+            ? 'Indiquez le nom et l\'adresse email de votre comptable : il recevra son accès.'
+            : 'Accès libéré (la personne n\'a plus de compte) : désignez quelqu\'un ou retirez-le.'}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
         {vide ? (
-          <button type="button" onClick={() => onModifier(c)} style={bouton('#4338ca', '#fff', '#4338ca')}>Désigner</button>
+          <>
+            <button type="button" onClick={() => onModifier(c)} style={bouton('#4338ca', '#fff', '#4338ca')}>Désigner</button>
+            {!c.obligatoire && <button type="button" onClick={() => onRetirer(c)} style={petit('#fff', '#be123c', '#fecdd3')}>🗑 Retirer</button>}
+          </>
         ) : (
           <>
             {c.invitationRenvoyable && <button type="button" onClick={() => onRenvoyer(c)} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>✉️ Renvoyer</button>}

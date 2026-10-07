@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+// Étape S3b : confirmations (« Quitter cet accès ») par la boîte de dialogue de LabFlow, jamais window.confirm.
+import { ConfirmProvider } from '../components/common/ConfirmDialog';
 import { MANUEL_COMPTA } from './manuelCompta';
 import { estTitulaireCabinet, useAccesCompta } from './accesCompta';
 
@@ -60,6 +62,7 @@ export default function ComptaApp() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ConfirmProvider>
         <Suspense fallback={<Chargement />}>
           <Routes>
             <Route path="/login" element={<ComptaLoginPage />} />
@@ -80,6 +83,7 @@ export default function ComptaApp() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </ConfirmProvider>
       </AuthProvider>
     </BrowserRouter>
   );
