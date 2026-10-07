@@ -15,7 +15,8 @@ interface Membre {
   cabinet: { id: number; nom: string };
   identite: Record<string, string | null>;
   titulaire: { nom: string | null; email: string | null; telephone: string | null };
-  acces: { niveau: string; membreDepuis: string | null };
+  // S4c : « tous les dossiers » du cabinet, ou seulement ceux que le titulaire a ouverts (la liste les montre).
+  acces: { niveau: string; membreDepuis: string | null; tousDossiers: boolean };
   etatAbonnement: 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
 }
 
@@ -101,8 +102,9 @@ function ComptaCabinetMembre({ espaceId }: { espaceId?: string }) {
               <Carte titre="🔑 Votre accès" sousTitre="Collaborateur du cabinet">
                 <Ligne libelle="Niveau" valeur={libelleNiveau(donnees.acces.niveau)} />
                 <Ligne libelle="Membre depuis" valeur={fmtDate(donnees.acces.membreDepuis)} />
+                <Ligne libelle="Dossiers" valeur={donnees.acces.tousDossiers ? 'Tous les dossiers du cabinet' : 'Ceux qui vous sont ouverts'} />
                 <p style={{ margin: '10px 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
-                  Votre accès est géré par le titulaire du cabinet : pour changer votre niveau ou fermer votre accès, adressez-vous à lui.
+                  Votre accès est géré par le titulaire du cabinet : pour changer votre niveau, vos dossiers ou fermer votre accès, adressez-vous à lui.
                 </p>
               </Carte>
             </div>

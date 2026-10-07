@@ -80,8 +80,10 @@ export default function ListeDossiers({ espaceId, titre = 'Vos dossiers', bandea
           {visibles.length === 0 ? (
             <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '22px 20px', textAlign: 'center', fontSize: '0.86rem', color: '#64748b', lineHeight: 1.6 }}>
               {etat.dossiers.length === 0
-                ? (peutCreer && ouvert ? 'Aucun dossier pour l\'instant : cliquez sur « + Dossier » pour créer le premier.'
-                  : peutCreer ? 'Aucun dossier pour l\'instant.' : 'Aucun dossier ne vous est ouvert pour l\'instant.')
+                ? (etat.espace.role === 'gerant'
+                  // S4c : un gérant ne voit que ses dossiers ; sans aucun, la page le dit (sa carte reste sur l'accueil).
+                  ? `Aucun dossier ne vous est ouvert pour l'instant : adressez-vous ${etat.espace.type === 'cabinet' ? 'au titulaire du cabinet' : 'au client'}${peutCreer && ouvert ? ', ou créez-en un (« + Dossier ») : il vous sera ouvert.' : '.'}`
+                  : peutCreer && ouvert ? 'Aucun dossier pour l\'instant : cliquez sur « + Dossier » pour créer le premier.' : 'Aucun dossier pour l\'instant.')
                 : recherche.trim() ? 'Aucun dossier ne correspond à cette recherche.' : 'Tous les dossiers sont archivés : cochez « Afficher les archivés ».'}
             </div>
           ) : (
