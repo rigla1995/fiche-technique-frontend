@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import api from '../../api/client';
 import { useConfirm } from '../../components/common/ConfirmDialog';
+import { useNotifications } from '../../context/NotificationContext';
 import BoutonAide from '../BoutonAide';
 import { libelleNiveau, type Niveau } from '../comptables';
 import { ChoixNiveau } from '../ui';
@@ -56,6 +57,10 @@ export default function ComptaGerants() {
       .catch(() => setChargement('erreur'));
   }, []);
   useEffect(() => { charger(); }, [charger]);
+  // La réponse de l'équipe LabFlow à une demande arrive dans la cloche : la page se relit aussitôt (places, demande).
+  const { notifications } = useNotifications();
+  const derniereReponse = notifications.find((n) => n.eventType === 'demande_traitee')?.id;
+  useEffect(() => { if (derniereReponse) charger(); }, [derniereReponse, charger]);
 
   const limiteAtteinte = !!etat && etat.places.utilisees >= etat.places.limite;
   // Plafond d'une demande : 10 à la fois, sans dépasser le plafond du serveur.

@@ -64,7 +64,8 @@ export default function ClocheCompta() {
 
       {ouvert && (
         <div role="dialog" aria-label="Notifications" style={{
-          position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 'min(320px, calc(100vw - 32px))', maxHeight: 400,
+          // Sur téléphone, la cloche n'est pas au bord droit (la pastille de la personne la suit) : marge gardée à gauche.
+          position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 'min(320px, calc(100vw - 72px))', maxHeight: 400,
           overflowY: 'auto', background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0',
           boxShadow: '0 12px 40px rgba(0,0,0,0.18)', zIndex: 9999,
         }}>

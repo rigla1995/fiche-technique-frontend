@@ -12,12 +12,13 @@ import { estTitulaireCabinet, useAccesCompta } from './accesCompta';
 // compta-bureau-seul / compta-mobile-seul).
 // S3c : une personne « comptable » est le titulaire d'un cabinet, ou un comptable (collaborateur d'un cabinet, comptable
 // d'un client LabFlow).
-const libelleRole = (role: string | undefined, titulaireCabinet: boolean) =>
+// `titulaireCabinet` : null tant que les accès ne sont pas lus (rien n'est affiché plutôt qu'un libellé qui changerait).
+const libelleRole = (role: string | undefined, titulaireCabinet: boolean | null) =>
   role === 'boss' ? 'Boss'
     : role === 'super_admin' ? 'Administrateur'
     : role === 'gerant' ? 'Gérant'
     : role === 'acheteur' ? 'Acheteur'
-    : role === 'comptable' ? (titulaireCabinet ? 'Cabinet comptable' : 'Comptable')
+    : role === 'comptable' ? (titulaireCabinet === null ? '' : titulaireCabinet ? 'Cabinet comptable' : 'Comptable')
     : 'Client';
 
 const initiales = (nom?: string) =>
@@ -58,7 +59,7 @@ export default function EnteteCompta({ onMenu }: { onMenu: () => void }) {
           <div className="compta-bureau-seul" style={{ lineHeight: 1.25 }}>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>{user?.name}</div>
             <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500, letterSpacing: '0.03em' }}>
-              {libelleRole(user?.role, estTitulaireCabinet(acces))}
+              {libelleRole(user?.role, acces ? estTitulaireCabinet(acces) : null)}
             </div>
           </div>
         </div>
