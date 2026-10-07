@@ -9,7 +9,9 @@ export interface AppNotification {
     | 'demande_traitee'
     | 'new_inventaire'
     | 'nouvelle_commande_acheteur'
-    | 'demande_acces_recue';
+    | 'demande_acces_recue'
+    // LabFlow Compta (S3b) : un comptable a quitté l'accès à la comptabilité du client
+    | 'comptable_parti';
   demandeId?: number;
   refId?: number;
   refKind?: string;
@@ -117,6 +119,9 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // c'est la cause du « pas instantané » (la notif n'apparaissait qu'au reload).
       es.addEventListener('demande_acces_recue', (e) => {
         try { push('demande_acces_recue', JSON.parse(e.data)); } catch { /* ignore */ }
+      });
+      es.addEventListener('comptable_parti', (e) => {
+        try { push('comptable_parti', JSON.parse(e.data)); } catch { /* ignore */ }
       });
       // Retrait instantané d'une notif « file d'attente » quand l'entité source est
       // traitée côté serveur (ex. demande d'accès passée en contactée/refusée/convertie).

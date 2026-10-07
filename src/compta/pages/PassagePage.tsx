@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import type { User } from '../../types';
 import { AuthShell, authSubmit } from '../../components/auth/AuthShell';
 import { PRODUIT, adresseApp, adresseCompta } from '../produit';
+import { lirePassage } from '../passage';
 
 // Arrivée d'un passage entre LabFlow et LabFlow Compta (étape S3a, SPEC-SOCLE D12), sur les deux adresses : le code de
 // la partie « # » est retiré aussitôt de l'adresse (ni historique ni favori ne le gardent), puis échangé une seule fois
@@ -24,8 +25,9 @@ const vientDeLautreAdresse = () =>
 export default function PassagePage() {
   const { ouvrirSession } = useAuth();
   const navigate = useNavigate();
-  const [code] = useState(() => window.location.hash.slice(1));
-  const [erreur, setErreur] = useState(() => !window.location.hash.slice(1));
+  // S3b : la partie « # » peut porter, après le code, une page d'arrivée de la liste fermée (sinon l'accueil).
+  const [{ code, page }] = useState(() => lirePassage(window.location.hash));
+  const [erreur, setErreur] = useState(() => !code);
   const [aConfirmer, setAConfirmer] = useState<Session | null>(null);
   const fait = useRef(false);
   const dejaConnecte = useRef(connecteIci());
@@ -41,18 +43,18 @@ export default function PassagePage() {
         const autrePersonne = dejaConnecte.current != null && dejaConnecte.current !== session.user.id;
         if (vientDeLautreAdresse() && !autrePersonne) {
           ouvrirSession(session);
-          navigate('/', { replace: true });
+          navigate(page, { replace: true });
         } else {
           setAConfirmer(session);
         }
       })
       .catch(() => setErreur(true));
-  }, [code, ouvrirSession, navigate]);
+  }, [code, page, ouvrirSession, navigate]);
 
   const ouvrir = () => {
     if (!aConfirmer) return;
     ouvrirSession(aConfirmer);
-    navigate('/', { replace: true });
+    navigate(page, { replace: true });
   };
 
   return (

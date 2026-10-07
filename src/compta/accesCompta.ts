@@ -4,7 +4,11 @@ import { createContext, useContext } from 'react';
 // Compta (fournisseur : AccesCompta.tsx) : le menu et les pages réservées se règlent sur les ACCÈS, plus sur le rôle
 // (étape S3a — un comptable invité par un client, ou un collaborateur de cabinet, a le rôle « comptable » sans être
 // titulaire d'un cabinet).
-export interface CarteAcces { id: number; nom: string; etat: string; role: 'titulaire' | 'gerant'; lien: string | null }
+// etatAbonnement (S3b, D4) : état de l'abonnement du titulaire de la comptabilité.
+export interface CarteAcces {
+  id: number; nom: string; etat: string; role: 'titulaire' | 'gerant'; lien: string | null;
+  etatAbonnement?: 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
+}
 export interface AccesCompta { cabinets: CarteAcces[]; maComptabilite: CarteAcces[]; confiees: CarteAcces[] }
 
 export interface ValeurAcces { acces: AccesCompta | null; erreur: boolean; recharger: () => void }
