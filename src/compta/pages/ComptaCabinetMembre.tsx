@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../../api/client';
 import BoutonAide from '../BoutonAide';
+import ListeDossiers from '../ListeDossiers';
 import { libelleNiveau } from '../comptables';
 import { libelleForme } from '../../utils/identiteLegale';
 import { Carte, Ligne } from '../ui';
 
 // « Cabinet … » (LabFlow Compta, étape S3c) : le cabinet dont la personne connectée est collaboratrice — identité du
 // cabinet, titulaire et contact, son accès (niveau, membre depuis). Réponse du client du 07/10 : le titulaire gère son
-// équipe, la page n'a pas de « Quitter ». Les dossiers arriveront à l'étape suivante.
+// équipe, la page n'a pas de « Quitter ». S4a : les dossiers qui lui sont ouverts (liste, recherche ; « + Dossier » avec
+// le niveau Complet).
 interface Membre {
   cabinet: { id: number; nom: string };
   identite: Record<string, string | null>;
@@ -103,10 +105,10 @@ function ComptaCabinetMembre({ espaceId }: { espaceId?: string }) {
                   Votre accès est géré par le titulaire du cabinet : pour changer votre niveau ou fermer votre accès, adressez-vous à lui.
                 </p>
               </Carte>
-              <Carte titre="📁 Les dossiers" sousTitre="Bientôt">
-                <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b', lineHeight: 1.6 }}>Les dossiers du cabinet arriveront dans une prochaine version de LabFlow Compta.</p>
-              </Carte>
             </div>
+          </div>
+          <div style={{ marginTop: 24 }}>
+            <ListeDossiers espaceId={donnees.cabinet.id} titre="📁 Dossiers du cabinet" bandeau={false} />
           </div>
         </>
       )}

@@ -7,7 +7,7 @@ import { Carte, Ligne } from '../ui';
 
 // « Mon cabinet » (LabFlow Compta, étape S2b) : le cabinet tel que LabFlow le connaît — identité (celle de ses
 // factures d'abonnement, saisie par l'admin), titulaire, gérants. S3c : gérants en place (désactivés compris) sur les
-// gérants prévus, et le lien vers « Mes gérants ».
+// gérants prévus, et le lien vers « Mes gérants ». S4a : le nombre de dossiers et le lien vers « Dossiers ».
 interface Cabinet {
   espace: { id: number; nom: string; etat: string };
   nomAffiche: string;
@@ -15,6 +15,7 @@ interface Cabinet {
   contact: { nom: string; email: string; telephone: string | null };
   nbGerants: number;
   gerantsEnPlace: number;
+  nbDossiers?: number;
 }
 
 export default function ComptaCabinet() {
@@ -81,6 +82,17 @@ export default function ComptaCabinet() {
               </p>
               <Link to="/gerants" style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 9, background: '#4338ca', color: '#fff', fontSize: '0.82rem', fontWeight: 700, textDecoration: 'none' }}>
                 Gérer mes gérants →
+              </Link>
+            </Carte>
+            <Carte titre="📁 Dossiers" sousTitre="Les entreprises dont vous tenez la comptabilité">
+              <div style={{ fontSize: '1.6rem', fontWeight: 900, color: '#3730a3' }}>{cabinet.nbDossiers ?? 0}</div>
+              <p style={{ margin: '4px 0 12px', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>
+                {(cabinet.nbDossiers ?? 0) > 0
+                  ? `dossier${(cabinet.nbDossiers ?? 0) > 1 ? 's' : ''} (archivés compris).`
+                  : 'Aucun dossier pour l\'instant : créez le premier avec l\'assistant.'}
+              </p>
+              <Link to="/dossiers" style={{ display: 'inline-block', padding: '8px 16px', borderRadius: 9, background: '#4338ca', color: '#fff', fontSize: '0.82rem', fontWeight: 700, textDecoration: 'none' }}>
+                Voir les dossiers →
               </Link>
             </Carte>
           </div>
