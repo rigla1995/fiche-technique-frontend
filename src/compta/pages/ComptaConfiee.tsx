@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../../api/client';
 import BoutonAide from '../BoutonAide';
+import ListeDossiers from '../ListeDossiers';
 import { useAccesCompta } from '../accesCompta';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { libelleNiveau } from '../comptables';
@@ -10,7 +11,8 @@ import { Carte, Ligne } from '../ui';
 
 // « Comptabilité de … » (LabFlow Compta, étape S3b ; réponse du client du 07/10) : la comptabilité qu'un client LabFlow
 // a confiée à la personne connectée — identité et contact du client, son accès (niveau, confiée le), « Quitter cet
-// accès ». Les dossiers arriveront à l'étape suivante. Une comptabilité confiée suit l'abonnement de son client (D4).
+// accès ». S4b : les dossiers du client qui lui sont ouverts (liste, recherche ; « + Dossier » avec le niveau Complet).
+// Une comptabilité confiée suit l'abonnement de son client (D4).
 interface Confiee {
   espace: { id: number; nom: string };
   identite: Record<string, string | null>;
@@ -131,10 +133,12 @@ function ComptaConfiee({ espaceId }: { espaceId?: string }) {
                 </button>
                 {erreur && <div role="alert" style={{ color: '#dc2626', fontSize: '0.78rem', marginTop: 8 }}>{erreur}</div>}
               </Carte>
-              <Carte titre="📁 Les dossiers" sousTitre="Bientôt">
-                <p style={{ margin: 0, fontSize: '0.82rem', color: '#64748b', lineHeight: 1.6 }}>Les dossiers de ce client arriveront dans une prochaine version de LabFlow Compta.</p>
-              </Carte>
             </div>
+          </div>
+          {/* S4b : les dossiers du client ouverts à la personne (son « Mon entreprise » et ses autres entités) ; la page a
+              déjà son bandeau d'abonnement. */}
+          <div style={{ marginTop: 24 }}>
+            <ListeDossiers espaceId={donnees.espace.id} titre="📁 Dossiers du client" bandeau={false} />
           </div>
         </>
       )}
