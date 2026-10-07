@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../api/client';
 import BoutonAide from '../BoutonAide';
+import { libelleNiveau } from '../comptables';
 
 // Accueil de LabFlow Compta : les comptabilités de la personne, en trois groupes TOUJOURS distincts (exigence du client,
 // CADRAGE §2) — son cabinet, sa comptabilité de client LabFlow, celles que des clients LabFlow lui ont confiées.
@@ -11,8 +12,10 @@ import BoutonAide from '../BoutonAide';
 // `lien` (étape S2b) : page ouverte par la carte (le cabinet de son titulaire) ; absent = carte sans lien à cette étape.
 // `etatAbonnement` (S3b, D4) : état de l'abonnement du titulaire — un cabinet bloqué se connecte encore (sa carte le
 // dit) ; une comptabilité confiée suit l'abonnement de son client.
+// `role`, `niveau` (S3c) : un collaborateur voit le cabinet dans « Mon cabinet », avec la mention « Collaborateur » et
+// son niveau.
 type EtatAbonnement = 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
-type Comptabilite = { id: number; nom: string; lien?: string | null; etatAbonnement?: EtatAbonnement };
+type Comptabilite = { id: number; nom: string; role?: 'titulaire' | 'gerant'; niveau?: string; lien?: string | null; etatAbonnement?: EtatAbonnement };
 const ETATS: Record<string, { libelle: string; fond: string; texte: string }> = {
   lecture_seule: { libelle: 'Lecture seule', fond: '#fef3c7', texte: '#92400e' },
   bloque: { libelle: 'Abonnement bloqué', fond: '#fee2e2', texte: '#991b1b' },
@@ -87,12 +90,18 @@ export default function ComptaAccueil() {
               {acces[g.cle].map((c) => {
                 const style: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid #e2e8f0', borderLeft: `4px solid ${g.couleur}`, borderRadius: 12, padding: '14px 16px', fontWeight: 700, color: '#0f172a', textDecoration: 'none' };
                 // Une comptabilité confiée d'un client bloqué se dit « Suspendue » (cadrage S3b §2 : l'état de facturation du
-                // client ne regarde pas son comptable) ; sa carte s'ouvre encore, pour pouvoir quitter l'accès.
-                const cleEtat = g.cle === 'confiees' && c.etatAbonnement === 'bloque' ? 'suspendu' : c.etatAbonnement;
+                // client ne regarde pas son comptable) ; sa carte s'ouvre encore, pour pouvoir quitter l'accès. S3c : de même
+                // pour le cabinet d'un collaborateur.
+                const cleEtat = (g.cle === 'confiees' || c.role === 'gerant') && c.etatAbonnement === 'bloque' ? 'suspendu' : c.etatAbonnement;
                 const e = cleEtat ? ETATS[cleEtat] : undefined;
                 const nom = (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0, overflowWrap: 'anywhere' }}>
                     {c.nom}
+                    {g.cle === 'cabinets' && c.role === 'gerant' && (
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: '#eef2ff', color: '#3730a3' }}>
+                        Collaborateur{c.niveau ? ` · ${libelleNiveau(c.niveau)}` : ''}
+                      </span>
+                    )}
                     {e && <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: e.fond, color: e.texte }}>{e.libelle}</span>}
                   </span>
                 );

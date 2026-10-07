@@ -308,5 +308,59 @@
     "apres": "⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|⟦?Un comptable a quitté votre comptabilité|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧⟧",
     "type": "ajoute",
     "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : titre de la notification « Un comptable a quitté votre comptabilité » (réponse du client du 07/10 : le client est prévenu par la cloche et par email) ; les autres titres de la cloche sont inchangés. Le terme « gérant » des autres titres reste rendu par le vocabulaire du compte."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": null,
+    "apres": "compta",
+    "type": "discriminant",
+    "occurrences": 2,
+    "justification": "Chantier Achats & Comptabilité, étape S3c (gérants du cabinet, cadrage validé par le client le 07/10/2026 ; demande du client : une cloche dans LabFlow Compta) : valeur du produit (« compta ») du fournisseur des notifications, comparée pour régler la cloche de LabFlow Compta ; jamais affichée."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": null,
+    "apres": "comptable",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3c (gérants du cabinet, cadrage validé par le client le 07/10/2026 ; demande du client : une cloche dans LabFlow Compta) : rôle (« comptable ») comparé : une personne de ce rôle reçoit toutes ses notifications dans la cloche de LabFlow Compta ; jamais affiché."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": null,
+    "apres": "labflow",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3c (gérants du cabinet, cadrage validé par le client le 07/10/2026 ; demande du client : une cloche dans LabFlow Compta) : valeur par défaut du produit (« labflow ») : la cloche de LabFlow, inchangée ; jamais affichée."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": null,
+    "apres": "⟦??produit=compta|⟧",
+    "type": "discriminant",
+    "mode": [
+      "identite",
+      "residuels"
+    ],
+    "justification": "Chantier Achats & Comptabilité, étape S3c (gérants du cabinet, cadrage validé par le client le 07/10/2026 ; demande du client : une cloche dans LabFlow Compta) : paramètre d'adresse de l'API (?produit=compta) ajouté aux routes des notifications pour la cloche de LabFlow Compta ; jamais affiché."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": "/api/notifications",
+    "apres": "/api/notifications⟦·⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3c (gérants du cabinet, cadrage validé par le client le 07/10/2026 ; demande du client : une cloche dans LabFlow Compta) : adresse de l'API des notifications, suivie du paramètre du produit ; jamais affichée."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": "/api/notifications/seen",
+    "apres": "/api/notifications/seen⟦·⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3c (gérants du cabinet, cadrage validé par le client le 07/10/2026 ; demande du client : une cloche dans LabFlow Compta) : adresse de l'API « notifications vues », suivie du paramètre du produit ; jamais affichée."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": "/api/notifications?eventType=⟦·⟧",
+    "apres": "/api/notifications?eventType=⟦·⟧⟦?&⟦·⟧|⟧",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3c (gérants du cabinet, cadrage validé par le client le 07/10/2026 ; demande du client : une cloche dans LabFlow Compta) : adresse de l'API d'effacement par type, suivie du paramètre du produit ; jamais affichée."
   }
 ]
