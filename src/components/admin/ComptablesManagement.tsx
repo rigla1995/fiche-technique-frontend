@@ -34,6 +34,8 @@ interface Cabinet {
     statutOnboarding: string;
     montantOnboarding: number | null;
     nbGerants: number;
+    // Étape S3c : accès de collaborateurs en place (désactivés compris) ; les gérants achetés ne descendent pas en dessous.
+    gerantsEnPlace?: number;
     postes: PosteCompta[];
     totalMensuel: number;
   } | null;
@@ -205,7 +207,7 @@ export default function ComptablesManagement() {
                     <div style={{ padding: '0 18px 12px', display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
                       <span style={chip}>📱 {c.phone || '—'}</span>
                       {c.abonnement && <span style={chip}>💳 {fmt(c.abonnement.totalMensuel)}/mois</span>}
-                      {c.abonnement && <span style={chip}>👥 {c.abonnement.nbGerants} gérant{c.abonnement.nbGerants > 1 ? 's' : ''}</span>}
+                      {c.abonnement && <span style={chip}>👥 {c.abonnement.gerantsEnPlace ?? 0} / {c.abonnement.nbGerants} gérant{c.abonnement.nbGerants > 1 ? 's' : ''}</span>}
                       <span style={{ ...chip, background: mode.fond, color: mode.couleur, borderColor: 'transparent', fontWeight: 700 }}>{mode.label}</span>
                       {!c.identiteComplete && (
                         <button type="button" onClick={() => setIdentite(c)} title="Raison sociale, matricule fiscal, adresse ou ville manquant"
@@ -288,7 +290,12 @@ export default function ComptablesManagement() {
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 440, borderRadius: 16 }}>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a' }}>👥 Gérants de « {gerants.cabinet.nomAffiche} »</div>
-              <Counter label="Gérants achetés" sub="Le nouveau montant s'applique à partir du mois suivant" value={gerants.nb} onChange={(nb) => setGerants({ ...gerants, nb })} min={0} max={50} disabled={gerants.enCours} />
+              <Counter label="Gérants achetés" sub="Le nouveau montant s'applique à partir du mois suivant" value={gerants.nb} onChange={(nb) => setGerants({ ...gerants, nb })} min={gerants.cabinet.abonnement?.gerantsEnPlace ?? 0} max={50} disabled={gerants.enCours} />
+              {(gerants.cabinet.abonnement?.gerantsEnPlace ?? 0) > 0 && (
+                <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
+                  {gerants.cabinet.abonnement?.gerantsEnPlace} gérant{(gerants.cabinet.abonnement?.gerantsEnPlace ?? 0) > 1 ? 's sont' : ' est'} en place (désactivés compris) : le titulaire doit en retirer pour descendre en dessous.
+                </div>
+              )}
               {gerants.erreur && <div style={{ background: '#fee2e2', color: '#dc2626', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem' }}>{gerants.erreur}</div>}
             </div>
             <div className="modal-footer">

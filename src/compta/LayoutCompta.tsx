@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import EnteteCompta from './EnteteCompta';
 import MenuCompta from './MenuCompta';
 import { AccesComptaProvider } from './FournisseurAcces';
+import { NotificationProvider } from '../context/NotificationContext';
 import './compta.css';
 
 // Mise en page des pages connectées de LabFlow Compta : celle de LabFlow (src/components/common/Layout.tsx) — barre du
@@ -17,8 +18,10 @@ export default function LayoutCompta() {
   if (!user) return <Navigate to="/login" replace />;
 
   // S3a : les accès de la personne (menu, pages réservées) sont lus une fois pour toute la mise en page.
+  // S3c : la cloche de LabFlow Compta (notifications de LabFlow Compta seulement).
   return (
     <AccesComptaProvider>
+    <NotificationProvider produit="compta">
     <div className="app-layout">
       <EnteteCompta onMenu={() => setMenuOuvert((v) => !v)} />
       <div className="layout-body">
@@ -31,6 +34,7 @@ export default function LayoutCompta() {
         </main>
       </div>
     </div>
+    </NotificationProvider>
     </AccesComptaProvider>
   );
 }

@@ -3,17 +3,22 @@ import { useAuth } from '../context/AuthContext';
 import LabFlowLogo from '../components/common/LabFlowLogo';
 import PastilleCompta from './PastilleCompta';
 import { LienStockVente } from './LiensEspace';
+import ClocheCompta from './ClocheCompta';
+import { estTitulaireCabinet, useAccesCompta } from './accesCompta';
 
 // Barre du haut de LabFlow Compta : celle de LabFlow (src/components/common/Header.tsx, classes .header), logo suivi de
-// la pastille « Compta », personne connectée et déconnexion. Ni cloche ni guide de mise en route : LabFlow Compta n'a
-// pas encore de notifications. Sur téléphone, un bouton ouvre le menu de gauche, qui reçoit aussi le nom et la
-// déconnexion (compta.css : classes compta-bureau-seul / compta-mobile-seul).
-const libelleRole = (role?: string) =>
+// la pastille « Compta », cloche (S3c), personne connectée et déconnexion. Pas de guide de mise en route. Sur téléphone,
+// un bouton ouvre le menu de gauche, qui reçoit aussi le nom et la déconnexion (compta.css : classes
+// compta-bureau-seul / compta-mobile-seul).
+// S3c : une personne « comptable » est le titulaire d'un cabinet, ou un comptable (collaborateur d'un cabinet, comptable
+// d'un client LabFlow).
+// `titulaireCabinet` : null tant que les accès ne sont pas lus (rien n'est affiché plutôt qu'un libellé qui changerait).
+const libelleRole = (role: string | undefined, titulaireCabinet: boolean | null) =>
   role === 'boss' ? 'Boss'
     : role === 'super_admin' ? 'Administrateur'
     : role === 'gerant' ? 'Gérant'
     : role === 'acheteur' ? 'Acheteur'
-    : role === 'comptable' ? 'Cabinet comptable'
+    : role === 'comptable' ? (titulaireCabinet === null ? '' : titulaireCabinet ? 'Cabinet comptable' : 'Comptable')
     : 'Client';
 
 const initiales = (nom?: string) =>
@@ -21,6 +26,7 @@ const initiales = (nom?: string) =>
 
 export default function EnteteCompta({ onMenu }: { onMenu: () => void }) {
   const { user, logout } = useAuth();
+  const { acces } = useAccesCompta();
   const navigate = useNavigate();
   const seDeconnecter = () => { logout(); navigate('/login', { replace: true }); };
 
@@ -40,6 +46,7 @@ export default function EnteteCompta({ onMenu }: { onMenu: () => void }) {
       <div className="header-right">
         {/* Étape S3a : retour à l'espace Stock / Vente sans ressaisie (client ou gérant) */}
         <LienStockVente />
+        <ClocheCompta />
         <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
           <div style={{
             width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.92)',
@@ -52,7 +59,7 @@ export default function EnteteCompta({ onMenu }: { onMenu: () => void }) {
           <div className="compta-bureau-seul" style={{ lineHeight: 1.25 }}>
             <div style={{ fontSize: '0.84rem', fontWeight: 700, color: '#fff' }}>{user?.name}</div>
             <div style={{ fontSize: '0.68rem', color: 'rgba(255,255,255,0.6)', fontWeight: 500, letterSpacing: '0.03em' }}>
-              {libelleRole(user?.role)}
+              {libelleRole(user?.role, acces ? estTitulaireCabinet(acces) : null)}
             </div>
           </div>
         </div>

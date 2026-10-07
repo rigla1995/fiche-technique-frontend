@@ -26,6 +26,9 @@ const PassagePage = lazy(() => import('./pages/PassagePage'));
 const ChoixEspace = lazy(() => import('./pages/ChoixEspace'));
 // Étape S3b : la page d'une comptabilité confiée par un client LabFlow (le serveur vérifie l'accès)
 const ComptaConfiee = lazy(() => import('./pages/ComptaConfiee'));
+// Étape S3c : « Mes gérants » du titulaire d'un cabinet ; la page du cabinet vue par un collaborateur
+const ComptaGerants = lazy(() => import('./pages/ComptaGerants'));
+const ComptaCabinetMembre = lazy(() => import('./pages/ComptaCabinetMembre'));
 // Le manuel de LabFlow Compta s'affiche dans la page du manuel de LabFlow (même présentation), réglée sur le produit.
 const GuidePage = lazy(() => import('../components/client/GuidePage'));
 const InvitePage = lazy(() => import('../components/auth/InvitePage'));
@@ -77,6 +80,8 @@ export default function ComptaApp() {
               <Route path="/manuel" element={<GuidePage manuel={MANUEL_COMPTA} />} />
               <Route path="/cabinet" element={<ReserveCabinet><ComptaCabinet /></ReserveCabinet>} />
               <Route path="/abonnement" element={<ReserveCabinet><ComptaAbonnement /></ReserveCabinet>} />
+              <Route path="/gerants" element={<ReserveCabinet><ComptaGerants /></ReserveCabinet>} />
+              <Route path="/cabinets/:espaceId" element={<ComptaCabinetMembre />} />
               <Route path="/ma-comptabilite" element={<ReserveClient><ComptaMaComptabilite /></ReserveClient>} />
               <Route path="/confiee/:espaceId" element={<ComptaConfiee />} />
             </Route>
