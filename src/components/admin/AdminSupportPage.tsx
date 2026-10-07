@@ -167,7 +167,7 @@ function DetailsPopup({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                   {isPending && estCabinet && prixCabinet && (
                     <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 10, padding: '12px 16px', fontSize: '0.82rem' }}>
-                      <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 6 }}>Abonnement actuel (LabFlow Compta)</div>
+                      <div style={{ fontWeight: 700, color: '#1e3a8a', marginBottom: 6 }}>Abonnement actuel (LabFlow Compta, hors promotion)</div>
                       <div style={{ color: '#1e40af' }}>
                         Cabinet · {prixCabinet.nbGerants} gérant{prixCabinet.nbGerants !== 1 ? 's' : ''}
                         <span style={{ fontWeight: 700, marginLeft: 8 }}>{prixCabinet.actuel} DT/mois</span>

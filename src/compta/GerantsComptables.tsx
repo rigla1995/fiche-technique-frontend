@@ -221,13 +221,15 @@ const GerantsComptables = forwardRef<GerantsComptablesHandle, Props>(function Ge
               {etat.supplementaires.utilises}<span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6b7280' }}> / {etat.supplementaires.limite}</span>
             </div>
           </div>
-          {etat.demandeEnCours ? (
+          {/* S3c (relecture) : une place libre s'ouvre même pendant une demande ; le badge s'ajoute au bouton. */}
+          {etat.demandeEnCours && (
             <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', borderRadius: 20, background: '#fef9c3', color: '#854d0e' }}>⏳ Demande en cours</span>
-          ) : limiteAtteinte ? (
-            <button type="button" onClick={ajouter} style={bouton('#fff', '#4338ca', '#4338ca')}>Demander des gérants comptables</button>
-          ) : (
-            <button type="button" onClick={ajouter} style={bouton('#4338ca', '#fff', '#4338ca')}>+ Gérant comptable</button>
           )}
+          {!limiteAtteinte ? (
+            <button type="button" onClick={ajouter} style={bouton('#4338ca', '#fff', '#4338ca')}>+ Gérant comptable</button>
+          ) : !etat.demandeEnCours ? (
+            <button type="button" onClick={ajouter} style={bouton('#fff', '#4338ca', '#4338ca')}>Demander des gérants comptables</button>
+          ) : null}
         </div>
       </div>
 

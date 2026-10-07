@@ -149,12 +149,15 @@ export function NotificationProvider({ children, produit = 'labflow' }: { childr
 
       es.onerror = () => {
         es.close();
-        setTimeout(connect, 5000);
+        relance = setTimeout(connect, 5000);
       };
     };
 
+    // Reconnexion prévue après une erreur : annulée au démontage (S3c : ce fournisseur sert aussi LabFlow Compta, et une
+    // reconnexion tardive laisserait un flux orphelin).
+    let relance: ReturnType<typeof setTimeout> | null = null;
     connect();
-    return () => { esRef.current?.close(); esRef.current = null; };
+    return () => { if (relance) clearTimeout(relance); esRef.current?.close(); esRef.current = null; };
   }, [user?.id, push]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const markAllRead = useCallback(() => {

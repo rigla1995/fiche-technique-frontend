@@ -60,7 +60,7 @@ function ComptaCabinetMembre({ espaceId }: { espaceId?: string }) {
               {donnees ? donnees.cabinet.nom : 'Cabinet'}
             </h1>
           </div>
-          <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Vous êtes collaborateur de ce cabinet</p>
+          {etat !== 'introuvable' && <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>Vous êtes collaborateur de ce cabinet</p>}
         </div>
         <BoutonAide section="compta-cabinet-membre" />
       </div>

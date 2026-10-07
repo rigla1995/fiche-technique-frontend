@@ -19,11 +19,15 @@ export default function ClocheCompta() {
   const navigate = useNavigate();
   const [ouvert, setOuvert] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const bouton = useRef<HTMLButtonElement>(null);
+  const panneau = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!ouvert) return;
     const clic = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOuvert(false); };
-    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape') setOuvert(false); };
+    // Échap ferme le panneau et rend le focus à la cloche ; à l'ouverture, le focus entre dans le panneau.
+    const touche = (e: KeyboardEvent) => { if (e.key === 'Escape') { setOuvert(false); bouton.current?.focus(); } };
+    panneau.current?.focus();
     document.addEventListener('mousedown', clic);
     document.addEventListener('keydown', touche);
     return () => { document.removeEventListener('mousedown', clic); document.removeEventListener('keydown', touche); };
@@ -43,8 +47,8 @@ export default function ClocheCompta() {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
-      <button type="button" onClick={basculer} title="Notifications" aria-label={unreadCount > 0 ? `Notifications (${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''})` : 'Notifications'}
-        aria-expanded={ouvert} aria-haspopup="true"
+      <button ref={bouton} type="button" onClick={basculer} title="Notifications" aria-label={unreadCount > 0 ? `Notifications (${unreadCount} nouvelle${unreadCount > 1 ? 's' : ''})` : 'Notifications'}
+        aria-expanded={ouvert} aria-haspopup="dialog"
         style={{
           position: 'relative', background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
           cursor: 'pointer', padding: '7px 9px', borderRadius: 8, fontSize: '1.05rem', lineHeight: 1, color: '#fff',
@@ -63,7 +67,8 @@ export default function ClocheCompta() {
       </button>
 
       {ouvert && (
-        <div role="dialog" aria-label="Notifications" style={{
+        <div ref={panneau} tabIndex={-1} role="dialog" aria-label="Notifications" style={{
+          outline: 'none',
           // Sur téléphone, la cloche n'est pas au bord droit (la pastille de la personne la suit) : marge gardée à gauche.
           position: 'absolute', top: 'calc(100% + 10px)', right: 0, width: 'min(320px, calc(100vw - 72px))', maxHeight: 400,
           overflowY: 'auto', background: '#fff', borderRadius: 14, border: '1px solid #e2e8f0',

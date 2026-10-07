@@ -30,11 +30,18 @@ interface Etat {
 interface Formulaire { id: number | null; nom: string; email: string; emailInitial: string; niveau: Niveau }
 
 const statut = (err: unknown) => (err as { response?: { status?: number } })?.response?.status;
+const codeDe = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+// Ce qui reste fermé tant que l'abonnement n'est pas actif (désactiver et retirer restent possibles).
+const FERME = 'vous ne pouvez ni ajouter, ni modifier, ni réactiver de gérant, ni renvoyer d\'invitation, ni demander de gérants';
 const messageDe = (err: unknown, defaut: string) => {
   const r = (err as { response?: { data?: { message?: string; code?: string } } })?.response?.data;
-  if (r?.code === 'READ_ONLY') return 'Votre abonnement attend un paiement : vos gérants ne peuvent être ni ajoutés, ni modifiés, ni réactivés pour le moment.';
-  if (r?.code === 'BLOCKED' || r?.code === 'SUSPENDED') return 'Votre abonnement est suspendu : vos gérants ne peuvent être ni ajoutés, ni modifiés, ni réactivés pour le moment.';
+  if (r?.code === 'READ_ONLY') return `Votre abonnement attend un paiement : ${FERME} pour le moment.`;
+  if (r?.code === 'BLOCKED') return `Votre abonnement est bloqué : ${FERME} pour le moment.`;
+  if (r?.code === 'SUSPENDED') return `Votre abonnement est suspendu : ${FERME} pour le moment.`;
   return r?.message || defaut;
+};
+const ETAT_ABONNEMENT: Record<string, string> = {
+  lecture_seule: 'Votre abonnement attend un paiement', bloque: 'Votre abonnement est bloqué', suspendu: 'Votre abonnement est suspendu',
 };
 
 export default function ComptaGerants() {
@@ -51,10 +58,15 @@ export default function ComptaGerants() {
   const [occupe, setOccupe] = useState<number | null>(null);
   const occupeRef = useRef<number | null>(null);
 
+  // Lectures et écritures numérotées : une lecture partie avant la dernière réponse reçue ne l'écrase jamais (relecture
+  // de S3c : relectures après une action, à chaque notification…).
+  const tour = useRef(0);
+  const appliquer = useCallback((e: Etat) => { tour.current += 1; setEtat(e); setChargement('pret'); }, []);
   const charger = useCallback(() => {
+    const moi = ++tour.current;
     api.get('/api/compta/cabinet/gerants')
-      .then(({ data }) => { setEtat(data as Etat); setChargement('pret'); })
-      .catch(() => setChargement('erreur'));
+      .then(({ data }) => { if (moi === tour.current) { setEtat(data as Etat); setChargement('pret'); } })
+      .catch(() => { if (moi === tour.current) setChargement('erreur'); });
   }, []);
   useEffect(() => { charger(); }, [charger]);
   // La réponse de l'équipe LabFlow à une demande arrive dans la cloche : la page se relit aussitôt (places, demande).
@@ -95,7 +107,7 @@ export default function ComptaGerants() {
         ? await api.put(`/api/compta/cabinet/gerants/${form.id}`, corps)
         : await api.post('/api/compta/cabinet/gerants', corps);
       const e = data as Etat;
-      setEtat(e);
+      appliquer(e);
       const adresse = corps.email.toLowerCase();
       if (e.emailEnvoye === false) {
         // L'accès est enregistré, l'email n'est pas parti : « Renvoyer » n'existe que pour une invitation renvoyable.
@@ -107,8 +119,10 @@ export default function ComptaGerants() {
       else setInfo('Modifications enregistrées.');
       setForm(null);
     } catch (err) {
-      // Accès disparu entre-temps, ou désactivé : formulaire fermé, liste relue.
-      if ([404, 409].includes(statut(err) ?? 0) && form.id) { setForm(null); charger(); }
+      // Accès disparu ou désactivé entre-temps, ou place prise entre-temps : formulaire fermé, liste relue. Un refus de
+      // l'adresse (la sienne, déjà dans le cabinet…) garde la saisie pour la corriger.
+      const code = codeDe(err);
+      if ((form.id && (statut(err) === 404 || code === 'ACCES_DESACTIVE')) || code === 'LIMITE_ATTEINTE') { setForm(null); charger(); }
       setErreur(messageDe(err, 'Enregistrement impossible, réessayez.'));
     } finally {
       setEnvoi(false);
@@ -144,14 +158,14 @@ export default function ComptaGerants() {
     if (!ok) return;
     await surAcces(g, async () => {
       const { data } = await api.post(`/api/compta/cabinet/gerants/${g.id}/desactiver`);
-      setEtat(data as Etat);
+      appliquer(data as Etat);
       setForm((f) => (f?.id === g.id ? null : f));
     }, 'Désactivation impossible, réessayez.');
   };
 
   const reactiver = (g: Gerant) => surAcces(g, async () => {
     const { data } = await api.post(`/api/compta/cabinet/gerants/${g.id}/reactiver`);
-    setEtat(data as Etat);
+    appliquer(data as Etat);
     setInfo(`${qui(g)} retrouve son accès à votre cabinet.`);
   }, 'Réactivation impossible, réessayez.');
 
@@ -168,7 +182,7 @@ export default function ComptaGerants() {
     if (!ok) return;
     await surAcces(g, async () => {
       const { data } = await api.delete(`/api/compta/cabinet/gerants/${g.id}`);
-      setEtat(data as Etat);
+      appliquer(data as Etat);
       setForm((f) => (f?.id === g.id ? null : f));
     }, 'Retrait impossible, réessayez.');
   };
@@ -184,7 +198,7 @@ export default function ComptaGerants() {
     setErreur('');
     try {
       const { data } = await api.post('/api/compta/cabinet/demande-gerants', { nombre: demande.nombre });
-      setEtat(data as Etat);
+      appliquer(data as Etat);
       setDemande(null);
       setInfo('Demande envoyée à l\'équipe LabFlow. Dès sa validation, vous pourrez ouvrir ces nouveaux accès.');
     } catch (err) {
@@ -216,14 +230,19 @@ export default function ComptaGerants() {
       </div>
 
       {chargement === 'en_cours' && <div className="loading-text">Chargement…</div>}
-      {chargement === 'erreur' && <div role="alert" style={alerte}>Impossible de charger vos gérants. Réessayez plus tard.</div>}
+      {chargement === 'erreur' && (
+        <div role="alert" style={{ ...alerte, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+          <span>{etat ? 'Impossible de relire vos gérants : la liste ci-dessous n\'est peut-être pas à jour.' : 'Impossible de charger vos gérants.'}</span>
+          <button type="button" onClick={charger} style={bouton('#b91c1c', '#fff', '#b91c1c')}>Réessayer</button>
+        </div>
+      )}
 
       {etat && (
         <>
           {!abonnementOuvert && (
             <div role="status" style={{ ...alerte, background: '#fffbeb', borderColor: '#fde68a', color: '#92400e', marginBottom: 16 }}>
-              {etat.etatAbonnement === 'lecture_seule' ? 'Votre abonnement attend un paiement' : 'Votre abonnement est suspendu'} : vous ne pouvez
-              ni ajouter, ni modifier, ni réactiver de gérant, ni en demander. Désactiver et retirer un gérant restent possibles.
+              {ETAT_ABONNEMENT[etat.etatAbonnement] || ETAT_ABONNEMENT.suspendu} : {FERME}. Désactiver et retirer un gérant restent
+              possibles.
             </div>
           )}
 
@@ -239,13 +258,15 @@ export default function ComptaGerants() {
                   {etat.places.utilisees}<span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#6b7280' }}> / {etat.places.limite}</span>
                 </div>
               </div>
-              {etat.demandeEnCours ? (
+              {/* Une place libre s'ouvre même pendant une demande (relecture de S3c) ; le badge s'ajoute au bouton. */}
+              {etat.demandeEnCours && (
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, padding: '6px 12px', borderRadius: 20, background: '#fef9c3', color: '#854d0e' }}>⏳ Demande en cours</span>
-              ) : limiteAtteinte ? (
-                <button type="button" onClick={ajouter} style={bouton('#fff', '#4338ca', '#4338ca')}>Demander des gérants</button>
-              ) : (
-                <button type="button" onClick={ajouter} style={bouton('#4338ca', '#fff', '#4338ca')}>+ Gérant</button>
               )}
+              {!limiteAtteinte ? (
+                <button type="button" onClick={ajouter} disabled={!abonnementOuvert} style={{ ...bouton('#4338ca', '#fff', '#4338ca'), ...(abonnementOuvert ? {} : inactif) }}>+ Gérant</button>
+              ) : !etat.demandeEnCours ? (
+                <button type="button" onClick={ajouter} disabled={!abonnementOuvert} style={{ ...bouton('#fff', '#4338ca', '#4338ca'), ...(abonnementOuvert ? {} : inactif) }}>Demander des gérants</button>
+              ) : null}
             </div>
           </div>
 
@@ -255,7 +276,7 @@ export default function ComptaGerants() {
           {form && (
             <form onSubmit={enregistrer} style={{ background: '#fff', borderRadius: 14, border: '1px solid #c7d2fe', padding: 18, marginBottom: 14, boxShadow: '0 4px 20px rgba(67,56,202,0.08)' }}>
               <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#312e81', marginBottom: 12 }}>
-                {form.emailInitial ? '✏️ Gérant' : '👤 Nouveau gérant'}
+                {form.emailInitial ? '✏️ Gérant' : form.id ? '👤 Désigner un gérant' : '👤 Nouveau gérant'}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))', gap: 12, marginBottom: 12 }}>
                 <div>
@@ -286,7 +307,7 @@ export default function ComptaGerants() {
             <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #c7d2fe', padding: 18, marginBottom: 14 }}>
               <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#312e81', marginBottom: 8 }}>Demander des gérants</div>
               <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 12, lineHeight: 1.5 }}>
-                L'équipe LabFlow valide votre demande ; ces gérants sont facturés{prix ? ` ${prix} DT par mois chacun,` : ''} à partir du mois suivant.
+                L'équipe LabFlow valide votre demande ; ces gérants sont facturés{prix ? ` ${prix} DT par mois chacun (hors promotion),` : ''} à partir du mois suivant.
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
                 <button type="button" aria-label="Un gérant de moins" onClick={() => setDemande((d) => (d ? { nombre: Math.max(1, d.nombre - 1) } : d))} disabled={demande.nombre <= 1} style={rond}>−</button>
@@ -304,7 +325,7 @@ export default function ComptaGerants() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {etat.gerants.map((g) => (
-              <CarteGerant key={g.id} g={g} occupe={occupe === g.id} onModifier={ouvrir} onDesactiver={desactiver} onReactiver={reactiver} onRetirer={retirer} onRenvoyer={renvoyer} />
+              <CarteGerant key={g.id} g={g} occupe={occupe === g.id} ecritureFermee={!abonnementOuvert} onModifier={ouvrir} onDesactiver={desactiver} onReactiver={reactiver} onRetirer={retirer} onRenvoyer={renvoyer} />
             ))}
             {etat.gerants.length === 0 && (
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '22px 20px', textAlign: 'center', fontSize: '0.86rem', color: '#64748b', lineHeight: 1.6 }}>
@@ -320,8 +341,9 @@ export default function ComptaGerants() {
   );
 }
 
-function CarteGerant({ g, occupe, onModifier, onDesactiver, onReactiver, onRetirer, onRenvoyer }: {
-  g: Gerant; occupe: boolean;
+// ecritureFermee : abonnement pas actif — désigner, modifier, réactiver et renvoyer sont refusés par le serveur (inactifs).
+function CarteGerant({ g, occupe, ecritureFermee, onModifier, onDesactiver, onReactiver, onRetirer, onRenvoyer }: {
+  g: Gerant; occupe: boolean; ecritureFermee: boolean;
   onModifier: (g: Gerant) => void; onDesactiver: (g: Gerant) => void; onReactiver: (g: Gerant) => void;
   onRetirer: (g: Gerant) => void; onRenvoyer: (g: Gerant) => void;
 }) {
@@ -345,13 +367,13 @@ function CarteGerant({ g, occupe, onModifier, onDesactiver, onReactiver, onRetir
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
         {vide ? (
-          <button type="button" onClick={() => onModifier(g)} disabled={occupe} aria-label="Désigner une personne pour cet accès" style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>Désigner</button>
+          <button type="button" onClick={() => onModifier(g)} disabled={occupe || ecritureFermee} aria-label="Désigner une personne pour cet accès" style={{ ...petit('#eef2ff', '#4338ca', '#c7d2fe'), ...(ecritureFermee ? inactif : {}) }}>Désigner</button>
         ) : desactive ? (
-          <button type="button" onClick={() => onReactiver(g)} disabled={occupe} aria-label={`Réactiver ${nom}`} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>▶ Réactiver</button>
+          <button type="button" onClick={() => onReactiver(g)} disabled={occupe || ecritureFermee} aria-label={`Réactiver ${nom}`} style={{ ...petit('#eef2ff', '#4338ca', '#c7d2fe'), ...(ecritureFermee ? inactif : {}) }}>▶ Réactiver</button>
         ) : (
           <>
-            {g.invitationRenvoyable && <button type="button" onClick={() => onRenvoyer(g)} disabled={occupe} aria-label={`Renvoyer l'invitation de ${nom}`} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>✉️ Renvoyer</button>}
-            <button type="button" onClick={() => onModifier(g)} disabled={occupe} aria-label={`Modifier ${nom}`} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>✏️ Modifier</button>
+            {g.invitationRenvoyable && <button type="button" onClick={() => onRenvoyer(g)} disabled={occupe || ecritureFermee} aria-label={`Renvoyer l'invitation de ${nom}`} style={{ ...petit('#eef2ff', '#4338ca', '#c7d2fe'), ...(ecritureFermee ? inactif : {}) }}>✉️ Renvoyer</button>}
+            <button type="button" onClick={() => onModifier(g)} disabled={occupe || ecritureFermee} aria-label={`Modifier ${nom}`} style={{ ...petit('#f0f9ff', '#0369a1', '#bae6fd'), ...(ecritureFermee ? inactif : {}) }}>✏️ Modifier</button>
             <button type="button" onClick={() => onDesactiver(g)} disabled={occupe} aria-label={`Désactiver ${nom}`} style={petit('#fff', '#475569', '#cbd5e1')}>⏸ Désactiver</button>
           </>
         )}
@@ -361,4 +383,6 @@ function CarteGerant({ g, occupe, onModifier, onDesactiver, onReactiver, onRetir
   );
 }
 
+// Bouton d'une action fermée tant que l'abonnement n'est pas actif.
+const inactif: React.CSSProperties = { opacity: 0.45, cursor: 'not-allowed' };
 const alerte: React.CSSProperties = { background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 12, padding: '14px 18px', fontWeight: 600, fontSize: '0.86rem' };

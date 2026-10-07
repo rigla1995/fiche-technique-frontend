@@ -306,8 +306,9 @@ export default function NouveauComptableModal({ onClose, onCreated }: { onClose:
                 {!emailChecking && emailCheckFailed && <div style={{ fontSize: 11, color: '#dc2626', marginTop: 3, fontWeight: 600 }}>❌ Impossible de vérifier cet email — réessayez.</div>}
                 {!emailChecking && rattache && (
                   <div style={{ ...bannerInfo, marginTop: 6 }}>
-                    🔗 Compte LabFlow Compta existant ({rattache.nom}) : le cabinet lui sera rattaché. La personne garde son mot de passe et
-                    les comptabilités qu'on lui a confiées ; elle recevra {rattache.active ? 'un email « votre cabinet est ouvert »' : 'l\'email d\'activation'}.
+                    🔗 Compte LabFlow Compta existant ({rattache.nom}) : le cabinet lui sera rattaché. La personne garde{rattache.active ? ' son mot de passe et' : ''} les
+                    comptabilités qu'on lui a confiées ; elle recevra {rattache.active ? 'un email « votre cabinet est ouvert »' : 'l\'email d\'activation (compte jamais activé)'}.
+                    Le nom et le téléphone saisis ici remplacent ceux du compte.
                   </div>
                 )}
               </div>
