@@ -9,7 +9,15 @@ import BoutonAide from '../BoutonAide';
 // Présentation de LabFlow (demande du client du 06/10) : page dans la mise en page commune (LayoutCompta), bandeau
 // coloré en tête avec son « ? », comme chaque page de LabFlow.
 // `lien` (étape S2b) : page ouverte par la carte (le cabinet de son titulaire) ; absent = carte sans lien à cette étape.
-type Comptabilite = { id: number; nom: string; lien?: string | null };
+// `etatAbonnement` (S3b, D4) : état de l'abonnement du titulaire — un cabinet bloqué se connecte encore (sa carte le
+// dit) ; une comptabilité confiée suit l'abonnement de son client.
+type EtatAbonnement = 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
+type Comptabilite = { id: number; nom: string; lien?: string | null; etatAbonnement?: EtatAbonnement };
+const ETATS: Record<string, { libelle: string; fond: string; texte: string }> = {
+  lecture_seule: { libelle: 'Lecture seule', fond: '#fef3c7', texte: '#92400e' },
+  bloque: { libelle: 'Abonnement bloqué', fond: '#fee2e2', texte: '#991b1b' },
+  suspendu: { libelle: 'Suspendue', fond: '#fee2e2', texte: '#991b1b' },
+};
 type Acces = { cabinets: Comptabilite[]; maComptabilite: Comptabilite[]; confiees: Comptabilite[] };
 
 const GROUPES: { cle: keyof Acces; titre: string; badge: string; couleur: string }[] = [
@@ -78,12 +86,19 @@ export default function ComptaAccueil() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
               {acces[g.cle].map((c) => {
                 const style: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid #e2e8f0', borderLeft: `4px solid ${g.couleur}`, borderRadius: 12, padding: '14px 16px', fontWeight: 700, color: '#0f172a', textDecoration: 'none' };
+                const e = c.etatAbonnement ? ETATS[c.etatAbonnement] : undefined;
+                const nom = (
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0, overflowWrap: 'anywhere' }}>
+                    {c.nom}
+                    {e && <span style={{ fontSize: '0.68rem', fontWeight: 800, padding: '2px 8px', borderRadius: 999, background: e.fond, color: e.texte }}>{e.libelle}</span>}
+                  </span>
+                );
                 return c.lien ? (
                   <Link key={`${g.cle}-${c.id}`} to={c.lien} style={style}>
-                    <span>{c.nom}</span><span style={{ color: g.couleur, fontSize: '0.85rem' }}>Ouvrir →</span>
+                    {nom}<span style={{ color: g.couleur, fontSize: '0.85rem', flexShrink: 0 }}>Ouvrir →</span>
                   </Link>
                 ) : (
-                  <div key={`${g.cle}-${c.id}`} style={style}>{c.nom}</div>
+                  <div key={`${g.cle}-${c.id}`} style={style}>{nom}</div>
                 );
               })}
             </div>

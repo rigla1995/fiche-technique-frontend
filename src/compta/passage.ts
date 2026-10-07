@@ -22,10 +22,23 @@ export const aDesComptabilites = async (): Promise<boolean> => {
 export const destinationApresConnexion = async (role?: string): Promise<string | null> =>
   (role === 'client' || role === 'gerant') && await aDesComptabilites() ? '/choix' : null;
 
+// Pages où un passage peut arriver directement (S3b : « Gérer sur LabFlow » de « Ma comptabilité »), liste fermée lue
+// par la page d'arrivée ; ailleurs, l'accueil de l'espace.
+export const PAGES_D_ARRIVEE = ['/client/gerants'];
+
 // Part vers l'autre adresse. `avantDeQuitter` : appelé une fois le code obtenu, juste avant de quitter la page.
-export const allerVers = async (destination: Destination, avantDeQuitter?: () => void): Promise<void> => {
+// `page` : page d'arrivée (une de PAGES_D_ARRIVEE), transmise dans la partie « # » avec le code.
+export const allerVers = async (destination: Destination, avantDeQuitter?: () => void, page?: string): Promise<void> => {
   const { data } = await api.post('/api/compta/passage', { destination });
   const base = destination === 'compta' ? adresseCompta() : adresseApp();
+  const suite = page && PAGES_D_ARRIVEE.includes(page) ? `&vers=${encodeURIComponent(page)}` : '';
   avantDeQuitter?.();
-  window.location.assign(`${base}/passage#${(data as { code: string }).code}`);
+  window.location.assign(`${base}/passage#${(data as { code: string }).code}${suite}`);
+};
+
+// Partie « # » d'un passage : le code, puis la page d'arrivée éventuelle (gardée seulement si elle est permise).
+export const lirePassage = (hash: string): { code: string; page: string } => {
+  const [code, ...reste] = hash.replace(/^#/, '').split('&');
+  const vers = new URLSearchParams(reste.join('&')).get('vers') || '';
+  return { code, page: PAGES_D_ARRIVEE.includes(vers) ? vers : '/' };
 };

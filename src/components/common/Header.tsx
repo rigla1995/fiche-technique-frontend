@@ -48,6 +48,9 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
     } else if (eventType === 'demande_acces_recue') {
       // Demande d'accès reçue via le site vitrine → file admin dédiée
       navigate('/admin/site/demandes');
+    } else if (eventType === 'comptable_parti') {
+      // LabFlow Compta (S3b) : le comptable a quitté l'accès → partie « Gérants Comptabilité » de la page Gérants.
+      navigate('/client/gerants');
     } else {
       navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }
@@ -206,6 +209,8 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                           ? 'linear-gradient(135deg,#fef3c7,#fde68a)'
                           : n.eventType === 'demande_acces_recue'
                           ? 'linear-gradient(135deg,#e0e7ff,#c7d2fe)'
+                          : n.eventType === 'comptable_parti'
+                          ? 'linear-gradient(135deg,#eef2ff,#e0e7ff)'
                           : n.statut === 'validée'
                           ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
                           : 'linear-gradient(135deg,#fee2e2,#fecaca)',
@@ -214,6 +219,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                           : n.eventType === 'nouvelle_commande_acheteur' ? voc.icon('acheteur')
                           : n.eventType === 'new_demande' ? '📥'
                           : n.eventType === 'demande_acces_recue' ? '🌐'
+                          : n.eventType === 'comptable_parti' ? '📒'
                           : n.statut === 'validée' ? '✅' : '❌'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -226,6 +232,8 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                             ? `Nouvelle demande — ${typeLabel(n.type)}`
                             : n.eventType === 'demande_acces_recue'
                             ? "Nouvelle demande d'accès"
+                            : n.eventType === 'comptable_parti'
+                            ? 'Accès à votre comptabilité quitté'
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
                         {n.clientNom && (

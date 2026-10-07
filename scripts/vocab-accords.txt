@@ -1310,67 +1310,67 @@ src/components/client/FournisseursPage.tsx
     miroir : ⟦<input/>⟧🏭 ⟦·⟧ ⟦?<span>(⟦·⟧)</span>|⟦·⟧⟧
 
 src/components/client/GerantsPage.tsx
-  l. 92
+  l. 111
     défaut : Affectez au moins une activité ou un labo
     miroir : Affectez au moins un local ou une usine
-  l. 133
+  l. 152
     défaut : Supprimer le gérant « ⟦·⟧ » ?
     miroir : Supprimer l'animatrice « ⟦·⟧ » ?
-  l. 160
+  l. 179
     défaut : ⟦?|Activité #⟧⟦·⟧
     miroir : ⟦?|Local #⟧⟦·⟧
-  l. 161
+  l. 180
     défaut : Labo : ⟦·⟧
     miroir : Usine : ⟦·⟧
-  l. 182
+  l. 201
     défaut : Comptes gérants
     miroir : Comptes abr-animatrices
-  l. 184
+  l. 203
     défaut : Gérez les accès de vos collaborateurs à leurs espaces activités
     miroir : Gérez les accès de vos collaborateurs à leurs zones locaux
-  l. 195
+  l. 214
     défaut : Gérants
     miroir : Animatrices
-  l. 203
+  l. 222
     défaut : Actifs
     miroir : Actives
-  l. 212
+  l. 231
     défaut : + Nouveau gérant
     miroir : + Nouvelle animatrice
-  l. 245
+  l. 268
     défaut : ⟦?Modifier le gérant — accès et affectations|Nouveau gérant — ⟦?payant (80 DT/mois)|inclus dans votre abonnement⟧⟧
     miroir : ⟦?Modifier l'animatrice — accès et affectations|Nouvelle animatrice — ⟦?payante (80 DT/mois)|incluse dans votre abonnement⟧⟧
-  l. 253
+  l. 276
     défaut : ⚠ Vous avez atteint la limite de ⟦·⟧ gérant(s) gratuit(s). Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
     miroir : ⚠ Vous avez atteint la limite de ⟦·⟧ animatrice(s) gratuite(s). Ce compte sera facturé <strong>80 DT/mois</strong> et nécessite une validation admin.
-  l. 303
+  l. 326
     défaut : Activités & labos assignés <span>*</span>
     miroir : Locaux & usines assignés <span>*</span>
-  l. 314
+  l. 337
     défaut : 📍 Activités
     miroir : 📍 Locaux
-  l. 326
+  l. 349
     défaut : 🏭 Labos
     miroir : 🏭 Usines
-  l. 346
+  l. 369
     défaut : 🛒 Gestion de la base acheteurs
     miroir : 🛒 Gestion de la base abr-clientes
-  l. 349
+  l. 372
     défaut : ⟦?Le gérant accède à l'Espace Acheteurs (carnet, tarifs, ventes, commandes de ses labos)|Assignez au moins un labo pour pouvoir accorder cet accès⟧.
     miroir : ⟦?L'animatrice accède à la Zone Clientes (carnet, tarifs, encaissements, commandes de ses usines)|Assignez au moins une usine pour pouvoir accorder cet accès⟧.
-  l. 395
+  l. 418
     défaut : Aucun compte gérant
     miroir : Aucun compte abr-animatrice
-  l. 396
+  l. 419
     défaut : ⟦?Votre abonnement inclut ⟦·⟧ compte(s) gérant. Créez un premier compte|Créez un compte gérant⟧ pour donner accès à un collaborateur.
     miroir : ⟦?Votre abonnement inclut ⟦·⟧ compte(s) animatrice. Créez un premier compte|Créez un compte animatrice⟧ pour donner accès à un collaborateur.
-  l. 402
+  l. 425
     défaut : + Créer un gérant
     miroir : + Créer une animatrice
-  l. 427
+  l. 450
     défaut : ⟦?● Actif|○ Inactif⟧
     miroir : ⟦?● Active|○ Inactive⟧
-  l. 437
+  l. 460
     défaut : 🛒 Base acheteurs
     miroir : 🛒 Base abr-clientes
 
@@ -2904,64 +2904,64 @@ src/components/client/StockPage.tsx
     miroir : Armoire Abr-Locaux
 
 src/components/client/SupportPage.tsx
-  l. 13
+  l. 16
     défaut : Demander l'ajout d'activités, labos, gérants ou de l'option Acheteurs
     miroir : Demander l'ajout de locaux, usines, animatrices ou de l'option Abr-Clientes
-  l. 182
+  l. 187
     défaut : L'option Acheteurs nécessite au moins un labo — ajoutez-en un à votre demande.
     miroir : L'option Abr-Clientes nécessite au moins une usine — ajoutez-en une à votre demande.
-  l. 334
+  l. 344
     défaut : ⟦?Demande déjà envoyée — en attente de validation|Débloquez l'Espace Produit complet : produits composés, fiches techniques, production⟧.
     miroir : ⟦?Demande déjà envoyée — en attente de validation|Débloquez la Zone Invention complète : inventions composées, états techniques, production⟧.
-  l. 364
+  l. 374
     défaut : Configuration actuelle : <strong>⟦·⟧ ⟦activité|activités@≠1⟧⟦? · ⟦·⟧ ⟦labo|labos@≠1⟧|⟧⟦? · ⟦·⟧ ⟦gérant|gérants@≠1⟧|⟧</strong>
     miroir : Configuration actuelle : <strong>⟦·⟧ ⟦local|locaux@≠1⟧⟦? · ⟦·⟧ ⟦usine|usines@≠1⟧|⟧⟦? · ⟦·⟧ ⟦animatrice|animatrices@≠1⟧|⟧</strong>
-  l. 374
+  l. 384
     défaut : activités supplémentaires
     miroir : locaux supplémentaires
-  l. 375
+  l. 385
     défaut : labos supplémentaires
     miroir : usines supplémentaires
-  l. 376
+  l. 386
     défaut : gérants supplémentaires
     miroir : animatrices supplémentaires
-  l. 384
+  l. 394
     défaut : Activités supplémentaires
     miroir : Locaux supplémentaires
-  l. 385
+  l. 395
     défaut : Labos supplémentaires
     miroir : Usines supplémentaires
-  l. 386
+  l. 396
     défaut : Gérants supplémentaires
     miroir : Animatrices supplémentaires
-  l. 429
+  l. 441
     défaut : 🤝 Option Acheteurs⟦·⟧
     miroir : 🤝 Option Abr-Clientes⟦·⟧
-  l. 432
+  l. 444
     défaut : palier actuel : jusqu'à ⟦·⟧ acheteurs
     miroir : palier actuel : jusqu'à ⟦·⟧ clientes
-  l. 437
+  l. 449
     défaut : ⟦?Passez à un palier supérieur — le nouveau palier remplace l'actuel|Activez le carnet d'acheteurs B2B (ventes depuis votre labo, portail de commande)⟧.
     miroir : ⟦?Passez à un palier supérieur — le nouveau palier remplace l'actuel|Activez le carnet de clientes B2B (encaissements depuis votre usine, portail de commande)⟧.
-  l. 443
+  l. 455
     défaut : ⚠️ Nécessite au moins un labo — ajoutez-en un à cette demande pour activer l'option.
     miroir : ⚠️ Nécessite au moins une usine — ajoutez-en une à cette demande pour activer l'option.
-  l. 455
+  l. 467
     défaut : Jusqu'à ⟦·⟧ acheteurs — ⟦·⟧ DT/mois
     miroir : Jusqu'à ⟦·⟧ clientes — ⟦·⟧ DT/mois
-  l. 473
+  l. 485
     défaut : Base : mensualité actuelle (option Acheteurs incluse le cas échéant)
     miroir : Base : mensualité actuelle (option Abr-Clientes incluse le cas échéant)
-  l. 592
+  l. 604
     défaut : ⟦?+⟦·⟧ ⟦activité|activités@>1⟧|⟧
     miroir : ⟦?+⟦·⟧ ⟦local|locaux@>1⟧|⟧
-  l. 593
+  l. 605
     défaut : ⟦?+⟦·⟧ ⟦labo|labos@>1⟧|⟧
     miroir : ⟦?+⟦·⟧ ⟦usine|usines@>1⟧|⟧
-  l. 594
+  l. 606
     défaut : ⟦?+⟦·⟧ ⟦gérant|gérants@>1⟧|⟧
     miroir : ⟦?+⟦·⟧ ⟦animatrice|animatrices@>1⟧|⟧
-  l. 595
+  l. 607
     défaut : ⟦?Option Acheteurs → palier jusqu'à ⟦·⟧|⟧
     miroir : ⟦?Option Abr-Clientes → palier jusqu'à ⟦·⟧|⟧
 
@@ -3484,15 +3484,15 @@ src/components/common/AssistantChat.tsx
     miroir : L'assistant IA n'est pas encore activé pour votre compte : il pourra analyser vos données (armoire, encaissements, abandons…) et répondre à vos questions sur LabFlow. Contactez votre administrateur pour l'activer.
 
 src/components/common/Header.tsx
-  l. 105
+  l. 108
     défaut : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Gérant⟧|Client⟧⟧⟧
     miroir : ⟦?Boss|⟦?Administrateur|⟦?⟦?⟦·⟧|Animatrice⟧|Client⟧⟧⟧
-  l. 197
-    défaut : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
-    miroir : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?✅|❌⟧⟧⟧⟧⟧
-  l. 220
-    défaut : ⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
-    miroir : ⟦?Pesée ajoutée par une animatrice|⟦?Nouvelle commande de la cliente⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧
+  l. 200
+    défaut : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?📒|⟦?✅|❌⟧⟧⟧⟧⟧⟧
+    miroir : ⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?📒|⟦?✅|❌⟧⟧⟧⟧⟧⟧
+  l. 226
+    défaut : ⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|⟦?Accès à votre comptabilité quitté|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧⟧
+    miroir : ⟦?Pesée ajoutée par une animatrice|⟦?Nouvelle commande de la cliente⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|⟦?Accès à votre comptabilité quitté|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧⟧
 
 src/components/common/Sidebar.tsx
   l. 283

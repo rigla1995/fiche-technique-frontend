@@ -215,5 +215,70 @@
     "apres": "token",
     "type": "discriminant",
     "justification": "Chantier Achats & Comptabilité, étape S3a (passage entre LabFlow et LabFlow Compta, découpage validé par le client le 06/10/2026) : clé du stockage de la session, relue pour ignorer la réponse de /auth/me d'une session déjà remplacée (page d'arrivée d'un passage) ; jamais affiché."
+  },
+  {
+    "fichier": "src/api/client.ts",
+    "avant": null,
+    "apres": "BLOCKED",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : code de refus « comptabilité bloquée » de la garde par comptabilité (SPEC-SOCLE D4, src/compta/garde.js), affiché sur place au lieu de la page d'erreur ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/client/GerantsPage.tsx",
+    "avant": null,
+    "apres": "gerants-comptabilite",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : ancre et options de défilement vers la partie « Gérants Comptabilité » de la page Gérants (choix du type d'un nouveau gérant) ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/client/GerantsPage.tsx",
+    "avant": null,
+    "apres": "smooth",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : ancre et options de défilement vers la partie « Gérants Comptabilité » de la page Gérants (choix du type d'un nouveau gérant) ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/client/GerantsPage.tsx",
+    "avant": null,
+    "apres": "start",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : ancre et options de défilement vers la partie « Gérants Comptabilité » de la page Gérants (choix du type d'un nouveau gérant) ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "comptable_parti",
+    "type": "discriminant",
+    "occurrences": 4,
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : type de la notification « un comptable a quitté l'accès à la comptabilité du client » (POST /api/compta/confiees/:id/quitter) ; jamais affiché."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "⟦?📦|⟦?🤝|⟦?📥|⟦?🌐|⟦?📒|⟦?✅|❌⟧⟧⟧⟧⟧⟧",
+    "type": "ajoute",
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : icône 📒 de la notification « comptable parti » (réponse du client du 07/10 : le client est prévenu par la cloche et par email). Aucun terme du lexique."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "linear-gradient(135deg,#⟦?eff6ff,#dbeafe|⟦?f5f3ff,#ede9fe|⟦?fef3c7,#fde68a|⟦?e0e7ff,#c7d2fe|⟦?eef2ff,#e0e7ff|⟦?d1fae5,#a7f3d0|fee2e2,#fecaca⟧⟧⟧⟧⟧⟧)",
+    "type": "discriminant",
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : fond de l'icône de la notification « comptable parti » dans la cloche ; jamais affiché comme texte."
+  },
+  {
+    "fichier": "src/components/common/Header.tsx",
+    "avant": null,
+    "apres": "⟦?Inventaire ajouté par un gérant|⟦?Nouvelle commande acheteur⟦? — ⟦·⟧|⟧|⟦?Nouvelle demande — ⟦·⟧|⟦?Nouvelle demande d'accès|⟦?Accès à votre comptabilité quitté|Demande ⟦?validée ✓|refusée ✗⟧ — ⟦·⟧⟧⟧⟧⟧⟧",
+    "type": "ajoute",
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : titre de la notification « Accès à votre comptabilité quitté » (réponse du client du 07/10 : le client est prévenu par la cloche et par email) ; les autres titres de la cloche sont inchangés. Le terme « gérant » des autres titres reste rendu par le vocabulaire du compte."
+  },
+  {
+    "fichier": "src/context/NotificationContext.tsx",
+    "avant": null,
+    "apres": "comptable_parti",
+    "type": "discriminant",
+    "occurrences": 2,
+    "justification": "Chantier Achats & Comptabilité, étape S3b (comptable du client, cadrage validé par le client le 07/10/2026) : type de la notification « un comptable a quitté l'accès à la comptabilité du client » (POST /api/compta/confiees/:id/quitter) ; jamais affiché."
   }
 ]
