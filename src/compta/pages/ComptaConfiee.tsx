@@ -17,7 +17,8 @@ interface Confiee {
   espace: { id: number; nom: string };
   identite: Record<string, string | null>;
   contact: { nom: string | null; email: string | null; telephone: string | null };
-  acces: { niveau: string; obligatoire: boolean; confieeLe: string | null };
+  // S4c : « tous les dossiers » du client, ou seulement ceux que le client a ouverts (la liste les montre).
+  acces: { niveau: string; obligatoire: boolean; confieeLe: string | null; tousDossiers: boolean };
   etatAbonnement: 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
 }
 
@@ -127,6 +128,7 @@ function ComptaConfiee({ espaceId }: { espaceId?: string }) {
               <Carte titre="🔑 Votre accès" sousTitre={donnees.acces.obligatoire ? 'Vous êtes le comptable de ce client' : 'Gérant comptable'}>
                 <Ligne libelle="Niveau" valeur={libelleNiveau(donnees.acces.niveau)} />
                 <Ligne libelle="Confiée le" valeur={fmtDate(donnees.acces.confieeLe)} />
+                <Ligne libelle="Dossiers" valeur={donnees.acces.tousDossiers ? 'Tous les dossiers du client' : 'Ceux qui vous sont ouverts'} />
                 <button type="button" onClick={quitter} disabled={envoi}
                   style={{ marginTop: 14, padding: '9px 16px', borderRadius: 9, border: '1.5px solid #fecdd3', background: '#fff', color: '#be123c', fontSize: '0.82rem', fontWeight: 700, cursor: envoi ? 'default' : 'pointer', opacity: envoi ? 0.7 : 1 }}>
                   {envoi ? 'Envoi…' : 'Quitter cet accès'}

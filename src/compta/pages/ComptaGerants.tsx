@@ -3,8 +3,8 @@ import api from '../../api/client';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { useNotifications } from '../../context/NotificationContext';
 import BoutonAide from '../BoutonAide';
-import { libelleNiveau, type Niveau } from '../comptables';
-import { ChoixNiveau } from '../ui';
+import { libelleNiveau, resumeDossiers, type DossierChoix, type DossiersAcces, type Niveau } from '../comptables';
+import { ChoixDossiers, ChoixNiveau } from '../ui';
 import { bouton, inp, lbl, pastille, petit, rond } from '../styles';
 
 // « Mes gérants » (LabFlow Compta, étape S3c ; labflow-reprise/achats-compta/PLAN-S3c.md) : le titulaire du cabinet
@@ -12,9 +12,13 @@ import { bouton, inp, lbl, pastille, petit, rond } from '../styles';
 // (la place reste comptée), réactiver, retirer (la place est libérée), renvoyer l'invitation ; au-delà, une demande à
 // l'équipe LabFlow. Réponses du client du 07/10 : le titulaire gère son équipe ; désactiver et retirer restent possibles
 // en lecture seule ; aucun email à la personne qui perd son accès.
+// S4c (réponse 2 du 07/10) : le titulaire fixe les dossiers de chaque collaborateur — « Tous les dossiers » ou une liste
+// à cocher, à l'ajout (« Choisir », liste vide par défaut : il ne voit rien tant que rien n'est coché) et à la modification.
 interface Gerant {
   id: number; etat: 'actif' | 'a_attribuer' | 'desactive'; niveau: Niveau;
   nom: string | null; email: string | null; invitationEnAttente: boolean; invitationRenvoyable: boolean;
+  // Absent tant que le serveur d'avant S4c est servi : un accès sans réglage voit tout.
+  dossiers?: DossiersAcces;
 }
 interface Etat {
   gerants: Gerant[];
@@ -23,11 +27,14 @@ interface Etat {
   prixGerant: number;
   nbGerantsMax: number;
   etatAbonnement: 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
+  // S4c : les dossiers du cabinet (archivés compris), pour la liste à cocher.
+  dossiers?: DossierChoix[];
   emailEnvoye?: boolean | null;
   nouvelle?: boolean;
 }
 // emailInitial : adresse de la personne à l'ouverture (vide = nouvel accès), pour le titre et l'avertissement.
-interface Formulaire { id: number | null; nom: string; email: string; emailInitial: string; niveau: Niveau }
+// cle : numéro d'ouverture du formulaire — le choix des dossiers repart d'un état neuf à chaque ouverture.
+interface Formulaire { id: number | null; cle: number; nom: string; email: string; emailInitial: string; niveau: Niveau; dossiers: DossiersAcces }
 
 const statut = (err: unknown) => (err as { response?: { status?: number } })?.response?.status;
 const codeDe = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
@@ -69,6 +76,21 @@ export default function ComptaGerants() {
       .catch(() => { if (moi === tour.current) setChargement('erreur'); });
   }, []);
   useEffect(() => { charger(); }, [charger]);
+  // S4c : un dossier coché vient d'être supprimé (409 DOSSIER_INCONNU) — la liste est relue et la saisie du formulaire
+  // gardée, sans les dossiers disparus.
+  const relireDossiers = useCallback(() => {
+    const moi = ++tour.current;
+    api.get('/api/compta/cabinet/gerants')
+      .then(({ data }) => {
+        if (moi !== tour.current) return;
+        const e = data as Etat;
+        setEtat(e);
+        setChargement('pret');
+        setForm((f) => (f && f.dossiers !== 'tous' ? { ...f, dossiers: f.dossiers.filter((id) => (e.dossiers ?? []).some((d) => d.id === id)) } : f));
+      })
+      .catch(() => { if (moi === tour.current) setChargement('erreur'); });
+  }, []);
+  const ouvertures = useRef(0);
   // La réponse de l'équipe LabFlow à une demande arrive dans la cloche : la page se relit aussitôt (places, demande).
   // Seulement une réponse arrivée après l'ouverture de la page (celles d'avant sont déjà dans la première lecture).
   const { notifications } = useNotifications();
@@ -88,13 +110,14 @@ export default function ComptaGerants() {
     if (!etat) return;
     if (limiteAtteinte) { setForm(null); setDemande({ nombre: 1 }); return; }
     setDemande(null);
-    setForm({ id: null, nom: '', email: '', emailInitial: '', niveau: 'complet' });
+    // S4c : un nouveau collaborateur commence avec « Choisir » et aucun dossier coché (réponse 2 du client du 07/10).
+    setForm({ id: null, cle: ++ouvertures.current, nom: '', email: '', emailInitial: '', niveau: 'complet', dossiers: [] });
   }
 
   function ouvrir(g: Gerant) {
     effacer();
     setDemande(null);
-    setForm({ id: g.id, nom: g.nom || '', email: g.email || '', emailInitial: g.email || '', niveau: g.niveau });
+    setForm({ id: g.id, cle: ++ouvertures.current, nom: g.nom || '', email: g.email || '', emailInitial: g.email || '', niveau: g.niveau, dossiers: g.dossiers ?? 'tous' });
   }
 
   const enregistrer = async (ev?: React.FormEvent) => {
@@ -104,7 +127,7 @@ export default function ComptaGerants() {
     setEnvoi(true);
     setErreur('');
     try {
-      const corps = { nom: form.nom.trim(), email: form.email.trim(), niveau: form.niveau };
+      const corps = { nom: form.nom.trim(), email: form.email.trim(), niveau: form.niveau, dossiers: form.dossiers };
       const { data } = form.id
         ? await api.put(`/api/compta/cabinet/gerants/${form.id}`, corps)
         : await api.post('/api/compta/cabinet/gerants', corps);
@@ -122,10 +145,16 @@ export default function ComptaGerants() {
       setForm(null);
     } catch (err) {
       // Accès disparu ou désactivé entre-temps, ou place prise entre-temps : formulaire fermé, liste relue. Un refus de
-      // l'adresse (la sienne, déjà dans le cabinet…) garde la saisie pour la corriger.
+      // l'adresse (la sienne, déjà dans le cabinet…) garde la saisie pour la corriger. S4c : un dossier coché qui
+      // n'existe plus — la liste est relue, la saisie gardée sans lui.
       const code = codeDe(err);
-      if ((form.id && (statut(err) === 404 || code === 'ACCES_DESACTIVE')) || code === 'LIMITE_ATTEINTE') { setForm(null); charger(); }
-      setErreur(messageDe(err, 'Enregistrement impossible, réessayez.'));
+      if (code === 'DOSSIER_INCONNU') {
+        relireDossiers();
+        setErreur('Un dossier coché vient d\'être supprimé : la liste a été mise à jour, vérifiez vos dossiers et enregistrez de nouveau.');
+      } else {
+        if ((form.id && (statut(err) === 404 || code === 'ACCES_DESACTIVE')) || code === 'LIMITE_ATTEINTE') { setForm(null); charger(); }
+        setErreur(messageDe(err, 'Enregistrement impossible, réessayez.'));
+      }
     } finally {
       setEnvoi(false);
     }
@@ -291,6 +320,7 @@ export default function ComptaGerants() {
                 </div>
               </div>
               <ChoixNiveau id="gcab-niveau" valeur={form.niveau} onChange={(niveau) => setForm((f) => (f ? { ...f, niveau } : f))} />
+              <ChoixDossiers key={form.cle} id="gcab-dossiers" valeur={form.dossiers} onChange={(dossiers) => setForm((f) => (f ? { ...f, dossiers } : f))} dossiers={etat.dossiers ?? []} />
               <div style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5, marginBottom: 12 }}>
                 Une adresse inconnue reçoit une invitation à activer son compte LabFlow Compta ; une adresse déjà connue reçoit l'accès tout de suite.
                 {form.emailInitial ? ' Une autre adresse donne l\'accès à une autre personne : l\'actuelle le perd, sans en être prévenue.' : ''}
@@ -327,7 +357,7 @@ export default function ComptaGerants() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {etat.gerants.map((g) => (
-              <CarteGerant key={g.id} g={g} occupe={occupe === g.id} ecritureFermee={!abonnementOuvert} onModifier={ouvrir} onDesactiver={desactiver} onReactiver={reactiver} onRetirer={retirer} onRenvoyer={renvoyer} />
+              <CarteGerant key={g.id} g={g} catalogue={etat.dossiers ?? []} occupe={occupe === g.id} ecritureFermee={!abonnementOuvert} onModifier={ouvrir} onDesactiver={desactiver} onReactiver={reactiver} onRetirer={retirer} onRenvoyer={renvoyer} />
             ))}
             {etat.gerants.length === 0 && (
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '22px 20px', textAlign: 'center', fontSize: '0.86rem', color: '#64748b', lineHeight: 1.6 }}>
@@ -344,14 +374,16 @@ export default function ComptaGerants() {
 }
 
 // ecritureFermee : abonnement pas actif — désigner, modifier, réactiver et renvoyer sont refusés par le serveur (inactifs).
-function CarteGerant({ g, occupe, ecritureFermee, onModifier, onDesactiver, onReactiver, onRetirer, onRenvoyer }: {
-  g: Gerant; occupe: boolean; ecritureFermee: boolean;
+// catalogue (S4c) : les dossiers du cabinet, pour nommer ceux du gérant.
+function CarteGerant({ g, catalogue, occupe, ecritureFermee, onModifier, onDesactiver, onReactiver, onRetirer, onRenvoyer }: {
+  g: Gerant; catalogue: DossierChoix[]; occupe: boolean; ecritureFermee: boolean;
   onModifier: (g: Gerant) => void; onDesactiver: (g: Gerant) => void; onReactiver: (g: Gerant) => void;
   onRetirer: (g: Gerant) => void; onRenvoyer: (g: Gerant) => void;
 }) {
   const vide = g.etat === 'a_attribuer';
   const desactive = g.etat === 'desactive';
   const nom = g.nom || g.email || 'ce gérant';
+  const dossiers = resumeDossiers(g.dossiers, catalogue);
   return (
     <div style={{ background: desactive ? '#f8fafc' : '#fff', borderRadius: 14, border: '1px solid #e5e7eb', borderLeft: `4px solid ${vide ? '#f59e0b' : desactive ? '#94a3b8' : '#4338ca'}`, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <div style={{ flex: '1 1 220px', minWidth: 0 }}>
@@ -366,6 +398,11 @@ function CarteGerant({ g, occupe, ecritureFermee, onModifier, onDesactiver, onRe
         <div style={{ fontSize: '0.8rem', color: '#6b7280', overflowWrap: 'anywhere' }}>
           {vide ? 'La personne n\'a plus de compte : désignez quelqu\'un ou retirez cet accès.' : `📧 ${g.email}`}
         </div>
+        {!vide && (
+          <div style={{ fontSize: '0.78rem', color: dossiers.vide ? '#92400e' : '#4338ca', fontWeight: 600, marginTop: 3, overflowWrap: 'anywhere' }}>
+            📁 {dossiers.texte}{dossiers.vide && !desactive && !ecritureFermee ? ' — cochez-en avec « Modifier »' : ''}
+          </div>
+        )}
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
         {vide ? (
