@@ -3,7 +3,7 @@ import api from '../../api/client';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { useNotifications } from '../../context/NotificationContext';
 import BoutonAide from '../BoutonAide';
-import { libelleNiveau, resumeDossiers, type DossierChoix, type DossiersAcces, type Niveau } from '../comptables';
+import { idsExistants, libelleNiveau, resumeDossiers, type DossiersAcces, type Niveau } from '../comptables';
 import { ChoixDossiers, ChoixNiveau } from '../ui';
 import { bouton, inp, lbl, pastille, petit, rond } from '../styles';
 
@@ -17,18 +17,19 @@ import { bouton, inp, lbl, pastille, petit, rond } from '../styles';
 interface Gerant {
   id: number; etat: 'actif' | 'a_attribuer' | 'desactive'; niveau: Niveau;
   nom: string | null; email: string | null; invitationEnAttente: boolean; invitationRenvoyable: boolean;
-  // Absent tant que le serveur d'avant S4c est servi : un accès sans réglage voit tout.
+  // Absent tant que le serveur d'avant S4c est servi : un accès sans réglage voit tout. S4d : les premiers noms de la
+  // liste (trois au plus), pour la carte.
   dossiers?: DossiersAcces;
+  dossiersNoms?: string[];
 }
 interface Etat {
+  cabinet: { id: number; nom: string };
   gerants: Gerant[];
   places: { utilisees: number; limite: number };
   demandeEnCours: boolean;
   prixGerant: number;
   nbGerantsMax: number;
   etatAbonnement: 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
-  // S4c : les dossiers du cabinet (archivés compris), pour la liste à cocher.
-  dossiers?: DossierChoix[];
   emailEnvoye?: boolean | null;
   nouvelle?: boolean;
 }
@@ -77,20 +78,17 @@ export default function ComptaGerants() {
   }, []);
   useEffect(() => { charger(); }, [charger]);
   // S4c : un dossier coché vient d'être supprimé (409 DOSSIER_INCONNU) — la liste est relue et la saisie du formulaire
-  // gardée, sans les dossiers disparus.
-  const relireDossiers = useCallback(() => {
-    const moi = ++tour.current;
-    api.get('/api/compta/cabinet/gerants')
-      .then(({ data }) => {
-        if (moi !== tour.current) return;
-        const e = data as Etat;
-        setEtat(e);
-        setChargement('pret');
-        setForm((f) => (f && f.dossiers !== 'tous' ? { ...f, dossiers: f.dossiers.filter((id) => (e.dossiers ?? []).some((d) => d.id === id)) } : f));
-      })
-      .catch(() => { if (moi === tour.current) setChargement('erreur'); });
-  }, []);
+  // gardée, sans les dossiers disparus (S4d : vérifiés au serveur par identifiants ; la liste à cocher repart à neuf).
   const ouvertures = useRef(0);
+  const epurerDossiers = useCallback((espaceId: number, dossiers: number[]) => {
+    setErreur('Un dossier coché vient d\'être supprimé : vérification de vos dossiers…');
+    idsExistants(espaceId, dossiers)
+      .then((restants) => {
+        setForm((f) => (f && f.dossiers !== 'tous' ? { ...f, cle: ++ouvertures.current, dossiers: f.dossiers.filter((x) => restants.includes(x)) } : f));
+        setErreur('Un dossier coché vient d\'être supprimé : il a été retiré de votre liste, vérifiez vos dossiers et enregistrez de nouveau.');
+      })
+      .catch(() => setErreur('Un dossier coché vient d\'être supprimé et la liste n\'a pas pu être relue : décochez-le (il est marqué « introuvable »), puis enregistrez de nouveau.'));
+  }, []);
   // La réponse de l'équipe LabFlow à une demande arrive dans la cloche : la page se relit aussitôt (places, demande).
   // Seulement une réponse arrivée après l'ouverture de la page (celles d'avant sont déjà dans la première lecture).
   const { notifications } = useNotifications();
@@ -149,8 +147,9 @@ export default function ComptaGerants() {
       // n'existe plus — la liste est relue, la saisie gardée sans lui.
       const code = codeDe(err);
       if (code === 'DOSSIER_INCONNU') {
-        relireDossiers();
-        setErreur('Un dossier coché vient d\'être supprimé : la liste a été mise à jour, vérifiez vos dossiers et enregistrez de nouveau.');
+        charger();
+        if (etat && form.dossiers !== 'tous') epurerDossiers(etat.cabinet.id, form.dossiers);
+        else setErreur(messageDe(err, 'Un dossier coché vient d\'être supprimé.'));
       } else {
         if ((form.id && (statut(err) === 404 || code === 'ACCES_DESACTIVE')) || code === 'LIMITE_ATTEINTE') { setForm(null); charger(); }
         setErreur(messageDe(err, 'Enregistrement impossible, réessayez.'));
@@ -320,7 +319,7 @@ export default function ComptaGerants() {
                 </div>
               </div>
               <ChoixNiveau id="gcab-niveau" valeur={form.niveau} onChange={(niveau) => setForm((f) => (f ? { ...f, niveau } : f))} />
-              <ChoixDossiers key={form.cle} id="gcab-dossiers" valeur={form.dossiers} onChange={(dossiers) => setForm((f) => (f ? { ...f, dossiers } : f))} dossiers={etat.dossiers ?? []} />
+              <ChoixDossiers key={form.cle} id="gcab-dossiers" valeur={form.dossiers} onChange={(dossiers) => setForm((f) => (f ? { ...f, dossiers } : f))} espaceId={etat.cabinet.id} />
               <div style={{ fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5, marginBottom: 12 }}>
                 Une adresse inconnue reçoit une invitation à activer son compte LabFlow Compta ; une adresse déjà connue reçoit l'accès tout de suite.
                 {form.emailInitial ? ' Une autre adresse donne l\'accès à une autre personne : l\'actuelle le perd, sans en être prévenue.' : ''}
@@ -357,7 +356,7 @@ export default function ComptaGerants() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {etat.gerants.map((g) => (
-              <CarteGerant key={g.id} g={g} catalogue={etat.dossiers ?? []} occupe={occupe === g.id} ecritureFermee={!abonnementOuvert} onModifier={ouvrir} onDesactiver={desactiver} onReactiver={reactiver} onRetirer={retirer} onRenvoyer={renvoyer} />
+              <CarteGerant key={g.id} g={g} occupe={occupe === g.id} ecritureFermee={!abonnementOuvert} onModifier={ouvrir} onDesactiver={desactiver} onReactiver={reactiver} onRetirer={retirer} onRenvoyer={renvoyer} />
             ))}
             {etat.gerants.length === 0 && (
               <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: '22px 20px', textAlign: 'center', fontSize: '0.86rem', color: '#64748b', lineHeight: 1.6 }}>
@@ -374,16 +373,16 @@ export default function ComptaGerants() {
 }
 
 // ecritureFermee : abonnement pas actif — désigner, modifier, réactiver et renvoyer sont refusés par le serveur (inactifs).
-// catalogue (S4c) : les dossiers du cabinet, pour nommer ceux du gérant.
-function CarteGerant({ g, catalogue, occupe, ecritureFermee, onModifier, onDesactiver, onReactiver, onRetirer, onRenvoyer }: {
-  g: Gerant; catalogue: DossierChoix[]; occupe: boolean; ecritureFermee: boolean;
+function CarteGerant({ g, occupe, ecritureFermee, onModifier, onDesactiver, onReactiver, onRetirer, onRenvoyer }: {
+  g: Gerant; occupe: boolean; ecritureFermee: boolean;
   onModifier: (g: Gerant) => void; onDesactiver: (g: Gerant) => void; onReactiver: (g: Gerant) => void;
   onRetirer: (g: Gerant) => void; onRenvoyer: (g: Gerant) => void;
 }) {
   const vide = g.etat === 'a_attribuer';
   const desactive = g.etat === 'desactive';
   const nom = g.nom || g.email || 'ce gérant';
-  const dossiers = resumeDossiers(g.dossiers, catalogue);
+  // S4c / S4d : « Tous les dossiers », « n dossiers : A, B, C… » (premiers noms rendus par le serveur), « Aucun dossier ouvert ».
+  const dossiers = resumeDossiers(g.dossiers, g.dossiersNoms);
   return (
     <div style={{ background: desactive ? '#f8fafc' : '#fff', borderRadius: 14, border: '1px solid #e5e7eb', borderLeft: `4px solid ${vide ? '#f59e0b' : desactive ? '#94a3b8' : '#4338ca'}`, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <div style={{ flex: '1 1 220px', minWidth: 0 }}>
