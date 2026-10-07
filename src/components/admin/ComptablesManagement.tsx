@@ -26,6 +26,8 @@ interface Cabinet {
   nomAffiche: string;
   identiteComplete: boolean;
   espace: { id: number; nom: string; etat: string };
+  // Étape S4a : dossiers du cabinet (archivés compris) ; un cabinet qui en a ne se supprime plus (D10).
+  nbDossiers?: number;
   abonnement: {
     id: number;
     modeCompte: string;
@@ -107,7 +109,7 @@ export default function ComptablesManagement() {
       title: `Supprimer le cabinet « ${c.nomAffiche} » ?`,
       message: 'Le compte du titulaire, son abonnement, ses mensualités et sa comptabilité de cabinet sont supprimés.',
       details: [
-        'Refusée dès qu\'une mensualité est réglée (sa facture a été émise) ; refusée aussi, plus tard, dès que le cabinet aura un dossier.',
+        'Refusée dès qu\'une mensualité est réglée (sa facture a été émise) ou dès que le cabinet a un dossier (rien de comptable ne disparaît) : archivez-le plutôt.',
         'Le journal des événements du cabinet est conservé.',
       ],
       tone: 'danger',
@@ -208,6 +210,7 @@ export default function ComptablesManagement() {
                       <span style={chip}>📱 {c.phone || '—'}</span>
                       {c.abonnement && <span style={chip}>💳 {fmt(c.abonnement.totalMensuel)}/mois</span>}
                       {c.abonnement && <span style={chip}>👥 {c.abonnement.gerantsEnPlace ?? 0} / {c.abonnement.nbGerants} gérant{c.abonnement.nbGerants > 1 ? 's' : ''}</span>}
+                      <span style={chip}>📁 {c.nbDossiers ?? 0} dossier{(c.nbDossiers ?? 0) > 1 ? 's' : ''}</span>
                       <span style={{ ...chip, background: mode.fond, color: mode.couleur, borderColor: 'transparent', fontWeight: 700 }}>{mode.label}</span>
                       {!c.identiteComplete && (
                         <button type="button" onClick={() => setIdentite(c)} title="Raison sociale, matricule fiscal, adresse ou ville manquant"

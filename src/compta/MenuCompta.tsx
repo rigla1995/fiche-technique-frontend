@@ -34,6 +34,13 @@ export default function MenuCompta({ ouvert, onFermer }: { ouvert: boolean; onFe
                   <span className="link-label">Mon cabinet</span>
                 </NavLink>
               </li>
+              {/* Étape S4a : les dossiers du cabinet */}
+              <li>
+                <NavLink to="/dossiers" className={classeLien} onClick={onFermer}>
+                  <span className="link-icon">📁</span>
+                  <span className="link-label">Dossiers</span>
+                </NavLink>
+              </li>
               {/* Étape S3c : les accès de ses collaborateurs */}
               <li>
                 <NavLink to="/gerants" className={classeLien} onClick={onFermer}>
