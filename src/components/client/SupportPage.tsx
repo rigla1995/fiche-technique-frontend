@@ -8,6 +8,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../common/ConfirmDialog';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Vocab } from '../../vocab/vocab';
+// LabFlow Compta (S3b) : gérants comptables supplémentaires dans la demande d'ajout (module Comptabilité actif).
+import { LigneGerantsCompta } from '../../compta/DemandeGerantsCompta';
+import { useModuleCompta, libelleGerantsCompta } from '../../compta/comptables';
 
 const typeLabels = (voc: Vocab): Record<string, { label: string; icon: string; desc: string }> => ({
   supplement: { label: 'Ajout de capacité', icon: '➕', desc: `Demander l'ajout ${voc.de('activite', true)}, ${voc.pl('labo')}, ${voc.pl('gerant')} ou de l'option ${voc.Court('acheteur', true)}` },
@@ -101,6 +104,8 @@ export default function SupportPage() {
   const [nbActivites, setNbActivites] = useState(0);
   const [nbLabos, setNbLabos] = useState(0);
   const [nbGerants, setNbGerants] = useState(0);
+  const [nbGerantsCompta, setNbGerantsCompta] = useState(0);
+  const moduleCompta = useModuleCompta();
   // Option Acheteurs : palier cible (0 = pas de changement)
   const [acheteursCible, setAcheteursCible] = useState(0);
 
@@ -133,7 +138,7 @@ export default function SupportPage() {
 
   const resetForm = () => {
     setFormType(null);
-    setNbActivites(0); setNbLabos(0); setNbGerants(0); setAcheteursCible(0); setDescription('');
+    setNbActivites(0); setNbLabos(0); setNbGerants(0); setNbGerantsCompta(0); setAcheteursCible(0); setDescription('');
     setError(null);
   };
 
@@ -177,7 +182,7 @@ export default function SupportPage() {
     try {
       let body: Record<string, unknown> = { type: formType };
       if (formType === 'supplement') {
-        if (nbActivites + nbLabos + nbGerants + acheteursCible === 0) { setError('Indiquez au moins un supplément'); setSaving(false); return; }
+        if (nbActivites + nbLabos + nbGerants + acheteursCible + nbGerantsCompta === 0) { setError('Indiquez au moins un supplément'); setSaving(false); return; }
         if (acheteursCible > 0 && acheteursNeedsLabo) {
           setError(`L'option ${voc.Court('acheteur', true)} nécessite au moins ${voc.un('labo')} — ${voc.acc('labo', 'ajoutez-en un', 'ajoutez-en une')} à votre demande.`);
           setSaving(false);
@@ -185,6 +190,7 @@ export default function SupportPage() {
         }
         body = { ...body, nbActivitesSupp: nbActivites, nbLabosSupp: nbLabos, nbGerantsSupp: nbGerants };
         if (acheteursCible > 0) body.nbAcheteursCible = acheteursCible;
+        if (nbGerantsCompta > 0) body.nbGerantsComptaSupp = nbGerantsCompta;
       } else {
         if (!description.trim()) { setError('Description requise'); setSaving(false); return; }
         body = { ...body, description: description.trim() };
@@ -236,21 +242,27 @@ export default function SupportPage() {
     : 0;
   // L'option exige un labo : existant, ou ajouté dans cette même demande
   const acheteursNeedsLabo = (supplPricing?.nbLabos ?? 0) + nbLabos < 1;
+  // Gérants comptables : à plein tarif, hors promotion (module Comptabilité, S2c).
+  const comptaDelta = nbGerantsCompta * (moduleCompta?.prixGerant ?? 0);
   const supplTotal = supplPricing
     ? (supplPricing.currentMensuel ?? 0)
       + nbActivites * (supplPricing.prixActiviteSup ?? 0)
       + nbLabos * (supplPricing.prixLaboSup ?? 0)
       + nbGerants * (supplPricing.prixGerantSup ?? 0)
       + acheteursDelta
+      + comptaDelta
     : null;
   const supplDelta = supplPricing
     ? nbActivites * (supplPricing.prixActiviteSup ?? 0)
       + nbLabos * (supplPricing.prixLaboSup ?? 0)
       + nbGerants * (supplPricing.prixGerantSup ?? 0)
       + acheteursDelta
+      + comptaDelta
     : 0;
   // Total après application de la promo mensualité active (estimation affichée avant la validation)
-  const supplTotalEff = supplTotal != null ? applyMensPromo(supplTotal, supplPricing?.mensPromo) : null;
+  // Le module Comptabilité EN PLACE (dans currentMensuel) et les gérants comptables demandés restent hors promotion.
+  const comptaHorsPromo = (moduleCompta?.actif ? moduleCompta.totalMensuel : 0) + comptaDelta;
+  const supplTotalEff = supplTotal != null ? applyMensPromo(supplTotal - comptaHorsPromo, supplPricing?.mensPromo) + comptaHorsPromo : null;
   const supplHasMensPromo = !!supplPricing?.mensPromo && supplTotalEff != null && supplTotal != null && supplTotalEff !== supplTotal;
 
   return (
@@ -420,6 +432,8 @@ export default function SupportPage() {
                       )}
                     </div>
                   );})}
+
+                  {moduleCompta?.actif && <LigneGerantsCompta module={moduleCompta} valeur={nbGerantsCompta} changer={setNbGerantsCompta} />}
 
                   {/* Option Acheteurs — activation ou passage à un palier supérieur */}
                   {supplPricing && paliersDispo.length > 0 && (
@@ -593,6 +607,7 @@ export default function SupportPage() {
                         d.nbLabosSupp && `+${voc.n('labo', d.nbLabosSupp)}`,
                         d.nbGerantsSupp && `+${voc.n('gerant', d.nbGerantsSupp)}`,
                         d.nbAcheteursCible && `Option ${voc.Court('acheteur', true)} → palier jusqu'à ${d.nbAcheteursCible}`,
+                        d.nbGerantsComptaSupp && libelleGerantsCompta(d.nbGerantsComptaSupp),
                       ].filter(Boolean).join(' · ')}
                     </span>
                   )}

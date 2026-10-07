@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '../context/AuthContext';
+// Étape S3b : confirmations (« Quitter cet accès ») par la boîte de dialogue de LabFlow, jamais window.confirm.
+import { ConfirmProvider } from '../components/common/ConfirmDialog';
 import { MANUEL_COMPTA } from './manuelCompta';
 import { estTitulaireCabinet, useAccesCompta } from './accesCompta';
 
@@ -22,6 +24,8 @@ const ComptaMaComptabilite = lazy(() => import('./pages/ComptaMaComptabilite'));
 // Étape S3a : passage sans ressaisie entre les deux adresses, et écran de choix après la connexion
 const PassagePage = lazy(() => import('./pages/PassagePage'));
 const ChoixEspace = lazy(() => import('./pages/ChoixEspace'));
+// Étape S3b : la page d'une comptabilité confiée par un client LabFlow (le serveur vérifie l'accès)
+const ComptaConfiee = lazy(() => import('./pages/ComptaConfiee'));
 // Le manuel de LabFlow Compta s'affiche dans la page du manuel de LabFlow (même présentation), réglée sur le produit.
 const GuidePage = lazy(() => import('../components/client/GuidePage'));
 const InvitePage = lazy(() => import('../components/auth/InvitePage'));
@@ -58,6 +62,7 @@ export default function ComptaApp() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ConfirmProvider>
         <Suspense fallback={<Chargement />}>
           <Routes>
             <Route path="/login" element={<ComptaLoginPage />} />
@@ -73,10 +78,12 @@ export default function ComptaApp() {
               <Route path="/cabinet" element={<ReserveCabinet><ComptaCabinet /></ReserveCabinet>} />
               <Route path="/abonnement" element={<ReserveCabinet><ComptaAbonnement /></ReserveCabinet>} />
               <Route path="/ma-comptabilite" element={<ReserveClient><ComptaMaComptabilite /></ReserveClient>} />
+              <Route path="/confiee/:espaceId" element={<ComptaConfiee />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
+        </ConfirmProvider>
       </AuthProvider>
     </BrowserRouter>
   );

@@ -66,6 +66,15 @@ function DetailsPopup({
         .then(({ data }) => setPricing(data)).catch(() => {});
     }
   }, [demande.clientId, demande.type]);
+  // LabFlow Compta (S3b) : prix d'un gérant comptable supplémentaire (module à plein tarif).
+  // null tant que le prix n'est pas lu : pas de total estimé faux (relecture de S3b).
+  const [prixGerantCompta, setPrixGerantCompta] = useState<number | null>(null);
+  useEffect(() => {
+    if (demande.type === 'supplement' && (demande.nbGerantsComptaSupp || 0) > 0) {
+      api.get(`/api/abonnements/client/${demande.clientId}/module-compta`)
+        .then(({ data }) => setPrixGerantCompta(Number((data as { prixGerant?: number }).prixGerant) || 0)).catch(() => {});
+    }
+  }, [demande.clientId, demande.type, demande.nbGerantsComptaSupp]);
 
   const handleAction = async (statut: 'validée' | 'refusée') => {
     setSaving(true);
@@ -80,13 +89,15 @@ function DetailsPopup({
     setSaving(false);
   };
 
-  const pricingDelta = pricing
+  const prixComptaConnu = (demande.nbGerantsComptaSupp || 0) === 0 || prixGerantCompta !== null;
+  const pricingDelta = pricing && prixComptaConnu
     ? (demande.nbActivitesSupp || 0) * pricing.prixActiviteSup
       + (demande.nbLabosSupp || 0) * pricing.prixLaboSup
       + (demande.nbGerantsSupp || 0) * pricing.prixGerantSup
       + ((demande.nbAcheteursCible || 0) > 0
         ? Math.max(0, (pricing.paliersAcheteurs?.find((p) => p.palier === demande.nbAcheteursCible)?.prix ?? 0) - (pricing.acheteursCost ?? 0))
         : 0)
+      + (demande.nbGerantsComptaSupp || 0) * (prixGerantCompta ?? 0)
     : null;
   const newTotal = pricing && pricingDelta !== null ? pricing.currentMensuel + pricingDelta : null;
 
@@ -151,6 +162,7 @@ function DetailsPopup({
                       demande.nbLabosSupp && `+${demande.nbLabosSupp} labo${(demande.nbLabosSupp || 0) > 1 ? 's' : ''}`,
                       demande.nbGerantsSupp && `+${demande.nbGerantsSupp} gérant${(demande.nbGerantsSupp || 0) > 1 ? 's' : ''}`,
                       demande.nbAcheteursCible && `Option Acheteurs → palier jusqu'à ${demande.nbAcheteursCible} acheteurs`,
+                      demande.nbGerantsComptaSupp && `+${demande.nbGerantsComptaSupp} gérant${(demande.nbGerantsComptaSupp || 0) > 1 ? 's' : ''} comptable${(demande.nbGerantsComptaSupp || 0) > 1 ? 's' : ''} (module Comptabilité)`,
                     ].filter(Boolean).map((part, i) => <div key={i} style={{ color: '#15803d', fontWeight: 600 }}>{part}</div>)}
                   </div>
                   {isPending && newTotal !== null && pricingDelta !== null && (
