@@ -70,8 +70,10 @@ export default function ComptaGerants() {
   }, []);
   useEffect(() => { charger(); }, [charger]);
   // La réponse de l'équipe LabFlow à une demande arrive dans la cloche : la page se relit aussitôt (places, demande).
+  // Seulement une réponse arrivée après l'ouverture de la page (celles d'avant sont déjà dans la première lecture).
   const { notifications } = useNotifications();
-  const derniereReponse = notifications.find((n) => n.eventType === 'demande_traitee')?.id;
+  const [ouverteLe] = useState(() => Date.now());
+  const derniereReponse = notifications.find((n) => n.eventType === 'demande_traitee' && n.createdAt > ouverteLe)?.id;
   useEffect(() => { if (derniereReponse) charger(); }, [derniereReponse, charger]);
 
   const limiteAtteinte = !!etat && etat.places.utilisees >= etat.places.limite;
