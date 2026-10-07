@@ -1,3 +1,4 @@
+import api from '../api/client';
 import type { IdentiteLegale } from '../utils/identiteLegale';
 
 // LabFlow Compta, étape S4a « Les dossiers du cabinet » (labflow-reprise/achats-compta/PLAN-S4.md) : types et
@@ -27,7 +28,29 @@ export interface LigneDossier {
   matriculeFiscal: string | null; ville: string | null; etat: EtatDossier; source: 'saisi' | 'labflow';
   identiteComplete: boolean; exercice: Exercice | null; creeLe: string;
 }
-export interface ListeDossiersReponse { espace: EspaceDossiers; droits: Droits; dossiers: LigneDossier[]; etatAbonnement: EtatAbonnement }
+// S4d « grands cabinets » : une PAGE de la liste — `dossiers` = la page, `total` = résultats de la recherche (archivés
+// compris si demandés), `nbActifs` / `nbArchives` = tous les dossiers ouverts à la personne (en-tête).
+export interface ListeDossiersReponse {
+  espace: EspaceDossiers; droits: Droits; dossiers: LigneDossier[];
+  total: number; page: number; limite: number; nbActifs: number; nbArchives: number;
+  etatAbonnement: EtatAbonnement;
+}
+// 25 par page (réponse du client du 07/10), « Afficher plus » pour les suivants.
+export const PAGE_DOSSIERS = 25;
+export interface ParametresListe { q?: string; archives?: boolean; page?: number; limite?: number; ids?: number[]; matricule?: string }
+// GET /api/compta/espaces/:espaceId/dossiers — recherche (nom, raison sociale, nom commercial, matricule), archivés,
+// page / limite, relecture par identifiants (liste à cocher), identifiant du matricule à 7 chiffres (assistant).
+export const lirePageDossiers = async (espaceId: number, p: ParametresListe = {}): Promise<ListeDossiersReponse> => {
+  const params: Record<string, string> = {};
+  if (p.q) params.q = p.q;
+  if (p.archives) params.archives = '1';
+  if (p.page) params.page = String(p.page);
+  if (p.limite) params.limite = String(p.limite);
+  if (p.ids) params.ids = p.ids.join(',');
+  if (p.matricule) params.matricule = p.matricule;
+  const { data } = await api.get(`/api/compta/espaces/${espaceId}/dossiers`, { params });
+  return data as ListeDossiersReponse;
+};
 
 export interface FicheDossier {
   id: number; espace: EspaceDossiers; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow';
@@ -127,9 +150,6 @@ export const messageDossier = (err: unknown, defaut: string, role: 'titulaire' |
 export const statutDe = (err: unknown) => (err as { response?: { status?: number } })?.response?.status;
 
 // Identifiant d'un matricule : ses 7 premiers chiffres (même règle que le serveur, avertissementsMatriculeDossier) ;
-// l'avertissement « déjà porté » se donne dès l'assistant, parmi les dossiers que la personne voit (jamais un refus).
+// l'avertissement « déjà porté » se donne dès l'assistant, parmi les dossiers que la personne voit (jamais un refus) —
+// S4d : lu au serveur (`matricule=`), plus dans une liste chargée d'avance.
 export const identifiantMatricule = (mf: string | null | undefined) => (mf || '').replace(/[\s.\-_/]/g, '').toUpperCase().slice(0, 7);
-export const dossiersMemeMatricule = (mf: string | null | undefined, dossiers: LigneDossier[], excludeId: number | null = null) => {
-  const id = identifiantMatricule(mf);
-  return /^\d{7}$/.test(id) ? dossiers.filter((d) => d.id !== excludeId && identifiantMatricule(d.matriculeFiscal) === id) : [];
-};

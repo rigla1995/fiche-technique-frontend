@@ -3,7 +3,7 @@ import api from '../../api/client';
 import BoutonAide from '../BoutonAide';
 import ListeDossiers from '../ListeDossiers';
 import { allerVers } from '../passage';
-import { libelleNiveau, resumeDossiers, type DossierChoix, type DossiersAcces } from '../comptables';
+import { libelleNiveau, resumeDossiers, type DossiersAcces } from '../comptables';
 import { texteEtatAbonnement, type EtatAbonnement } from '../dossiers';
 import { ChoixDossiers } from '../ui';
 import { bouton, petit } from '../styles';
@@ -17,8 +17,10 @@ import { bouton, petit } from '../styles';
 interface Acces {
   id: number; etat: 'a_attribuer' | 'actif'; obligatoire: boolean; niveau: string;
   nom: string | null; email: string | null; invitationEnAttente: boolean;
-  // Absent tant que le serveur d'avant S4c est servi : un accès sans réglage voit tout.
+  // Absent tant que le serveur d'avant S4c est servi : un accès sans réglage voit tout. S4d : les premiers noms de la
+  // liste (trois au plus), pour la ligne « Dossiers ».
   dossiers?: DossiersAcces;
+  dossiersNoms?: string[];
 }
 interface MaComptabilite {
   espace: { id: number; nom: string; etat: string; ouvertLe: string };
@@ -27,9 +29,7 @@ interface MaComptabilite {
     postes: { code: string; libelle: string; montant: number }[]; totalMensuel: number;
   } | null;
   comptables: Acces[];
-  // S4c : les dossiers de la comptabilité (archivés compris), pour la liste à cocher ; l'état de l'abonnement (D4),
-  // qui ferme « Régler » comme « + Dossier » quand la comptabilité n'est pas modifiable.
-  dossiers?: DossierChoix[];
+  // S4c : l'état de l'abonnement (D4), qui ferme « Régler » comme « + Dossier » quand la comptabilité n'est pas modifiable.
   etatAbonnement?: EtatAbonnement;
 }
 
@@ -85,9 +85,9 @@ export default function ComptaMaComptabilite() {
     setErreurReglage('');
     try {
       const { data } = await api.put(`/api/compta/mes-comptables/${id}`, { dossiers });
-      const e = data as { comptables: Acces[]; dossiers: DossierChoix[] };
+      const e = data as { comptables: Acces[] };
       tour.current += 1;
-      setDonnees((d) => (d ? { ...d, comptables: e.comptables, dossiers: e.dossiers } : d));
+      setDonnees((d) => (d ? { ...d, comptables: e.comptables } : d));
       setReglage(null);
       setInfoReglage({ id, texte: 'Dossiers enregistrés.' });
     } catch (err) {
@@ -104,11 +104,10 @@ export default function ComptaMaComptabilite() {
   const comptable = donnees?.comptables.find((c) => c.obligatoire) || null;
   const supplementaires = donnees?.comptables.filter((c) => !c.obligatoire) || [];
   const module = donnees?.module || null;
-  const catalogue = donnees?.dossiers || [];
   // Comptabilité non modifiable (abonnement en attente, bloqué, suspendu) : « Régler » fermé, comme « + Dossier ».
   const reglageFerme = (donnees?.etatAbonnement ?? 'actif') !== 'actif';
   const propsReglage = (c: Acces) => ({
-    acces: c, catalogue, ouvert: reglage === c.id, envoi: envoiReglage, erreur: reglage === c.id ? erreurReglage : '',
+    acces: c, espaceId: donnees?.espace.id ?? 0, ouvert: reglage === c.id, envoi: envoiReglage, erreur: reglage === c.id ? erreurReglage : '',
     info: infoReglage?.id === c.id ? infoReglage.texte : '', ferme: reglageFerme, autreOuvert: reglage !== null && reglage !== c.id,
     onOuvrir: () => ouvrirReglage(c.id), onFermer: fermerReglage, onEnregistrer: (d: DossiersAcces) => enregistrerDossiers(c.id, d),
   });
@@ -231,12 +230,12 @@ function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
 // Annuler. La valeur en cours repart de l'accès à chaque ouverture (une saisie abandonnée n'est pas gardée). Le bouton
 // reste en place (le focus ne se perd pas) : il ouvre puis referme. `ferme` : comptabilité non modifiable ; `autreOuvert` :
 // un autre accès est en cours de réglage (un seul à la fois, sans perdre sa saisie).
-function ReglageDossiers({ acces, catalogue, ouvert, envoi, erreur, info, ferme, autreOuvert, onOuvrir, onFermer, onEnregistrer }: {
-  acces: Acces; catalogue: DossierChoix[]; ouvert: boolean; envoi: boolean; erreur: string; info: string; ferme: boolean; autreOuvert: boolean;
+function ReglageDossiers({ acces, espaceId, ouvert, envoi, erreur, info, ferme, autreOuvert, onOuvrir, onFermer, onEnregistrer }: {
+  acces: Acces; espaceId: number; ouvert: boolean; envoi: boolean; erreur: string; info: string; ferme: boolean; autreOuvert: boolean;
   onOuvrir: () => void; onFermer: () => void; onEnregistrer: (dossiers: DossiersAcces) => void;
 }) {
   const [valeur, setValeur] = useState<DossiersAcces>(acces.dossiers ?? 'tous');
-  const resume = resumeDossiers(acces.dossiers, catalogue);
+  const resume = resumeDossiers(acces.dossiers, acces.dossiersNoms);
   const qui = acces.nom || acces.email || 'cet accès';
   const inactif = ferme || autreOuvert;
   return (
@@ -255,7 +254,7 @@ function ReglageDossiers({ acces, catalogue, ouvert, envoi, erreur, info, ferme,
       {info && <div role="status" style={{ fontSize: '0.8rem', color: '#166534', fontWeight: 600, padding: '6px 0' }}>✓ {info}</div>}
       {ouvert && (
         <div style={{ marginTop: 10 }}>
-          <ChoixDossiers id={`mc-dossiers-${acces.id}`} libelle="Réglage" valeur={valeur} onChange={setValeur} dossiers={catalogue} />
+          <ChoixDossiers id={`mc-dossiers-${acces.id}`} libelle="Réglage" valeur={valeur} onChange={setValeur} espaceId={espaceId} />
           {erreur && <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 8, padding: '9px 13px', fontSize: '0.82rem', color: '#dc2626', marginBottom: 10 }}>{erreur}</div>}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button type="button" onClick={() => onEnregistrer(valeur)} disabled={envoi} style={{ ...bouton('#4338ca', '#fff', '#4338ca'), flex: '2 1 160px', opacity: envoi ? 0.7 : 1 }}>{envoi ? 'Enregistrement…' : '✓ Enregistrer'}</button>

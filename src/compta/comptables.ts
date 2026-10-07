@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/client';
+import { lirePageDossiers } from './dossiers';
 
 // LabFlow Compta, étape S3b : constantes et lectures partagées par les écrans du comptable du client (page Gérants de
 // LabFlow, « Ma comptabilité », « Comptabilité de … », demande d'ajout). Vocabulaire comptable fixe.
@@ -16,15 +17,24 @@ export const libelleNiveau = (n: string) => NIVEAUX.find((x) => x.valeur === n)?
 // S4c (réponses 2 et 4 du client du 07/10) : les dossiers d'un accès — « tous » (ceux d'aujourd'hui et ceux à venir) ou
 // la liste des identifiants des dossiers qui lui sont ouverts. Le serveur contrôle les identifiants.
 export type DossiersAcces = 'tous' | number[];
-// Un dossier de la comptabilité pour la liste à cocher (catalogue rendu par le serveur, archivés compris, classés après).
+// Un dossier dans la liste à cocher (une ligne de la liste paginée du serveur, archivés compris).
 export interface DossierChoix { id: number; nom: string; matriculeFiscal: string | null; etat: 'actif' | 'archive'; source: 'saisi' | 'labflow' }
 // Résumé d'un réglage pour une carte : « Tous les dossiers », « Aucun dossier ouvert » (à signaler), « 2 dossiers : A, B ».
-// Sans réglage (serveur d'avant S4c encore servi), un accès voit tout.
-export const resumeDossiers = (d: DossiersAcces | undefined, catalogue: DossierChoix[] = []): { texte: string; vide: boolean } => {
+// S4d : les premiers noms viennent du serveur avec l'accès (`dossiersNoms`, trois au plus) — le catalogue ne voyage
+// plus. Sans réglage (serveur d'avant S4c encore servi), un accès voit tout.
+export const resumeDossiers = (d: DossiersAcces | undefined, noms: string[] = []): { texte: string; vide: boolean } => {
   if (!d || d === 'tous') return { texte: 'Tous les dossiers', vide: false };
   if (d.length === 0) return { texte: 'Aucun dossier ouvert', vide: true };
-  const noms = d.map((id) => catalogue.find((x) => x.id === id)?.nom || `n° ${id}`);
-  return { texte: `${d.length} dossier${d.length > 1 ? 's' : ''} : ${noms.slice(0, 3).join(', ')}${noms.length > 3 ? '…' : ''}`, vide: false };
+  const tete = noms.slice(0, 3).join(', ');
+  return { texte: `${d.length} dossier${d.length > 1 ? 's' : ''}${tete ? ` : ${tete}${d.length > Math.min(noms.length, 3) ? '…' : ''}` : ''}`, vide: false };
+};
+// S4d : parmi des identifiants cochés, ceux qui existent encore dans la comptabilité (archivés compris), par lots d'une
+// page (200), lus ensemble — après un refus « dossier inconnu », la saisie est gardée sans les dossiers disparus.
+export const idsExistants = async (espaceId: number, ids: number[]): Promise<number[]> => {
+  const lots: number[][] = [];
+  for (let i = 0; i < ids.length; i += 200) lots.push(ids.slice(i, i + 200));
+  const reponses = await Promise.all(lots.map((lot) => lirePageDossiers(espaceId, { ids: lot, archives: true, limite: 200 })));
+  return reponses.flatMap((r) => r.dossiers.map((d) => d.id));
 };
 
 // Module Comptabilité du compte connecté (GET /api/abonnements/module-compta) : actif, prix d'un gérant comptable

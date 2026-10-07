@@ -7,8 +7,8 @@ import { useConfirm } from '../components/common/ConfirmDialog';
 import { IDENTITE_VIDE, corpsIdentite, formeIndividuelle, libelleForme, type IdentiteLegale } from '../utils/identiteLegale';
 import { FormulaireExercice, FormulaireRegime } from './DossierFormulaires';
 import {
-  REGIME_DEFAUT, anneeCivile, controlerExercice, dossiersMemeMatricule, fmtDate, libelleImpot, libellePersonne, libelleTva, messageDossier,
-  nbPeriodes, ouiNon, regimeParForme, type Exercice, type FicheDossier, type LigneDossier, type Regime,
+  REGIME_DEFAUT, anneeCivile, controlerExercice, fmtDate, identifiantMatricule, libelleImpot, libellePersonne, libelleTva, lirePageDossiers,
+  messageDossier, nbPeriodes, ouiNon, regimeParForme, type Exercice, type FicheDossier, type Regime,
 } from './dossiers';
 
 // Assistant « Nouveau dossier » (LabFlow Compta, étape S4a ; labflow-reprise/achats-compta/PLAN-S4.md §2) — même
@@ -44,9 +44,9 @@ function StepIndicator({ current }: { current: number }) {
   );
 }
 
-// `dossiers` : ceux que la personne voit déjà — l'avertissement « matricule déjà porté » se donne dès l'étape Identité
-// (le serveur le redit à la création, parmi les dossiers ouverts à la personne).
-export default function NouveauDossier({ espaceId, onClose, dossiers = [], role = 'titulaire' }: { espaceId: number; onClose: () => void; dossiers?: LigneDossier[]; role?: 'titulaire' | 'gerant' }) {
+// L'avertissement « matricule déjà porté » se donne dès l'étape Identité, lu au serveur parmi les dossiers ouverts à la
+// personne (S4d : plus de liste chargée d'avance) ; le serveur le redit à la création.
+export default function NouveauDossier({ espaceId, onClose, role = 'titulaire' }: { espaceId: number; onClose: () => void; role?: 'titulaire' | 'gerant' }) {
   const navigate = useNavigate();
   const { alerte } = useConfirm();
   const [step, setStep] = useState(0);
@@ -70,9 +70,23 @@ export default function NouveauDossier({ espaceId, onClose, dossiers = [], role 
   const erreurExercice = controlerExercice(exercice);
   const nextDisabled = (step === 0 && !step1Valid) || (step === 2 && !!erreurExercice);
   const complete = !!(raison && identite.matriculeFiscal && identite.adresse && identite.ville);
-  // Même identifiant de matricule qu'un dossier déjà visible : avertissement, jamais un refus (groupes, franchises).
-  const doublons = dossiersMemeMatricule(identite.matriculeFiscal, dossiers);
-  const avertissementsLocaux = doublons.map((d) => `Ce matricule fiscal est déjà porté par le dossier « ${d.nom} »`);
+  // Même identifiant de matricule qu'un dossier déjà visible : avertissement, jamais un refus (groupes, franchises). Lu
+  // au serveur dès que l'identifiant a ses 7 chiffres (archivés compris, trois noms au plus), après une courte attente.
+  const [doublons, setDoublons] = useState<{ idMf: string; noms: string[] }>({ idMf: '', noms: [] });
+  const idMf = identifiantMatricule(identite.matriculeFiscal);
+  const idMfValide = /^\d{7}$/.test(idMf);
+  useEffect(() => {
+    if (!idMfValide) return undefined;
+    let annule = false;
+    const t = setTimeout(() => {
+      lirePageDossiers(espaceId, { matricule: idMf, archives: true, limite: 3 })
+        .then((r) => { if (!annule) setDoublons({ idMf, noms: r.dossiers.map((d) => d.nom) }); })
+        .catch(() => { if (!annule) setDoublons({ idMf, noms: [] }); });
+    }, 300);
+    return () => { annule = true; clearTimeout(t); };
+  }, [espaceId, idMf, idMfValide]);
+  // Seuls les doublons lus pour l'identifiant en cours comptent (état dérivé : rien à remettre à zéro).
+  const avertissementsLocaux = idMfValide && doublons.idMf === idMf ? doublons.noms.map((nom) => `Ce matricule fiscal est déjà porté par le dossier « ${nom} »`) : [];
 
   const next = () => {
     setError(null);
