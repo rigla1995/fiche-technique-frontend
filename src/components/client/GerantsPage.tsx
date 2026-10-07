@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
 // LabFlow Compta, étape S3b : partie « Gérants Comptabilité » et choix du type d'un nouveau gérant (module actif).
-import GerantsComptables, { ChoixTypeGerant, type GerantsComptablesHandle } from '../../compta/GerantsComptables';
+import GerantsComptables, { ANCRE_COMPTA, ChoixTypeGerant, type GerantsComptablesHandle } from '../../compta/GerantsComptables';
 import type { Gerant, Activite, Labo, AbonnementConfig } from '../../types';
 import { useEmailCheck } from '../../hooks/useEmailCheck';
 import { useConfirm } from '../common/ConfirmDialog';
@@ -64,19 +64,19 @@ export default function GerantsPage() {
   }, []);
 
   // S3b : module Comptabilité actif → « + Nouveau » demande d'abord le type (Stock / Vente ou Comptabilité).
-  const [compta, setCompta] = useState({ actif: false, limiteAtteinte: false });
+  const [comptaActif, setComptaActif] = useState(false);
   const [choixType, setChoixType] = useState(false);
   const refCompta = useRef<GerantsComptablesHandle>(null);
-  const surEtatCompta = useCallback((e: { actif: boolean; limiteAtteinte: boolean }) => setCompta(e), []);
+  const surEtatCompta = useCallback((actif: boolean) => setComptaActif(actif), []);
   const ouvrirStockVente = () => { setChoixType(false); setShowForm(true); setEditingId(null); setForm(EMPTY_FORM); setInviteSent(null); setError(''); };
   const ouvrirComptabilite = () => {
     setChoixType(false);
-    refCompta.current?.nouveau();
+    refCompta.current?.nouveauDepuisChoix();
     // Après le rendu du formulaire (sinon le défilement doux est interrompu par la mise à jour de la page).
-    window.setTimeout(() => document.getElementById('gerants-comptabilite')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    window.setTimeout(() => document.getElementById(ANCRE_COMPTA)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
   };
   const nouveauGerant = () => {
-    if (!compta.actif) { ouvrirStockVente(); return; }
+    if (!comptaActif) { ouvrirStockVente(); return; }
     setShowForm(false);
     setChoixType(true);
   };
@@ -89,6 +89,7 @@ export default function GerantsPage() {
   };
 
   const startEdit = (g: Gerant) => {
+    setChoixType(false);
     // Pré-remplissage avec le même repli legacy que l'affichage (mono-affectation ancienne).
     const actIds = g.activiteIds && g.activiteIds.length ? g.activiteIds : (g.activiteType !== 'labo' && g.activiteId ? [g.activiteId] : []);
     const labIds = g.laboIds && g.laboIds.length ? g.laboIds : (g.activiteType === 'labo' && g.activiteId ? [g.activiteId] : []);
@@ -224,7 +225,7 @@ export default function GerantsPage() {
               <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#1e40af', lineHeight: 1 }}>{activeCount}</div>
             </div>
           )}
-          {atGerantLimit && !compta.actif ? (
+          {atGerantLimit && !comptaActif ? (
             <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: 10, padding: '8px 16px', fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.2)' }}>
               🔒 Limite atteinte ({maxGerants})
             </div>
@@ -258,7 +259,7 @@ export default function GerantsPage() {
       )}
 
       {choixType && (
-        <ChoixTypeGerant stockVenteLibre={!atGerantLimit} onStockVente={ouvrirStockVente} onComptabilite={ouvrirComptabilite} onFermer={() => setChoixType(false)} />
+        <ChoixTypeGerant stockVenteLibre={!atGerantLimit} nomGerant={voc.nom('gerant')} espaces={voc.pl('espace_activites')} onStockVente={ouvrirStockVente} onComptabilite={ouvrirComptabilite} onFermer={() => setChoixType(false)} />
       )}
 
       {/* Create form */}

@@ -86,7 +86,10 @@ export default function ComptaAccueil() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 12 }}>
               {acces[g.cle].map((c) => {
                 const style: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: '#fff', border: '1px solid #e2e8f0', borderLeft: `4px solid ${g.couleur}`, borderRadius: 12, padding: '14px 16px', fontWeight: 700, color: '#0f172a', textDecoration: 'none' };
-                const e = c.etatAbonnement ? ETATS[c.etatAbonnement] : undefined;
+                // Une comptabilité confiée d'un client bloqué se dit « Suspendue » (cadrage S3b §2 : l'état de facturation du
+                // client ne regarde pas son comptable) ; sa carte s'ouvre encore, pour pouvoir quitter l'accès.
+                const cleEtat = g.cle === 'confiees' && c.etatAbonnement === 'bloque' ? 'suspendu' : c.etatAbonnement;
+                const e = cleEtat ? ETATS[cleEtat] : undefined;
                 const nom = (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0, overflowWrap: 'anywhere' }}>
                     {c.nom}

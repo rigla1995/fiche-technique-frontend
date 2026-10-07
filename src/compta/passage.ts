@@ -24,7 +24,8 @@ export const destinationApresConnexion = async (role?: string): Promise<string |
 
 // Pages où un passage peut arriver directement (S3b : « Gérer sur LabFlow » de « Ma comptabilité »), liste fermée lue
 // par la page d'arrivée ; ailleurs, l'accueil de l'espace.
-export const PAGES_D_ARRIVEE = ['/client/gerants'];
+// La partie « Gérants Comptabilité » de la page Gérants (ancre de src/compta/GerantsComptables.tsx).
+export const PAGES_D_ARRIVEE = ['/client/gerants#gerants-comptabilite'];
 
 // Part vers l'autre adresse. `avantDeQuitter` : appelé une fois le code obtenu, juste avant de quitter la page.
 // `page` : page d'arrivée (une de PAGES_D_ARRIVEE), transmise dans la partie « # » avec le code.

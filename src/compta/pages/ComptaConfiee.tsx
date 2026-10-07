@@ -5,6 +5,7 @@ import BoutonAide from '../BoutonAide';
 import { useAccesCompta } from '../accesCompta';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import { libelleNiveau } from '../comptables';
+import { libelleForme } from '../../utils/identiteLegale';
 
 // « Comptabilité de … » (LabFlow Compta, étape S3b ; réponse du client du 07/10) : la comptabilité qu'un client LabFlow
 // a confiée à la personne connectée — identité et contact du client, son accès (niveau, confiée le), « Quitter cet
@@ -23,8 +24,13 @@ const IDENTITE: [string, string][] = [
   ['matriculeFiscal', 'Matricule fiscal'], ['rne', 'RNE'], ['adresse', 'Adresse'], ['ville', 'Ville'],
 ];
 
-export default function ComptaConfiee() {
+// Une page par comptabilité : changer d'espace (navigation directe) repart d'un état neuf, jamais de l'ancienne.
+export default function ComptaConfieePage() {
   const { espaceId } = useParams();
+  return <ComptaConfiee key={espaceId} espaceId={espaceId} />;
+}
+
+function ComptaConfiee({ espaceId }: { espaceId?: string }) {
   const navigate = useNavigate();
   const { recharger } = useAccesCompta();
   const { confirm } = useConfirm();
@@ -57,6 +63,8 @@ export default function ComptaConfiee() {
       recharger();
       navigate('/', { replace: true });
     } catch (err) {
+      // Accès déjà retiré par le client entre-temps : retour à l'accueil, comme après avoir quitté.
+      if ((err as { response?: { status?: number } })?.response?.status === 404) { recharger(); navigate('/', { replace: true }); return; }
       setErreur((err as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Impossible de quitter cet accès pour le moment, réessayez.');
       setEnvoi(false);
     }
@@ -102,10 +110,12 @@ export default function ComptaConfiee() {
                 : 'Comptabilité en lecture seule : l\'abonnement de ce client attend un paiement.'}
             </div>
           )}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 20 }}>
             <Carte titre="🏢 Le client" sousTitre="Son identité et son contact">
               {lignesIdentite.length === 0 && <p style={{ margin: '0 0 8px', fontSize: '0.8rem', color: '#64748b' }}>Identité légale pas encore renseignée.</p>}
-              {lignesIdentite.map(([cle, libelle]) => <Ligne key={cle} libelle={libelle} valeur={donnees.identite[cle] || '—'} />)}
+              {lignesIdentite.map(([cle, libelle]) => (
+                <Ligne key={cle} libelle={libelle} valeur={(cle === 'formeJuridique' ? libelleForme(donnees.identite[cle]) : donnees.identite[cle]) || '—'} />
+              ))}
               <Ligne libelle="Contact" valeur={donnees.contact.nom || '—'} />
               <Ligne libelle="Email" valeur={donnees.contact.email || '—'} />
               {donnees.contact.telephone && <Ligne libelle="Téléphone" valeur={donnees.contact.telephone} />}

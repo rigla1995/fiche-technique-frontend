@@ -67,7 +67,8 @@ function DetailsPopup({
     }
   }, [demande.clientId, demande.type]);
   // LabFlow Compta (S3b) : prix d'un gérant comptable supplémentaire (module à plein tarif).
-  const [prixGerantCompta, setPrixGerantCompta] = useState(0);
+  // null tant que le prix n'est pas lu : pas de total estimé faux (relecture de S3b).
+  const [prixGerantCompta, setPrixGerantCompta] = useState<number | null>(null);
   useEffect(() => {
     if (demande.type === 'supplement' && (demande.nbGerantsComptaSupp || 0) > 0) {
       api.get(`/api/abonnements/client/${demande.clientId}/module-compta`)
@@ -88,14 +89,15 @@ function DetailsPopup({
     setSaving(false);
   };
 
-  const pricingDelta = pricing
+  const prixComptaConnu = (demande.nbGerantsComptaSupp || 0) === 0 || prixGerantCompta !== null;
+  const pricingDelta = pricing && prixComptaConnu
     ? (demande.nbActivitesSupp || 0) * pricing.prixActiviteSup
       + (demande.nbLabosSupp || 0) * pricing.prixLaboSup
       + (demande.nbGerantsSupp || 0) * pricing.prixGerantSup
       + ((demande.nbAcheteursCible || 0) > 0
         ? Math.max(0, (pricing.paliersAcheteurs?.find((p) => p.palier === demande.nbAcheteursCible)?.prix ?? 0) - (pricing.acheteursCost ?? 0))
         : 0)
-      + (demande.nbGerantsComptaSupp || 0) * prixGerantCompta
+      + (demande.nbGerantsComptaSupp || 0) * (prixGerantCompta ?? 0)
     : null;
   const newTotal = pricing && pricingDelta !== null ? pricing.currentMensuel + pricingDelta : null;
 

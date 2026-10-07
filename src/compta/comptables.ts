@@ -15,7 +15,8 @@ export const libelleNiveau = (n: string) => NIVEAUX.find((x) => x.valeur === n)?
 
 // Module Comptabilité du compte connecté (GET /api/abonnements/module-compta) : actif, prix d'un gérant comptable
 // supplémentaire (plein tarif, hors promotion), gérants achetés et plafond.
-export interface ModuleCompta { actif: boolean; prixGerant: number; nbGerants: number; nbGerantsMax: number }
+// totalMensuel : postes du module en place (module et gérants comptables), à plein tarif.
+export interface ModuleCompta { actif: boolean; prixGerant: number; nbGerants: number; nbGerantsMax: number; totalMensuel: number }
 
 export function useModuleCompta(): ModuleCompta | null {
   const [module, setModule] = useState<ModuleCompta | null>(null);
@@ -24,7 +25,7 @@ export function useModuleCompta(): ModuleCompta | null {
     api.get('/api/abonnements/module-compta')
       .then(({ data }) => {
         const d = data as Partial<ModuleCompta>;
-        if (!annule) setModule({ actif: d.actif === true, prixGerant: Number(d.prixGerant) || 0, nbGerants: Number(d.nbGerants) || 0, nbGerantsMax: Number(d.nbGerantsMax) || 50 });
+        if (!annule) setModule({ actif: d.actif === true, prixGerant: Number(d.prixGerant) || 0, nbGerants: Number(d.nbGerants) || 0, nbGerantsMax: Number(d.nbGerantsMax) || 50, totalMensuel: Number(d.totalMensuel) || 0 });
       })
       .catch(() => { /* pas de module : rien à afficher */ });
     return () => { annule = true; };

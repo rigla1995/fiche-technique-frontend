@@ -260,7 +260,9 @@ export default function SupportPage() {
       + comptaDelta
     : 0;
   // Total après application de la promo mensualité active (estimation affichée avant la validation)
-  const supplTotalEff = supplTotal != null ? applyMensPromo(supplTotal - comptaDelta, supplPricing?.mensPromo) + comptaDelta : null;
+  // Le module Comptabilité EN PLACE (dans currentMensuel) et les gérants comptables demandés restent hors promotion.
+  const comptaHorsPromo = (moduleCompta?.actif ? moduleCompta.totalMensuel : 0) + comptaDelta;
+  const supplTotalEff = supplTotal != null ? applyMensPromo(supplTotal - comptaHorsPromo, supplPricing?.mensPromo) + comptaHorsPromo : null;
   const supplHasMensPromo = !!supplPricing?.mensPromo && supplTotalEff != null && supplTotal != null && supplTotalEff !== supplTotal;
 
   return (

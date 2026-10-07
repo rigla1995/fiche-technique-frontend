@@ -33,7 +33,7 @@ export default function ComptaMaComptabilite() {
     setOuverture(true);
     setErreurGerer('');
     try {
-      await allerVers('app', undefined, '/client/gerants');
+      await allerVers('app', undefined, '/client/gerants#gerants-comptabilite');
     } catch {
       setErreurGerer('Ouverture impossible pour le moment, réessayez.');
       setOuverture(false);
@@ -115,7 +115,13 @@ export default function ComptaMaComptabilite() {
                 {supplementaires.length}<span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#64748b' }}> / {module?.nbGerants ?? 0}</span>
               </div>
               {supplementaires.map((c) => (
-                <Ligne key={c.id} libelle={c.nom || c.email || '—'} valeur={`${libelleNiveau(c.niveau)}${c.invitationEnAttente ? ' · invitation envoyée' : ''}`} />
+                <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #f8fafc', fontSize: '0.84rem', minWidth: 0 }}>
+                  <div style={{ fontWeight: 700, color: '#0f172a', overflowWrap: 'anywhere' }}>{c.nom || '—'}</div>
+                  {c.email && <div style={{ color: '#64748b', overflowWrap: 'anywhere' }}>{c.email}</div>}
+                  <div style={{ color: '#475569', marginTop: 2 }}>
+                    {c.etat === 'a_attribuer' ? 'Accès libéré' : `${libelleNiveau(c.niveau)} · ${c.invitationEnAttente ? '⏳ invitation envoyée' : '● actif'}`}
+                  </div>
+                </div>
               ))}
               <p style={{ margin: '6px 0 0', fontSize: '0.8rem', color: '#64748b', lineHeight: 1.5 }}>
                 {(module?.nbGerants ?? 0) > 0 ? 'Ajoutez-les ou retirez-les dans LabFlow, page Gérants.' : 'Aucun pour l\'instant : vous pouvez en demander dans LabFlow, page Gérants.'}
@@ -143,7 +149,7 @@ function Carte({ titre, sousTitre, children }: { titre: string; sousTitre: strin
 function Ligne({ libelle, valeur }: { libelle: string; valeur: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc' }}>
-      <span style={{ color: '#64748b' }}>{libelle}</span>
+      <span style={{ color: '#64748b', minWidth: 0, overflowWrap: 'anywhere' }}>{libelle}</span>
       <span style={{ color: '#0f172a', fontWeight: 600, textAlign: 'right', overflowWrap: 'anywhere' }}>{valeur}</span>
     </div>
   );

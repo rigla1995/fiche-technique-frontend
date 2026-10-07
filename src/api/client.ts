@@ -49,10 +49,11 @@ api.interceptors.response.use(
     }
     if (status === 403) {
       // READ_ONLY/SUSPENDED get inline errors, not a redirect
-      // LabFlow Compta (S3b) : BLOCKED aussi — une comptabilité bloquée (garde par comptabilité) se dit sur place ; un
-      // cabinet bloqué se connecte encore.
+      // LabFlow Compta (S3b) : BLOCKED aussi, pour les seules routes Compta — une comptabilité bloquée (garde par
+      // comptabilité) se dit sur place ; un cabinet bloqué se connecte encore. Ailleurs, rien ne change.
       const code = error.response?.data?.code;
-      if (code === 'READ_ONLY' || code === 'SUSPENDED' || code === 'BLOCKED') {
+      const compta = String(error.config?.url || '').startsWith('/api/compta/');
+      if (code === 'READ_ONLY' || code === 'SUSPENDED' || (code === 'BLOCKED' && compta)) {
         return Promise.reject(error);
       }
       // Accès acheteurs révoqué pendant la session du gérant : resynchroniser le

@@ -50,7 +50,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
       navigate('/admin/site/demandes');
     } else if (eventType === 'comptable_parti') {
       // LabFlow Compta (S3b) : le comptable a quitté l'accès → partie « Gérants Comptabilité » de la page Gérants.
-      navigate('/client/gerants');
+      navigate('/client/gerants#gerants-comptabilite');
     } else {
       navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }
@@ -233,7 +233,7 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                             : n.eventType === 'demande_acces_recue'
                             ? "Nouvelle demande d'accès"
                             : n.eventType === 'comptable_parti'
-                            ? 'Accès à votre comptabilité quitté'
+                            ? 'Un comptable a quitté votre comptabilité'
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
                         {n.clientNom && (
