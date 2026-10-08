@@ -6,10 +6,11 @@ import BoutonAide from '../BoutonAide';
 import { ChoixCompte } from '../ChoixCompte';
 import { ChoixTiers } from '../ChoixTiers';
 import { Modale } from '../DossierFormulaires';
+import { FenetreImport } from '../FenetreImport';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import {
-  LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, contrepasserEcriture, controlerDate, controlerMontant, fmtJour, fmtMontant, libellePeriode,
-  ligneEnvoyee, lireEcriture, lireEcritures, periodeDe, periodeOuverteSuivante, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
+  LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, contrepasserEcriture, controlerDate, controlerMontant, fmtJour, fmtMontant, importerBalanceOuverture, importerEcritures, libellePeriode,
+  ligneEnvoyee, lireEcriture, lireEcritures, periodeDe, periodeOuverteSuivante, telechargerModeleBalanceOuverture, telechargerModeleEcritures, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
   type AideReponse, type ContrepassationReponse, type Ecriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
 } from '../ecritures';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
@@ -27,11 +28,14 @@ import { bouton, inp, lbl, pastille, petit } from '../styles';
 // journal et par exercice, auteur et heure), « Valider la période » (toutes celles du mois choisi), « Contre-passer » une
 // écriture validée (écriture inverse, liée des deux côtés), vraie date d'une opération d'une période close (enregistrée au
 // premier jour de la période ouverte suivante, NC 01 §61) ; la page s'ouvre sur une période donnée (?periode=…).
-type Fenetre = { type: 'creer' } | { type: 'modifier'; ecriture: Ecriture } | { type: 'contrepasser'; ecriture: Ecriture } | null;
+// S6c (PLAN-S6 §2 « S6c », §4 « Imports ») : « Importer (Excel) » (des écritures en brouillard, modèle de LabFlow Compta, tout ou
+// rien) et « Balance d'ouverture » (une écriture d'à-nouveaux AN au premier jour de l'exercice, en brouillard) — titulaire
+// et Complet ; la fenêtre d'import partagée (FenetreImport) montre le rapport rangée par rangée d'un fichier refusé.
+type Fenetre = { type: 'creer' } | { type: 'modifier'; ecriture: Ecriture } | { type: 'contrepasser'; ecriture: Ecriture } | { type: 'importer' } | { type: 'importer-balance' } | null;
 type Role = 'titulaire' | 'gerant';
 type Refus = (err: unknown) => boolean;
 // Refus que la personne corrige dans la fenêtre (le serveur dit quoi) ; les autres 409 (écriture validée, dossier archivé…) ferment la fenêtre.
-const CORRIGEABLES = ['DESEQUILIBRE', 'COMPTES_IDENTIQUES', 'TOTAL_TROP_GRAND', 'TIERS_REQUIS', 'TIERS_INTERDIT', 'TIERS_TYPE', 'TIERS_DESACTIVE', 'COMPTE_NON_IMPUTABLE', 'TAXE_DESACTIVEE', 'JOURNAL_DESACTIVE', 'DATE_HORS_EXERCICE', 'PERIODE_CLOSE', 'PERIODE_ABSENTE', 'EXERCICE_CLOS', 'ASSIETTE_TTC', 'ASSIETTE_TVA', 'ASSIETTE_NULLE', 'MONTANT_NUL', 'LIGNE_SANS_CODE', 'CODE_NON_RETENUE', 'RETENUE_ABSENTE', 'JOURNAL_SANS_RETENUE', 'TAXE_SANS_COMPTE'];
+const CORRIGEABLES = ['DESEQUILIBRE', 'COMPTES_IDENTIQUES', 'TOTAL_TROP_GRAND', 'TIERS_REQUIS', 'TIERS_INTERDIT', 'TIERS_TYPE', 'TIERS_DESACTIVE', 'COMPTE_NON_IMPUTABLE', 'TAXE_DESACTIVEE', 'JOURNAL_DESACTIVE', 'DATE_HORS_EXERCICE', 'PERIODE_CLOSE', 'PERIODE_ABSENTE', 'EXERCICE_CLOS', 'ASSIETTE_TTC', 'ASSIETTE_TVA', 'ASSIETTE_NULLE', 'MONTANT_NUL', 'LIGNE_SANS_CODE', 'CODE_NON_RETENUE', 'RETENUE_ABSENTE', 'JOURNAL_SANS_RETENUE', 'TAXE_SANS_COMPTE', 'AN_DATE'];
 const codeDe = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
 const messageDe = (err: unknown) => (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '';
 // Un refus « périmé » ferme la fenêtre et relit (dossier ou écriture disparus, écriture validée, dossier archivé…) ; un
@@ -277,6 +281,21 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
       setOccupe(false);
     }
   };
+  // S6c : après un import, les comptes rendus suivent et les filtres sont levés (les écritures importées peuvent être de
+  // n'importe quel mois, journal, état) : la liste se relit entière, le message dit combien.
+  const apresImport = (nb: EcrituresReponse['nb'], message: string) => {
+    setLu((prev) => (prev ? { ...prev, etat: { ...prev.etat, nb } } : prev));
+    setErreur('');
+    setFenetre(null);
+    setInfo(message);
+    const memesFiltres = !periodeId && !journalId && !etatFiltre && !q;
+    setPeriodeId(null);
+    setJournalId(null);
+    setEtatFiltre('');
+    setRecherche('');
+    setQ('');
+    if (memesFiltres) relireFenetre();
+  };
   // Déplier une écriture : ses lignes sont lues une fois.
   const basculer = (e: Ecriture) => {
     const ouverte = depliees.has(e.id);
@@ -423,6 +442,8 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                 🔏 Valider la période ({etat.periode.nbBrouillard})
               </button>
             )}
+            {peutValider && etat.exercice && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'importer' }); }} disabled={occupe || lecture} title="Importer des écritures préparées dans le modèle Excel (en brouillard, tout ou rien)" style={{ ...bouton('#eef2ff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>📤 Importer (Excel)</button>}
+            {peutValider && etat.exercice && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'importer-balance' }); }} disabled={occupe || lecture} title="Importer la balance d'ouverture d'un dossier repris d'un autre logiciel (une écriture d'à-nouveaux, en brouillard)" style={{ ...bouton('#fff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>📤 Balance d'ouverture</button>}
           </div>
 
           <div style={cadre}>
@@ -526,6 +547,38 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
           {fenetre?.type === 'creer' && <FenetreEcriture etat={etat} role={role} onClose={() => setFenetre(null)} onEnregistre={(r) => appliquer(r.nb, `Écriture ${r.ecriture.numeroProvisoire} enregistrée en brouillard (${fmtMontant(r.ecriture.total)} D).`, r.ecriture)} onRefus={refus} />}
           {fenetre?.type === 'modifier' && <FenetreEcriture etat={etat} ecriture={fenetre.ecriture} role={role} onClose={() => setFenetre(null)} onEnregistre={(r) => appliquer(r.nb, `Écriture ${r.ecriture.numeroProvisoire} modifiée (${fmtMontant(r.ecriture.total)} D).`, r.ecriture)} onRefus={refus} />}
           {fenetre?.type === 'contrepasser' && <FenetreContrepassation etat={etat} ecriture={fenetre.ecriture} role={role} onClose={() => setFenetre(null)} onEnregistre={appliquerContrepassation} onRefus={refus} />}
+          {fenetre?.type === 'importer' && (
+            <FenetreImport titre="Importer des écritures (Excel)" sousTitre={`${etat.dossier.nom} · en brouillard, tout ou rien`} role={role} onClose={() => setFenetre(null)} onRefus={refus}
+              aide={(
+                <ul style={listeAide}>
+                  <li>Une rangée par ligne d'écriture ; les rangées d'une même écriture se suivent et portent le même repère dans la colonne « Écriture » (1, 2, 3…).</li>
+                  <li>Journal (code), date (JJ/MM/AAAA), pièce et libellé sur la première rangée de chaque écriture.</li>
+                  <li>Compte par son numéro, tiers par son code (obligatoire sur un compte collectif), code de taxe par son code, un débit OU un crédit par rangée, échéance facultative.</li>
+                  <li>Mêmes règles que la saisie (partie double, période ouverte, comptes imputables) ; les écritures naissent en brouillard avec leur numéro provisoire. 2 000 rangées au plus.</li>
+                </ul>
+              )}
+              telechargerModele={() => telechargerModeleEcritures(etat.dossier.id)}
+              importer={async (f) => {
+                const r = await importerEcritures(etat.dossier.id, f);
+                apresImport(r.nb, `${pluriel(r.importees, 'écriture importée', 'écritures importées')} en brouillard (${r.premiere}${r.importees > 1 ? ` à ${r.derniere}` : ''} ; ${Object.entries(r.journaux).map(([code, n]) => `${code} : ${n}`).join(', ')}). Relisez-les, puis validez-les.`);
+              }} />
+          )}
+          {fenetre?.type === 'importer-balance' && (
+            <FenetreImport titre="Importer une balance d'ouverture (Excel)" sousTitre={`${etat.dossier.nom} · une écriture d'à-nouveaux au ${fmtJour(etat.exercice?.debut)}, en brouillard`} role={role} onClose={() => setFenetre(null)} onRefus={refus}
+              aide={(
+                <ul style={listeAide}>
+                  <li>Pour un dossier repris d'un autre logiciel : une rangée par compte (et par tiers sur un compte collectif : fournisseurs, clients), solde au débit OU au crédit, en dinars.</li>
+                  <li>L'import crée UNE écriture d'à-nouveaux dans le journal AN, datée du {fmtJour(etat.exercice?.debut)}, pièce AN-{(etat.exercice?.debut || '').slice(0, 4)}, en brouillard : relisez-la, puis validez-la.</li>
+                  <li>Le total des débits doit égaler le total des crédits ; un exercice qui a déjà des à-nouveaux refuse l'import.</li>
+                </ul>
+              )}
+              telechargerModele={() => telechargerModeleBalanceOuverture(etat.dossier.id)}
+              importer={async (f) => {
+                const r = await importerBalanceOuverture(etat.dossier.id, f);
+                setDetails((m) => { const n = new Map(m); n.set(r.ecriture.id, r.ecriture); return n; });
+                apresImport(r.nb, `Balance d'ouverture importée : écriture ${r.ecriture.numeroProvisoire} (journal ${r.ecriture.journal.code}, ${pluriel(r.lignes, 'ligne', 'lignes')}, ${fmtMontant(r.total)} D) en brouillard au ${fmtJour(r.ecriture.date)}. Relisez-la, puis validez-la.`);
+              }} />
+          )}
         </>
       )}
     </div>
@@ -940,6 +993,7 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
 }
 
 const grille: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))', gap: 12, marginBottom: 14 };
+const listeAide: React.CSSProperties = { margin: 0, paddingLeft: 18, display: 'grid', gap: 4 };
 const carteLigne: React.CSSProperties = { background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px' };
 const cadre: React.CSSProperties = { background: '#fff', borderRadius: 16, border: '1px solid #e5e7eb', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' };
 const enTeteCadre: React.CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 18px', background: 'linear-gradient(135deg,#f8faff,#eef2ff)', flexWrap: 'wrap' };

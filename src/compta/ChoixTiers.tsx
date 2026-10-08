@@ -6,9 +6,11 @@ import { inp, lbl, pastille, petit } from './styles';
 // LabFlow Compta, étape S6a : choix d'un tiers sur une ligne d'écriture passée sur un compte collectif (fournisseurs ou
 // clients). Un dossier peut compter des centaines de tiers : une recherche (début du code ou mot du nom) remplace la
 // liste déroulante — les 30 premiers résultats, le tiers choisi affiché au-dessus (même modèle que ChoixCompte).
-// `tiers` : les tiers proposés (actifs, du type attendu par le compte) ; `valeur` : identifiant choisi ou null.
-export function ChoixTiers({ id, libelle, tiers, valeur, onChange, disabled = false, aide }: {
-  id: string; libelle: string; tiers: TiersCourt[]; valeur: number | null; onChange: (t: TiersCourt | null) => void; disabled?: boolean; aide?: string;
+// `tiers` : les tiers proposés (actifs, du type attendu par le compte) ; `valeur` : identifiant choisi ou null ; S6c :
+// `facultatif` (grand livre : « Aucun tiers » plutôt que « Tiers à choisir », bouton « Aucun » pour retirer) et `vide` (texte
+// d'une liste vide, à la place du conseil de la saisie).
+export function ChoixTiers({ id, libelle, tiers, valeur, onChange, disabled = false, aide, facultatif = false, vide }: {
+  id: string; libelle: string; tiers: TiersCourt[]; valeur: number | null; onChange: (t: TiersCourt | null) => void; disabled?: boolean; aide?: string; facultatif?: boolean; vide?: string;
 }) {
   const [q, setQ] = useState('');
   const [ouvert, setOuvert] = useState(false);
@@ -34,8 +36,8 @@ export function ChoixTiers({ id, libelle, tiers, valeur, onChange, disabled = fa
             <span style={{ color: '#0f172a', fontWeight: 600, overflowWrap: 'anywhere' }}>{choisi.nom}</span>
             {choisi.retenue && <span style={pastille('#eef2ff', '#3730a3')} title="Retenue par défaut de ce tiers">{choisi.retenue.code}</span>}
           </>
-        ) : <span style={{ color: '#b45309', fontWeight: 600 }}>Tiers à choisir (compte collectif)</span>}
-        {choisi && !disabled && <button type="button" onClick={() => choisir(null)} aria-label={`${libelle} : changer de tiers`} style={petit('#fff', '#475569', '#cbd5e1')}>Changer</button>}
+        ) : facultatif ? <span style={{ color: '#64748b' }}>Aucun tiers</span> : <span style={{ color: '#b45309', fontWeight: 600 }}>Tiers à choisir (compte collectif)</span>}
+        {choisi && !disabled && <button type="button" onClick={() => choisir(null)} aria-label={facultatif ? `${libelle} : aucun tiers` : `${libelle} : changer de tiers`} style={petit('#fff', '#475569', '#cbd5e1')}>{facultatif ? 'Aucun' : 'Changer'}</button>}
       </div>
       {champVisible && (
         <input id={id} type="search" value={q} onChange={(e) => { setQ(e.target.value); setOuvert(true); }} onFocus={() => setOuvert(true)} disabled={disabled} autoComplete="off"
@@ -46,7 +48,7 @@ export function ChoixTiers({ id, libelle, tiers, valeur, onChange, disabled = fa
       )}
       {ouvert && !disabled && (
         <div id={`${id}-liste`} role="listbox" aria-label={`Tiers proposés pour ${libelle}`} style={{ marginTop: 4, border: '1px solid #e2e8f0', borderRadius: 8, maxHeight: 200, overflowY: 'auto', background: '#fff' }}>
-          {resultats.length === 0 && <div style={{ padding: '8px 10px', fontSize: '0.8rem', color: '#64748b' }}>{tiers.length ? 'Aucun tiers ne correspond.' : 'Aucun tiers actif de ce type : créez-le sur la page Tiers.'}</div>}
+          {resultats.length === 0 && <div style={{ padding: '8px 10px', fontSize: '0.8rem', color: '#64748b' }}>{tiers.length ? 'Aucun tiers ne correspond.' : (vide || 'Aucun tiers actif de ce type : créez-le sur la page Tiers.')}</div>}
           {resultats.map((x) => (
             <button key={x.id} type="button" role="option" aria-selected={x.id === valeur} onClick={() => choisir(x)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', textAlign: 'left', padding: '6px 10px', border: 'none', borderBottom: '1px solid #f1f5f9', background: x.id === valeur ? '#eef2ff' : '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.82rem' }}>

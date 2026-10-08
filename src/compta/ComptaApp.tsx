@@ -40,6 +40,8 @@ const ComptaTiers = lazy(() => import('./pages/ComptaTiers'));
 const ComptaEcritures = lazy(() => import('./pages/ComptaEcritures'));
 // S6b : les périodes d'un dossier (valider tout, clore, rouvrir, journal général PDF, centralisation).
 const ComptaPeriodes = lazy(() => import('./pages/ComptaPeriodes'));
+// S6c : les livres d'un dossier (grand livre, balance, livre-journal, exports Excel).
+const ComptaLivres = lazy(() => import('./pages/ComptaLivres'));
 // Étape S4a : les dossiers du cabinet (liste du titulaire ; la fiche d'un dossier pour toute personne à qui il est ouvert,
 // vérifié par le serveur)
 const ComptaDossiers = lazy(() => import('./pages/ComptaDossiers'));
@@ -104,6 +106,7 @@ export default function ComptaApp() {
               <Route path="/dossiers/:dossierId/tiers" element={<ComptaTiers />} />
               <Route path="/dossiers/:dossierId/ecritures" element={<ComptaEcritures />} />
               <Route path="/dossiers/:dossierId/periodes" element={<ComptaPeriodes />} />
+              <Route path="/dossiers/:dossierId/livres" element={<ComptaLivres />} />
               <Route path="/cabinets/:espaceId" element={<ComptaCabinetMembre />} />
               <Route path="/ma-comptabilite" element={<ReserveClient><ComptaMaComptabilite /></ReserveClient>} />
               <Route path="/confiee/:espaceId" element={<ComptaConfiee />} />
