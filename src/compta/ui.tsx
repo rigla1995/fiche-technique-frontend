@@ -43,7 +43,7 @@ export function ChoixNiveau({ id, valeur, onChange }: { id: string; valeur: Nive
           </button>
         ))}
       </div>
-      <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 6 }}>Sur les dossiers : Complet crée et modifie, Saisie et Consultation consultent ; la saisie des écritures viendra.</div>
+      <div style={{ fontSize: '0.72rem', color: '#6b7280', marginTop: 6 }}>Sur les dossiers : Complet configure et saisit ; Saisie saisit les écritures (en brouillard) et les tiers ; Consultation consulte.</div>
     </div>
   );
 }

@@ -21,8 +21,9 @@ export interface Periode { debut: string; fin: string; etat: 'ouverte' | 'close'
 export type EtatDossier = 'actif' | 'archive';
 export type EtatAbonnement = 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
 // S5a : `configurer` (plan de comptes) = titulaire ou gérant de niveau Complet (réponse 6 du client du 07/10) ; S5c :
-// `tiers` (créer et modifier des tiers) = Complet ou Saisie (réponse 4 du 08/10).
-export interface Droits { creer: boolean; modifier: boolean; configurer: boolean; tiers: boolean; archiver: boolean; supprimer: boolean }
+// `tiers` (créer et modifier des tiers) = Complet ou Saisie (réponse 4 du 08/10) ; S6a : `saisir` (écritures en brouillard)
+// = Complet ou Saisie aussi.
+export interface Droits { creer: boolean; modifier: boolean; configurer: boolean; tiers: boolean; saisir: boolean; archiver: boolean; supprimer: boolean }
 export interface EspaceDossiers { id: number; nom: string; type: 'cabinet' | 'client_labflow'; role: 'titulaire' | 'gerant'; niveau: string }
 
 export interface LigneDossier {
@@ -67,6 +68,8 @@ export interface FicheDossier {
   journaux: { nbActifs: number; nbTotal: number };
   taxes: { nbActifs: number; nbTotal: number };
   tiers: { fournisseurs: { nbActifs: number; nbTotal: number }; clients: { nbActifs: number; nbTotal: number } };
+  // S6a : la tenue (carte « Tenue ») — écritures en brouillard et validées ; `mouvemente` devient vrai dès la première.
+  ecritures: { nbBrouillard: number; nbValidees: number };
   avertissements?: string[];
   // S4b : « Reprendre l'identité de LabFlow » — nombre de champs repris (0 = identique).
   reprise?: number;

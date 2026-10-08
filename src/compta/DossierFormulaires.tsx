@@ -10,9 +10,10 @@ import { inp, lbl } from './styles';
 // confirmation (700). `onSubmit` : enregistrement (formulaire, sans validation native : les contrôles sont ceux des
 // formulaires) ; Échap ou ✕ ferment (pas pendant l'envoi) ; `inactif` : enregistrement fermé sans changer le libellé
 // (lecture de la patente en cours). Le cadre reçoit le clavier à l'ouverture : Échap marche sans cliquer dedans.
-export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, libelleEnvoi = '✓ Enregistrer', children, large = false, inactif = false }: {
+// S6a : `largeur` (pixels) pour une fenêtre plus large que `large` (grille des lignes d'une écriture).
+export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, libelleEnvoi = '✓ Enregistrer', children, large = false, inactif = false, largeur }: {
   titre: string; sousTitre?: string; onClose: () => void; onSubmit: () => void; envoi: boolean; erreur: string | null; libelleEnvoi?: string;
-  children: React.ReactNode; large?: boolean; inactif?: boolean;
+  children: React.ReactNode; large?: boolean; inactif?: boolean; largeur?: number;
 }) {
   const cadre = useRef<HTMLDivElement>(null);
   useEffect(() => { cadre.current?.focus(); }, []);
@@ -21,7 +22,7 @@ export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, lib
       style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, outline: 'none' }}
       onKeyDown={(e) => { if (e.key === 'Escape' && !envoi) onClose(); }}>
       <form noValidate onSubmit={(e) => { e.preventDefault(); if (!envoi && !inactif) onSubmit(); }}
-        style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: large ? 640 : 560, maxHeight: '92vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.22)' }}>
+        style={{ background: '#fff', borderRadius: 20, width: '100%', maxWidth: largeur ?? (large ? 640 : 560), maxHeight: '92vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 32px 80px rgba(0,0,0,0.22)' }}>
         <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em' }}>{titre}</div>

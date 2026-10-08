@@ -6,7 +6,8 @@ import { lirePageDossiers } from './dossiers';
 // LabFlow, « Ma comptabilité », « Comptabilité de … », demande d'ajout). Vocabulaire comptable fixe.
 
 export type Niveau = 'consultation' | 'saisie' | 'complet';
-// Niveaux validés par le client le 07/10 ; ils comptent sur les dossiers depuis S4a (Complet crée et modifie) ; la saisie viendra.
+// Niveaux validés par le client le 07/10 ; ils comptent sur les dossiers depuis S4a (Complet crée et modifie), sur les tiers
+// depuis S5c et sur les écritures depuis S6a (Saisie saisit en brouillard).
 export const NIVEAUX: { valeur: Niveau; libelle: string; aide: string }[] = [
   { valeur: 'consultation', libelle: 'Consultation', aide: 'tout lire, sans rien écrire' },
   { valeur: 'saisie', libelle: 'Saisie', aide: 'saisir les pièces et les écritures, sans valider, clôturer ni configurer' },
