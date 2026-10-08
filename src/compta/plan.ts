@@ -1,4 +1,5 @@
 import api from '../api/client';
+import { telechargerClasseur, televerserClasseur } from './classeurs';
 import type { Droits, EspaceDossiers, EtatAbonnement, EtatDossier } from './dossiers';
 
 // LabFlow Compta, étape S5a « Le paquet Tunisie et le plan de comptes » (labflow-reprise/achats-compta/PLAN-S5.md) :
@@ -75,18 +76,12 @@ export const correspond = (c: Compte, q: string, libelleNormalise?: string): boo
   return (libelleNormalise ?? normaliser(c.libelle)).includes(normaliser(t));
 };
 
-// Téléchargement du plan (classeur à la charte), nom du fichier lu dans la réponse.
-export const telechargerPlan = async (dossierId: number, nomDossier: string) => {
-  const res = await api.get(`/api/compta/dossiers/${dossierId}/plan/export`, { responseType: 'blob' });
-  const cd = (res.headers['content-disposition'] as string | undefined) || '';
-  const m = cd.match(/filename="?([^"]+)"?/);
-  const nom = m ? m[1] : `plan-de-comptes-${nomDossier.replace(/[^\w-]+/g, '_')}.xlsx`;
-  const url = window.URL.createObjectURL(new Blob([res.data as BlobPart], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
-  const a = document.createElement('a');
-  a.href = url;
-  a.setAttribute('download', nom);
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  window.URL.revokeObjectURL(url);
-};
+// Téléchargement du plan (classeur à la charte), nom du fichier lu dans la réponse (classeurs.ts depuis S5c).
+export const telechargerPlan = (dossierId: number, nomDossier: string) => telechargerClasseur(`/api/compta/dossiers/${dossierId}/plan/export`, `plan-de-comptes-${nomDossier.replace(/[^\w-]+/g, '_')}.xlsx`);
+
+// S5c : import Excel du plan d'un autre logiciel, en TOUT-OU-RIEN (SPEC-SOCLE D18) — modèle téléchargeable (Numéro,
+// Libellé, Nature facultative), téléversement ; le serveur renomme les numéros connus, ajoute les inconnus sous leur
+// parent et rend le plan complet avec le compte rendu de l'import.
+export interface ImportationPlan { fichier: string; nbLignes: number; renommes: number; ajoutes: number; inchanges: number }
+export const telechargerModelePlan = (dossierId: number) => telechargerClasseur(`/api/compta/dossiers/${dossierId}/plan/modele-import`, `modele-plan-de-comptes-${dossierId}.xlsx`);
+export const importerPlan = (dossierId: number, fichier: File) => televerserClasseur<PlanReponse & { importation: ImportationPlan }>(`/api/compta/dossiers/${dossierId}/plan/import`, fichier);
