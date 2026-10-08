@@ -27,7 +27,7 @@ type Role = 'titulaire' | 'gerant';
 type Refus = (err: unknown) => boolean;
 
 // Une ligne de la carte « Configuration » : libellé, compte rendu, bouton « Ouvrir » vers la page (S5a plan de comptes ;
-// S5b journaux et taxes).
+// S5b journaux et taxes ; S6a écritures, carte « Tenue »).
 function LigneConfiguration({ libelle, valeur, lien, icone }: { libelle: string; valeur: string; lien: string; icone: string }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>
@@ -36,6 +36,16 @@ function LigneConfiguration({ libelle, valeur, lien, icone }: { libelle: string;
         <span style={{ color: '#0f172a', fontWeight: 600, textAlign: 'right', overflowWrap: 'anywhere' }}>{valeur}</span>
         <Link to={lien} style={{ ...petit('#eef2ff', '#4338ca', '#c7d2fe'), textDecoration: 'none' }}>{icone} Ouvrir</Link>
       </span>
+    </div>
+  );
+}
+
+// Une ligne de la carte « Tenue » dont la page arrive à une étape suivante (PLAN-S6 §2 : périodes, grand livre, balance).
+function LigneAVenir({ libelle, quand }: { libelle: string; quand: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>
+      <span style={{ color: '#94a3b8' }}>{libelle}</span>
+      <span style={pastille('#f1f5f9', '#64748b')}>{quand}</span>
     </div>
   );
 }
@@ -272,7 +282,8 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                       ))}
                     </div>
                     <p style={{ margin: '10px 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
-                      {fiche.exercice.periodes.length} période{fiche.exercice.periodes.length > 1 ? 's' : ''} mensuelle{fiche.exercice.periodes.length > 1 ? 's' : ''}, toutes ouvertes ; la clôture arrivera avec la saisie.
+                      {fiche.exercice.periodes.length} période{fiche.exercice.periodes.length > 1 ? 's' : ''} mensuelle{fiche.exercice.periodes.length > 1 ? 's' : ''}, toutes ouvertes ; la clôture des périodes arrivera avec la validation des écritures (étape suivante).
+                      {fiche.mouvemente ? ' Le dossier a des écritures : les dates de l\'exercice ne changent plus.' : ''}
                     </p>
                     {modifiable && !fiche.mouvemente && <button type="button" onClick={() => { setInfo(''); setFenetre('exercice'); }} style={{ ...petit('#f0f9ff', '#0369a1', '#bae6fd'), marginTop: 12 }}>✏️ Modifier les dates</button>}
                   </>
@@ -289,6 +300,15 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   valeur={`${fiche.taxes.nbActifs} code${fiche.taxes.nbActifs > 1 ? 's' : ''} actif${fiche.taxes.nbActifs > 1 ? 's' : ''}${fiche.taxes.nbTotal > fiche.taxes.nbActifs ? ` · ${fiche.taxes.nbTotal - fiche.taxes.nbActifs} désactivé${fiche.taxes.nbTotal - fiche.taxes.nbActifs > 1 ? 's' : ''}` : ''}`} />
                 <LigneConfiguration libelle="Tiers" lien={`/dossiers/${fiche.id}/tiers`} icone="📇"
                   valeur={`${fiche.tiers.fournisseurs.nbActifs} fournisseur${fiche.tiers.fournisseurs.nbActifs > 1 ? 's' : ''} · ${fiche.tiers.clients.nbActifs} client${fiche.tiers.clients.nbActifs > 1 ? 's' : ''}${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal > fiche.tiers.fournisseurs.nbActifs + fiche.tiers.clients.nbActifs ? ` · ${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs} désactivé${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs > 1 ? 's' : ''}` : ''}`} />
+              </Carte>
+              {/* S6a : la tenue du dossier — les écritures en brouillard (PLAN-S6 §2) ; validation, périodes, grand livre et
+                  balance aux étapes suivantes. */}
+              <Carte titre="✍️ Tenue" sousTitre="La saisie des écritures ; validation, périodes et livres aux étapes suivantes">
+                <LigneConfiguration libelle="Écritures" lien={`/dossiers/${fiche.id}/ecritures`} icone="✍️"
+                  valeur={`${fiche.ecritures.nbBrouillard} en brouillard · ${fiche.ecritures.nbValidees} validée${fiche.ecritures.nbValidees > 1 ? 's' : ''}`} />
+                <LigneAVenir libelle="Périodes" quand="Étape suivante" />
+                <LigneAVenir libelle="Grand livre" quand="Étape des livres" />
+                <LigneAVenir libelle="Balance" quand="Étape des livres" />
               </Carte>
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
                 {fiche.acces.map((a, i) => (
