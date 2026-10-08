@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import BoutonAide from '../BoutonAide';
@@ -8,9 +8,9 @@ import { ChoixTiers } from '../ChoixTiers';
 import { Modale } from '../DossierFormulaires';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import {
-  LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, controlerDate, controlerMontant, fmtJour, fmtMontant, libellePeriode,
-  ligneEnvoyee, lireEcriture, lireEcritures, periodeDe, texteTaxe, totaux, typeTiersDe, versMillimes,
-  type AideReponse, type Ecriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
+  LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, contrepasserEcriture, controlerDate, controlerMontant, fmtJour, fmtMontant, libellePeriode,
+  ligneEnvoyee, lireEcriture, lireEcritures, periodeDe, periodeOuverteSuivante, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
+  type AideReponse, type ContrepassationReponse, type Ecriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
 } from '../ecritures';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
 
@@ -23,7 +23,11 @@ import { bouton, inp, lbl, pastille, petit } from '../styles';
 // la retenue » calculés par le serveur, modifiables) ; modifier et supprimer une écriture en brouillard (titulaire,
 // Complet ou Saisie). Une écriture rend l'écriture touchée et les comptes rendus ; la fenêtre chargée est relue d'un coup ;
 // un refus sur un état périmé (404, 409 hors refus corrigeables) ferme la fenêtre et relit (convention de S3c).
-type Fenetre = { type: 'creer' } | { type: 'modifier'; ecriture: Ecriture } | null;
+// S6b (PLAN-S6 §2 « S6b » ; réponses 2, 4 et 5 du 08/10) : « Valider » une écriture (définitif, numéro définitif continu par
+// journal et par exercice, auteur et heure), « Valider la période » (toutes celles du mois choisi), « Contre-passer » une
+// écriture validée (écriture inverse, liée des deux côtés), vraie date d'une opération d'une période close (enregistrée au
+// premier jour de la période ouverte suivante, NC 01 §61) ; la page s'ouvre sur une période donnée (?periode=…).
+type Fenetre = { type: 'creer' } | { type: 'modifier'; ecriture: Ecriture } | { type: 'contrepasser'; ecriture: Ecriture } | null;
 type Role = 'titulaire' | 'gerant';
 type Refus = (err: unknown) => boolean;
 // Refus que la personne corrige dans la fenêtre (le serveur dit quoi) ; les autres 409 (écriture validée, dossier archivé…) ferment la fenêtre.
@@ -50,13 +54,16 @@ export default function ComptaEcrituresPage() {
 
 function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const { confirm } = useConfirm();
+  // S6b : la page Périodes ouvre les écritures d'une période (?periode=…) ; le mois en cours n'est alors pas posé.
+  const [parametres] = useSearchParams();
+  const periodeInitiale = Number(parametres.get('periode')) || null;
   // `lu` : la dernière réponse (en-tête, droits, choix de la saisie, total), les écritures accumulées depuis la page 1, et
   // la clé (journal, période, état, recherche) qu'elle sert — une relecture en route se voit à la différence avec la clé.
   const [lu, setLu] = useState<{ cle: string; etat: EcrituresReponse; lignes: Ecriture[] } | null>(null);
   const [etatPage, setEtatPage] = useState<'chargement' | 'pret' | 'introuvable'>('chargement');
   const [erreurLecture, setErreurLecture] = useState(false);
   const [journalId, setJournalId] = useState<number | null>(null);
-  const [periodeId, setPeriodeId] = useState<number | null>(null);
+  const [periodeId, setPeriodeId] = useState<number | null>(periodeInitiale);
   const [etatFiltre, setEtatFiltre] = useState<EtatEcriture | ''>('');
   const [recherche, setRecherche] = useState('');
   const [q, setQ] = useState('');
@@ -77,7 +84,10 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   useEffect(() => { deplieesRef.current = depliees; }, [depliees]);
   useEffect(() => { detailsRef.current = details; }, [details]);
   // Le mois en cours est posé une fois, à la première réponse (il faut connaître les périodes de l'exercice).
-  const defautPose = useRef(false);
+  const defautPose = useRef(!!periodeInitiale);
+  // Une période demandée dans l'adresse qui n'est pas dans l'exercice ouvert (autre dossier, faute de frappe) : jugée une
+  // fois à la première réponse, puis toutes les périodes (relecture de S6b).
+  const periodeInitialeJugee = useRef(false);
   const tour = useRef(0);
   const cle = `${journalId ?? ''}\u0000${periodeId ?? ''}\u0000${etatFiltre}\u0000${q}`;
 
@@ -100,6 +110,13 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
           const courante = r.exercice ? periodeDe(r.exercice.periodes, aujourdhui()) : null;
           // Le mois en cours existe dans l'exercice : la page le choisit et relit (une seule fois).
           if (courante) { setPeriodeId(courante.id); return; }
+        } else if (periodeInitiale && !periodeInitialeJugee.current) {
+          periodeInitialeJugee.current = true;
+          if (!r.exercice || !r.exercice.periodes.some((p) => p.id === periodeInitiale)) {
+            setPeriodeId(null);
+            setInfo('La période demandée n\'est pas dans l\'exercice ouvert de ce dossier : toutes les périodes sont affichées.');
+            return;
+          }
         }
         setLu((prev) => {
           const reprise = page === 1 || !prev || prev.cle !== cle;
@@ -120,7 +137,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
         if (statutDe(err) === 404) setEtatPage('introuvable'); else setErreurLecture(true);
       })
       .finally(() => { if (moi === tour.current) { setPlus(false); setEnRelecture(false); } });
-  }, [dossierId, journalId, periodeId, etatFiltre, q, cle, lireDetail]);
+  }, [dossierId, journalId, periodeId, etatFiltre, q, cle, lireDetail, periodeInitiale]);
   useEffect(() => { charger(1); return () => { tour.current += 1; }; }, [charger]);
 
   const etat = lu?.etat ?? null;
@@ -131,6 +148,8 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const ouvert = !!etat && etat.etatAbonnement === 'actif';
   const dossierActif = !!etat && etat.dossier.etat === 'actif';
   const peutSaisir = !!etat && etat.droits.saisir && dossierActif && ouvert;
+  // S6b : valider, valider la période et contre-passer = titulaire ou Complet (droit « configurer »).
+  const peutValider = !!etat && etat.droits.configurer && dossierActif && ouvert;
 
   const relireFenetre = useCallback(() => {
     const n = lu ? lu.lignes.length : 0;
@@ -166,6 +185,98 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     charger(1);
     return true;
   };
+  // S6b : une écriture validée reste à sa place dans la liste (état et numéro définitif mis à jour, lignes remplacées) ;
+  // les comptes rendus (dossier, période filtrée) suivent la réponse. Les filtres ne bougent pas ; sous le filtre « état »
+  // (brouillard), l'écriture sort de la vue : la fenêtre chargée est relue (sinon « Afficher plus » sauterait une écriture
+  // et le total compterait un de trop — relecture de S6b).
+  const sansLignes = (e: Ecriture): Ecriture => { const copie = { ...e }; delete copie.lignes; return copie; };
+  const appliquerValidation = (r: EcritureReponse) => {
+    setLu((prev) => (prev ? {
+      ...prev,
+      etat: { ...prev.etat, nb: r.nb, periode: prev.etat.periode && prev.etat.periode.id === periodeId && periodeDe(prev.etat.exercice?.periodes ?? [], r.ecriture.date)?.id === periodeId ? { ...prev.etat.periode, nbBrouillard: Math.max(0, prev.etat.periode.nbBrouillard - 1), nbValidees: prev.etat.periode.nbValidees + 1 } : prev.etat.periode },
+      lignes: prev.lignes.map((x) => (x.id === r.ecriture.id ? sansLignes(r.ecriture) : x)),
+    } : prev));
+    setDetails((m) => { const n = new Map(m); n.set(r.ecriture.id, r.ecriture); return n; });
+    setErreur('');
+    setInfo(`Écriture ${r.ecriture.numero} validée (définitif).`);
+    if (etatFiltre) relireFenetre();
+  };
+  const valider = async (e: Ecriture) => {
+    if (!etat || occupeRef.current) return;
+    const ok = await confirm({
+      title: `Valider l'écriture ${e.numeroProvisoire} ?`,
+      message: `« ${e.libelle} » du ${fmtJour(e.date)} (${e.journal.code}, pièce ${e.reference}, ${fmtMontant(e.total)} D) recevra son numéro définitif, continu dans le journal ${e.journal.code} pour l'exercice. C'est définitif : elle ne se modifiera plus et ne se supprimera plus ; une erreur se corrigera par contre-passation.`,
+      details: ['Pour une numérotation dans l\'ordre des dates, validez plutôt toute la période : filtrez la période puis « Valider la période », ou page Périodes, « Valider tout ».'],
+      tone: 'primary',
+      confirmLabel: 'Valider',
+      icon: '🔏',
+    });
+    if (!ok || occupeRef.current) return;
+    occupeRef.current = true;
+    setOccupe(true);
+    try {
+      appliquerValidation(await validerEcriture(etat.dossier.id, e.id));
+    } catch (err) {
+      if (!refus(err)) setErreur(messageDossier(err, 'Validation impossible, réessayez.', role));
+    } finally {
+      occupeRef.current = false;
+      setOccupe(false);
+    }
+  };
+  // Toutes les écritures en brouillard de la période filtrée, dans l'ordre des dates : la fenêtre chargée est relue (les
+  // lignes dépliées se relisent d'elles-mêmes : leur date de modification change).
+  const validerLaPeriode = async () => {
+    if (!etat || !etat.periode || occupeRef.current) return;
+    const p = etat.periode;
+    const ok = await confirm({
+      title: `Valider les écritures de ${libellePeriode(p)} ?`,
+      message: `${pluriel(p.nbBrouillard, 'écriture en brouillard', 'écritures en brouillard')}${journalId ? ', tous journaux confondus (le filtre Journal ne limite pas la validation),' : ''} vont être validées dans l'ordre des dates : chacune reçoit son numéro définitif (continu par journal et par exercice). C'est définitif : une écriture validée ne se modifie plus et ne se supprime plus ; elle se contre-passe.`,
+      tone: 'primary',
+      confirmLabel: 'Valider la période',
+      icon: '🔏',
+    });
+    if (!ok || occupeRef.current) return;
+    occupeRef.current = true;
+    setOccupe(true);
+    try {
+      const r = await validerPeriode(etat.dossier.id, p.id);
+      setErreur('');
+      setInfo(`${pluriel(r.validees, 'écriture validée', 'écritures validées')} pour ${libellePeriode(p)} (définitif).`);
+      relireFenetre();
+    } catch (err) {
+      if (!refus(err)) setErreur(messageDossier(err, 'Validation impossible, réessayez.', role));
+    } finally {
+      occupeRef.current = false;
+      setOccupe(false);
+    }
+  };
+  // La contre-passation : l'écriture inverse (nouvelle) se montre comme une écriture enregistrée ; l'origine est relue
+  // (son lien « annulée par »).
+  const appliquerContrepassation = (r: ContrepassationReponse) => {
+    setLu((prev) => (prev ? { ...prev, lignes: prev.lignes.map((x) => (x.id === r.origine.id ? sansLignes(r.origine) : x)) } : prev));
+    setDetails((m) => { const n = new Map(m); n.set(r.origine.id, r.origine); return n; });
+    appliquer(r.nb, `Contre-passation ${r.ecriture.numero} enregistrée et validée (${fmtMontant(r.ecriture.total)} D) : elle annule ${r.origine.numero}.`, r.ecriture);
+  };
+  // Contre-passer : l'écriture validée est relue à l'instant (ses lignes, son lien).
+  const contrepasser = async (e: Ecriture) => {
+    if (!etat || occupeRef.current) return;
+    occupeRef.current = true;
+    setOccupe(true);
+    setInfo('');
+    try {
+      const d = await lireEcriture(etat.dossier.id, e.id);
+      setDetails((m) => { const n = new Map(m); n.set(e.id, d); return n; });
+      setLu((prev) => (prev ? { ...prev, lignes: prev.lignes.map((x) => (x.id === d.id ? sansLignes(d) : x)) } : prev));
+      // Contre-passée entre-temps par quelqu'un d'autre : rien à ouvrir, la ligne relue le montre.
+      if (d.contrepasseePar) { setErreur(`L'écriture ${d.numero} est déjà contre-passée par ${d.contrepasseePar.numero}.`); return; }
+      setFenetre({ type: 'contrepasser', ecriture: d });
+    } catch (err) {
+      if (!refus(err)) setErreur(messageDossier(err, 'Écriture impossible à relire, réessayez.', role));
+    } finally {
+      occupeRef.current = false;
+      setOccupe(false);
+    }
+  };
   // Déplier une écriture : ses lignes sont lues une fois.
   const basculer = (e: Ecriture) => {
     const ouverte = depliees.has(e.id);
@@ -178,7 +289,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     const ok = await confirm({
       title: `Supprimer l'écriture ${e.numeroProvisoire} ?`,
       message: `« ${e.libelle} » du ${fmtJour(e.date)} (${e.journal.code}, pièce ${e.reference}, ${fmtMontant(e.total)} D) sera retirée du dossier avec ses lignes. Le journal de la comptabilité en garde tout le contenu.`,
-      details: ['Une écriture validée ne se supprime jamais : elle se contre-passe (étape suivante).'],
+      details: ['Une écriture validée ne se supprime jamais : elle se contre-passe.'],
       tone: 'danger',
       confirmLabel: 'Supprimer',
     });
@@ -307,6 +418,11 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
               <input id="fe-q" type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Libellé, pièce ou montant (ex. 1190,500)" aria-label="Rechercher une écriture" style={inp} autoComplete="off" />
             </div>
             {peutSaisir && etat.exercice && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'creer' }); }} disabled={occupe || lecture} style={{ ...bouton('linear-gradient(135deg,#4338ca,#6366f1)', '#fff', 'transparent'), marginBottom: 1 }}>+ Écriture</button>}
+            {peutValider && etat.periode && etat.periode.etat === 'ouverte' && etat.periode.nbBrouillard > 0 && (
+              <button type="button" onClick={validerLaPeriode} disabled={occupe || lecture} title={`${pluriel(etat.periode.nbBrouillard, 'écriture en brouillard', 'écritures en brouillard')} dans ${libellePeriode(etat.periode)}`} style={{ ...bouton('#eef2ff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>
+                🔏 Valider la période ({etat.periode.nbBrouillard})
+              </button>
+            )}
           </div>
 
           <div style={cadre}>
@@ -314,7 +430,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
               <span role="status" aria-live="polite" style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.92rem' }}>
                 {relecture ? 'Lecture…' : pluriel(etat.total, 'écriture', 'écritures')}{q ? ' pour cette recherche' : ''}
               </span>
-              <span style={{ fontSize: '0.76rem', color: '#64748b' }}>De la plus récente à la plus ancienne · numéro provisoire en brouillard</span>
+              <span style={{ fontSize: '0.76rem', color: '#64748b' }}>De la plus récente à la plus ancienne · numéro provisoire en brouillard, définitif une fois validée</span>
             </div>
             {lignes.length === 0 && !relecture && (
               <p style={{ margin: 0, padding: '16px 18px', fontSize: '0.84rem', color: '#64748b', lineHeight: 1.6 }}>
@@ -333,10 +449,12 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                       style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 18px', width: '100%', textAlign: 'left', border: 'none', background: ouverte ? '#f8faff' : '#fff', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.84rem', flexWrap: 'wrap' }}>
                       <span style={{ color: '#94a3b8', fontSize: '0.7rem', width: 10 }}>{ouverte ? '▾' : '▸'}</span>
                       <span style={{ fontFamily: mono, fontWeight: 800, color: '#1e1b4b', minWidth: 76 }}>{e.numero || e.numeroProvisoire}</span>
-                      <span style={{ color: '#334155', minWidth: 84 }}>{fmtJour(e.date)}</span>
+                      <span style={{ color: '#334155', minWidth: 84 }} title={e.dateReelle ? `Opération du ${fmtJour(e.dateReelle)}, enregistrée au ${fmtJour(e.date)} (période close)` : undefined}>{fmtJour(e.date)}{e.dateReelle ? <span style={{ color: '#b45309', fontSize: '0.72rem' }}> (op. {fmtJour(e.dateReelle)})</span> : null}</span>
                       <span style={pastille('#eef2ff', '#3730a3')} title={e.journal.libelle}>{e.journal.code}</span>
                       <span style={{ fontFamily: mono, fontSize: '0.78rem', color: '#64748b', minWidth: 90, overflowWrap: 'anywhere' }}>{e.reference}</span>
                       <span style={{ color: '#0f172a', fontWeight: 600, flex: '1 1 200px', minWidth: 0, overflowWrap: 'anywhere' }}>{e.libelle}</span>
+                      {e.origine === 'contrepassation' && <span style={pastille('#fef2f2', '#be123c')} title={`Contre-passation : annule ${e.origineNumero || 'l\'écriture d\'origine'}`}>↩ annule {e.origineNumero}</span>}
+                      {e.contrepasseePar && <span style={pastille('#f1f5f9', '#475569')} title={`Annulée par la contre-passation ${e.contrepasseePar.numero}`}>annulée par {e.contrepasseePar.numero}</span>}
                       <span style={{ fontFamily: mono, fontWeight: 700, color: '#0f172a', minWidth: 110, textAlign: 'right' }}>{fmtMontant(e.total)}</span>
                       <span style={pastille(e.etat === 'validee' ? '#dcfce7' : '#fef3c7', e.etat === 'validee' ? '#166534' : '#92400e')}>{LIBELLES_ETAT[e.etat]}</span>
                     </button>
@@ -375,10 +493,18 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                               </tfoot>
                             </table>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8, fontSize: '0.74rem', color: '#64748b' }}>
-                              <span>Saisie par {d.creePar || '—'} le {new Date(d.creeLe).toLocaleString('fr-FR')}{d.modifieLe !== d.creeLe ? ` · modifiée le ${new Date(d.modifieLe).toLocaleString('fr-FR')}` : ''} · origine : {LIBELLES_ORIGINE[d.origine] || d.origine}</span>
+                              <span>
+                                Saisie par {d.creePar || '—'} le {new Date(d.creeLe).toLocaleString('fr-FR')}{d.modifieLe !== d.creeLe && d.modifieLe !== d.valideLe ? ` · modifiée le ${new Date(d.modifieLe).toLocaleString('fr-FR')}` : ''}
+                                {d.etat === 'validee' && d.valideLe ? <> · <strong style={{ color: '#166534' }}>validée{d.validePar ? ` par ${d.validePar}` : ''} le {new Date(d.valideLe).toLocaleString('fr-FR')}</strong></> : null}
+                                {' '}· origine : {LIBELLES_ORIGINE[d.origine] || d.origine}{d.origine === 'contrepassation' && d.origineNumero ? ` de ${d.origineNumero}` : ''}
+                                {d.dateReelle ? ` · opération du ${fmtJour(d.dateReelle)}, enregistrée au ${fmtJour(d.date)} (période close)` : ''}
+                                {d.contrepasseePar ? ` · annulée par la contre-passation ${d.contrepasseePar.numero}` : ''}
+                              </span>
                               <span style={{ flex: 1 }} />
+                              {peutValider && d.etat === 'brouillard' && <button type="button" onClick={() => valider(e)} disabled={occupe || lecture} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>🔏 Valider</button>}
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => modifier(e)} disabled={occupe || lecture} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>✏️ Modifier</button>}
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => supprimer(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>🗑 Supprimer</button>}
+                              {peutValider && !!etat.exercice && d.etat === 'validee' && !d.contrepasseePar && <button type="button" onClick={() => contrepasser(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>↩ Contre-passer</button>}
                             </div>
                           </>
                         )}
@@ -399,9 +525,96 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
 
           {fenetre?.type === 'creer' && <FenetreEcriture etat={etat} role={role} onClose={() => setFenetre(null)} onEnregistre={(r) => appliquer(r.nb, `Écriture ${r.ecriture.numeroProvisoire} enregistrée en brouillard (${fmtMontant(r.ecriture.total)} D).`, r.ecriture)} onRefus={refus} />}
           {fenetre?.type === 'modifier' && <FenetreEcriture etat={etat} ecriture={fenetre.ecriture} role={role} onClose={() => setFenetre(null)} onEnregistre={(r) => appliquer(r.nb, `Écriture ${r.ecriture.numeroProvisoire} modifiée (${fmtMontant(r.ecriture.total)} D).`, r.ecriture)} onRefus={refus} />}
+          {fenetre?.type === 'contrepasser' && <FenetreContrepassation etat={etat} ecriture={fenetre.ecriture} role={role} onClose={() => setFenetre(null)} onEnregistre={appliquerContrepassation} onRefus={refus} />}
         </>
       )}
     </div>
+  );
+}
+
+// S6b : contre-passer une écriture validée — l'écriture inverse (mêmes comptes, tiers et codes, débits et crédits échangés)
+// naît validée dans le même journal, à la date choisie (du jour par défaut, dans une période ouverte, jamais avant
+// l'origine), avec son libellé et sa pièce (ceux de l'origine par défaut). Le serveur décide ; l'aperçu montre l'inverse.
+// Date proposée : le jour (borné par la fin de l'exercice), jamais avant l'origine ; si elle tombe dans une période close,
+// le premier jour de la période ouverte suivante (relecture de S6b).
+const dateContrepassation = (ecriture: Ecriture, exercice: EcrituresReponse['exercice']) => {
+  const jour = aujourdhui();
+  let d = exercice && jour > exercice.fin ? exercice.fin : jour;
+  if (d < ecriture.date) d = ecriture.date;
+  const p = exercice ? periodeDe(exercice.periodes, d) : null;
+  if (exercice && p && p.etat === 'close') {
+    const s = periodeOuverteSuivante(exercice.periodes, p);
+    if (s) d = s.debut;
+  }
+  return d;
+};
+function FenetreContrepassation({ etat, ecriture, role, onClose, onEnregistre, onRefus }: { etat: EcrituresReponse; ecriture: Ecriture; role: Role; onClose: () => void; onEnregistre: (r: ContrepassationReponse) => void; onRefus: Refus }) {
+  const exercice = etat.exercice;
+  const [date, setDate] = useState(() => dateContrepassation(ecriture, exercice));
+  const [libelle, setLibelle] = useState(`Contre-passation de ${ecriture.numero} : ${ecriture.libelle}`.slice(0, etat.bornes.libelleMax));
+  const [reference, setReference] = useState(ecriture.reference);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const periode = exercice && /^\d{4}-\d{2}-\d{2}$/.test(date) ? periodeDe(exercice.periodes, date) : null;
+  const enregistrer = async () => {
+    if (envoi) return;
+    const ed = controlerDate(date, exercice);
+    if (ed) { setErreur(ed); return; }
+    if (date < ecriture.date) { setErreur(`La contre-passation ne peut pas précéder l'écriture d'origine (${fmtJour(ecriture.date)}).`); return; }
+    if (!libelle.trim()) { setErreur('Indiquez le libellé de la contre-passation.'); return; }
+    if (!reference.trim()) { setErreur('Indiquez la référence de la pièce.'); return; }
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      onEnregistre(await contrepasserEcriture(etat.dossier.id, ecriture.id, { date, libelle: libelle.trim(), reference: reference.trim() }));
+    } catch (err) {
+      if (refusPerime(err) && onRefus(err)) return;
+      setErreur(messageDossier(err, 'La contre-passation n\'a pas pu être enregistrée — réessayez.', role));
+      setEnvoi(false);
+    }
+  };
+  return (
+    <Modale titre={`Contre-passer l'écriture ${ecriture.numero}`} sousTitre={`${ecriture.libelle} · ${fmtJour(ecriture.date)} · ${ecriture.journal.code} · ${fmtMontant(ecriture.total)} D — l'écriture inverse sera validée aussitôt`}
+      onClose={onClose} onSubmit={enregistrer} envoi={envoi} erreur={erreur} libelleEnvoi="↩ Contre-passer" largeur={760}>
+      <div style={grille}>
+        <div>
+          <label htmlFor="fc-date" style={lbl}>Date de la contre-passation</label>
+          <input id="fc-date" type="date" value={date} min={ecriture.date} max={exercice?.fin} onChange={(e) => { setDate(e.target.value); setErreur(null); }} disabled={envoi} style={inp} />
+          <div style={{ fontSize: '0.72rem', color: periode ? (periode.etat === 'ouverte' ? '#166534' : '#b91c1c') : '#b45309', marginTop: 4 }}>
+            {periode ? `Période : ${libellePeriode(periode)}${periode.etat === 'ouverte' ? '' : ' (close : choisissez une date dans une période ouverte)'}` : exercice ? `Hors de l'exercice (${fmtJour(exercice.debut)} → ${fmtJour(exercice.fin)})` : 'Aucun exercice ouvert'}
+          </div>
+        </div>
+        <div>
+          <label htmlFor="fc-ref" style={lbl}>Référence de la pièce</label>
+          <input id="fc-ref" value={reference} onChange={(e) => { setReference(e.target.value); setErreur(null); }} disabled={envoi} maxLength={etat.bornes.referenceMax} style={{ ...inp, fontFamily: mono }} />
+        </div>
+        <div style={{ gridColumn: '1 / -1' }}>
+          <label htmlFor="fc-libelle" style={lbl}>Libellé</label>
+          <input id="fc-libelle" value={libelle} onChange={(e) => { setLibelle(e.target.value); setErreur(null); }} disabled={envoi} maxLength={etat.bornes.libelleMax} style={inp} />
+        </div>
+      </div>
+      <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Écriture inverse (aperçu)</div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+        <thead>
+          <tr style={{ color: '#64748b', textAlign: 'left' }}>
+            <th style={cellule}>Compte</th><th style={cellule}>Tiers</th><th style={{ ...cellule, textAlign: 'right' }}>Débit</th><th style={{ ...cellule, textAlign: 'right' }}>Crédit</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(ecriture.lignes || []).map((l) => (
+            <tr key={l.id} style={{ borderTop: '1px solid #e2e8f0' }}>
+              <td style={{ ...cellule, whiteSpace: 'nowrap' }}><span style={{ fontFamily: mono, fontWeight: 800, color: '#1e1b4b' }}>{l.compte.numero}</span> <span style={{ color: '#475569' }}>{l.compte.libelle}</span></td>
+              <td style={cellule}>{l.tiers ? <><span style={{ fontFamily: mono, fontWeight: 700 }}>{l.tiers.code}</span> {l.tiers.nom}</> : '—'}</td>
+              <td style={{ ...cellule, textAlign: 'right', fontFamily: mono, whiteSpace: 'nowrap' }}>{versMillimes(l.credit) ? fmtMontant(l.credit) : ''}</td>
+              <td style={{ ...cellule, textAlign: 'right', fontFamily: mono, whiteSpace: 'nowrap' }}>{versMillimes(l.debit) ? fmtMontant(l.debit) : ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p style={{ margin: '10px 0 0', fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5 }}>
+        L'écriture d'origine reste validée et porte le lien vers sa contre-passation ; l'inverse reçoit le numéro définitif suivant du journal {ecriture.journal.code}. Saisissez ensuite l'écriture correcte. Une écriture ne se contre-passe qu'une fois.
+      </p>
+    </Modale>
   );
 }
 
@@ -441,6 +654,9 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
   const dateDefaut = exercice ? (periodeDe(exercice.periodes, jour) ? jour : exercice.periodes.filter((p) => p.etat === 'ouverte').pop()?.debut || exercice.fin) : jour;
   const [journalId, setJournalId] = useState<number | null>(ecriture?.journal.id ?? journaux[0]?.id ?? null);
   const [date, setDate] = useState(ecriture?.date || dateDefaut);
+  // S6b (NC 01 §61) : la vraie date d'une opération d'une période close, enregistrée au premier jour de la période
+  // ouverte suivante ; vide le reste du temps. Les échéances se proposent d'après la vraie date quand elle existe.
+  const [dateReelle, setDateReelle] = useState(ecriture?.dateReelle || '');
   const [reference, setReference] = useState(ecriture?.reference || '');
   const [libelle, setLibelle] = useState(ecriture?.libelle || '');
   const [lignes, setLignes] = useState<LigneSaisie[]>(() => (ecriture?.lignes?.length ? ecriture.lignes.map(depuisLigne) : [ligneVide(), ligneVide()]));
@@ -470,22 +686,40 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
     const tiers = l.tiersId ? tiersParId.get(l.tiersId) : null;
     poser(l.cle, { compteId, tiersId: type && tiers && tiers.type === type ? l.tiersId : null });
   };
+  // La date de référence des échéances : la vraie date de l'opération quand elle existe, sinon la date d'enregistrement.
+  const baseEcheance = dateReelle || date;
   const changerTiers = (l: LigneSaisie, tiers: TiersCourt | null) => {
     // Échéance proposée d'après le délai de paiement du tiers (jamais imposée : le champ reste modifiable) ; le code de
     // retenue choisi pour l'ancien tiers ne suit pas.
-    poser(l.cle, { tiersId: tiers?.id ?? null, echeance: tiers && !l.echeance && /^\d{4}-\d{2}-\d{2}$/.test(date) ? ajouterJours(date, tiers.delaiPaiement) : l.echeance });
+    poser(l.cle, { tiersId: tiers?.id ?? null, echeance: tiers && !l.echeance && /^\d{4}-\d{2}-\d{2}$/.test(baseEcheance) ? ajouterJours(baseEcheance, tiers.delaiPaiement) : l.echeance });
     setRetenueId(null);
   };
-  // La date change : les échéances encore égales à la proposition (ancienne date + délai du tiers) suivent.
-  const changerDate = (nouvelle: string) => {
-    const ancienne = date;
-    setDate(nouvelle);
-    setErreur(null);
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(nouvelle) || !/^\d{4}-\d{2}-\d{2}$/.test(ancienne)) return;
+  // La date (ou la vraie date) change : les échéances encore égales à la proposition (ancienne base + délai du tiers) suivent.
+  const suivreEcheances = (ancienne: string, nouvelle: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nouvelle) || !/^\d{4}-\d{2}-\d{2}$/.test(ancienne) || ancienne === nouvelle) return;
     setLignes((ls) => ls.map((l) => {
       const tiers = l.tiersId ? tiersParId.get(l.tiersId) : null;
       return tiers && l.echeance === ajouterJours(ancienne, tiers.delaiPaiement) ? { ...l, echeance: ajouterJours(nouvelle, tiers.delaiPaiement) } : l;
     }));
+  };
+  const changerDate = (nouvelle: string) => {
+    const ancienne = baseEcheance;
+    setDate(nouvelle);
+    setErreur(null);
+    if (!dateReelle) suivreEcheances(ancienne, nouvelle);
+  };
+  const changerDateReelle = (nouvelle: string) => {
+    const ancienne = baseEcheance;
+    setDateReelle(nouvelle);
+    setErreur(null);
+    suivreEcheances(ancienne, nouvelle || date);
+  };
+  // La date choisie tombe dans une période close : l'écriture s'enregistre au premier jour de la période ouverte suivante,
+  // la vraie date gardée (NC 01 §61).
+  const reporterDate = (suivante: string) => {
+    setDateReelle(dateReelle || date);
+    setDate(suivante);
+    setErreur(null);
   };
   const retirer = (cle: number) => { setLignes((ls) => (ls.length > 2 ? ls.filter((l) => l.cle !== cle) : ls)); setErreur(null); };
   const ajouter = () => { setLignes((ls) => [...ls, ligneVide()]); setErreur(null); };
@@ -550,6 +784,7 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
     if (!journalId) { setErreur('Choisissez le journal.'); return; }
     const ed = controlerDate(date, exercice);
     if (ed) { setErreur(ed); return; }
+    if (dateReelle && (!/^\d{4}-\d{2}-\d{2}$/.test(dateReelle) || dateReelle >= date)) { setErreur('La vraie date de l\'opération doit précéder la date d\'enregistrement ; sinon, retirez-la.'); return; }
     if (!reference.trim()) { setErreur('Indiquez la référence de la pièce justificative (numéro de facture, de relevé…).'); return; }
     if (!libelle.trim()) { setErreur('Indiquez le libellé de l\'écriture.'); return; }
     if (lignes.length < 2) { setErreur('Une écriture a au moins deux lignes.'); return; }
@@ -564,13 +799,13 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
       if (d === 0n && c === 0n) { setErreur(`Ligne ${n} : indiquez le débit ou le crédit.`); return; }
       const type = typeTiersDe(comptesParId.get(l.compteId)?.nature);
       if (type && !l.tiersId) { setErreur(`Ligne ${n} : choisissez le ${type} (compte collectif ${comptesParId.get(l.compteId)?.numero}).`); return; }
-      if (l.echeance && l.echeance < date) { setErreur(`Ligne ${n} : l'échéance précède la date de l'écriture.`); return; }
+      if (l.echeance && l.echeance < baseEcheance) { setErreur(`Ligne ${n} : l'échéance précède la date de l'écriture.`); return; }
     }
     if (!equilibre) { setErreur(`Écriture déséquilibrée : débits ${fmtMontant(t.debit)} ≠ crédits ${fmtMontant(t.credit)} (écart ${fmtMontant(t.ecart < 0n ? -t.ecart : t.ecart)}). Enregistrer n'est possible qu'à écart nul.`); return; }
     setEnvoi(true);
     setErreur(null);
     try {
-      const corps = { journalId, date, reference: reference.trim(), libelle: libelle.trim(), lignes: lignes.map(ligneEnvoyee) };
+      const corps = { journalId, date, dateReelle: dateReelle || null, reference: reference.trim(), libelle: libelle.trim(), lignes: lignes.map(ligneEnvoyee) };
       const url = `/api/compta/dossiers/${etat.dossier.id}/ecritures`;
       const { data } = creation ? await api.post(url, corps) : await api.put(`${url}/${ecriture.id}`, corps);
       onEnregistre(data as EcritureReponse);
@@ -581,8 +816,9 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
     }
   };
   const periode = exercice && /^\d{4}-\d{2}-\d{2}$/.test(date) ? periodeDe(exercice.periodes, date) : null;
+  const suivante = exercice && periode && periode.etat === 'close' ? periodeOuverteSuivante(exercice.periodes, periode) : null;
   return (
-    <Modale titre={creation ? 'Saisir une écriture' : `Modifier l'écriture ${ecriture.numeroProvisoire}`} sousTitre={creation ? 'En brouillard : modifiable et supprimable jusqu\'à sa validation (étape suivante)' : `${ecriture.libelle} · ${fmtMontant(ecriture.total)} D`}
+    <Modale titre={creation ? 'Saisir une écriture' : `Modifier l'écriture ${ecriture.numeroProvisoire}`} sousTitre={creation ? 'En brouillard : modifiable et supprimable jusqu\'à sa validation' : `${ecriture.libelle} · ${fmtMontant(ecriture.total)} D`}
       onClose={onClose} onSubmit={enregistrer} envoi={envoi} erreur={erreur} libelleEnvoi={creation ? '✓ Enregistrer en brouillard' : '✓ Enregistrer'} largeur={980}>
       <div style={grille}>
         <div>
@@ -593,12 +829,29 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
           </select>
         </div>
         <div>
-          <label htmlFor="fe-f-date" style={lbl}>Date</label>
+          <label htmlFor="fe-f-date" style={lbl}>{dateReelle ? 'Date d\'enregistrement' : 'Date'}</label>
           <input id="fe-f-date" type="date" value={date} min={exercice?.debut} max={exercice?.fin} onChange={(e) => changerDate(e.target.value)} disabled={fige} style={inp} />
           <div style={{ fontSize: '0.72rem', color: periode ? (periode.etat === 'ouverte' ? '#166534' : '#b91c1c') : '#b45309', marginTop: 4 }}>
             {periode ? `Période : ${libellePeriode(periode)}${periode.etat === 'ouverte' ? '' : ' (close)'}` : exercice ? `Hors de l'exercice (${fmtJour(exercice.debut)} → ${fmtJour(exercice.fin)})` : 'Aucun exercice ouvert'}
           </div>
+          {periode && periode.etat === 'close' && (
+            <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', marginTop: 6, lineHeight: 1.5 }}>
+              {suivante
+                ? <>Une opération d'une période close s'enregistre au premier jour de la période ouverte suivante, sa vraie date gardée (NC 01 §61). <button type="button" onClick={() => reporterDate(suivante.debut)} disabled={fige} style={{ ...petit('#fff', '#92400e', '#fcd34d'), marginTop: 4 }}>Enregistrer au {fmtJour(suivante.debut)} en gardant la vraie date {fmtJour(date)}</button></>
+                : 'Aucune période ouverte ne suit : le titulaire peut rouvrir la période (page Périodes).'}
+            </div>
+          )}
         </div>
+        {dateReelle && (
+          <div>
+            <label htmlFor="fe-f-reelle" style={lbl}>Vraie date de l'opération</label>
+            <input id="fe-f-reelle" type="date" value={dateReelle} max={date} onChange={(e) => changerDateReelle(e.target.value)} disabled={fige} style={inp} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '0.72rem', color: '#b45309' }}>Opération d'une période close, enregistrée au {fmtJour(date)}.</span>
+              <button type="button" onClick={() => changerDateReelle('')} disabled={fige} style={petit('#fff', '#475569', '#cbd5e1')}>✕ Retirer</button>
+            </div>
+          </div>
+        )}
         <div>
           <label htmlFor="fe-f-ref" style={lbl}>Référence de la pièce</label>
           <input id="fe-f-ref" value={reference} onChange={(e) => { setReference(e.target.value); setErreur(null); }} disabled={envoi} maxLength={etat.bornes.referenceMax} placeholder="ex. F-2026-0412" style={{ ...inp, fontFamily: mono }} autoFocus={creation} />
@@ -654,7 +907,7 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
                 </div>
                 <div>
                   <label htmlFor={`fe-l-${l.cle}-ech`} style={lbl}>Échéance</label>
-                  <input id={`fe-l-${l.cle}-ech`} type="date" value={l.echeance} min={date} onChange={(e) => poser(l.cle, { echeance: e.target.value })} disabled={fige} style={inp} />
+                  <input id={`fe-l-${l.cle}-ech`} type="date" value={l.echeance} min={baseEcheance} onChange={(e) => poser(l.cle, { echeance: e.target.value })} disabled={fige} style={inp} />
                 </div>
               </div>
             </div>

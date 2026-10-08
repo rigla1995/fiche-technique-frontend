@@ -176,6 +176,9 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
     }
   };
 
+  // S6b : les périodes de l'exercice en cours, ouvertes et closes (carte Tenue, carte Exercice).
+  const nbCloses = fiche?.exercice ? fiche.exercice.periodes.filter((p) => p.etat === 'close').length : 0;
+  const nbOuvertes = fiche?.exercice ? fiche.exercice.periodes.length - nbCloses : 0;
   const id = fiche?.identite;
   const lignesIdentite: [string, string | null | undefined][] = id ? [
     ['Raison sociale', id.raisonSociale],
@@ -282,7 +285,7 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                       ))}
                     </div>
                     <p style={{ margin: '10px 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
-                      {fiche.exercice.periodes.length} période{fiche.exercice.periodes.length > 1 ? 's' : ''} mensuelle{fiche.exercice.periodes.length > 1 ? 's' : ''}, toutes ouvertes ; la clôture des périodes arrivera avec la validation des écritures (étape suivante).
+                      {fiche.exercice.periodes.length} période{fiche.exercice.periodes.length > 1 ? 's' : ''} mensuelle{fiche.exercice.periodes.length > 1 ? 's' : ''} : {nbOuvertes} ouverte{nbOuvertes > 1 ? 's' : ''}, {nbCloses} close{nbCloses > 1 ? 's' : ''} (page Périodes : valider, clore, rouvrir, journal général).
                       {fiche.mouvemente ? ' Le dossier a des écritures : les dates de l\'exercice ne changent plus.' : ''}
                     </p>
                     {modifiable && !fiche.mouvemente && <button type="button" onClick={() => { setInfo(''); setFenetre('exercice'); }} style={{ ...petit('#f0f9ff', '#0369a1', '#bae6fd'), marginTop: 12 }}>✏️ Modifier les dates</button>}
@@ -301,12 +304,13 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                 <LigneConfiguration libelle="Tiers" lien={`/dossiers/${fiche.id}/tiers`} icone="📇"
                   valeur={`${fiche.tiers.fournisseurs.nbActifs} fournisseur${fiche.tiers.fournisseurs.nbActifs > 1 ? 's' : ''} · ${fiche.tiers.clients.nbActifs} client${fiche.tiers.clients.nbActifs > 1 ? 's' : ''}${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal > fiche.tiers.fournisseurs.nbActifs + fiche.tiers.clients.nbActifs ? ` · ${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs} désactivé${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs > 1 ? 's' : ''}` : ''}`} />
               </Carte>
-              {/* S6a : la tenue du dossier — les écritures en brouillard (PLAN-S6 §2) ; validation, périodes, grand livre et
-                  balance aux étapes suivantes. */}
-              <Carte titre="✍️ Tenue" sousTitre="La saisie des écritures ; validation, périodes et livres aux étapes suivantes">
+              {/* S6a : la tenue du dossier — les écritures (PLAN-S6 §2) ; S6b : validation et périodes ; grand livre et
+                  balance à l'étape des livres. */}
+              <Carte titre="✍️ Tenue" sousTitre="Écritures, validation et périodes ; grand livre et balance à l'étape des livres">
                 <LigneConfiguration libelle="Écritures" lien={`/dossiers/${fiche.id}/ecritures`} icone="✍️"
                   valeur={`${fiche.ecritures.nbBrouillard} en brouillard · ${fiche.ecritures.nbValidees} validée${fiche.ecritures.nbValidees > 1 ? 's' : ''}`} />
-                <LigneAVenir libelle="Périodes" quand="Étape suivante" />
+                <LigneConfiguration libelle="Périodes" lien={`/dossiers/${fiche.id}/periodes`} icone="🔏"
+                  valeur={fiche.exercice ? `${nbOuvertes} ouverte${nbOuvertes > 1 ? 's' : ''} · ${nbCloses} close${nbCloses > 1 ? 's' : ''}` : 'Aucun exercice'} />
                 <LigneAVenir libelle="Grand livre" quand="Étape des livres" />
                 <LigneAVenir libelle="Balance" quand="Étape des livres" />
               </Carte>
