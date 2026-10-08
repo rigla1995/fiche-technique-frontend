@@ -62,6 +62,9 @@ export interface FicheDossier {
   droits: Droits; mouvemente: boolean; creeLe: string; modifieLe: string; etatAbonnement: EtatAbonnement;
   // S5a : résumé de la configuration (carte « Configuration ») — plan de comptes copié du paquet pays.
   plan: { nbActifs: number; nbAjoutes: number; nbDesactives: number; paquet: { pays: string; version: string; libelle: string } | null };
+  // S5b : journaux et codes de taxe actifs.
+  journaux: { nbActifs: number; nbTotal: number };
+  taxes: { nbActifs: number; nbTotal: number };
   avertissements?: string[];
   // S4b : « Reprendre l'identité de LabFlow » — nombre de champs repris (0 = identique).
   reprise?: number;
