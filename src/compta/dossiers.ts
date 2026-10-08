@@ -20,8 +20,9 @@ export interface Exercice { debut: string; fin: string }
 export interface Periode { debut: string; fin: string; etat: 'ouverte' | 'close' }
 export type EtatDossier = 'actif' | 'archive';
 export type EtatAbonnement = 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
-// S5a : `configurer` (plan de comptes) = titulaire ou gérant de niveau Complet (réponse 6 du client du 07/10).
-export interface Droits { creer: boolean; modifier: boolean; configurer: boolean; archiver: boolean; supprimer: boolean }
+// S5a : `configurer` (plan de comptes) = titulaire ou gérant de niveau Complet (réponse 6 du client du 07/10) ; S5c :
+// `tiers` (créer et modifier des tiers) = Complet ou Saisie (réponse 4 du 08/10).
+export interface Droits { creer: boolean; modifier: boolean; configurer: boolean; tiers: boolean; archiver: boolean; supprimer: boolean }
 export interface EspaceDossiers { id: number; nom: string; type: 'cabinet' | 'client_labflow'; role: 'titulaire' | 'gerant'; niveau: string }
 
 export interface LigneDossier {
@@ -62,9 +63,10 @@ export interface FicheDossier {
   droits: Droits; mouvemente: boolean; creeLe: string; modifieLe: string; etatAbonnement: EtatAbonnement;
   // S5a : résumé de la configuration (carte « Configuration ») — plan de comptes copié du paquet pays.
   plan: { nbActifs: number; nbAjoutes: number; nbDesactives: number; paquet: { pays: string; version: string; libelle: string } | null };
-  // S5b : journaux et codes de taxe actifs.
+  // S5b : journaux et codes de taxe actifs ; S5c : tiers (fournisseurs, clients).
   journaux: { nbActifs: number; nbTotal: number };
   taxes: { nbActifs: number; nbTotal: number };
+  tiers: { fournisseurs: { nbActifs: number; nbTotal: number }; clients: { nbActifs: number; nbTotal: number } };
   avertissements?: string[];
   // S4b : « Reprendre l'identité de LabFlow » — nombre de champs repris (0 = identique).
   reprise?: number;

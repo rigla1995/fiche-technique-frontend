@@ -34,6 +34,8 @@ const ComptaPlanComptes = lazy(() => import('./pages/ComptaPlanComptes'));
 // S5b : les journaux et les codes de taxe d'un dossier.
 const ComptaJournaux = lazy(() => import('./pages/ComptaJournaux'));
 const ComptaTaxes = lazy(() => import('./pages/ComptaTaxes'));
+// S5c : les tiers (fournisseurs, clients) d'un dossier et les imports Excel.
+const ComptaTiers = lazy(() => import('./pages/ComptaTiers'));
 // Étape S4a : les dossiers du cabinet (liste du titulaire ; la fiche d'un dossier pour toute personne à qui il est ouvert,
 // vérifié par le serveur)
 const ComptaDossiers = lazy(() => import('./pages/ComptaDossiers'));
@@ -95,6 +97,7 @@ export default function ComptaApp() {
               <Route path="/dossiers/:dossierId/plan" element={<ComptaPlanComptes />} />
               <Route path="/dossiers/:dossierId/journaux" element={<ComptaJournaux />} />
               <Route path="/dossiers/:dossierId/taxes" element={<ComptaTaxes />} />
+              <Route path="/dossiers/:dossierId/tiers" element={<ComptaTiers />} />
               <Route path="/cabinets/:espaceId" element={<ComptaCabinetMembre />} />
               <Route path="/ma-comptabilite" element={<ReserveClient><ComptaMaComptabilite /></ReserveClient>} />
               <Route path="/confiee/:espaceId" element={<ComptaConfiee />} />
