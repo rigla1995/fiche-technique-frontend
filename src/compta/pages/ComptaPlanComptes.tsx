@@ -4,8 +4,9 @@ import api from '../../api/client';
 import { useConfirm } from '../../components/common/ConfirmDialog';
 import BoutonAide from '../BoutonAide';
 import { Modale } from '../DossierFormulaires';
+import { FenetreImport } from '../FenetreImport';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
-import { CLASSES, controlerNumero, correspond, enfantsParParent, lirePlan, normaliser, numeroPropose, telechargerPlan, type Compte, type PlanReponse } from '../plan';
+import { CLASSES, controlerNumero, correspond, enfantsParParent, importerPlan, lirePlan, normaliser, numeroPropose, telechargerModelePlan, telechargerPlan, type Compte, type PlanReponse } from '../plan';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
 
 // « Plan de comptes » (LabFlow Compta, étape S5a ; labflow-reprise/achats-compta/PLAN-S5.md §2) : l'arbre des comptes
@@ -14,7 +15,8 @@ import { bouton, inp, lbl, pastille, petit } from '../styles';
 // viennent du serveur (réponse 6 du 07/10 : Complet configure ; Saisie et Consultation lisent) ; un dossier archivé ou
 // une comptabilité non active se consultent sans rien changer. Chaque écriture rend l'arbre entier, que la page
 // remplace ; un refus sur un état périmé (404, 409) ferme la fenêtre et relit (convention de S3c).
-type Fenetre = { type: 'subdiviser'; compte: Compte } | { type: 'modifier'; compte: Compte } | null;
+// S5c : « Importer (Excel) » — le plan d'un autre logiciel, en tout-ou-rien (FenetreImport).
+type Fenetre = { type: 'subdiviser'; compte: Compte } | { type: 'modifier'; compte: Compte } | { type: 'importer' } | null;
 type Role = 'titulaire' | 'gerant';
 type Refus = (err: unknown) => boolean;
 type Ligne = { c: Compte; profondeur: number };
@@ -225,6 +227,7 @@ function ComptaPlanComptes({ dossierId }: { dossierId?: string }) {
               </label>
             )}
             <span style={{ flex: 1 }} />
+            {modifiable && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'importer' }); }} disabled={occupe} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>📤 Importer (Excel)</button>}
             <button type="button" onClick={exporter} disabled={occupe} style={petit('#f0fdf4', '#166534', '#bbf7d0')}>📥 Exporter (Excel)</button>
           </div>
 
@@ -266,6 +269,16 @@ function ComptaPlanComptes({ dossierId }: { dossierId?: string }) {
 
           {fenetre?.type === 'subdiviser' && <FenetreSubdiviser plan={plan} parent={fenetre.compte} role={role} onClose={() => setFenetre(null)} onEnregistre={(p, numero) => { const nouveau = p.comptes.find((c) => c.numero === numero); appliquer(p, `Compte ${numero} ajouté.`, nouveau ? cheminDe(nouveau) : []); }} onRefus={refus} />}
           {fenetre?.type === 'modifier' && <FenetreModifier plan={plan} compte={fenetre.compte} role={role} onClose={() => setFenetre(null)} onEnregistre={(p) => appliquer(p, `Compte ${fenetre.compte.numero} enregistré.`)} onRefus={refus} />}
+          {fenetre?.type === 'importer' && (
+            <FenetreImport titre="Importer un plan de comptes (Excel)" sousTitre={plan.dossier.nom} role={role} onClose={() => setFenetre(null)} onRefus={refus}
+              aide={`Une ligne par compte : numéro (${plan.numero.min} à ${plan.numero.max} chiffres), libellé, nature facultative (Banque, Caisse, Fournisseurs…). Un numéro déjà dans le plan est renommé ; un numéro inconnu est ajouté sous le compte dont il prolonge le numéro, nature héritée sauf indication. L'import ne désactive ni ne supprime jamais un compte.`}
+              telechargerModele={() => telechargerModelePlan(plan.dossier.id)}
+              importer={async (f) => {
+                const p = await importerPlan(plan.dossier.id, f);
+                const n = (x: number, un: string, des: string) => `${x} ${x > 1 ? des : un}`;
+                appliquer(p, `Plan importé (${p.importation.fichier}) : ${n(p.importation.renommes, 'compte renommé', 'comptes renommés')}, ${n(p.importation.ajoutes, 'ajouté', 'ajoutés')}, ${n(p.importation.inchanges, 'inchangé', 'inchangés')}.`);
+              }} />
+          )}
         </>
       )}
     </div>

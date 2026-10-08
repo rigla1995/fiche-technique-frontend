@@ -279,7 +279,7 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                 )}
               </Carte>
               {/* S5a : la configuration du dossier — le plan de comptes (copié du paquet pays) ; S5b : ses journaux et ses
-                  codes de taxe (copiés selon le régime) ; les tiers arrivent à l'étape suivante (PLAN-S5 §2). */}
+                  codes de taxe (copiés selon le régime) ; S5c : ses tiers (fournisseurs, clients) (PLAN-S5 §2). */}
               <Carte titre="⚙️ Configuration" sousTitre={fiche.plan.paquet ? `Plan de comptes : ${fiche.plan.paquet.libelle}` : 'Plan de comptes, journaux, taxes, tiers'}>
                 <LigneConfiguration libelle="Plan de comptes" lien={`/dossiers/${fiche.id}/plan`} icone="📑"
                   valeur={`${fiche.plan.nbActifs} compte${fiche.plan.nbActifs > 1 ? 's' : ''} actif${fiche.plan.nbActifs > 1 ? 's' : ''}${fiche.plan.nbAjoutes > 0 ? ` · ${fiche.plan.nbAjoutes} ajouté${fiche.plan.nbAjoutes > 1 ? 's' : ''}` : ''}${fiche.plan.nbDesactives > 0 ? ` · ${fiche.plan.nbDesactives} désactivé${fiche.plan.nbDesactives > 1 ? 's' : ''}` : ''}`} />
@@ -287,7 +287,8 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   valeur={`${fiche.journaux.nbActifs} journa${fiche.journaux.nbActifs > 1 ? 'ux' : 'l'} actif${fiche.journaux.nbActifs > 1 ? 's' : ''}${fiche.journaux.nbTotal > fiche.journaux.nbActifs ? ` · ${fiche.journaux.nbTotal - fiche.journaux.nbActifs} désactivé${fiche.journaux.nbTotal - fiche.journaux.nbActifs > 1 ? 's' : ''}` : ''}`} />
                 <LigneConfiguration libelle="Taxes" lien={`/dossiers/${fiche.id}/taxes`} icone="🧾"
                   valeur={`${fiche.taxes.nbActifs} code${fiche.taxes.nbActifs > 1 ? 's' : ''} actif${fiche.taxes.nbActifs > 1 ? 's' : ''}${fiche.taxes.nbTotal > fiche.taxes.nbActifs ? ` · ${fiche.taxes.nbTotal - fiche.taxes.nbActifs} désactivé${fiche.taxes.nbTotal - fiche.taxes.nbActifs > 1 ? 's' : ''}` : ''}`} />
-                <Ligne libelle="Tiers" valeur="À l'étape suivante" />
+                <LigneConfiguration libelle="Tiers" lien={`/dossiers/${fiche.id}/tiers`} icone="📇"
+                  valeur={`${fiche.tiers.fournisseurs.nbActifs} fournisseur${fiche.tiers.fournisseurs.nbActifs > 1 ? 's' : ''} · ${fiche.tiers.clients.nbActifs} client${fiche.tiers.clients.nbActifs > 1 ? 's' : ''}${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal > fiche.tiers.fournisseurs.nbActifs + fiche.tiers.clients.nbActifs ? ` · ${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs} désactivé${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs > 1 ? 's' : ''}` : ''}`} />
               </Carte>
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
                 {fiche.acces.map((a, i) => (
