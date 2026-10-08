@@ -40,16 +40,6 @@ function LigneConfiguration({ libelle, valeur, lien, icone }: { libelle: string;
   );
 }
 
-// Une ligne de la carte « Tenue » dont la page arrive à une étape suivante (PLAN-S6 §2 : périodes, grand livre, balance).
-function LigneAVenir({ libelle, quand }: { libelle: string; quand: string }) {
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>
-      <span style={{ color: '#94a3b8' }}>{libelle}</span>
-      <span style={pastille('#f1f5f9', '#64748b')}>{quand}</span>
-    </div>
-  );
-}
-
 // Une page par dossier : changer de dossier (navigation directe) repart d'un état neuf.
 export default function ComptaDossierPage() {
   const { dossierId } = useParams();
@@ -304,15 +294,16 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                 <LigneConfiguration libelle="Tiers" lien={`/dossiers/${fiche.id}/tiers`} icone="📇"
                   valeur={`${fiche.tiers.fournisseurs.nbActifs} fournisseur${fiche.tiers.fournisseurs.nbActifs > 1 ? 's' : ''} · ${fiche.tiers.clients.nbActifs} client${fiche.tiers.clients.nbActifs > 1 ? 's' : ''}${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal > fiche.tiers.fournisseurs.nbActifs + fiche.tiers.clients.nbActifs ? ` · ${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs} désactivé${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs > 1 ? 's' : ''}` : ''}`} />
               </Carte>
-              {/* S6a : la tenue du dossier — les écritures (PLAN-S6 §2) ; S6b : validation et périodes ; grand livre et
-                  balance à l'étape des livres. */}
-              <Carte titre="✍️ Tenue" sousTitre="Écritures, validation et périodes ; grand livre et balance à l'étape des livres">
+              {/* S6a : la tenue du dossier — les écritures (PLAN-S6 §2) ; S6b : validation et périodes ; S6c : les livres
+                  (grand livre, balance, journaux) sur la page Livres, chacun par son onglet. */}
+              <Carte titre="✍️ Tenue" sousTitre="Écritures, validation et périodes, grand livre, balance et journaux">
                 <LigneConfiguration libelle="Écritures" lien={`/dossiers/${fiche.id}/ecritures`} icone="✍️"
                   valeur={`${fiche.ecritures.nbBrouillard} en brouillard · ${fiche.ecritures.nbValidees} validée${fiche.ecritures.nbValidees > 1 ? 's' : ''}`} />
                 <LigneConfiguration libelle="Périodes" lien={`/dossiers/${fiche.id}/periodes`} icone="🔏"
                   valeur={fiche.exercice ? `${nbOuvertes} ouverte${nbOuvertes > 1 ? 's' : ''} · ${nbCloses} close${nbCloses > 1 ? 's' : ''}` : 'Aucun exercice'} />
-                <LigneAVenir libelle="Grand livre" quand="Étape des livres" />
-                <LigneAVenir libelle="Balance" quand="Étape des livres" />
+                <LigneConfiguration libelle="Grand livre" lien={`/dossiers/${fiche.id}/livres?vue=grand-livre`} icone="📖" valeur="Par compte, par tiers" />
+                <LigneConfiguration libelle="Balance" lien={`/dossiers/${fiche.id}/livres?vue=balance`} icone="⚖️" valeur="Générale, auxiliaire" />
+                <LigneConfiguration libelle="Journaux" lien={`/dossiers/${fiche.id}/livres?vue=journaux`} icone="📒" valeur="Par journal, par période" />
               </Carte>
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
                 {fiche.acces.map((a, i) => (

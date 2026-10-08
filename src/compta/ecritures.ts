@@ -1,4 +1,5 @@
 import api from '../api/client';
+import { telechargerClasseur, televerserClasseur } from './classeurs';
 import type { Droits, EspaceDossiers, EtatAbonnement, EtatDossier } from './dossiers';
 import type { CompteCourt, TypeJournal } from './journaux';
 import type { Assiette, TypeTaxe } from './taxes';
@@ -54,6 +55,9 @@ export interface SuppressionReponse { supprime: { id: number; numeroProvisoire: 
 // la période (plus rien en brouillard) et le nombre d'écritures validées.
 export interface ContrepassationReponse { ecriture: Ecriture; origine: Ecriture; nb: NbEcritures }
 export interface ValidationPeriodeReponse { periode: PeriodeFiltree; validees: number; nb: NbEcritures }
+// S6c : les imports Excel (tout ou rien) — des écritures en brouillard ; une balance d'ouverture = une écriture d'à-nouveaux.
+export interface ImportEcrituresReponse { importees: number; lignes: number; premiere: string; derniere: string; journaux: Record<string, number>; nb: NbEcritures }
+export interface ImportBalanceReponse { ecriture: Ecriture; lignes: number; total: string; nb: NbEcritures }
 // Une ligne telle que la fenêtre la saisit (montants en texte, tels que tapés) et telle qu'elle part au serveur.
 export interface LigneSaisie { cle: number; compteId: number | null; tiersId: number | null; libelle: string; debit: string; credit: string; taxeId: number | null; echeance: string }
 export interface LigneEnvoyee { compteId: number | null; tiersId: number | null; libelle: string | null; debit: string; credit: string; taxeId: number | null; echeance: string | null }
@@ -99,6 +103,11 @@ export const validerPeriode = async (dossierId: number, periodeId: number): Prom
   const { data } = await api.post(`/api/compta/dossiers/${encodeURIComponent(String(dossierId))}/periodes/${periodeId}/valider`);
   return data as ValidationPeriodeReponse;
 };
+// S6c : modèles à la charte et imports (le serveur contrôle toutes les rangées : à la moindre erreur, rien n'est importé).
+export const telechargerModeleEcritures = (dossierId: number) => telechargerClasseur(chemin(dossierId, '/modele-import'), `modele-ecritures-${dossierId}.xlsx`);
+export const importerEcritures = (dossierId: number, fichier: File) => televerserClasseur<ImportEcrituresReponse>(chemin(dossierId, '/import'), fichier);
+export const telechargerModeleBalanceOuverture = (dossierId: number) => telechargerClasseur(chemin(dossierId, '/modele-balance-ouverture'), `modele-balance-ouverture-${dossierId}.xlsx`);
+export const importerBalanceOuverture = (dossierId: number, fichier: File) => televerserClasseur<ImportBalanceReponse>(chemin(dossierId, '/import-balance-ouverture'), fichier);
 
 // ── Millimes (mêmes règles que le serveur : 15 entiers, 3 décimales au plus, virgule acceptée) ─────────────────────
 const RE_MONTANT = /^\d{1,15}(\.\d{1,3})?$/;
