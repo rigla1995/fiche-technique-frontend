@@ -26,6 +26,20 @@ type Role = 'titulaire' | 'gerant';
 // Rendu par une fenêtre quand le serveur refuse : vrai si la page a pris la main (fenêtre fermée, fiche relue).
 type Refus = (err: unknown) => boolean;
 
+// Une ligne de la carte « Configuration » : libellé, compte rendu, bouton « Ouvrir » vers la page (S5a plan de comptes ;
+// S5b journaux et taxes).
+function LigneConfiguration({ libelle, valeur, lien, icone }: { libelle: string; valeur: string; lien: string; icone: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>
+      <span style={{ color: '#64748b' }}>{libelle}</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <span style={{ color: '#0f172a', fontWeight: 600, textAlign: 'right', overflowWrap: 'anywhere' }}>{valeur}</span>
+        <Link to={lien} style={{ ...petit('#eef2ff', '#4338ca', '#c7d2fe'), textDecoration: 'none' }}>{icone} Ouvrir</Link>
+      </span>
+    </div>
+  );
+}
+
 // Une page par dossier : changer de dossier (navigation directe) repart d'un état neuf.
 export default function ComptaDossierPage() {
   const { dossierId } = useParams();
@@ -264,22 +278,15 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   </>
                 )}
               </Carte>
-              {/* S5a : la configuration du dossier — le plan de comptes (copié du paquet pays) ; journaux, taxes et tiers
-                  arrivent aux étapes suivantes (PLAN-S5 §2). */}
+              {/* S5a : la configuration du dossier — le plan de comptes (copié du paquet pays) ; S5b : ses journaux et ses
+                  codes de taxe (copiés selon le régime) ; les tiers arrivent à l'étape suivante (PLAN-S5 §2). */}
               <Carte titre="⚙️ Configuration" sousTitre={fiche.plan.paquet ? `Plan de comptes : ${fiche.plan.paquet.libelle}` : 'Plan de comptes, journaux, taxes, tiers'}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>
-                  <span style={{ color: '#64748b' }}>Plan de comptes</span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                    <span style={{ color: '#0f172a', fontWeight: 600 }}>
-                      {fiche.plan.nbActifs} compte{fiche.plan.nbActifs > 1 ? 's' : ''} actif{fiche.plan.nbActifs > 1 ? 's' : ''}
-                      {fiche.plan.nbAjoutes > 0 ? ` · ${fiche.plan.nbAjoutes} ajouté${fiche.plan.nbAjoutes > 1 ? 's' : ''}` : ''}
-                      {fiche.plan.nbDesactives > 0 ? ` · ${fiche.plan.nbDesactives} désactivé${fiche.plan.nbDesactives > 1 ? 's' : ''}` : ''}
-                    </span>
-                    <Link to={`/dossiers/${fiche.id}/plan`} style={{ ...petit('#eef2ff', '#4338ca', '#c7d2fe'), textDecoration: 'none' }}>📑 Ouvrir</Link>
-                  </span>
-                </div>
-                <Ligne libelle="Journaux" valeur="À l'étape suivante" />
-                <Ligne libelle="Taxes" valeur="À l'étape suivante" />
+                <LigneConfiguration libelle="Plan de comptes" lien={`/dossiers/${fiche.id}/plan`} icone="📑"
+                  valeur={`${fiche.plan.nbActifs} compte${fiche.plan.nbActifs > 1 ? 's' : ''} actif${fiche.plan.nbActifs > 1 ? 's' : ''}${fiche.plan.nbAjoutes > 0 ? ` · ${fiche.plan.nbAjoutes} ajouté${fiche.plan.nbAjoutes > 1 ? 's' : ''}` : ''}${fiche.plan.nbDesactives > 0 ? ` · ${fiche.plan.nbDesactives} désactivé${fiche.plan.nbDesactives > 1 ? 's' : ''}` : ''}`} />
+                <LigneConfiguration libelle="Journaux" lien={`/dossiers/${fiche.id}/journaux`} icone="📒"
+                  valeur={`${fiche.journaux.nbActifs} journa${fiche.journaux.nbActifs > 1 ? 'ux' : 'l'} actif${fiche.journaux.nbActifs > 1 ? 's' : ''}${fiche.journaux.nbTotal > fiche.journaux.nbActifs ? ` · ${fiche.journaux.nbTotal - fiche.journaux.nbActifs} désactivé${fiche.journaux.nbTotal - fiche.journaux.nbActifs > 1 ? 's' : ''}` : ''}`} />
+                <LigneConfiguration libelle="Taxes" lien={`/dossiers/${fiche.id}/taxes`} icone="🧾"
+                  valeur={`${fiche.taxes.nbActifs} code${fiche.taxes.nbActifs > 1 ? 's' : ''} actif${fiche.taxes.nbActifs > 1 ? 's' : ''}${fiche.taxes.nbTotal > fiche.taxes.nbActifs ? ` · ${fiche.taxes.nbTotal - fiche.taxes.nbActifs} désactivé${fiche.taxes.nbTotal - fiche.taxes.nbActifs > 1 ? 's' : ''}` : ''}`} />
                 <Ligne libelle="Tiers" valeur="À l'étape suivante" />
               </Carte>
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
