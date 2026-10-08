@@ -22,9 +22,11 @@ export function ChoixTiers({ id, libelle, tiers, valeur, onChange, disabled = fa
     return liste.slice(0, 30);
   }, [tiers, t, ouvert, normalises]);
   const choisir = (x: TiersCourt | null) => { onChange(x); setQ(''); setOuvert(false); };
+  const champVisible = !choisi || ouvert;
   return (
     <div>
-      <label htmlFor={id} style={lbl}>{libelle}</label>
+      {/* Le libellé ne vise le champ de recherche que lorsqu'il est rendu ; sinon il titre le tiers choisi. */}
+      {champVisible ? <label htmlFor={id} style={lbl}>{libelle}</label> : <div style={lbl}>{libelle}</div>}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6, fontSize: '0.84rem' }}>
         {choisi ? (
           <>
@@ -33,9 +35,9 @@ export function ChoixTiers({ id, libelle, tiers, valeur, onChange, disabled = fa
             {choisi.retenue && <span style={pastille('#eef2ff', '#3730a3')} title="Retenue par défaut de ce tiers">{choisi.retenue.code}</span>}
           </>
         ) : <span style={{ color: '#b45309', fontWeight: 600 }}>Tiers à choisir (compte collectif)</span>}
-        {choisi && !disabled && <button type="button" onClick={() => choisir(null)} style={petit('#fff', '#475569', '#cbd5e1')}>Changer</button>}
+        {choisi && !disabled && <button type="button" onClick={() => choisir(null)} aria-label={`${libelle} : changer de tiers`} style={petit('#fff', '#475569', '#cbd5e1')}>Changer</button>}
       </div>
-      {(!choisi || ouvert) && (
+      {champVisible && (
         <input id={id} type="search" value={q} onChange={(e) => { setQ(e.target.value); setOuvert(true); }} onFocus={() => setOuvert(true)} disabled={disabled} autoComplete="off"
           placeholder="Rechercher : code ou nom" aria-label={`${libelle} : rechercher un tiers`} style={inp}
           role="combobox" aria-expanded={ouvert} aria-controls={`${id}-liste`} aria-autocomplete="list"

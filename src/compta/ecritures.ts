@@ -65,7 +65,7 @@ export const lireEcritures = async (dossierId: number | string, p: ParametresEcr
   const { data } = await api.get(chemin(dossierId), { params });
   return data as EcrituresReponse;
 };
-export const lireEcriture = async (dossierId: number, ecritureId: number): Promise<Ecriture> => {
+export const lireEcriture = async (dossierId: number | string, ecritureId: number): Promise<Ecriture> => {
   const { data } = await api.get(chemin(dossierId, `/${ecritureId}`));
   return (data as { ecriture: Ecriture }).ecriture;
 };
@@ -139,7 +139,7 @@ export const controlerDate = (date: string, exercice: ExerciceOuvert | null): st
   if (!exercice) return 'Aucun exercice ouvert dans ce dossier.';
   const p = periodeDe(exercice.periodes, date);
   if (!p) return `La date doit être dans l'exercice ouvert (du ${fmtJour(exercice.debut)} au ${fmtJour(exercice.fin)}).`;
-  if (p.etat !== 'ouverte') return `La période de ${libellePeriode(p)} est close.`;
+  if (p.etat !== 'ouverte') return `La période ${libellePeriode(p)} est close.`;
   return null;
 };
 export const fmtJour = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : '—');

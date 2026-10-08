@@ -27,8 +27,18 @@ type Fenetre = { type: 'creer' } | { type: 'modifier'; ecriture: Ecriture } | nu
 type Role = 'titulaire' | 'gerant';
 type Refus = (err: unknown) => boolean;
 // Refus que la personne corrige dans la fenêtre (le serveur dit quoi) ; les autres 409 (écriture validée, dossier archivé…) ferment la fenêtre.
-const CORRIGEABLES = ['DESEQUILIBRE', 'TIERS_REQUIS', 'TIERS_INTERDIT', 'TIERS_DESACTIVE', 'COMPTE_NON_IMPUTABLE', 'TAXE_DESACTIVEE', 'JOURNAL_DESACTIVE', 'DATE_HORS_EXERCICE', 'PERIODE_CLOSE', 'PERIODE_ABSENTE', 'EXERCICE_CLOS', 'ASSIETTE_TTC', 'ASSIETTE_NULLE', 'MONTANT_NUL', 'RETENUE_ABSENTE', 'JOURNAL_SANS_RETENUE', 'TAXE_SANS_COMPTE'];
+const CORRIGEABLES = ['DESEQUILIBRE', 'COMPTES_IDENTIQUES', 'TOTAL_TROP_GRAND', 'TIERS_REQUIS', 'TIERS_INTERDIT', 'TIERS_TYPE', 'TIERS_DESACTIVE', 'COMPTE_NON_IMPUTABLE', 'TAXE_DESACTIVEE', 'JOURNAL_DESACTIVE', 'DATE_HORS_EXERCICE', 'PERIODE_CLOSE', 'PERIODE_ABSENTE', 'EXERCICE_CLOS', 'ASSIETTE_TTC', 'ASSIETTE_TVA', 'ASSIETTE_NULLE', 'MONTANT_NUL', 'LIGNE_SANS_CODE', 'CODE_NON_RETENUE', 'RETENUE_ABSENTE', 'JOURNAL_SANS_RETENUE', 'TAXE_SANS_COMPTE'];
 const codeDe = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+const messageDe = (err: unknown) => (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '';
+// Un refus « périmé » ferme la fenêtre et relit (dossier ou écriture disparus, écriture validée, dossier archivé…) ; un
+// 404 sur un compte, un tiers ou un code d'une ligne se corrige sur place, comme les 400 et les 409 corrigeables.
+const refusPerime = (err: unknown) => {
+  const s = statutDe(err);
+  if (s === 404) return /Dossier introuvable|Écriture introuvable/.test(messageDe(err));
+  return s === 409 && !CORRIGEABLES.includes(codeDe(err) || '');
+};
+const LIBELLES_ORIGINE: Record<Ecriture['origine'], string> = { saisie: 'saisie', import: 'import', contrepassation: 'contre-passation' };
+const NATURES_TVA = ['tva_deductible', 'tva_collectee', 'tva_a_payer'];
 const mono = 'ui-monospace, monospace';
 const pluriel = (n: number, un: string, des: string) => `${n} ${n > 1 ? des : un}`;
 
@@ -57,13 +67,27 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
   const occupeRef = useRef(false);
-  // Les écritures dépliées et leurs lignes (lues à la demande, une fois ; remplacées après une modification).
+  // Les écritures dépliées et leurs lignes (lues à la demande ; remplacées après une modification ; retirées du cache
+  // quand une relecture montre qu'une autre personne les a changées — `modifieLe` diffère). Miroirs en ref pour les
+  // lectures asynchrones.
   const [depliees, setDepliees] = useState<Set<number>>(() => new Set());
   const [details, setDetails] = useState<Map<number, Ecriture | 'lecture' | 'erreur'>>(() => new Map());
+  const deplieesRef = useRef(depliees);
+  const detailsRef = useRef(details);
+  useEffect(() => { deplieesRef.current = depliees; }, [depliees]);
+  useEffect(() => { detailsRef.current = details; }, [details]);
   // Le mois en cours est posé une fois, à la première réponse (il faut connaître les périodes de l'exercice).
   const defautPose = useRef(false);
   const tour = useRef(0);
   const cle = `${journalId ?? ''}\u0000${periodeId ?? ''}\u0000${etatFiltre}\u0000${q}`;
+
+  // Les lignes d'une écriture, lues à la demande (dépliage, relecture après une modification venue d'ailleurs).
+  const lireDetail = useCallback((id: number) => {
+    setDetails((m) => { const n = new Map(m); n.set(id, 'lecture'); return n; });
+    lireEcriture(dossierId || '', id)
+      .then((e) => setDetails((m) => { const n = new Map(m); n.set(id, e); return n; }))
+      .catch(() => setDetails((m) => { const n = new Map(m); n.set(id, 'erreur'); return n; }));
+  }, [dossierId]);
 
   useEffect(() => { const t = setTimeout(() => setQ(recherche.trim()), 300); return () => clearTimeout(t); }, [recherche]);
   const charger = useCallback((page: number, limite: number = PAGE_ECRITURES) => {
@@ -82,6 +106,12 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
           const vus = new Set(reprise ? [] : prev.lignes.map((e) => e.id));
           return { cle, etat: r, lignes: reprise ? r.ecritures : [...prev.lignes, ...r.ecritures.filter((e) => !vus.has(e.id))] };
         });
+        // Lignes en cache périmées (écriture modifiée par quelqu'un d'autre) : retirées, relues si l'écriture est dépliée.
+        const perimees = r.ecritures.filter((e) => { const d = detailsRef.current.get(e.id); return !!d && d !== 'lecture' && d !== 'erreur' && d.modifieLe !== e.modifieLe; }).map((e) => e.id);
+        if (perimees.length) {
+          setDetails((m) => { const n = new Map(m); perimees.forEach((id) => n.delete(id)); return n; });
+          perimees.filter((id) => deplieesRef.current.has(id)).forEach(lireDetail);
+        }
         setEtatPage('pret');
         setErreurLecture(false);
       })
@@ -90,7 +120,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
         if (statutDe(err) === 404) setEtatPage('introuvable'); else setErreurLecture(true);
       })
       .finally(() => { if (moi === tour.current) { setPlus(false); setEnRelecture(false); } });
-  }, [dossierId, journalId, periodeId, etatFiltre, q, cle]);
+  }, [dossierId, journalId, periodeId, etatFiltre, q, cle, lireDetail]);
   useEffect(() => { charger(1); return () => { tour.current += 1; }; }, [charger]);
 
   const etat = lu?.etat ?? null;
@@ -107,15 +137,25 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     setEnRelecture(true);
     charger(1, Math.min(200, Math.max(PAGE_ECRITURES, Math.ceil(n / PAGE_ECRITURES) * PAGE_ECRITURES)));
   }, [lu, charger]);
-  // Après une écriture : comptes rendus mis à jour, lignes de l'écriture touchée remplacées, fenêtre chargée relue.
+  // Après une écriture : comptes rendus mis à jour, lignes de l'écriture touchée remplacées, fenêtre chargée relue. Une
+  // écriture enregistrée doit se voir : les filtres qui l'excluraient (la facture de septembre saisie en octobre, un
+  // journal, un état, une recherche) sont levés — la clé change, la liste se relit ; le message le dit.
   const appliquer = (nb: EcrituresReponse['nb'], message: string, ecriture?: Ecriture, retirer?: number) => {
-    setLu((prev) => (prev ? { ...prev, etat: { ...prev.etat, nb }, lignes: retirer ? prev.lignes.filter((e) => e.id !== retirer) : prev.lignes } : prev));
+    setLu((prev) => (prev ? { ...prev, etat: { ...prev.etat, nb, total: retirer ? Math.max(0, prev.etat.total - 1) : prev.etat.total }, lignes: retirer ? prev.lignes.filter((e) => e.id !== retirer) : prev.lignes } : prev));
     if (ecriture) setDetails((m) => { const n = new Map(m); n.set(ecriture.id, ecriture); return n; });
     if (retirer) setDepliees((s) => { const n = new Set(s); n.delete(retirer); return n; });
     setErreur('');
-    setInfo(message);
     setFenetre(null);
-    relireFenetre();
+    const ajustes: string[] = [];
+    if (ecriture) {
+      const p = periodeId && etat?.exercice ? periodeDe(etat.exercice.periodes, ecriture.date) : null;
+      if (periodeId && p && p.id !== periodeId) { setPeriodeId(p.id); ajustes.push(`période ${libellePeriode(p)}`); }
+      if (journalId && journalId !== ecriture.journal.id) { setJournalId(null); ajustes.push('tous les journaux'); }
+      if (etatFiltre && etatFiltre !== ecriture.etat) { setEtatFiltre(''); ajustes.push('tous les états'); }
+      if (q) { setRecherche(''); setQ(''); ajustes.push('recherche effacée'); }
+    }
+    setInfo(ajustes.length ? `${message} Filtres ajustés pour la montrer : ${ajustes.join(', ')}.` : message);
+    if (!ajustes.length) relireFenetre();
   };
   const refus: Refus = (err) => {
     const s = statutDe(err);
@@ -132,13 +172,6 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     setDepliees((s) => { const n = new Set(s); if (ouverte) n.delete(e.id); else n.add(e.id); return n; });
     if (ouverte || (details.get(e.id) && details.get(e.id) !== 'erreur')) return;
     lireDetail(e.id);
-  };
-  const lireDetail = (id: number) => {
-    if (!etat) return;
-    setDetails((m) => { const n = new Map(m); n.set(id, 'lecture'); return n; });
-    lireEcriture(etat.dossier.id, id)
-      .then((e) => setDetails((m) => { const n = new Map(m); n.set(id, e); return n; }))
-      .catch((err) => { if (!refus(err)) setDetails((m) => { const n = new Map(m); n.set(id, 'erreur'); return n; }); });
   };
   const supprimer = async (e: Ecriture) => {
     if (!etat || occupeRef.current) return;
@@ -163,11 +196,22 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
       setOccupe(false);
     }
   };
-  const modifier = (e: Ecriture) => {
-    const d = details.get(e.id);
-    if (!d || d === 'lecture' || d === 'erreur') { lireDetail(e.id); setDepliees((s) => new Set(s).add(e.id)); return; }
+  // Modifier : l'écriture est relue à l'instant (jamais une version en cache qu'une autre personne aurait dépassée).
+  const modifier = async (e: Ecriture) => {
+    if (!etat || occupeRef.current) return;
+    occupeRef.current = true;
+    setOccupe(true);
     setInfo('');
-    setFenetre({ type: 'modifier', ecriture: d });
+    try {
+      const d = await lireEcriture(etat.dossier.id, e.id);
+      setDetails((m) => { const n = new Map(m); n.set(e.id, d); return n; });
+      setFenetre({ type: 'modifier', ecriture: d });
+    } catch (err) {
+      if (!refus(err)) setErreur(messageDossier(err, 'Écriture impossible à relire, réessayez.', role));
+    } finally {
+      occupeRef.current = false;
+      setOccupe(false);
+    }
   };
 
   const retour = etat ? { lien: `/dossiers/${etat.dossier.id}`, libelle: etat.dossier.nom } : null;
@@ -220,7 +264,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
           )}
           {etat.dossier.etat === 'archive' && ouvert && (
             <div role="status" style={{ ...alerte, background: '#f8fafc', borderColor: '#cbd5e1', color: '#475569', marginBottom: 16 }}>
-              Dossier archivé : ses écritures se lisent, ne se saisissent pas tant qu'il n'est pas désarchivé.
+              Dossier archivé : ses écritures se lisent mais ne se saisissent pas tant qu'il n'est pas désarchivé.
             </div>
           )}
           {ouvert && dossierActif && !etat.droits.saisir && (
@@ -274,7 +318,9 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
             </div>
             {lignes.length === 0 && !relecture && (
               <p style={{ margin: 0, padding: '16px 18px', fontSize: '0.84rem', color: '#64748b', lineHeight: 1.6 }}>
-                {q || journalId || periodeId || etatFiltre ? 'Aucune écriture ne correspond à ces filtres.' : peutSaisir ? 'Aucune écriture pour l\'instant : cliquez sur « + Écriture ».' : 'Aucune écriture pour l\'instant.'}
+                {etat.nb.brouillard + etat.nb.validees === 0
+                  ? (peutSaisir ? 'Aucune écriture pour l\'instant : cliquez sur « + Écriture ».' : 'Aucune écriture pour l\'instant.')
+                  : 'Aucune écriture ne correspond à ces filtres (journal, période, état, recherche).'}
               </p>
             )}
             <div style={{ opacity: relecture ? 0.6 : 1 }}>
@@ -329,7 +375,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                               </tfoot>
                             </table>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 8, fontSize: '0.74rem', color: '#64748b' }}>
-                              <span>Saisie par {d.creePar || '—'} le {new Date(d.creeLe).toLocaleString('fr-FR')}{d.modifieLe !== d.creeLe ? ` · modifiée le ${new Date(d.modifieLe).toLocaleString('fr-FR')}` : ''} · origine : {d.origine}</span>
+                              <span>Saisie par {d.creePar || '—'} le {new Date(d.creeLe).toLocaleString('fr-FR')}{d.modifieLe !== d.creeLe ? ` · modifiée le ${new Date(d.modifieLe).toLocaleString('fr-FR')}` : ''} · origine : {LIBELLES_ORIGINE[d.origine] || d.origine}</span>
                               <span style={{ flex: 1 }} />
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => modifier(e)} disabled={occupe || lecture} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>✏️ Modifier</button>}
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => supprimer(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>🗑 Supprimer</button>}
@@ -372,10 +418,25 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
   const creation = !ecriture;
   const exercice = etat.exercice;
   const journaux = useMemo(() => etat.journaux.filter((j) => j.actif || j.id === ecriture?.journal.id), [etat.journaux, ecriture]);
-  const comptesParId = useMemo(() => new Map(etat.comptes.map((c) => [c.id, c])), [etat.comptes]);
+  // Les choix de la grille : les comptes imputables et les tiers actifs du dossier, plus ceux que l'écriture modifiée
+  // porte déjà et qui n'y sont plus (compte devenu non imputable, tiers désactivé) : montrés, marqués, à remplacer.
+  const comptesChoix = useMemo(() => {
+    const manquants = (ecriture?.lignes || []).filter((l) => !etat.comptes.some((c) => c.id === l.compte.id)).map((l) => ({ id: l.compte.id, numero: l.compte.numero, libelle: `${l.compte.libelle} — non imputable (désactivé ou subdivisé) : choisissez un autre compte`, nature: l.compte.nature, actif: false, feuille: false, imputable: false }));
+    return manquants.length ? [...etat.comptes, ...manquants.filter((m, i) => manquants.findIndex((x) => x.id === m.id) === i)] : etat.comptes;
+  }, [etat.comptes, ecriture]);
+  const tiersChoix = useMemo(() => {
+    const liste = [...etat.tiers];
+    for (const l of ecriture?.lignes || []) {
+      if (l.tiers && !liste.some((t) => t.id === l.tiers?.id)) liste.push({ id: l.tiers.id, type: l.tiers.type, typeLibelle: l.tiers.type === 'fournisseur' ? 'Fournisseur' : 'Client', code: l.tiers.code, nom: `${l.tiers.nom} — désactivé (page Tiers)`, compteId: l.compte.id, delaiPaiement: 0, retenue: null });
+    }
+    return liste;
+  }, [etat.tiers, ecriture]);
+  const comptesParId = useMemo(() => new Map(comptesChoix.map((c) => [c.id, c])), [comptesChoix]);
   const taxesParId = useMemo(() => new Map(etat.taxes.map((x) => [x.id, x])), [etat.taxes]);
-  const tiersParId = useMemo(() => new Map(etat.tiers.map((t) => [t.id, t])), [etat.tiers]);
-  const retenues = useMemo(() => etat.taxes.filter((x) => x.type === 'retenue'), [etat.taxes]);
+  const tiersParId = useMemo(() => new Map(tiersChoix.map((t) => [t.id, t])), [tiersChoix]);
+  const tiersParType = useMemo(() => ({ fournisseur: tiersChoix.filter((t) => t.type === 'fournisseur'), client: tiersChoix.filter((t) => t.type === 'client') }), [tiersChoix]);
+  // Codes que « Ajouter la retenue » calcule sur l'écriture entière : retenues à la source, retenues de TVA, avances.
+  const retenues = useMemo(() => etat.taxes.filter((x) => x.type === 'retenue' || x.type === 'retenue_tva' || x.type === 'avance'), [etat.taxes]);
   const jour = aujourdhui();
   const dateDefaut = exercice ? (periodeDe(exercice.periodes, jour) ? jour : exercice.periodes.filter((p) => p.etat === 'ouverte').pop()?.debut || exercice.fin) : jour;
   const [journalId, setJournalId] = useState<number | null>(ecriture?.journal.id ?? journaux[0]?.id ?? null);
@@ -388,9 +449,15 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
   const [aide, setAide] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  // Miroir des lignes pour les aides (lues à la réponse du serveur, jamais depuis une fermeture périmée).
+  const lignesRef = useRef(lignes);
+  useEffect(() => { lignesRef.current = lignes; }, [lignes]);
   const journal = journaux.find((j) => j.id === journalId) || null;
   const t = totaux(lignes);
   const equilibre = t.ecart === 0n && t.debit > 0n;
+  // Une retenue ou une avance déjà posée : le bouton ne la propose pas deux fois.
+  const retenueDeja = lignes.some((l) => { const x = l.taxeId ? taxesParId.get(l.taxeId) : null; return !!x && (x.type === 'retenue' || x.type === 'retenue_tva' || x.type === 'avance'); });
+  const fige = envoi || aide;
   // La ligne du tiers (compte collectif) : sa retenue par défaut propose le code ; « Ajouter la retenue » part de là.
   const ligneTiers = lignes.find((l) => l.tiersId && typeTiersDe(comptesParId.get(l.compteId ?? -1)?.nature));
   const tiersLigne = ligneTiers ? tiersParId.get(ligneTiers.tiersId ?? -1) || null : null;
@@ -404,15 +471,28 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
     poser(l.cle, { compteId, tiersId: type && tiers && tiers.type === type ? l.tiersId : null });
   };
   const changerTiers = (l: LigneSaisie, tiers: TiersCourt | null) => {
-    // Échéance proposée d'après le délai de paiement du tiers (jamais imposée : le champ reste modifiable).
+    // Échéance proposée d'après le délai de paiement du tiers (jamais imposée : le champ reste modifiable) ; le code de
+    // retenue choisi pour l'ancien tiers ne suit pas.
     poser(l.cle, { tiersId: tiers?.id ?? null, echeance: tiers && !l.echeance && /^\d{4}-\d{2}-\d{2}$/.test(date) ? ajouterJours(date, tiers.delaiPaiement) : l.echeance });
+    setRetenueId(null);
+  };
+  // La date change : les échéances encore égales à la proposition (ancienne date + délai du tiers) suivent.
+  const changerDate = (nouvelle: string) => {
+    const ancienne = date;
+    setDate(nouvelle);
+    setErreur(null);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nouvelle) || !/^\d{4}-\d{2}-\d{2}$/.test(ancienne)) return;
+    setLignes((ls) => ls.map((l) => {
+      const tiers = l.tiersId ? tiersParId.get(l.tiersId) : null;
+      return tiers && l.echeance === ajouterJours(ancienne, tiers.delaiPaiement) ? { ...l, echeance: ajouterJours(nouvelle, tiers.delaiPaiement) } : l;
+    }));
   };
   const retirer = (cle: number) => { setLignes((ls) => (ls.length > 2 ? ls.filter((l) => l.cle !== cle) : ls)); setErreur(null); };
   const ajouter = () => { setLignes((ls) => [...ls, ligneVide()]); setErreur(null); };
   // Une ligne calculée par le serveur, insérée dans la grille (montants en texte français).
   const ligneDepuisAide = (r: AideReponse): LigneSaisie => ({ cle: cleSuivante++, compteId: r.ligne.compteId, tiersId: null, libelle: '', debit: versMillimes(r.ligne.debit) ? fmtMontant(r.ligne.debit) : '', credit: versMillimes(r.ligne.credit) ? fmtMontant(r.ligne.credit) : '', taxeId: r.ligne.taxeId, echeance: '' });
   const erreurAide = (err: unknown, defaut: string) => {
-    if (!CORRIGEABLES.includes(codeDe(err) || '') && statutDe(err) !== 400 && onRefus(err)) return;
+    if (refusPerime(err) && onRefus(err)) return;
     setErreur(messageDossier(err, defaut, role));
   };
   const ajouterTaxe = async (l: LigneSaisie) => {
@@ -423,7 +503,8 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
     setErreur(null);
     try {
       const r = await aideTaxe(etat.dossier.id, { journalId, ligne: ligneEnvoyee(l) });
-      setLignes((ls) => { const i = ls.findIndex((x) => x.cle === l.cle); const n = [...ls]; n.splice(i + 1, 0, ligneDepuisAide(r)); return n; });
+      // Insérée sous la ligne de base (en fin de grille si elle a disparu entre-temps).
+      setLignes((ls) => { const i = ls.findIndex((x) => x.cle === l.cle); const n = [...ls]; n.splice(i < 0 ? n.length : i + 1, 0, ligneDepuisAide(r)); return n; });
       setNote(`${r.taxe.code} : ${fmtMontant(r.ligne.debit !== '0.000' ? r.ligne.debit : r.ligne.credit)} D sur ${r.compte.numero} (base ${fmtMontant(r.base)} D). Ligne modifiable.`);
     } catch (err) {
       erreurAide(err, 'La ligne de taxe n\'a pas pu être calculée.');
@@ -439,21 +520,25 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
     try {
       const r = await aideRetenue(etat.dossier.id, { journalId, tiersId: ligneTiers.tiersId, taxeId: retenueProposee, lignes: lignes.filter((l) => l.compteId && (versMillimes(l.debit) || versMillimes(l.credit))).map(ligneEnvoyee) });
       const montant = versMillimes(r.ligne.debit !== '0.000' ? r.ligne.debit : r.ligne.credit) ?? 0n;
+      const avance = r.taxe.type === 'avance';
+      // Les lignes telles qu'elles sont À LA RÉPONSE (miroir), jamais la copie prise au clic.
+      const courantes = lignesRef.current;
+      let suivantes = [...courantes, ligneDepuisAide(r)];
+      // La ligne du tiers passe au net : son montant (crédit à l'achat, débit à la vente) baisse de la retenue (une avance
+      // l'augmente) — seulement quand il n'y a qu'une ligne de tiers et que son montant couvre la retenue.
       let net = false;
-      let suivantes = [...lignes, ligneDepuisAide(r)];
-      // La ligne du tiers passe au net : son montant (crédit à l'achat, débit à la vente) baisse de la retenue — seulement
-      // quand il n'y a qu'une ligne de tiers et qu'elle couvre la retenue.
-      const collectifs = lignes.filter((l) => l.tiersId && typeTiersDe(comptesParId.get(l.compteId ?? -1)?.nature));
+      const collectifs = courantes.filter((l) => l.tiersId && typeTiersDe(comptesParId.get(l.compteId ?? -1)?.nature));
       if (collectifs.length === 1 && journal) {
         const cote: 'debit' | 'credit' = journal.type === 'achats' ? 'credit' : 'debit';
         const actuel = versMillimes(collectifs[0][cote]);
-        if (actuel != null && actuel >= montant) {
-          suivantes = suivantes.map((l) => (l.cle === collectifs[0].cle ? { ...l, [cote]: fmtMontant(actuel - montant) } : l));
+        if (actuel != null && (avance || actuel > montant)) {
+          suivantes = suivantes.map((l) => (l.cle === collectifs[0].cle ? { ...l, [cote]: fmtMontant(avance ? actuel + montant : actuel - montant) } : l));
           net = true;
         }
       }
       setLignes(suivantes);
-      setNote(`Retenue ${r.taxe.code} : ${fmtMontant(montant)} D sur ${r.compte.numero} (assiette TTC hors timbre ${fmtMontant(r.base)} D)${net ? ' ; la ligne du tiers passe au net' : ''}. Ligne modifiable ; retirez-la si la retenue n'est pas due (seuil par paiement).`);
+      const assiette = r.taxe.assiette === 'tva' ? 'assiette : la TVA' : r.taxe.assiette === 'ht' ? 'assiette HT' : 'assiette TTC hors timbre';
+      setNote(`${avance ? 'Avance' : 'Retenue'} ${r.taxe.code} : ${fmtMontant(montant)} D sur ${r.compte.numero} (${assiette} ${fmtMontant(r.base)} D)${net ? (avance ? ' ; la ligne du tiers augmente d\'autant' : ' ; la ligne du tiers passe au net') : ''}. Ligne modifiable${avance ? '.' : ' ; retirez-la si la retenue n\'est pas due (seuil par paiement).'}`);
     } catch (err) {
       erreurAide(err, 'La retenue n\'a pas pu être calculée.');
     } finally {
@@ -490,7 +575,7 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
       const { data } = creation ? await api.post(url, corps) : await api.put(`${url}/${ecriture.id}`, corps);
       onEnregistre(data as EcritureReponse);
     } catch (err) {
-      if (!CORRIGEABLES.includes(codeDe(err) || '') && onRefus(err)) return;
+      if (refusPerime(err) && onRefus(err)) return;
       setErreur(messageDossier(err, `L'écriture n'a pas pu être enregistrée — réessayez.`, role));
       setEnvoi(false);
     }
@@ -509,9 +594,9 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
         </div>
         <div>
           <label htmlFor="fe-f-date" style={lbl}>Date</label>
-          <input id="fe-f-date" type="date" value={date} min={exercice?.debut} max={exercice?.fin} onChange={(e) => { setDate(e.target.value); setErreur(null); }} disabled={envoi} style={inp} />
+          <input id="fe-f-date" type="date" value={date} min={exercice?.debut} max={exercice?.fin} onChange={(e) => changerDate(e.target.value)} disabled={fige} style={inp} />
           <div style={{ fontSize: '0.72rem', color: periode ? (periode.etat === 'ouverte' ? '#166534' : '#b91c1c') : '#b45309', marginTop: 4 }}>
-            {periode ? `Période de ${libellePeriode(periode)}${periode.etat === 'ouverte' ? '' : ' (close)'}` : exercice ? `Hors de l'exercice (${fmtJour(exercice.debut)} → ${fmtJour(exercice.fin)})` : 'Aucun exercice ouvert'}
+            {periode ? `Période : ${libellePeriode(periode)}${periode.etat === 'ouverte' ? '' : ' (close)'}` : exercice ? `Hors de l'exercice (${fmtJour(exercice.debut)} → ${fmtJour(exercice.fin)})` : 'Aucun exercice ouvert'}
           </div>
         </div>
         <div>
@@ -530,43 +615,46 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
           const type = typeTiersDe(compte?.nature);
           const taxe = l.taxeId ? taxesParId.get(l.taxeId) || null : null;
           const montantPose = (versMillimes(l.debit) ?? 0n) > 0n || (versMillimes(l.credit) ?? 0n) > 0n;
-          // Pas d'aide sur une ligne de TVA (compte de TVA) : on ne calcule pas de TVA sur la TVA.
-          const ligneDeTva = !!compte && ['tva_deductible', 'tva_collectee', 'tva_a_payer'].includes(compte.nature);
+          // Pas d'aide sur une ligne de TVA (compte de TVA) sauf pour une retenue de TVA ; pas deux fois : la ligne qui
+          // suit porte déjà ce code sur un autre compte (sa ligne de taxe est là).
+          const ligneDeTva = !!compte && NATURES_TVA.includes(compte.nature);
+          const dejaAidee = !!taxe && !!lignes[i + 1] && lignes[i + 1].taxeId === l.taxeId && lignes[i + 1].compteId !== l.compteId;
+          const aidePossible = !!taxe && aideTaxePossible(taxe) && montantPose && !dejaAidee && (taxe.assiette === 'tva' ? ligneDeTva : !ligneDeTva);
           return (
             <div key={l.cle} style={carteLigne}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                 <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Ligne {i + 1}</span>
                 <span style={{ flex: 1 }} />
-                {taxe && aideTaxePossible(taxe) && montantPose && !ligneDeTva && <button type="button" onClick={() => ajouterTaxe(l)} disabled={envoi || aide} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>{aide ? 'Calcul…' : taxe.type === 'tva' ? '➕ Ajouter la TVA' : `➕ Ajouter ${taxe.type === 'timbre' ? 'le timbre' : 'la taxe'}`}</button>}
-                <button type="button" onClick={() => retirer(l.cle)} disabled={envoi || lignes.length <= 2} title={lignes.length <= 2 ? 'Une écriture garde au moins deux lignes' : 'Retirer cette ligne'} style={{ ...petit('#fff', '#be123c', '#fecdd3'), opacity: lignes.length <= 2 ? 0.5 : 1 }}>✕ Retirer</button>
+                {aidePossible && taxe && <button type="button" onClick={() => ajouterTaxe(l)} disabled={fige} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>{aide ? 'Calcul…' : taxe.type === 'tva' ? '➕ Ajouter la TVA' : `➕ Ajouter ${taxe.type === 'timbre' ? 'le timbre' : 'la taxe'}`}</button>}
+                <button type="button" onClick={() => retirer(l.cle)} disabled={fige || lignes.length <= 2} title={lignes.length <= 2 ? 'Une écriture garde au moins deux lignes' : 'Retirer cette ligne'} style={{ ...petit('#fff', '#be123c', '#fecdd3'), opacity: lignes.length <= 2 ? 0.5 : 1 }}>✕ Retirer</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: type ? 'minmax(220px, 1.2fr) minmax(200px, 1fr)' : '1fr', gap: 12 }}>
-                <ChoixCompte id={`fe-l-${l.cle}-compte`} libelle="Compte" comptes={etat.comptes} valeur={l.compteId} onChange={(id) => changerCompte(l, id)} disabled={envoi} />
-                {type && <ChoixTiers id={`fe-l-${l.cle}-tiers`} libelle={`${type === 'fournisseur' ? 'Fournisseur' : 'Client'} (compte collectif ${compte?.numero})`} tiers={etat.tiers.filter((x) => x.type === type)} valeur={l.tiersId} onChange={(x) => changerTiers(l, x)} disabled={envoi} />}
+              <div style={{ display: 'grid', gridTemplateColumns: type ? 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))' : '1fr', gap: 12 }}>
+                <ChoixCompte id={`fe-l-${l.cle}-compte`} libelle="Compte" comptes={comptesChoix} valeur={l.compteId} onChange={(id) => changerCompte(l, id)} disabled={fige} />
+                {type && <ChoixTiers id={`fe-l-${l.cle}-tiers`} libelle={`${type === 'fournisseur' ? 'Fournisseur' : 'Client'} (compte collectif ${compte?.numero})`} tiers={tiersParType[type]} valeur={l.tiersId} onChange={(x) => changerTiers(l, x)} disabled={fige} />}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 10 }}>
                 <div style={{ gridColumn: 'span 2' }}>
                   <label htmlFor={`fe-l-${l.cle}-lib`} style={lbl}>Libellé de la ligne</label>
-                  <input id={`fe-l-${l.cle}-lib`} value={l.libelle} onChange={(e) => poser(l.cle, { libelle: e.target.value })} disabled={envoi} maxLength={etat.bornes.libelleMax} placeholder={libelle.trim() || 'Celui de l\'écriture'} style={inp} />
+                  <input id={`fe-l-${l.cle}-lib`} value={l.libelle} onChange={(e) => poser(l.cle, { libelle: e.target.value })} disabled={fige} maxLength={etat.bornes.libelleMax} placeholder={libelle.trim() || 'Celui de l\'écriture'} style={inp} />
                 </div>
                 <div>
                   <label htmlFor={`fe-l-${l.cle}-debit`} style={lbl}>Débit</label>
-                  <input id={`fe-l-${l.cle}-debit`} inputMode="decimal" value={l.debit} onChange={(e) => poser(l.cle, { debit: e.target.value, credit: e.target.value ? '' : l.credit })} disabled={envoi} placeholder="0,000" style={{ ...inp, fontFamily: mono, textAlign: 'right' }} />
+                  <input id={`fe-l-${l.cle}-debit`} inputMode="decimal" value={l.debit} onChange={(e) => poser(l.cle, { debit: e.target.value, credit: e.target.value ? '' : l.credit })} disabled={fige} placeholder="0,000" style={{ ...inp, fontFamily: mono, textAlign: 'right' }} />
                 </div>
                 <div>
                   <label htmlFor={`fe-l-${l.cle}-credit`} style={lbl}>Crédit</label>
-                  <input id={`fe-l-${l.cle}-credit`} inputMode="decimal" value={l.credit} onChange={(e) => poser(l.cle, { credit: e.target.value, debit: e.target.value ? '' : l.debit })} disabled={envoi} placeholder="0,000" style={{ ...inp, fontFamily: mono, textAlign: 'right' }} />
+                  <input id={`fe-l-${l.cle}-credit`} inputMode="decimal" value={l.credit} onChange={(e) => poser(l.cle, { credit: e.target.value, debit: e.target.value ? '' : l.debit })} disabled={fige} placeholder="0,000" style={{ ...inp, fontFamily: mono, textAlign: 'right' }} />
                 </div>
                 <div>
                   <label htmlFor={`fe-l-${l.cle}-taxe`} style={lbl}>Code de taxe</label>
-                  <select id={`fe-l-${l.cle}-taxe`} value={l.taxeId ?? ''} onChange={(e) => poser(l.cle, { taxeId: e.target.value ? Number(e.target.value) : null })} disabled={envoi} style={inp}>
+                  <select id={`fe-l-${l.cle}-taxe`} value={l.taxeId ?? ''} onChange={(e) => poser(l.cle, { taxeId: e.target.value ? Number(e.target.value) : null })} disabled={fige} style={inp}>
                     <option value="">Aucun</option>
                     {etat.taxes.map((x) => <option key={x.id} value={x.id}>{texteTaxe(x)}</option>)}
                   </select>
                 </div>
                 <div>
                   <label htmlFor={`fe-l-${l.cle}-ech`} style={lbl}>Échéance</label>
-                  <input id={`fe-l-${l.cle}-ech`} type="date" value={l.echeance} min={date} onChange={(e) => poser(l.cle, { echeance: e.target.value })} disabled={envoi} style={inp} />
+                  <input id={`fe-l-${l.cle}-ech`} type="date" value={l.echeance} min={date} onChange={(e) => poser(l.cle, { echeance: e.target.value })} disabled={fige} style={inp} />
                 </div>
               </div>
             </div>
@@ -575,18 +663,18 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginTop: 12 }}>
-        <button type="button" onClick={ajouter} disabled={envoi || lignes.length >= etat.bornes.lignesMax} style={petit('#fff', '#4338ca', '#c7d2fe')}>+ Ligne</button>
-        {retenuePossible && (
+        <button type="button" onClick={ajouter} disabled={fige || lignes.length >= etat.bornes.lignesMax} style={petit('#fff', '#4338ca', '#c7d2fe')}>+ Ligne</button>
+        {retenuePossible && !retenueDeja && (
           <>
-            <select aria-label="Code de retenue à la source" value={retenueProposee ?? ''} onChange={(e) => { setRetenueId(e.target.value ? Number(e.target.value) : null); setErreur(null); }} disabled={envoi || aide} style={{ ...inp, width: 'auto', minWidth: 160 }}>
+            <select aria-label="Code de retenue à la source, de retenue de TVA ou d'avance" value={retenueProposee ?? ''} onChange={(e) => { setRetenueId(e.target.value ? Number(e.target.value) : null); setErreur(null); }} disabled={fige} style={{ ...inp, width: 'auto', minWidth: 160 }}>
               <option value="">Code de retenue…</option>
               {retenues.map((x) => <option key={x.id} value={x.id}>{texteTaxe(x)}{tiersLigne?.retenue?.id === x.id ? ' — par défaut' : ''}</option>)}
             </select>
-            <button type="button" onClick={ajouterRetenue} disabled={envoi || aide || !retenueProposee} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>{aide ? 'Calcul…' : '➕ Ajouter la retenue'}</button>
+            <button type="button" onClick={ajouterRetenue} disabled={fige || !retenueProposee} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>{aide ? 'Calcul…' : '➕ Ajouter la retenue'}</button>
           </>
         )}
         <span style={{ flex: 1 }} />
-        <span role="status" aria-live="polite" style={{ fontFamily: mono, fontSize: '0.84rem', fontWeight: 800, color: equilibre ? '#166534' : '#b45309', background: equilibre ? '#f0fdf4' : '#fffbeb', border: `1px solid ${equilibre ? '#bbf7d0' : '#fde68a'}`, borderRadius: 10, padding: '8px 12px' }}>
+        <span role="status" style={{ fontFamily: mono, fontSize: '0.84rem', fontWeight: 800, color: equilibre ? '#166534' : '#b45309', background: equilibre ? '#f0fdf4' : '#fffbeb', border: `1px solid ${equilibre ? '#bbf7d0' : '#fde68a'}`, borderRadius: 10, padding: '8px 12px' }}>
           Débits {fmtMontant(t.debit)} · Crédits {fmtMontant(t.credit)} · Écart {fmtMontant(t.ecart < 0n ? -t.ecart : t.ecart)}{equilibre ? ' ✓' : ''}
         </span>
       </div>

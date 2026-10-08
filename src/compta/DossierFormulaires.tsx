@@ -17,6 +17,9 @@ export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, lib
 }) {
   const cadre = useRef<HTMLDivElement>(null);
   useEffect(() => { cadre.current?.focus(); }, []);
+  // S6a : un refus rendu sous une longue saisie (grille des lignes d'une écriture) se fait voir : défilement jusqu'au message.
+  const refErreur = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (erreur) refErreur.current?.scrollIntoView({ block: 'nearest' }); }, [erreur]);
   return (
     <div ref={cadre} tabIndex={-1} role="dialog" aria-modal="true" aria-label={titre}
       style={{ position: 'fixed', inset: 0, zIndex: 400, background: 'rgba(15,23,42,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, outline: 'none' }}
@@ -32,7 +35,7 @@ export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, lib
         </div>
         <div style={{ padding: '20px 24px', overflowY: 'auto', flex: 1 }}>
           {children}
-          {erreur && <div role="alert" style={{ marginTop: 14, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#dc2626', fontWeight: 600 }}>{erreur}</div>}
+          {erreur && <div ref={refErreur} role="alert" style={{ marginTop: 14, background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 8, padding: '8px 12px', fontSize: '0.78rem', color: '#dc2626', fontWeight: 600 }}>{erreur}</div>}
         </div>
         <div style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
           <button type="button" onClick={onClose} disabled={envoi} style={{ padding: '9px 22px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
