@@ -29,6 +29,8 @@ const ComptaConfiee = lazy(() => import('./pages/ComptaConfiee'));
 // Étape S3c : « Mes gérants » du titulaire d'un cabinet ; la page du cabinet vue par un collaborateur
 const ComptaGerants = lazy(() => import('./pages/ComptaGerants'));
 const ComptaCabinetMembre = lazy(() => import('./pages/ComptaCabinetMembre'));
+// Étape S5a : le plan de comptes d'un dossier (toute personne à qui le dossier est ouvert, vérifié par le serveur)
+const ComptaPlanComptes = lazy(() => import('./pages/ComptaPlanComptes'));
 // Étape S4a : les dossiers du cabinet (liste du titulaire ; la fiche d'un dossier pour toute personne à qui il est ouvert,
 // vérifié par le serveur)
 const ComptaDossiers = lazy(() => import('./pages/ComptaDossiers'));
@@ -87,6 +89,7 @@ export default function ComptaApp() {
               <Route path="/gerants" element={<ReserveCabinet><ComptaGerants /></ReserveCabinet>} />
               <Route path="/dossiers" element={<ReserveCabinet><ComptaDossiers /></ReserveCabinet>} />
               <Route path="/dossiers/:dossierId" element={<ComptaDossier />} />
+              <Route path="/dossiers/:dossierId/plan" element={<ComptaPlanComptes />} />
               <Route path="/cabinets/:espaceId" element={<ComptaCabinetMembre />} />
               <Route path="/ma-comptabilite" element={<ReserveClient><ComptaMaComptabilite /></ReserveClient>} />
               <Route path="/confiee/:espaceId" element={<ComptaConfiee />} />
