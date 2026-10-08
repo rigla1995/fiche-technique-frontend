@@ -23,9 +23,13 @@ export interface LigneEcriture {
 export interface Ecriture {
   id: number; numeroProvisoire: string; numero: string | null; date: string; dateReelle: string | null; journal: { id: number; code: string; libelle: string; type: TypeJournal };
   reference: string; libelle: string; etat: EtatEcriture; etatLibelle: string; total: string; origine: 'saisie' | 'import' | 'contrepassation'; origineId: number | null;
-  nbLignes: number; creePar: string | null; creeLe: string; modifieLe: string; valideLe: string | null; lignes?: LigneEcriture[];
+  // S6b : le numéro de l'écriture d'origine (contre-passation), la contre-passation qui annule cette écriture, l'auteur de la validation.
+  origineNumero: string | null; contrepasseePar: { id: number; numero: string } | null;
+  nbLignes: number; creePar: string | null; creeLe: string; modifieLe: string; validePar: string | null; valideLe: string | null; lignes?: LigneEcriture[];
 }
 export interface NbEcritures { brouillard: number; validees: number }
+// S6b : la période choisie dans les filtres, avec ce qu'elle contient encore en brouillard (« Valider la période »).
+export interface PeriodeFiltree { id: number; debut: string; fin: string; etat: 'ouverte' | 'close'; nbBrouillard: number; nbValidees: number }
 // Une PAGE de la liste : `ecritures` = la page (sans leurs lignes), `total` = résultats des filtres, `nb` = toutes les
 // écritures du dossier (bandeau) ; les choix de la saisie voyagent avec (journaux, comptes imputables, codes, tiers).
 export interface EcrituresReponse {
@@ -33,6 +37,7 @@ export interface EcrituresReponse {
   droits: Droits;
   exercice: ExerciceOuvert | null;
   nb: NbEcritures;
+  periode: PeriodeFiltree | null;
   filtres: { journalId: number | null; periodeId: number | null; etat: EtatEcriture | ''; q: string };
   ecritures: Ecriture[]; total: number; page: number; limite: number;
   journaux: JournalCourt[];
@@ -45,6 +50,10 @@ export interface EcrituresReponse {
 }
 export interface EcritureReponse { ecriture: Ecriture; nb: NbEcritures }
 export interface SuppressionReponse { supprime: { id: number; numeroProvisoire: string }; nb: NbEcritures }
+// S6b : une contre-passation rend l'écriture inverse et l'écriture d'origine relue (son lien) ; valider une période rend
+// la période (plus rien en brouillard) et le nombre d'écritures validées.
+export interface ContrepassationReponse { ecriture: Ecriture; origine: Ecriture; nb: NbEcritures }
+export interface ValidationPeriodeReponse { periode: PeriodeFiltree; validees: number; nb: NbEcritures }
 // Une ligne telle que la fenêtre la saisit (montants en texte, tels que tapés) et telle qu'elle part au serveur.
 export interface LigneSaisie { cle: number; compteId: number | null; tiersId: number | null; libelle: string; debit: string; credit: string; taxeId: number | null; echeance: string }
 export interface LigneEnvoyee { compteId: number | null; tiersId: number | null; libelle: string | null; debit: string; credit: string; taxeId: number | null; echeance: string | null }
@@ -76,6 +85,19 @@ export const aideTaxe = async (dossierId: number, corps: { journalId: number; li
 export const aideRetenue = async (dossierId: number, corps: { journalId: number; tiersId: number | null; taxeId: number | null; lignes: LigneEnvoyee[] }): Promise<AideReponse> => {
   const { data } = await api.post(chemin(dossierId, '/aide/retenue'), corps);
   return data as AideReponse;
+};
+// S6b : valider une écriture (définitif), la contre-passer (date, libellé et pièce facultatifs), valider toute une période.
+export const validerEcriture = async (dossierId: number, ecritureId: number): Promise<EcritureReponse> => {
+  const { data } = await api.post(chemin(dossierId, `/${ecritureId}/valider`));
+  return data as EcritureReponse;
+};
+export const contrepasserEcriture = async (dossierId: number, ecritureId: number, corps: { date?: string; libelle?: string; reference?: string }): Promise<ContrepassationReponse> => {
+  const { data } = await api.post(chemin(dossierId, `/${ecritureId}/contrepasser`), corps);
+  return data as ContrepassationReponse;
+};
+export const validerPeriode = async (dossierId: number, periodeId: number): Promise<ValidationPeriodeReponse> => {
+  const { data } = await api.post(`/api/compta/dossiers/${encodeURIComponent(String(dossierId))}/periodes/${periodeId}/valider`);
+  return data as ValidationPeriodeReponse;
 };
 
 // ── Millimes (mêmes règles que le serveur : 15 entiers, 3 décimales au plus, virgule acceptée) ─────────────────────
@@ -131,6 +153,9 @@ export const ajouterJours = (date: string, n: number) => {
 };
 // La période (mois) qui contient une date, ou null.
 export const periodeDe = (periodes: PeriodeExercice[], date: string) => periodes.find((p) => date >= p.debut && date <= p.fin) || null;
+// S6b (NC 01 §61) : une opération d'une période close s'enregistre au premier jour de la période ouverte qui suit, sa
+// vraie date gardée ; null quand aucune période ouverte ne suit.
+export const periodeOuverteSuivante = (periodes: PeriodeExercice[], close: PeriodeExercice) => periodes.find((p) => p.debut > close.fin && p.etat === 'ouverte') || null;
 // Libellé d'une période : « mars 2026 » (une période partielle garde son mois).
 export const libellePeriode = (p: PeriodeExercice) => new Date(`${p.debut}T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
 // Message d'erreur d'une date d'écriture, ou null : dans une période ouverte de l'exercice ouvert (le serveur revérifie).

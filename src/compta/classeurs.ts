@@ -8,12 +8,13 @@ export const TYPE_XLSX = 'application/vnd.openxmlformats-officedocument.spreadsh
 export interface LigneImportFausse { ligne: number; repere: string; erreurs: string[] }
 export interface RapportImport { message: string; code?: string; lignes: LigneImportFausse[]; nbLignes: number; nbErreurs: number }
 
-// Téléchargement d'un classeur, nom du fichier lu dans la réponse (sinon `nomParDefaut`).
-export const telechargerClasseur = async (chemin: string, nomParDefaut: string) => {
+// Téléchargement d'un classeur, nom du fichier lu dans la réponse (sinon `nomParDefaut`). S6b : sert aussi au journal
+// général en PDF (`type`).
+export const telechargerClasseur = async (chemin: string, nomParDefaut: string, type: string = TYPE_XLSX) => {
   const res = await api.get(chemin, { responseType: 'blob' });
   const cd = (res.headers['content-disposition'] as string | undefined) || '';
   const m = cd.match(/filename="?([^"]+)"?/);
-  const url = window.URL.createObjectURL(new Blob([res.data as BlobPart], { type: TYPE_XLSX }));
+  const url = window.URL.createObjectURL(new Blob([res.data as BlobPart], { type }));
   const a = document.createElement('a');
   a.href = url;
   a.setAttribute('download', m ? m[1] : nomParDefaut);
