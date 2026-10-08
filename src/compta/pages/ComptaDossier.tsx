@@ -264,6 +264,24 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   </>
                 )}
               </Carte>
+              {/* S5a : la configuration du dossier — le plan de comptes (copié du paquet pays) ; journaux, taxes et tiers
+                  arrivent aux étapes suivantes (PLAN-S5 §2). */}
+              <Carte titre="⚙️ Configuration" sousTitre={fiche.plan.paquet ? `Plan de comptes : ${fiche.plan.paquet.libelle}` : 'Plan de comptes, journaux, taxes, tiers'}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, fontSize: '0.86rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>
+                  <span style={{ color: '#64748b' }}>Plan de comptes</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <span style={{ color: '#0f172a', fontWeight: 600 }}>
+                      {fiche.plan.nbActifs} compte{fiche.plan.nbActifs > 1 ? 's' : ''} actif{fiche.plan.nbActifs > 1 ? 's' : ''}
+                      {fiche.plan.nbAjoutes > 0 ? ` · ${fiche.plan.nbAjoutes} ajouté${fiche.plan.nbAjoutes > 1 ? 's' : ''}` : ''}
+                      {fiche.plan.nbDesactives > 0 ? ` · ${fiche.plan.nbDesactives} désactivé${fiche.plan.nbDesactives > 1 ? 's' : ''}` : ''}
+                    </span>
+                    <Link to={`/dossiers/${fiche.id}/plan`} style={{ ...petit('#eef2ff', '#4338ca', '#c7d2fe'), textDecoration: 'none' }}>📑 Ouvrir</Link>
+                  </span>
+                </div>
+                <Ligne libelle="Journaux" valeur="À l'étape suivante" />
+                <Ligne libelle="Taxes" valeur="À l'étape suivante" />
+                <Ligne libelle="Tiers" valeur="À l'étape suivante" />
+              </Carte>
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
                 {fiche.acces.map((a, i) => (
                   <div key={`${a.email}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: '0.84rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>

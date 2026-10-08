@@ -20,7 +20,8 @@ export interface Exercice { debut: string; fin: string }
 export interface Periode { debut: string; fin: string; etat: 'ouverte' | 'close' }
 export type EtatDossier = 'actif' | 'archive';
 export type EtatAbonnement = 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
-export interface Droits { creer: boolean; modifier: boolean; archiver: boolean; supprimer: boolean }
+// S5a : `configurer` (plan de comptes) = titulaire ou gérant de niveau Complet (réponse 6 du client du 07/10).
+export interface Droits { creer: boolean; modifier: boolean; configurer: boolean; archiver: boolean; supprimer: boolean }
 export interface EspaceDossiers { id: number; nom: string; type: 'cabinet' | 'client_labflow'; role: 'titulaire' | 'gerant'; niveau: string }
 
 export interface LigneDossier {
@@ -59,6 +60,8 @@ export interface FicheDossier {
   exercices: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos' }[];
   acces: { role: 'titulaire' | 'gerant'; niveau: string; nom: string | null; email: string | null }[];
   droits: Droits; mouvemente: boolean; creeLe: string; modifieLe: string; etatAbonnement: EtatAbonnement;
+  // S5a : résumé de la configuration (carte « Configuration ») — plan de comptes copié du paquet pays.
+  plan: { nbActifs: number; nbAjoutes: number; nbDesactives: number; paquet: { pays: string; version: string; libelle: string } | null };
   avertissements?: string[];
   // S4b : « Reprendre l'identité de LabFlow » — nombre de champs repris (0 = identique).
   reprise?: number;
