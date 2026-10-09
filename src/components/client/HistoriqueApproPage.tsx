@@ -9,6 +9,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Activite, HistoriqueApproEntry } from '../../types';
+import { codeErreur, messageErreur } from './factures/pieces';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -148,22 +149,26 @@ function EditModal({ entry, fournisseurs, onSave, onClose }: EditModalProps) {
 // ── Delete confirm modal ──────────────────────────────────────────────────────
 interface DeleteModalProps {
   entry: HistoriqueApproEntry;
-  onConfirm: (id: number) => Promise<void>;
+  onConfirm: (id: number, confirmerFacture: boolean) => Promise<void>;
   onClose: () => void;
 }
 function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
   const voc = useVocabulaire();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  // Factures fournisseur, étape F1 : dernière ligne d'une facture qui a une pièce jointe → la facture et sa pièce
+  // partent avec elle ; le serveur le dit (409), un second clic confirme.
+  const [derniereLigne, setDerniereLigne] = useState<string | null>(null);
 
   const handleDelete = async () => {
     setDeleting(true);
     setError('');
     try {
-      await onConfirm(entry.id);
+      await onConfirm(entry.id, derniereLigne !== null);
       onClose();
-    } catch {
-      setError('Erreur lors de la suppression');
+    } catch (e) {
+      if (codeErreur(e) === 'DERNIERE_LIGNE_FACTURE') setDerniereLigne(messageErreur(e, 'C\'est la dernière ligne de sa facture.'));
+      else setError(messageErreur(e, 'Erreur lors de la suppression'));
     }
     setDeleting(false);
   };
@@ -197,12 +202,17 @@ function DeleteModal({ entry, onConfirm, onClose }: DeleteModalProps) {
           <div style={{ background: '#fff7ed', border: '1px solid #fbd38d', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#92400e', fontWeight: 600 }}>
             🔒 Action irréversible — cette suppression ne peut pas être annulée.
           </div>
+          {derniereLigne && (
+            <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#991b1b', fontWeight: 600 }}>
+              📎 {derniereLigne}
+            </div>
+          )}
           {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', margin: 0 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
             <button className="btn btn-ghost" onClick={onClose} disabled={deleting}>Annuler</button>
             <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}
               style={{ background: '#dc2626', color: '#fff', border: 'none' }}>
-              {deleting ? '…' : 'Supprimer définitivement'}
+              {deleting ? '…' : derniereLigne ? 'Supprimer la ligne, la facture et sa pièce' : 'Supprimer définitivement'}
             </button>
           </div>
         </div>
@@ -384,8 +394,8 @@ export default function HistoriqueApproPage() {
     } : r));
   };
 
-  const handleDelete = async (id: number) => {
-    await api.delete(`/api/stock/historique/${id}?isEntreprise=true`);
+  const handleDelete = async (id: number, confirmerFacture: boolean) => {
+    await api.delete(`/api/stock/historique/${id}?isEntreprise=true${confirmerFacture ? '&confirmerFacture=1' : ''}`);
     setResults((prev) => prev.filter((r) => r.id !== id));
   };
 

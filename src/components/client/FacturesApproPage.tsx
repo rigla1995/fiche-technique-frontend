@@ -6,6 +6,8 @@ import type { Activite } from '../../types';
 import GuideButton from './GuideButton';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
+import FenetrePieces from './factures/FenetrePieces';
+import { useAuth } from '../../context/AuthContext';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -34,6 +36,8 @@ interface FactureRow {
   montantHT: number;
   montantTva: number;
   montantTTC: number;
+  // Factures fournisseur, étape F1 : nombre de pièces jointes (vraie facture du fournisseur).
+  nbPieces?: number;
 }
 
 interface LigneFact {
@@ -156,6 +160,16 @@ export default function FacturesApproPage() {
     });
   };
 
+  // Factures fournisseur, étape F1 : la vraie facture (pièces jointes) d'une appro saisie ; le PDF fabriqué par
+  // LabFlow ne reste que pour les factures de transfert.
+  const [fenetrePieces, setFenetrePieces] = useState<{ id: number; titre: string } | null>(null);
+  const ouvrirPieces = (f: FactureRow) => setFenetrePieces({
+    id: f.id,
+    titre: `Facture ${f.refFacture ?? ''}${f.fournisseurNom ? ` — ${f.fournisseurNom}` : ''}`,
+  });
+  const { canWrite } = useAuth();
+  const majNombrePieces = (id: number, n: number) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, nbPieces: n } : x)));
+
   // Facture PDF (charte des factures acheteurs : émetteur = fournisseur)
   const ouvrirPdf = async (id: number) => {
     try {
@@ -185,6 +199,10 @@ export default function FacturesApproPage() {
 
   return (
     <div className="page">
+      {fenetrePieces && (
+        <FenetrePieces factureId={fenetrePieces.id} titre={fenetrePieces.titre} accent="#1e40af"
+          onFermer={() => setFenetrePieces(null)} onNombre={(n) => majNombrePieces(fenetrePieces.id, n)} />
+      )}
       {/* Hero */}
       <div style={{
         background: 'linear-gradient(135deg, #1e3a8a 0%, #1e40af 55%, #3b82f6 100%)',
@@ -287,12 +305,27 @@ export default function FacturesApproPage() {
                       <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem' }}>{f.montantTTC.toFixed(3)} DT</div>
                     </div>
                     {/* span cliquable (l'en-tête entier est déjà un <button>) */}
-                    <span role="button" tabIndex={0} title="Ouvrir la facture PDF"
-                      onClick={(e) => { e.stopPropagation(); ouvrirPdf(f.id); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); ouvrirPdf(f.id); } }}
-                      style={{ background: '#fff', border: '1px solid #93c5fd', color: '#1d4ed8', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                      📄 PDF
-                    </span>
+                    {f.typeSource === 'transfert' ? (
+                      <span role="button" tabIndex={0} title="Ouvrir la facture PDF"
+                        onClick={(e) => { e.stopPropagation(); ouvrirPdf(f.id); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); ouvrirPdf(f.id); } }}
+                        style={{ background: '#fff', border: '1px solid #93c5fd', color: '#1d4ed8', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        📄 PDF
+                      </span>
+                    ) : !canWrite && (f.nbPieces ?? 0) === 0 ? (
+                      // Compte en lecture seule : rien à joindre — pas de bouton qui promettrait l'impossible.
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.76rem', whiteSpace: 'nowrap' }}>📎 Aucune pièce</span>
+                    ) : (
+                      <span role="button" tabIndex={0}
+                        title={(f.nbPieces ?? 0) > 0 ? `Voir la facture ${voc.du('fournisseur')}` : `Joindre la facture ${voc.du('fournisseur')}`}
+                        onClick={(e) => { e.stopPropagation(); ouvrirPieces(f); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); ouvrirPieces(f); } }}
+                        style={(f.nbPieces ?? 0) > 0
+                          ? { background: '#fff', border: '1px solid #93c5fd', color: '#1d4ed8', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }
+                          : { background: '#fffbeb', border: '1px dashed #f59e0b', color: '#b45309', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {(f.nbPieces ?? 0) > 0 ? `📎 Voir la facture${(f.nbPieces ?? 0) > 1 ? ` (${f.nbPieces})` : ''}` : '📎 Joindre la facture'}
+                      </span>
+                    )}
                     <span style={{ color: '#1e40af', fontSize: '1rem' }}>{isExpanded ? '▼' : '▶'}</span>
                   </div>
                 </button>
