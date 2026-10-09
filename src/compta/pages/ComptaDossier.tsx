@@ -10,8 +10,10 @@ import { FormulaireExercice, FormulaireRegime, Modale } from '../DossierFormulai
 import { libelleNiveau } from '../comptables';
 import {
   controlerExercice, fmtDate, fmtMoisAnnee, libelleImpot, libellePersonne, libelleTva, messageDossier, ouiNon, statutDe, texteEtatAbonnement,
-  type Exercice, type FicheDossier, type Regime,
+  type Exercice, type FicheDossier, type Regime, type ResumeTenue,
 } from '../dossiers';
+import { signe } from '../echeancier';
+import { fmtMontant } from '../ecritures';
 import { bouton, pastille, petit } from '../styles';
 import { Carte, Ligne } from '../ui';
 
@@ -39,6 +41,16 @@ function LigneConfiguration({ libelle, valeur, lien, icone }: { libelle: string;
     </div>
   );
 }
+
+// S7a : le dû non lettré d'un type de tiers (carte Tenue, ligne Échéancier) : « 1 190,000 dont 300,000 échu », « soldé »,
+// « 500,000 en votre faveur » (relecture : un dû négatif se dit en clair).
+const texteDu = (r: ResumeTenue) => {
+  const du = signe(r.du);
+  const echu = signe(r.echu);
+  if (du === 0n) return 'soldé';
+  if (du < 0n) return `${fmtMontant(-du)} en votre faveur`;
+  return `${fmtMontant(du)}${echu > 0n ? ` dont ${fmtMontant(echu)} échu` : ''}`;
+};
 
 // Une page par dossier : changer de dossier (navigation directe) repart d'un état neuf.
 export default function ComptaDossierPage() {
@@ -295,8 +307,8 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   valeur={`${fiche.tiers.fournisseurs.nbActifs} fournisseur${fiche.tiers.fournisseurs.nbActifs > 1 ? 's' : ''} · ${fiche.tiers.clients.nbActifs} client${fiche.tiers.clients.nbActifs > 1 ? 's' : ''}${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal > fiche.tiers.fournisseurs.nbActifs + fiche.tiers.clients.nbActifs ? ` · ${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs} désactivé${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs > 1 ? 's' : ''}` : ''}`} />
               </Carte>
               {/* S6a : la tenue du dossier — les écritures (PLAN-S6 §2) ; S6b : validation et périodes ; S6c : les livres
-                  (grand livre, balance, journaux) sur la page Livres, chacun par son onglet. */}
-              <Carte titre="✍️ Tenue" sousTitre="Écritures, validation et périodes, grand livre, balance et journaux">
+                  (grand livre, balance, journaux) sur la page Livres, chacun par son onglet ; S7a : lettrage et échéancier. */}
+              <Carte titre="✍️ Tenue" sousTitre="Écritures, périodes, livres, lettrage et échéancier">
                 <LigneConfiguration libelle="Écritures" lien={`/dossiers/${fiche.id}/ecritures`} icone="✍️"
                   valeur={`${fiche.ecritures.nbBrouillard} en brouillard · ${fiche.ecritures.nbValidees} validée${fiche.ecritures.nbValidees > 1 ? 's' : ''}`} />
                 <LigneConfiguration libelle="Périodes" lien={`/dossiers/${fiche.id}/periodes`} icone="🔏"
@@ -304,6 +316,14 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                 <LigneConfiguration libelle="Grand livre" lien={`/dossiers/${fiche.id}/livres?vue=grand-livre`} icone="📖" valeur="Par compte, par tiers" />
                 <LigneConfiguration libelle="Balance" lien={`/dossiers/${fiche.id}/livres?vue=balance`} icone="⚖️" valeur="Générale, auxiliaire" />
                 <LigneConfiguration libelle="Journaux" lien={`/dossiers/${fiche.id}/livres?vue=journaux`} icone="📒" valeur="Par journal, par période" />
+                {fiche.tenue && (
+                  <>
+                    <LigneConfiguration libelle="Lettrage" lien={`/dossiers/${fiche.id}/lettrage`} icone="🔗"
+                      valeur={`${fiche.tenue.fournisseurs.aLettrer + fiche.tenue.clients.aLettrer} ligne${fiche.tenue.fournisseurs.aLettrer + fiche.tenue.clients.aLettrer > 1 ? 's' : ''} à lettrer`} />
+                    <LigneConfiguration libelle="Échéancier" lien={`/dossiers/${fiche.id}/echeancier`} icone="📅"
+                      valeur={`Fournisseurs ${texteDu(fiche.tenue.fournisseurs)} · clients ${texteDu(fiche.tenue.clients)}`} />
+                  </>
+                )}
               </Carte>
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
                 {fiche.acces.map((a, i) => (
