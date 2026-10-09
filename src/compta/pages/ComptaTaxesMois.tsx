@@ -44,7 +44,8 @@ function ComptaTaxesMois({ dossierId }: { dossierId?: string }) {
   const { confirm } = useConfirm();
   const [parametres, setParametres] = useSearchParams();
   const [periodeId, setPeriodeId] = useState<number | null>(() => { const v = Number(parametres.get('periode')); return Number.isInteger(v) && v > 0 ? v : null; });
-  const [brouillard, setBrouillard] = useState(true);
+  // S7c : « ?brouillard=0 » (lien de la page Déclaration mensuelle) ouvre la page sur les écritures validées seulement.
+  const [brouillard, setBrouillard] = useState(() => parametres.get('brouillard') !== '0');
   const cle = `${periodeId ?? ''}|${brouillard ? 1 : 0}`;
   // La dernière lecture, avec la clé (période, brouillard) et le numéro de relecture qu'elle sert : la page est « à jour »
   // seulement quand les deux correspondent (après une écriture, l'ancienne lecture reste affichée mais figée).
