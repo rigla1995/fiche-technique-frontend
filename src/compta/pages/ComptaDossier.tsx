@@ -53,6 +53,14 @@ const texteDu = (r: ResumeTenue) => {
 };
 
 // S7b : le compte rendu des taxes du mois (carte Taxes) : « septembre 2026 : TVA à payer 1 234,500 · 3 pièces à certifier ».
+// S7c : la déclaration mensuelle à faire (carte Taxes) : « septembre 2026 : échéance le 20/10/2026 » ou « septembre 2026 :
+// déclarée le 18/10/2026 ».
+const texteDeclaration = (r: ResumeFiscalite) => {
+  const d = r.declaration;
+  if (!d) return 'aucun mois fini à déclarer';
+  const mois = fmtMoisAnnee(d.periode.debut);
+  return d.declareeLe ? `${mois} : déclarée le ${fmtDate(d.declareeLe)}` : `${mois} : à déclarer${d.echeance ? ` avant le ${fmtDate(d.echeance)}` : ''}`;
+};
 const texteTaxes = (r: ResumeFiscalite) => {
   if (!r.periode || !r.tva) return `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à retenue sans certificat (tous mois)`;
   const aPayer = signe(r.tva.aPayer);
@@ -335,11 +343,12 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   </>
                 )}
               </Carte>
-              {/* S7b : les taxes du mois — état de TVA, retenues et certificats (PLAN-S7 §2 « S7b ») ; S7c y ajoutera la
-                  déclaration mensuelle. */}
+              {/* S7b : les taxes du mois — état de TVA, retenues et certificats (PLAN-S7 §2 « S7b ») ; S7c : la déclaration
+                  mensuelle (le mois à déclarer, son échéance). */}
               {fiche.fiscalite && (
-                <Carte titre="🧾 Taxes" sousTitre="TVA du mois, retenues à la source et certificats TEJ">
+                <Carte titre="🧾 Taxes" sousTitre="TVA du mois, retenues à la source, certificats TEJ, déclaration mensuelle">
                   <LigneConfiguration libelle="Taxes du mois" lien={`/dossiers/${fiche.id}/taxes-mois${fiche.fiscalite.periode ? `?periode=${fiche.fiscalite.periode.id}` : ''}`} icone="🧾" valeur={texteTaxes(fiche.fiscalite)} />
+                  <LigneConfiguration libelle="Déclaration mensuelle" lien={`/dossiers/${fiche.id}/declaration${fiche.fiscalite.declaration ? `?periode=${fiche.fiscalite.declaration.periode.id}` : ''}`} icone="🗓️" valeur={texteDeclaration(fiche.fiscalite)} />
                 </Carte>
               )}
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
