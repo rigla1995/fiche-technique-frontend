@@ -14,7 +14,7 @@ import type { TypeTiers } from './tiers';
 export type EtatEcriture = 'brouillard' | 'validee';
 export interface JournalCourt { id: number; code: string; libelle: string; type: TypeJournal; actif: boolean }
 export interface TaxeCourte { id: number; code: string; libelle: string; type: TypeTaxe; typeLibelle: string; taux: string | null; montant: string | null; assiette: Assiette; assietteLibelle: string; actif: boolean }
-export interface TiersCourt { id: number; type: TypeTiers; typeLibelle: string; code: string; nom: string; compteId: number; delaiPaiement: number; retenue: { id: number; code: string; taux: string | null; actif: boolean } | null }
+export interface TiersCourt { id: number; type: TypeTiers; typeLibelle: string; code: string; nom: string; compteId: number; delaiPaiement: number; retenue: { id: number; code: string; taux: string | null; actif: boolean; selonRegime?: boolean } | null }
 export interface PeriodeExercice { id: number; debut: string; fin: string; etat: 'ouverte' | 'close' }
 export interface ExerciceOuvert { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; periodes: PeriodeExercice[] }
 export interface LigneEcriture {

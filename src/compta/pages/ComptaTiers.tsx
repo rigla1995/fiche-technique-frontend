@@ -9,8 +9,8 @@ import { FenetreImport } from '../FenetreImport';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import { texteCompte } from '../journaux';
 import {
-  LIBELLES_TYPE, PAGE_TIERS, controlerCodeTiers, controlerPrefixe, exempleCode, importerTiers, lireTiers, telechargerModeleTiers, telechargerTiers, texteDelai, texteRetenue,
-  type EcritureTiers, type RegimeTvaTiers, type Tiers, type TiersReponse, type TypeTiers,
+  LIBELLES_TYPE, PAGE_TIERS, controlerCodeTiers, controlerPrefixe, exempleCode, importerTiers, lireTiers, retenueProposee, telechargerModeleTiers, telechargerTiers, texteDelai, texteIdentifiant, texteRetenue,
+  type EcritureTiers, type RegimeTvaTiers, type Tiers, type TiersReponse, type TypeIdentifiant, type TypeTiers,
 } from '../tiers';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
 
@@ -22,7 +22,9 @@ import { bouton, inp, lbl, pastille, petit } from '../styles';
 // supprimer un tiers sans écriture, régler le modèle des codes et importer un classeur Excel en tout-ou-rien (titulaire
 // ou Complet), exporter (tout niveau). Chaque écriture rend le tiers touché, remplacé en place ; une création ou un
 // import relit la liste ; un refus sur un état périmé (404, 409) ferme la fenêtre et relit (convention de S3c), sauf les
-// refus que la personne corrige dans la fenêtre.
+// refus que la personne corrige dans la fenêtre. S7b : la fiche d'un fournisseur porte son régime fiscal (qui propose la
+// retenue par défaut), sa résidence et, sans matricule fiscal, son identifiant de secours (CIN, passeport, carte de séjour,
+// autre) : la plateforme TEJ les exige au certificat de retenue (page Taxes du mois).
 type Fenetre = { type: 'creer' } | { type: 'modifier'; tiers: Tiers } | { type: 'modele' } | { type: 'importer' } | null;
 type Role = 'titulaire' | 'gerant';
 type Refus = (err: unknown) => boolean;
@@ -285,7 +287,7 @@ function ComptaTiers({ dossierId }: { dossierId?: string }) {
                     <span style={{ minWidth: 0, flex: '1 1 auto' }}>
                       <span style={{ color: '#0f172a', fontWeight: 600, overflowWrap: 'anywhere' }}>{t.nom}</span>
                       <span style={{ display: 'block', fontSize: '0.76rem', color: '#64748b' }}>
-                        {t.matriculeFiscal ? <span style={{ fontFamily: mono }}>{t.matriculeFiscal}</span> : 'MF non renseigné'}{t.ville ? ` · ${t.ville}` : ''}
+                        {t.matriculeFiscal ? <span style={{ fontFamily: mono }}>{t.matriculeFiscal}</span> : t.identifiant ? <span style={{ fontFamily: mono }}>{texteIdentifiant(t.identifiant)}</span> : 'MF non renseigné'}{t.ville ? ` · ${t.ville}` : ''}{t.type === 'fournisseur' && t.regimeFiscalLibelle ? ` · ${t.regimeFiscalLibelle}` : ''}{!t.resident ? ' · non résident' : ''}
                       </span>
                       <span style={{ display: 'block', fontSize: '0.76rem', color: '#64748b' }}>
                         Compte {t.compte ? texteCompte(t.compte) : '—'} · Retenue {texteRetenue(t.retenue)} · {texteDelai(t.delaiPaiement)}
@@ -367,6 +369,25 @@ function FenetreTiers({ etat, type, tiers, role, onClose, onEnregistre, onRefus 
   const [regime, setRegime] = useState<RegimeTvaTiers>(tiers?.regimeTva || 'assujetti');
   const [retenueId, setRetenueId] = useState<number | null>(tiers?.retenue?.id ?? null);
   const [delai, setDelai] = useState(tiers ? String(tiers.delaiPaiement) : '');
+  // S7b : régime fiscal, résidence, identifiant de secours (fournisseurs).
+  const [regimeFiscal, setRegimeFiscal] = useState(tiers?.regimeFiscal || '');
+  const [resident, setResident] = useState(tiers ? tiers.resident : true);
+  const [idType, setIdType] = useState<TypeIdentifiant | ''>(tiers?.identifiant?.type || '');
+  const [idNumero, setIdNumero] = useState(tiers?.identifiant?.numero || '');
+  const [idNaissance, setIdNaissance] = useState(tiers?.identifiant?.naissance || '');
+  const [idPays, setIdPays] = useState(tiers?.identifiant?.pays || '');
+  const [noteRetenue, setNoteRetenue] = useState('');
+  const fournisseur = type === 'fournisseur';
+  const regimeChoisi = etat.regimesFiscaux.find((r) => r.valeur === regimeFiscal);
+  // Changer de régime propose la retenue par défaut de la même famille (achats ou honoraires) ; elle reste modifiable.
+  const choisirRegime = (v: string) => {
+    setRegimeFiscal(v);
+    setErreur(null);
+    const regime = etat.regimesFiscaux.find((r) => r.valeur === v);
+    const actuel = retenues.find((x) => x.id === retenueId)?.code ?? null;
+    const proposee = retenueProposee(regime, actuel, etat.familles);
+    if (proposee && proposee.id !== retenueId) { setRetenueId(proposee.id); setNoteRetenue(`Retenue par défaut proposée d'après le régime : ${texteRetenue({ id: proposee.id, code: proposee.code, libelle: '', taux: proposee.taux, actif: true })}.`); } else setNoteRetenue('');
+  };
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const poser = <T,>(f: (v: T) => void) => (v: T) => { f(v); setErreur(null); };
@@ -380,11 +401,21 @@ function FenetreTiers({ etat, type, tiers, role, onClose, onEnregistre, onRefus 
     if (!compteId) { setErreur('Choisissez le compte collectif.'); return; }
     const d = delai.trim() || '0';
     if (!/^\d{1,3}$/.test(d) || Number(d) > etat.delaiMax) { setErreur(`Le délai de paiement est un nombre de jours de 0 à ${etat.delaiMax}.`); return; }
-    const tout: Record<string, string | number | null> = { code: c, nom: nom.trim(), matriculeFiscal: matricule.trim(), adresse: adresse.trim(), ville: ville.trim(), telephone: telephone.trim(), email: email.trim(), compteId, regimeTva: regime, retenueId, delaiPaiement: Number(d) };
-    let corps: Record<string, string | number | null> = { ...tout, type };
+    // S7b : l'identifiant de secours (numéro en majuscules ; CIN : 8 chiffres ; pays : deux lettres) — le serveur revérifie.
+    const numeroId = idType === 'cin' ? idNumero.replace(/\s/g, '') : idNumero.trim().toUpperCase();
+    if (idType && !numeroId) { setErreur('Indiquez le numéro de l\'identifiant, ou choisissez « Aucun ».'); return; }
+    if (idType === 'cin' && !/^\d{8}$/.test(numeroId)) { setErreur('Le numéro de CIN a 8 chiffres.'); return; }
+    if (idType && idPays.trim() && !/^[A-Za-z]{2}$/.test(idPays.trim())) { setErreur('Le pays se note en deux lettres (TN, FR, DZ…).'); return; }
+    const identifiant = idType ? { type: idType, numero: numeroId, naissance: idNaissance || null, pays: idPays.trim().toUpperCase() || null } : null;
+    type Valeur = string | number | boolean | null | { type: string; numero: string; naissance: string | null; pays: string | null };
+    const tout: Record<string, Valeur> = { code: c, nom: nom.trim(), matriculeFiscal: matricule.trim(), adresse: adresse.trim(), ville: ville.trim(), telephone: telephone.trim(), email: email.trim(), compteId, regimeTva: regime, retenueId, delaiPaiement: Number(d), regimeFiscal: regimeFiscal || null, resident, identifiant };
+    let corps: Record<string, Valeur> = { ...tout, type };
     if (!creation) {
-      const avant: Record<string, string | number | null> = { code: tiers.code, nom: tiers.nom, matriculeFiscal: tiers.matriculeFiscal || '', adresse: tiers.adresse || '', ville: tiers.ville || '', telephone: tiers.telephone || '', email: tiers.email || '', compteId: tiers.compte?.id ?? null, regimeTva: tiers.regimeTva, retenueId: tiers.retenue?.id ?? null, delaiPaiement: tiers.delaiPaiement };
-      corps = Object.fromEntries(Object.entries(tout).filter(([k, v]) => v !== avant[k]));
+      const avant: Record<string, Valeur> = {
+        code: tiers.code, nom: tiers.nom, matriculeFiscal: tiers.matriculeFiscal || '', adresse: tiers.adresse || '', ville: tiers.ville || '', telephone: tiers.telephone || '', email: tiers.email || '', compteId: tiers.compte?.id ?? null, regimeTva: tiers.regimeTva, retenueId: tiers.retenue?.id ?? null, delaiPaiement: tiers.delaiPaiement,
+        regimeFiscal: tiers.regimeFiscal, resident: tiers.resident, identifiant: tiers.identifiant ? { type: tiers.identifiant.type, numero: tiers.identifiant.numero, naissance: tiers.identifiant.naissance, pays: tiers.identifiant.pays } : null,
+      };
+      corps = Object.fromEntries(Object.entries(tout).filter(([k, v]) => JSON.stringify(v) !== JSON.stringify(avant[k])));
       if (!Object.keys(corps).length) { onClose(); return; }
     }
     setEnvoi(true);
@@ -445,7 +476,7 @@ function FenetreTiers({ etat, type, tiers, role, onClose, onEnregistre, onRefus 
         </div>
         <div>
           <label htmlFor="ft-retenue" style={lbl}>Retenue par défaut</label>
-          <select id="ft-retenue" value={retenueId ?? ''} onChange={(e) => poser(setRetenueId)(e.target.value ? Number(e.target.value) : null)} disabled={envoi} style={inp}>
+          <select id="ft-retenue" value={retenueId ?? ''} onChange={(e) => { poser(setRetenueId)(e.target.value ? Number(e.target.value) : null); setNoteRetenue(''); }} disabled={envoi} style={inp}>
             <option value="">Aucune</option>
             {retenues.map((x) => <option key={x.id} value={x.id}>{texteRetenue(x)}{x.actif ? '' : ' — désactivée'}</option>)}
           </select>
@@ -455,6 +486,57 @@ function FenetreTiers({ etat, type, tiers, role, onClose, onEnregistre, onRefus 
           <input id="ft-delai" inputMode="numeric" value={delai} onChange={(e) => poser(setDelai)(e.target.value)} disabled={envoi} maxLength={3} placeholder="0 = comptant" style={inp} />
         </div>
       </div>
+      {fournisseur && (
+        <fieldset style={{ border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 14px', margin: '4px 0 10px' }}>
+          <legend style={{ ...lbl, padding: '0 6px', marginBottom: 0 }}>Fiscalité — retenues et certificats TEJ</legend>
+          <div style={grille}>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label htmlFor="ft-regime-fiscal" style={lbl}>Régime fiscal</label>
+              <select id="ft-regime-fiscal" value={regimeFiscal} onChange={(e) => choisirRegime(e.target.value)} disabled={envoi} style={inp}>
+                <option value="">Non renseigné</option>
+                {etat.regimesFiscaux.map((r) => <option key={r.valeur} value={r.valeur}>{r.libelle}</option>)}
+              </select>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', color: '#334155', fontWeight: 600, cursor: 'pointer', alignSelf: 'end', paddingBottom: 10 }}>
+              <input type="checkbox" checked={resident} onChange={(e) => poser(setResident)(e.target.checked)} disabled={envoi} /> Résident en Tunisie
+            </label>
+          </div>
+          {regimeChoisi && <p style={{ margin: '-4px 0 8px', fontSize: '0.74rem', color: '#64748b' }}>Retenue proposée : achats {regimeChoisi.retenues.achats ? texteRetenue({ ...regimeChoisi.retenues.achats, libelle: '', actif: true }) : '—'} · honoraires {regimeChoisi.retenues.honoraires ? texteRetenue({ ...regimeChoisi.retenues.honoraires, libelle: '', actif: true }) : '—'} · catégorie {regimeChoisi.personne === 'morale' ? 'personne morale (PM)' : 'personne physique (PP)'}{regimeChoisi.note ? ` — ${regimeChoisi.note}` : ''}</p>}
+          {noteRetenue && <p role="status" style={{ margin: '-4px 0 8px', fontSize: '0.76rem', color: '#166534', fontWeight: 600 }}>{noteRetenue}</p>}
+          <div style={grille}>
+            <div>
+              <label htmlFor="ft-id-type" style={lbl}>Identifiant de secours</label>
+              <select id="ft-id-type" value={idType} onChange={(e) => poser(setIdType)(e.target.value as TypeIdentifiant | '')} disabled={envoi} style={inp}>
+                <option value="">Aucun</option>
+                {etat.typesIdentifiant.map((x) => <option key={x.valeur} value={x.valeur}>{x.libelle}</option>)}
+              </select>
+            </div>
+            {idType && (
+              <>
+                <div>
+                  <label htmlFor="ft-id-numero" style={lbl}>Numéro</label>
+                  <input id="ft-id-numero" value={idNumero} onChange={(e) => poser(setIdNumero)(e.target.value)} disabled={envoi} maxLength={30} placeholder={idType === 'cin' ? '8 chiffres' : ''} style={{ ...inp, fontFamily: mono }} />
+                </div>
+                {idType !== 'autre' && (
+                  <div>
+                    <label htmlFor="ft-id-naissance" style={lbl}>Date de naissance</label>
+                    <input id="ft-id-naissance" type="date" value={idNaissance} onChange={(e) => poser(setIdNaissance)(e.target.value)} disabled={envoi} style={inp} />
+                  </div>
+                )}
+                {idType !== 'cin' && (
+                  <div>
+                    <label htmlFor="ft-id-pays" style={lbl}>Pays (2 lettres)</label>
+                    <input id="ft-id-pays" value={idPays} onChange={(e) => poser(setIdPays)(e.target.value.toUpperCase())} disabled={envoi} maxLength={2} placeholder="FR" style={{ ...inp, fontFamily: mono, textTransform: 'uppercase' }} />
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b', lineHeight: 1.5 }}>
+            Pour un certificat de retenue, la plateforme TEJ exige : le matricule fiscal avec sa lettre de clé (à défaut, l'identifiant de secours : CIN de 8 chiffres et date de naissance ; passeport ou carte de séjour avec date de naissance et pays ; autre identifiant avec pays), le régime fiscal, l'adresse, l'email et le téléphone.
+          </p>
+        </fieldset>
+      )}
       <p style={{ margin: '6px 0 0', fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5 }}>
         {creation
           ? `Le code a de ${etat.code.min} à ${etat.code.max} lettres ou chiffres et reste unique parmi les ${L.pluriel} du dossier. Un matricule déjà porté par un autre tiers est signalé, jamais refusé. La retenue par défaut sera proposée à la saisie, jamais imposée.`

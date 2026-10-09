@@ -988,7 +988,7 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
           <>
             <select aria-label="Code de retenue à la source, de retenue de TVA ou d'avance" value={retenueProposee ?? ''} onChange={(e) => { setRetenueId(e.target.value ? Number(e.target.value) : null); setErreur(null); }} disabled={fige} style={{ ...inp, width: 'auto', minWidth: 160 }}>
               <option value="">Code de retenue…</option>
-              {retenues.map((x) => <option key={x.id} value={x.id}>{texteTaxe(x)}{tiersLigne?.retenue?.id === x.id ? ' — par défaut' : ''}</option>)}
+              {retenues.map((x) => <option key={x.id} value={x.id}>{texteTaxe(x)}{tiersLigne?.retenue?.id === x.id ? (tiersLigne.retenue.selonRegime ? " — d'après le régime" : ' — par défaut') : ''}</option>)}
             </select>
             <button type="button" onClick={ajouterRetenue} disabled={fige || !retenueProposee} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>{aide ? 'Calcul…' : '➕ Ajouter la retenue'}</button>
           </>
