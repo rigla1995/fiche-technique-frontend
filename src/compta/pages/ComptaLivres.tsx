@@ -327,7 +327,7 @@ function Balance({ b, lecture, vide }: { b: BalanceReponse | null; lecture: bool
       {b && b.rangees.length === 0 && <Attente lecture={false} texte="Aucune ligne dans cette sélection." />}
       {!b && <Attente lecture={lecture} texte={vide} />}
       {b && b.rangees.length > 0 && (
-        <div style={{ overflowX: 'auto', opacity: lecture ? 0.6 : 1 }}>
+        <div style={{ overflowX: 'auto', position: 'relative', opacity: lecture ? 0.6 : 1 }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 760 }}>
             <thead>
               <tr style={{ color: '#64748b', textAlign: 'left' }}>
@@ -399,19 +399,19 @@ function GrandLivre({ g, lecture, vide, choisi, plus, afficherPlus, dossierId, p
         {!choisi && <Attente lecture={false} texte="Choisissez un compte ou un tiers pour lire son grand livre." />}
         {choisi && !g && <Attente lecture={lecture} texte={vide} />}
         {g && (
-          <div style={{ overflowX: 'auto', opacity: lecture ? 0.6 : 1 }}>
+          <div style={{ overflowX: 'auto', position: 'relative', opacity: lecture ? 0.6 : 1 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 820 }}>
               <thead>
                 <tr style={{ color: '#64748b', textAlign: 'left' }}>
                   <th style={cellule}>Date</th><th style={cellule}>Journal</th><th style={cellule}>Numéro</th><th style={cellule}>Pièce</th><th style={cellule}>Libellé</th><th style={cellule}>{g.compte && !g.tiers ? 'Tiers' : 'Compte'}</th>
-                  <th style={{ ...cellule, textAlign: 'right' }}>Débit</th><th style={{ ...cellule, textAlign: 'right' }}>Crédit</th><th style={{ ...cellule, textAlign: 'right' }}>Solde</th><th style={cellule}>État</th>
+                  <th style={{ ...cellule, textAlign: 'right' }}>Débit</th><th style={{ ...cellule, textAlign: 'right' }}>Crédit</th><th style={{ ...cellule, textAlign: 'right' }}>Solde</th><th style={cellule} title="Lettrage (page Lettrage)">Lettre</th><th style={cellule}>État</th>
                 </tr>
               </thead>
               <tbody>
                 <tr style={{ borderTop: '1px solid #f1f5f9', background: '#f8faff', fontWeight: 700 }}>
                   <td style={cellule} colSpan={6}>Solde d'ouverture <span style={{ fontWeight: 400, color: '#64748b' }}>(à-nouveaux et mouvements antérieurs)</span></td>
                   <td style={nombre}>{montant(g.ouverture.debit)}</td><td style={nombre}>{montant(g.ouverture.credit)}</td>
-                  <td style={{ ...nombre, fontWeight: 800 }}>{texteSolde(g.ouverture, fmtMontant)}</td><td style={cellule}><Brouillard n={g.ouverture.nbBrouillard ?? 0} /></td>
+                  <td style={{ ...nombre, fontWeight: 800 }}>{texteSolde(g.ouverture, fmtMontant)}</td><td style={cellule} /><td style={cellule}><Brouillard n={g.ouverture.nbBrouillard ?? 0} /></td>
                 </tr>
                 {g.lignes.map((l) => (
                   <tr key={l.id} style={{ borderTop: '1px solid #f1f5f9' }}>
@@ -423,16 +423,17 @@ function GrandLivre({ g, lecture, vide, choisi, plus, afficherPlus, dossierId, p
                     <td style={{ ...cellule, whiteSpace: 'nowrap' }}>{g.compte && !g.tiers ? (l.tiers ? <><span style={{ fontFamily: mono, fontWeight: 700 }}>{l.tiers.code}</span> {l.tiers.nom}</> : '—') : <><span style={{ fontFamily: mono, fontWeight: 700 }}>{l.compte.numero}</span> <span style={{ color: '#475569' }}>{l.compte.libelle}</span></>}</td>
                     <td style={nombre}>{montant(l.debit)}</td><td style={nombre}>{montant(l.credit)}</td>
                     <td style={{ ...nombre, fontWeight: 800 }}>{texteSolde(l, fmtMontant)}</td>
+                    <td style={{ ...cellule, fontFamily: mono, fontWeight: 800, color: '#4338ca' }}>{l.lettre || ''}</td>
                     <td style={cellule}><span style={pastille(l.ecriture.etat === 'validee' ? '#dcfce7' : '#fef3c7', l.ecriture.etat === 'validee' ? '#166534' : '#92400e')}>{LIBELLES_ETAT[l.ecriture.etat]}</span></td>
                   </tr>
                 ))}
-                {g.lignes.length === 0 && <tr><td style={{ ...cellule, color: '#64748b' }} colSpan={10}>Aucune ligne dans cette sélection (le solde d'ouverture est reporté).</td></tr>}
+                {g.lignes.length === 0 && <tr><td style={{ ...cellule, color: '#64748b' }} colSpan={11}>Aucune ligne dans cette sélection (le solde d'ouverture est reporté).</td></tr>}
               </tbody>
               <tfoot>
                 <tr style={{ borderTop: '2px solid #c7d2fe', fontWeight: 800, background: '#f8faff' }}>
                   <td style={cellule} colSpan={6}>Mouvements de la sélection ({pluriel(g.totaux.nbLignes, 'ligne', 'lignes')}) et solde <Brouillard n={g.totaux.nbBrouillard} /></td>
                   <td style={nombre}>{fmtMontant(g.totaux.debit)}</td><td style={nombre}>{fmtMontant(g.totaux.credit)}</td>
-                  <td style={nombre}>{texteSolde(g.totaux, fmtMontant)}</td><td style={cellule} />
+                  <td style={nombre}>{texteSolde(g.totaux, fmtMontant)}</td><td style={cellule} colSpan={2} />
                 </tr>
               </tfoot>
             </table>
@@ -463,7 +464,7 @@ function LivreJournal({ j, lecture, vide, choisi, plus, afficherPlus, dossierId,
         {choisi && !j && <Attente lecture={lecture} texte={vide} />}
         {j && j.ecritures.length === 0 && <Attente lecture={false} texte="Aucune écriture dans cette sélection." />}
         {j && j.ecritures.length > 0 && (
-          <div style={{ overflowX: 'auto', opacity: lecture ? 0.6 : 1 }}>
+          <div style={{ overflowX: 'auto', position: 'relative', opacity: lecture ? 0.6 : 1 }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 760 }}>
               <thead>
                 <tr style={{ color: '#64748b', textAlign: 'left' }}>

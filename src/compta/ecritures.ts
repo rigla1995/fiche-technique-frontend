@@ -20,6 +20,8 @@ export interface ExerciceOuvert { id: number; debut: string; fin: string; etat: 
 export interface LigneEcriture {
   id: number; rang: number; compte: { id: number; numero: string; libelle: string; nature: string }; tiers: { id: number; type: TypeTiers; code: string; nom: string } | null;
   libelle: string | null; debit: string; credit: string; taxe: { id: number; code: string; libelle: string; type: TypeTaxe } | null; echeance: string | null;
+  // S7a : la lettre de la ligne (lettrage d'un tiers), ou null.
+  lettre?: string | null;
 }
 export interface Ecriture {
   id: number; numeroProvisoire: string; numero: string | null; date: string; dateReelle: string | null; journal: { id: number; code: string; libelle: string; type: TypeJournal };
@@ -53,7 +55,8 @@ export interface EcritureReponse { ecriture: Ecriture; nb: NbEcritures }
 export interface SuppressionReponse { supprime: { id: number; numeroProvisoire: string }; nb: NbEcritures }
 // S6b : une contre-passation rend l'écriture inverse et l'écriture d'origine relue (son lien) ; valider une période rend
 // la période (plus rien en brouillard) et le nombre d'écritures validées.
-export interface ContrepassationReponse { ecriture: Ecriture; origine: Ecriture; nb: NbEcritures }
+// S7a : `delettrees` — les lettres défaites d'office (« F0001 AAA »…).
+export interface ContrepassationReponse { ecriture: Ecriture; origine: Ecriture; nb: NbEcritures; delettrees?: string[] }
 export interface ValidationPeriodeReponse { periode: PeriodeFiltree; validees: number; nb: NbEcritures }
 // S6c : les imports Excel (tout ou rien) — des écritures en brouillard ; une balance d'ouverture = une écriture d'à-nouveaux.
 export interface ImportEcrituresReponse { importees: number; lignes: number; premiere: string; derniere: string; journaux: Record<string, number>; nb: NbEcritures }

@@ -259,7 +259,16 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const appliquerContrepassation = (r: ContrepassationReponse) => {
     setLu((prev) => (prev ? { ...prev, lignes: prev.lignes.map((x) => (x.id === r.origine.id ? sansLignes(r.origine) : x)) } : prev));
     setDetails((m) => { const n = new Map(m); n.set(r.origine.id, r.origine); return n; });
-    appliquer(r.nb, `Contre-passation ${r.ecriture.numero} enregistrée et validée (${fmtMontant(r.ecriture.total)} D) : elle annule ${r.origine.numero}.`, r.ecriture);
+    // S7a : des lettres défaites en bloc touchent d'autres écritures (le règlement lettré avec l'origine) : leurs lignes lues
+    // sont oubliées, et relues si elles sont dépliées (leur pastille de lettre disparaît).
+    if (r.delettrees?.length) {
+      const autres = [...details.keys()].filter((id) => id !== r.origine.id && id !== r.ecriture.id);
+      setDetails((m) => { const n = new Map(m); autres.forEach((id) => n.delete(id)); return n; });
+      autres.filter((id) => deplieesRef.current.has(id)).forEach(lireDetail);
+    }
+    // S7a : les lettres défaites d'office sont dites.
+    const delettrees = r.delettrees?.length ? ` Lettres défaites : ${r.delettrees.join(', ')} (lettrez l'écriture avec sa contre-passation, page Lettrage).` : '';
+    appliquer(r.nb, `Contre-passation ${r.ecriture.numero} enregistrée et validée (${fmtMontant(r.ecriture.total)} D) : elle annule ${r.origine.numero}.${delettrees}`, r.ecriture);
   };
   // Contre-passer : l'écriture validée est relue à l'instant (ses lignes, son lien).
   const contrepasser = async (e: Ecriture) => {
@@ -495,7 +504,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                                 {(d.lignes || []).map((l) => (
                                   <tr key={l.id} style={{ borderTop: '1px solid #e2e8f0', verticalAlign: 'top' }}>
                                     <td style={{ ...cellule, whiteSpace: 'nowrap' }}><span style={{ fontFamily: mono, fontWeight: 800, color: '#1e1b4b' }}>{l.compte.numero}</span> <span style={{ color: '#475569' }}>{l.compte.libelle}</span></td>
-                                    <td style={cellule}>{l.tiers ? <><span style={{ fontFamily: mono, fontWeight: 700 }}>{l.tiers.code}</span> {l.tiers.nom}</> : '—'}</td>
+                                    <td style={cellule}>{l.tiers ? <><span style={{ fontFamily: mono, fontWeight: 700 }}>{l.tiers.code}</span> {l.tiers.nom}</> : '—'}{l.lettre && <span style={{ ...pastille('#eef2ff', '#4338ca'), marginLeft: 6, fontFamily: mono }} title="Ligne lettrée (page Lettrage)">🔗 {l.lettre}</span>}</td>
                                     <td style={{ ...cellule, color: l.libelle ? '#0f172a' : '#94a3b8' }}>{l.libelle || d.libelle}</td>
                                     <td style={{ ...cellule, textAlign: 'right', fontFamily: mono }}>{versMillimes(l.debit) ? fmtMontant(l.debit) : ''}</td>
                                     <td style={{ ...cellule, textAlign: 'right', fontFamily: mono }}>{versMillimes(l.credit) ? fmtMontant(l.credit) : ''}</td>
@@ -646,6 +655,11 @@ function FenetreContrepassation({ etat, ecriture, role, onClose, onEnregistre, o
           <input id="fc-libelle" value={libelle} onChange={(e) => { setLibelle(e.target.value); setErreur(null); }} disabled={envoi} maxLength={etat.bornes.libelleMax} style={inp} />
         </div>
       </div>
+      {(ecriture.lignes || []).some((l) => l.lettre) && (
+        <div role="note" style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '8px 12px', marginBottom: 10, fontSize: '0.78rem', color: '#92400e' }}>
+          Lignes lettrées ({[...new Set((ecriture.lignes || []).filter((l) => l.lettre).map((l) => `${l.tiers?.code ?? ''} ${l.lettre}`.trim()))].join(', ')}) : la contre-passation défait ces lettres en bloc — leurs autres lignes (le règlement, par exemple) redeviennent aussi non lettrées ; lettrez ensuite l'écriture avec sa contre-passation (page Lettrage, même pièce).
+        </div>
+      )}
       <div style={{ fontSize: '0.76rem', fontWeight: 800, color: '#4338ca', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 6 }}>Écriture inverse (aperçu)</div>
       <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
         <thead>
