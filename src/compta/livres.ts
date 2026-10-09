@@ -56,6 +56,8 @@ export interface BalanceReponse { type: TypeBalance; selection: Selection; range
 export const estControleGenerale = (c: BalanceReponse['controles']): c is ControlesGenerale => 'journaux' in c;
 export interface LigneLivre extends Cotes {
   id: number; date: string; rang: number; libelle: string; debit: string; credit: string; echeance: string | null; taxe: string | null;
+  // S7a : la lettre de la ligne (lettrage d'un tiers), ou null.
+  lettre: string | null;
   ecriture: { id: number; numero: string | null; numeroProvisoire: string; etat: 'brouillard' | 'validee'; reference: string; libelle: string; dateReelle: string | null; origine: Ecriture['origine']; journal: { id: number; code: string } };
   compte: { id: number; numero: string; libelle: string };
   tiers: { id: number; type: 'fournisseur' | 'client'; code: string; nom: string } | null;

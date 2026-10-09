@@ -55,6 +55,7 @@ export const lirePageDossiers = async (espaceId: number, p: ParametresListe = {}
   return data as ListeDossiersReponse;
 };
 
+export interface ResumeTenue { aLettrer: number; du: string; echu: string }
 export interface FicheDossier {
   id: number; espace: EspaceDossiers; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow';
   identite: IdentiteLegale; identiteComplete: boolean; regime: Regime; pays: string; devise: string; decimales: number;
@@ -70,6 +71,9 @@ export interface FicheDossier {
   tiers: { fournisseurs: { nbActifs: number; nbTotal: number }; clients: { nbActifs: number; nbTotal: number } };
   // S6a : la tenue (carte « Tenue ») — écritures en brouillard et validées ; `mouvemente` devient vrai dès la première.
   ecritures: { nbBrouillard: number; nbValidees: number };
+  // S7a : lettrage et échéancier (carte « Tenue ») — par type de tiers : lignes validées à lettrer, dû non lettré
+  // (brouillard compris) et sa part échue au jour de la lecture (montants en texte, signés).
+  tenue: { fournisseurs: ResumeTenue; clients: ResumeTenue };
   avertissements?: string[];
   // S4b : « Reprendre l'identité de LabFlow » — nombre de champs repris (0 = identique).
   reprise?: number;

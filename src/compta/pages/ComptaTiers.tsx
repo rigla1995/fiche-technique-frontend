@@ -298,8 +298,12 @@ function ComptaTiers({ dossierId }: { dossierId?: string }) {
                     {t.origine === 'import' && <span style={pastille('#eef2ff', '#3730a3')}>Importé</span>}
                     {!t.actif && <span style={pastille('#e2e8f0', '#475569')}>Désactivé</span>}
                   </span>
+                  {/* S7a : le lettrage du tiers (lecture pour tout accès ; lettrer : titulaire, Complet, Saisie). */}
+                  <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginLeft: 'auto' }}>
+                    <Link to={`/dossiers/${etat.dossier.id}/lettrage?tiers=${t.id}`} style={{ ...lien, textDecoration: 'none' }} aria-label={`Lettrage de ${t.code}`} title={`Lettrage de ${t.code} : lignes non lettrées, lettres, propositions`}>🔗 Lettrage</Link>
+                  </span>
                   {(peutTiers || peutConfigurer) && (
-                    <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginLeft: 'auto' }}>
+                    <span style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       {peutTiers && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'modifier', tiers: t }); }} disabled={occupe || lecture} style={lien}>Modifier</button>}
                       {peutTiers && t.actif && <button type="button" onClick={() => agir(t, 'desactiver')} disabled={occupe || lecture} style={lien}>Désactiver</button>}
                       {peutTiers && !t.actif && <button type="button" onClick={() => agir(t, 'reactiver')} disabled={occupe || lecture} style={lien}>Réactiver</button>}

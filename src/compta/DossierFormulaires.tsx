@@ -11,8 +11,10 @@ import { inp, lbl } from './styles';
 // formulaires) ; Échap ou ✕ ferment (pas pendant l'envoi) ; `inactif` : enregistrement fermé sans changer le libellé
 // (lecture de la patente en cours). Le cadre reçoit le clavier à l'ouverture : Échap marche sans cliquer dedans.
 // S6a : `largeur` (pixels) pour une fenêtre plus large que `large` (grille des lignes d'une écriture).
-export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, libelleEnvoi = '✓ Enregistrer', children, large = false, inactif = false, largeur }: {
+export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, libelleEnvoi = '✓ Enregistrer', libelleAttente = 'Enregistrement…', children, large = false, inactif = false, largeur }: {
   titre: string; sousTitre?: string; onClose: () => void; onSubmit: () => void; envoi: boolean; erreur: string | null; libelleEnvoi?: string;
+  // S7a : le libellé du bouton pendant l'envoi (« Préparation du PDF… » quand rien ne s'enregistre).
+  libelleAttente?: string;
   children: React.ReactNode; large?: boolean; inactif?: boolean; largeur?: number;
 }) {
   const cadre = useRef<HTMLDivElement>(null);
@@ -40,7 +42,7 @@ export function Modale({ titre, sousTitre, onClose, onSubmit, envoi, erreur, lib
         <div style={{ padding: '14px 24px', borderTop: '1px solid #f1f5f9', display: 'flex', justifyContent: 'flex-end', gap: 10, flexWrap: 'wrap' }}>
           <button type="button" onClick={onClose} disabled={envoi} style={{ padding: '9px 22px', borderRadius: 9, border: '1px solid #e2e8f0', background: '#fff', color: '#374151', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Annuler</button>
           <button type="submit" disabled={envoi || inactif} style={{ padding: '9px 28px', borderRadius: 9, border: 'none', background: envoi || inactif ? '#e5e7eb' : 'linear-gradient(135deg,#4338ca,#6366f1)', color: envoi || inactif ? '#9ca3af' : '#fff', fontSize: 13, fontWeight: 700, cursor: envoi || inactif ? 'default' : 'pointer' }}>
-            {envoi ? 'Enregistrement…' : libelleEnvoi}
+            {envoi ? libelleAttente : libelleEnvoi}
           </button>
         </div>
       </form>
