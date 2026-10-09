@@ -1,6 +1,6 @@
 // Factures fournisseur, étape F1 : les pièces jointes d'une facture d'approvisionnement — ouvrir, joindre, remplacer,
 // supprimer (définitif). Ouverte depuis les pages Factures (activités et labo).
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useConfirm } from '../../common/ConfirmDialog';
 import { useVocabulaire } from '../../../hooks/useVocabulaire';
@@ -35,6 +35,15 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const [envoi, setEnvoi] = useState(false);
   const [nouveaux, setNouveaux] = useState<FichierChoisi[]>([]);
   const [remplacement, setRemplacement] = useState<{ piece: Piece; fichiers: FichierChoisi[] } | null>(null);
+  // Onglet refusé par le navigateur : lien à toucher soi-même (adresse locale libérée au remplacement et à la fermeture).
+  const [lien, setLien] = useState<{ url: string; nom: string } | null>(null);
+  const lienCourant = useRef<string | null>(null);
+  useEffect(() => () => { if (lienCourant.current) URL.revokeObjectURL(lienCourant.current); }, []);
+  const montrerLien = (url: string | null, nom: string) => {
+    if (lienCourant.current) URL.revokeObjectURL(lienCourant.current);
+    lienCourant.current = url;
+    setLien(url ? { url, nom } : null);
+  };
 
   useEffect(() => {
     let annule = false;
@@ -49,7 +58,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const places = Math.max(0, PIECES_MAX - (pieces?.length ?? 0));
 
   const ouvrir = async (p: Piece, telecharger = false) => {
-    try { await ouvrirPiece(factureId, p, telecharger); } catch (e) { setErreur(messageErreur(e, 'Ce fichier ne s\'ouvre pas : réessayez.')); }
+    try { montrerLien(await ouvrirPiece(factureId, p, telecharger), p.nom); } catch (e) { setErreur(messageErreur(e, 'Ce fichier ne s\'ouvre pas : réessayez.')); }
   };
   const joindre = async () => {
     if (!nouveaux.length) return;
@@ -90,6 +99,12 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
         </div>
         <div className="modal-body">
           {erreur && <div className="alert alert-error">{erreur}</div>}
+          {lien && (
+            <div className="alert alert-warning" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span>Votre navigateur n'a pas ouvert de nouvel onglet.</span>
+              <a href={lien.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700 }}>Afficher « {lien.nom} »</a>
+            </div>
+          )}
           {pieces === null ? (
             <p className="text-muted">Chargement…</p>
           ) : pieces.length === 0 ? (

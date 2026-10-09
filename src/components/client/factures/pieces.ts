@@ -140,9 +140,11 @@ export async function supprimerPiece(factureId: number, pieceId: number) {
 
 /**
  * Ouvre une pièce dans un nouvel onglet (la photo HEIC : sa copie JPEG) ; `telecharger` : l'original en pièce jointe.
- * L'onglet est ouvert AVANT la lecture (sinon le navigateur bloque la fenêtre surgie après une attente).
+ * L'onglet est ouvert AVANT la lecture (sinon le navigateur bloque la fenêtre surgie après une attente). Si le navigateur
+ * refuse tout onglet (bloqueur de fenêtres, certains téléphones), → l'adresse locale du fichier : l'appelant affiche un
+ * lien que la personne touche elle-même (et la libère ensuite) ; sinon → null.
  */
-export async function ouvrirPiece(factureId: number, piece: Piece, telecharger = false) {
+export async function ouvrirPiece(factureId: number, piece: Piece, telecharger = false): Promise<string | null> {
   const onglet = telecharger ? null : window.open('', '_blank');
   try {
     const params = telecharger ? '?telecharger=1' : (piece.avecApercu ? '?apercu=1' : '');
@@ -154,11 +156,14 @@ export async function ouvrirPiece(factureId: number, piece: Piece, telecharger =
       a.download = piece.nom;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } else if (onglet) {
-      onglet.location.href = url;
-    } else {
-      window.open(url, '_blank');
+      return null;
     }
+    if (onglet) {
+      onglet.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
+      return null;
+    }
+    return url;
   } catch (e) {
     onglet?.close();
     throw e;
