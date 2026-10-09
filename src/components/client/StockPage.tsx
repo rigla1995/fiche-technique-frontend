@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -14,7 +14,7 @@ import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fou
 import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
-import { enregistrerAvecConfirmation, messageErreur, type FichierChoisi } from './factures/pieces';
+import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -521,6 +521,14 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [bulkError, setBulkError] = useState('');
   // Factures fournisseur, étape F1 : la facture du fournisseur jointe à la saisie (facultative).
   const [bulkPieces, setBulkPieces] = useState<FichierChoisi[]>([]);
+  // Préparation d'un fichier en cours (envoi bloqué) ; génération de la zone (une préparation d'avant une remise à zéro
+  // est jetée) ; vignettes libérées en quittant l'écran.
+  const [piecesEnPreparation, setPiecesEnPreparation] = useState(false);
+  const [generationPieces, setGenerationPieces] = useState(0);
+  const viderPieces = () => { libererFichiers(bulkPieces); setBulkPieces([]); setPiecesEnPreparation(false); setGenerationPieces((g) => g + 1); };
+  const piecesCourantes = useRef<FichierChoisi[]>([]);
+  useEffect(() => { piecesCourantes.current = bulkPieces; }, [bulkPieces]);
+  useEffect(() => () => libererFichiers(piecesCourantes.current), []);
   const { confirm } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string; error?: string } | null>(null);
 
@@ -673,7 +681,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           })),
         }, bulkPieces, confirm, voc.ce('fournisseur'));
         if (issue === 'annulee') { setBulkSaving(false); return; }
-        setBulkPieces([]);
+        viderPieces();
         setBulkDate(todayStr());
         setBulkFournisseurId('');
         setBulkRefFacture('');
@@ -772,6 +780,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       : null;
 
     const doConflictCheckThenSave = async (timbreFiscal = false) => {
+      // Bouton bloqué dès la confirmation (la lecture des historiques prend un instant : pas de second envoi).
+      setBulkSaving(true);
       const histMap: Record<number, StockHistoryEntry[]> = {};
       await Promise.all(readyIds.map(async (id) => { histMap[id] = await fetchHistory(id); }));
 
@@ -791,6 +801,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       }
 
       if (conflicts.length > 0) {
+        setBulkSaving(false);
         setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(timbreFiscal); } });
         return;
       }
@@ -1089,11 +1100,11 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}
+              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation}
                 style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
                 {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); setBulkPieces([]); }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); viderPieces(); }}>
                 Réinitialiser
               </button>
             </div>
@@ -1102,8 +1113,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         </div>
         {activiteId && (
           <div style={{ marginTop: 12 }}>
-            <ZonePieces fichiers={bulkPieces} onChange={setBulkPieces} accent="#1e40af"
-              disabled={hasPTQuantity || bulkSaving || !canWrite} />
+            <ZonePieces key={generationPieces} fichiers={bulkPieces} onChange={setBulkPieces} accent="#1e40af"
+              onPreparation={setPiecesEnPreparation} disabled={hasPTQuantity || bulkSaving || !canWrite} />
           </div>
         )}
       </div>

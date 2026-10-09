@@ -59,12 +59,29 @@ export async function typeDuFichier(f: Blob): Promise<TypePiece | null> {
 
 export const estHeic = (t: TypePiece) => t === 'image/heic' || t === 'image/heif';
 
-/** Copie JPEG d'une photo HEIC, faite dans le navigateur (décodeur chargé à la demande, servi par LabFlow). */
+/** Côté le plus long de la copie JPEG d'une photo HEIC (lisible à l'écran, ~1 Mo) ; le serveur refuse une copie de plus
+ * de 5 Mo (la photo d'origine, elle, est gardée telle quelle). */
+const APERCU_COTE = 2500;
+const APERCU_MAX = 5 * 1024 * 1024;
+
+/** Copie JPEG réduite d'une photo HEIC, faite dans le navigateur (décodeur chargé à la demande, servi par LabFlow). */
 async function copieJpeg(f: File): Promise<Blob | null> {
   try {
     const { heicTo } = await import('heic-to');
-    const jpeg = await heicTo({ blob: f, type: 'image/jpeg', quality: 0.85 });
-    return jpeg instanceof Blob ? jpeg : null;
+    const image = await heicTo({ blob: f, type: 'bitmap' });
+    if (!(image instanceof ImageBitmap)) return null;
+    const echelle = Math.min(1, APERCU_COTE / Math.max(image.width, image.height));
+    const toile = document.createElement('canvas');
+    toile.width = Math.max(1, Math.round(image.width * echelle));
+    toile.height = Math.max(1, Math.round(image.height * echelle));
+    const ctx = toile.getContext('2d');
+    if (!ctx) return null;
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, toile.width, toile.height);
+    ctx.drawImage(image, 0, 0, toile.width, toile.height);
+    image.close();
+    const jpeg = await new Promise<Blob | null>((ok) => toile.toBlob(ok, 'image/jpeg', 0.85));
+    return jpeg && jpeg.size <= APERCU_MAX ? jpeg : null;
   } catch {
     return null;
   }
@@ -79,9 +96,15 @@ export async function preparerFichier(f: File): Promise<FichierChoisi | { erreur
   const type = await typeDuFichier(f);
   if (!type) return { erreur: `« ${f.name} » n'est ni un PDF ni une photo (JPEG, PNG, WebP, HEIC).` };
   const apercu = estHeic(type) ? await copieJpeg(f) : null;
-  const vignette = type === 'application/pdf' ? null : URL.createObjectURL(apercu ?? f);
+  // Pas de vignette pour un PDF, ni pour une photo HEIC sans copie (Chrome et Firefox ne l'affichent pas).
+  const vignette = type === 'application/pdf' || (estHeic(type) && !apercu) ? null : URL.createObjectURL(apercu ?? f);
   compteur += 1;
   return { cle: `${Date.now()}-${compteur}`, fichier: f, type, apercu, vignette };
+}
+
+/** Libère les vignettes d'une liste de fichiers choisis (à appeler quand on la vide ou qu'on la quitte). */
+export function libererFichiers(fichiers: FichierChoisi[]) {
+  for (const f of fichiers) if (f.vignette) URL.revokeObjectURL(f.vignette);
 }
 
 /** Taille lisible (Ko / Mo). */
@@ -166,6 +189,11 @@ export async function ouvrirPiece(factureId: number, piece: Piece, telecharger =
     return url;
   } catch (e) {
     onglet?.close();
+    // Lue en Blob, la réponse d'erreur cache son message : le relire pour l'afficher (404, 429…).
+    const reponse = (e as { response?: { data?: unknown } }).response;
+    if (reponse?.data instanceof Blob) {
+      try { reponse.data = JSON.parse(await reponse.data.text()); } catch { /* corps non JSON : message par défaut */ }
+    }
     throw e;
   }
 }

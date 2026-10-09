@@ -7,6 +7,7 @@ import type { Destination } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import FenetrePieces from './factures/FenetrePieces';
+import { useAuth } from '../../context/AuthContext';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -177,6 +178,7 @@ export default function LaboFacturesApproPage() {
     id: f.id,
     titre: `Facture ${f.refFacture ?? ''}${f.fournisseurNom ? ` — ${f.fournisseurNom}` : ''}`,
   });
+  const { canWrite } = useAuth();
   const majNombrePieces = (id: number, n: number) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, nbPieces: n } : x)));
 
   // Facture PDF (charte des factures acheteurs : émetteur = fournisseur)
@@ -342,11 +344,14 @@ export default function LaboFacturesApproPage() {
                         style={{ background: '#fff', border: '1px solid #c4b5fd', color: '#6d28d9', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                         📄 PDF
                       </span>
+                    ) : !canWrite && (f.nbPieces ?? 0) === 0 ? (
+                      // Compte en lecture seule : rien à joindre — pas de bouton qui promettrait l'impossible.
+                      <span style={{ color: 'var(--text-muted)', fontSize: '0.76rem', whiteSpace: 'nowrap' }}>📎 Aucune pièce</span>
                     ) : (
                       <span role="button" tabIndex={0}
                         title={(f.nbPieces ?? 0) > 0 ? `Voir la facture ${voc.du('fournisseur')}` : `Joindre la facture ${voc.du('fournisseur')}`}
                         onClick={(e) => { e.stopPropagation(); ouvrirPieces(f); }}
-                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); ouvrirPieces(f); } }}
+                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); ouvrirPieces(f); } }}
                         style={(f.nbPieces ?? 0) > 0
                           ? { background: '#fff', border: '1px solid #c4b5fd', color: '#6d28d9', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }
                           : { background: '#fffbeb', border: '1px dashed #f59e0b', color: '#b45309', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>

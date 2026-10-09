@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -26,7 +26,7 @@ interface PtRecipeInfoLabo {
 import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
-import { enregistrerAvecConfirmation, messageErreur, type FichierChoisi } from './factures/pieces';
+import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const currentYear = new Date().getFullYear();
@@ -208,6 +208,14 @@ export default function StockLaboPage() {
   // Factures fournisseur, étape F1 : la facture du fournisseur jointe à la saisie (facultative), et le refus d'un
   // enregistrement affiché (il était tu).
   const [bulkPieces, setBulkPieces] = useState<FichierChoisi[]>([]);
+  // Préparation d'un fichier en cours (envoi bloqué) ; génération de la zone (une préparation d'avant une remise à zéro
+  // est jetée) ; vignettes libérées en quittant l'écran.
+  const [piecesEnPreparation, setPiecesEnPreparation] = useState(false);
+  const [generationPieces, setGenerationPieces] = useState(0);
+  const viderPieces = () => { libererFichiers(bulkPieces); setBulkPieces([]); setPiecesEnPreparation(false); setGenerationPieces((g) => g + 1); };
+  const piecesCourantes = useRef<FichierChoisi[]>([]);
+  useEffect(() => { piecesCourantes.current = bulkPieces; }, [bulkPieces]);
+  useEffect(() => () => libererFichiers(piecesCourantes.current), []);
   const [bulkError, setBulkError] = useState('');
   const { confirm } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
@@ -473,7 +481,7 @@ export default function StockLaboPage() {
           })),
         }, bulkPieces, confirm, voc.ce('fournisseur'));
         if (issue === 'annulee') { setBulkSaving(false); return; }
-        setBulkPieces([]);
+        viderPieces();
       }
       const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
@@ -851,19 +859,19 @@ export default function StockLaboPage() {
               </div>
               <div style={{ flex: 1 }} />
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
-                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite}
+                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation}
                   style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
                   {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); setBulkPieces([]); }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); viderPieces(); }}>
                   Réinitialiser
                 </button>
               </div>
             </div>
             {bulkError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: '8px 0 0', textAlign: 'right' }}>{bulkError}</p>}
             <div style={{ marginTop: 12 }}>
-              <ZonePieces fichiers={bulkPieces} onChange={setBulkPieces} accent="#7e22ce"
-                disabled={hasPTQuantity || bulkSaving || !canWrite} />
+              <ZonePieces key={generationPieces} fichiers={bulkPieces} onChange={setBulkPieces} accent="#7e22ce"
+                onPreparation={setPiecesEnPreparation} disabled={hasPTQuantity || bulkSaving || !canWrite} />
             </div>
           </div>
 

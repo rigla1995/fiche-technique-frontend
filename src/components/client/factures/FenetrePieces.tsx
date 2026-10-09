@@ -1,12 +1,13 @@
 // Factures fournisseur, étape F1 : les pièces jointes d'une facture d'approvisionnement — ouvrir, joindre, remplacer,
 // supprimer (définitif). Ouverte depuis les pages Factures (activités et labo).
 import { useEffect, useRef, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { useConfirm } from '../../common/ConfirmDialog';
 import { useVocabulaire } from '../../../hooks/useVocabulaire';
 import ZonePieces from './ZonePieces';
 import {
-  PIECES_MAX, joindrePieces, listerPieces, messageErreur, ouvrirPiece, remplacerPiece, supprimerPiece, taille,
+  PIECES_MAX, joindrePieces, libererFichiers, listerPieces, messageErreur, ouvrirPiece, remplacerPiece, supprimerPiece, taille,
   type FichierChoisi, type Piece,
 } from './pieces';
 
@@ -35,6 +36,17 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const [envoi, setEnvoi] = useState(false);
   const [nouveaux, setNouveaux] = useState<FichierChoisi[]>([]);
   const [remplacement, setRemplacement] = useState<{ piece: Piece; fichiers: FichierChoisi[] } | null>(null);
+  const [prepare, setPrepare] = useState(false);
+  const setFichiersRemplacement: Dispatch<SetStateAction<FichierChoisi[]>> = (maj) =>
+    setRemplacement((r) => (r ? { ...r, fichiers: typeof maj === 'function' ? maj(r.fichiers) : maj } : r));
+  const fermerRemplacement = () => { libererFichiers(remplacement?.fichiers ?? []); setRemplacement(null); setPrepare(false); };
+  // Vignettes des fichiers choisis libérées quand la fenêtre se ferme.
+  const choisis = useRef<FichierChoisi[]>([]);
+  useEffect(() => { choisis.current = [...nouveaux, ...(remplacement?.fichiers ?? [])]; }, [nouveaux, remplacement]);
+  useEffect(() => () => libererFichiers(choisis.current), []);
+  // Échap ferme (sauf pendant un envoi) ; le focus va au bouton de fermeture à l'ouverture.
+  const fermer = useRef<HTMLButtonElement>(null);
+  useEffect(() => { fermer.current?.focus(); }, []);
   // Onglet refusé par le navigateur : lien à toucher soi-même (adresse locale libérée au remplacement et à la fermeture).
   const [lien, setLien] = useState<{ url: string; nom: string } | null>(null);
   const lienCourant = useRef<string | null>(null);
@@ -63,7 +75,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const joindre = async () => {
     if (!nouveaux.length) return;
     setEnvoi(true);
-    try { apres(await joindrePieces(factureId, nouveaux)); setNouveaux([]); } catch (e) { setErreur(messageErreur(e, 'Envoi impossible : réessayez.')); }
+    try { apres(await joindrePieces(factureId, nouveaux)); libererFichiers(nouveaux); setNouveaux([]); } catch (e) { setErreur(messageErreur(e, 'Envoi impossible : réessayez.')); }
     setEnvoi(false);
   };
   const remplacer = async () => {
@@ -75,7 +87,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
     });
     if (!ok) return;
     setEnvoi(true);
-    try { apres(await remplacerPiece(factureId, remplacement.piece.id, remplacement.fichiers[0])); setRemplacement(null); } catch (e) { setErreur(messageErreur(e, 'Remplacement impossible : réessayez.')); }
+    try { apres(await remplacerPiece(factureId, remplacement.piece.id, remplacement.fichiers[0])); fermerRemplacement(); } catch (e) { setErreur(messageErreur(e, 'Remplacement impossible : réessayez.')); }
     setEnvoi(false);
   };
   const supprimer = async (p: Piece) => {
@@ -91,11 +103,12 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   };
 
   return (
-    <div className="modal-overlay" onClick={() => { if (!envoi) onFermer(); }}>
+    <div className="modal-overlay" onClick={() => { if (!envoi) onFermer(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape' && !envoi) { e.stopPropagation(); onFermer(); } }}>
       <div className="modal" style={{ maxWidth: 620 }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={titre}>
         <div className="modal-header">
           <h2>📎 {titre}</h2>
-          <button className="modal-close" onClick={onFermer} disabled={envoi} aria-label="Fermer">×</button>
+          <button ref={fermer} className="modal-close" onClick={onFermer} disabled={envoi} aria-label="Fermer">×</button>
         </div>
         <div className="modal-body">
           {erreur && <div className="alert alert-error">{erreur}</div>}
@@ -124,15 +137,21 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      <button className="btn btn-primary btn-sm" onClick={() => ouvrir(p)} disabled={envoi}
-                        style={{ background: accent, border: 'none' }}>Ouvrir</button>
-                      {(p.type === 'image/heic' || p.type === 'image/heif') && (
+                      {/* Une photo HEIC sans copie ne s'affiche pas dans Chrome ni Firefox : on la télécharge. */}
+                      {(p.type === 'image/heic' || p.type === 'image/heif') && !p.avecApercu ? (
+                        <button className="btn btn-primary btn-sm" onClick={() => ouvrir(p, true)} disabled={envoi}
+                          style={{ background: accent, border: 'none' }} title="La photo d'origine, au format HEIC">Télécharger</button>
+                      ) : (
+                        <button className="btn btn-primary btn-sm" onClick={() => ouvrir(p)} disabled={envoi}
+                          style={{ background: accent, border: 'none' }}>Ouvrir</button>
+                      )}
+                      {(p.type === 'image/heic' || p.type === 'image/heif') && p.avecApercu && (
                         <button className="btn btn-ghost btn-sm" onClick={() => ouvrir(p, true)} disabled={envoi} title="La photo d'origine, au format HEIC">Original</button>
                       )}
                       {peutEcrire && (
                         <>
                           <button className="btn btn-ghost btn-sm" disabled={envoi}
-                            onClick={() => setRemplacement(remplacement?.piece.id === p.id ? null : { piece: p, fichiers: [] })}>Remplacer</button>
+                            onClick={() => { if (remplacement?.piece.id === p.id) fermerRemplacement(); else { fermerRemplacement(); setRemplacement({ piece: p, fichiers: [] }); } }}>Remplacer</button>
                           <button className="btn btn-ghost btn-sm" disabled={envoi} onClick={() => supprimer(p)}
                             style={{ color: 'var(--danger)' }}>Supprimer</button>
                         </>
@@ -142,10 +161,10 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
                   {remplacement?.piece.id === p.id && (
                     <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <ZonePieces unique accent={accent} disabled={envoi} fichiers={remplacement.fichiers}
-                        onChange={(f) => setRemplacement({ piece: p, fichiers: f })} />
+                        onChange={setFichiersRemplacement} onPreparation={setPrepare} />
                       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                        <button className="btn btn-ghost btn-sm" onClick={() => setRemplacement(null)} disabled={envoi}>Annuler</button>
-                        <button className="btn btn-primary btn-sm" onClick={remplacer} disabled={envoi || !remplacement.fichiers.length}
+                        <button className="btn btn-ghost btn-sm" onClick={fermerRemplacement} disabled={envoi}>Annuler</button>
+                        <button className="btn btn-primary btn-sm" onClick={remplacer} disabled={envoi || prepare || !remplacement.fichiers.length}
                           style={{ background: accent, border: 'none' }}>{envoi ? '…' : 'Remplacer'}</button>
                       </div>
                     </div>
@@ -156,10 +175,10 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
           )}
           {pieces !== null && peutEcrire && places > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <ZonePieces accent={accent} places={places} disabled={envoi} fichiers={nouveaux} onChange={setNouveaux} />
+              <ZonePieces accent={accent} places={places} disabled={envoi} fichiers={nouveaux} onChange={setNouveaux} onPreparation={setPrepare} />
               {nouveaux.length > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                  <button className="btn btn-primary btn-sm" onClick={joindre} disabled={envoi} style={{ background: accent, border: 'none' }}>
+                  <button className="btn btn-primary btn-sm" onClick={joindre} disabled={envoi || prepare} style={{ background: accent, border: 'none' }}>
                     {envoi ? 'Envoi…' : `Joindre ${nouveaux.length > 1 ? `les ${nouveaux.length} fichiers` : 'le fichier'}`}
                   </button>
                 </div>

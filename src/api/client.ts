@@ -66,6 +66,16 @@ api.interceptors.response.use(
       window.location.href = '/error/403';
       return Promise.reject(error);
     }
+    // Factures fournisseur (F1) : un stockage des pièces absent ou indisponible, ou trop d'envois simultanés, se disent
+    // sur place (503 codé) — la saisie en cours n'est jamais perdue ; les pièces lues en Blob n'ont pas de code lisible.
+    if (status === 503) {
+      const code = error.response?.data?.code;
+      const url = String(error.config?.url || '');
+      if (['STOCKAGE_ABSENT', 'STOCKAGE_INDISPONIBLE', 'ENVOIS_SIMULTANES'].includes(code)
+        || url.startsWith('/api/appros/') || /^\/api\/factures\/\d+\/pieces/.test(url)) {
+        return Promise.reject(error);
+      }
+    }
     if (status === 500 || status === 503) {
       window.location.href = `/error/${status}`;
       return Promise.reject(error);
