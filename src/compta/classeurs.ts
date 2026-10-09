@@ -10,7 +10,8 @@ export interface RapportImport { message: string; code?: string; lignes: LigneIm
 
 // Téléchargement d'un classeur, nom du fichier lu dans la réponse (sinon `nomParDefaut`). S6b : sert aussi au journal
 // général en PDF (`type`). S7a : `corps` — le document se demande en POST (lettre de relance : son texte dans le corps).
-export const telechargerClasseur = async (chemin: string, nomParDefaut: string, type: string = TYPE_XLSX, corps?: unknown) => {
+// S7b : rend le nom du fichier enregistré (celui de la réponse, sinon le nom de repli).
+export const telechargerClasseur = async (chemin: string, nomParDefaut: string, type: string = TYPE_XLSX, corps?: unknown): Promise<string> => {
   const res = corps === undefined ? await api.get(chemin, { responseType: 'blob' }) : await api.post(chemin, corps, { responseType: 'blob' });
   const cd = (res.headers['content-disposition'] as string | undefined) || '';
   const m = cd.match(/filename="?([^"]+)"?/);
@@ -22,6 +23,7 @@ export const telechargerClasseur = async (chemin: string, nomParDefaut: string, 
   a.click();
   a.remove();
   window.URL.revokeObjectURL(url);
+  return m ? m[1] : nomParDefaut;
 };
 
 // Téléversement d'un classeur (champ « fichier », champs texte en plus) ; la réponse du serveur telle quelle.

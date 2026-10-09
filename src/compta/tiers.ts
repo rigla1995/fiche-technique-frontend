@@ -9,12 +9,21 @@ import type { CompteCourt } from './journaux';
 
 export type TypeTiers = 'fournisseur' | 'client';
 export type RegimeTvaTiers = 'assujetti' | 'non_assujetti' | 'exonere' | 'suspension';
+// S7b : identifiant de secours d'un bénéficiaire sans matricule fiscal (plateforme TEJ : CIN, passeport, carte de séjour,
+// autre identifiant), régime fiscal d'un fournisseur (liste du paquet du pays) et la retenue qu'il propose.
+export type TypeIdentifiant = 'cin' | 'passeport' | 'carte_sejour' | 'autre';
+export interface IdentifiantSecours { type: TypeIdentifiant; typeLibelle: string; numero: string; naissance: string | null; pays: string | null }
+export interface RegimeFiscalChoix {
+  valeur: string; libelle: string; personne: 'morale' | 'physique'; note: string | null;
+  retenues: { achats: { id: number; code: string; taux: string | null } | null; honoraires: { id: number; code: string; taux: string | null } | null };
+}
 export interface RetenueCourte { id: number; code: string; libelle: string; taux: string | null; actif: boolean }
 export interface Tiers {
   id: number; type: TypeTiers; typeLibelle: string; code: string; nom: string; matriculeFiscal: string | null;
   adresse: string | null; ville: string | null; telephone: string | null; email: string | null;
   compte: CompteCourt | null; regimeTva: RegimeTvaTiers; regimeTvaLibelle: string; retenue: RetenueCourte | null;
   delaiPaiement: number; origine: 'saisi' | 'import'; actif: boolean; creeLe: string; modifieLe: string;
+  regimeFiscal: string | null; regimeFiscalLibelle: string | null; personne: 'morale' | 'physique' | null; resident: boolean; identifiant: IdentifiantSecours | null;
 }
 // Le modèle des codes du dossier (préfixe par type + nombre de chiffres) et le prochain code libre de chaque type
 // (null : série pleine).
@@ -36,6 +45,9 @@ export interface TiersReponse {
   delaiMax: number;
   collectifs: CompteCourt[];
   retenues: RetenueCourte[];
+  regimesFiscaux: RegimeFiscalChoix[];
+  familles: { achats: string[]; honoraires: string[] };
+  typesIdentifiant: { valeur: TypeIdentifiant; libelle: string }[];
   importMax: number;
   etatAbonnement: EtatAbonnement;
 }
@@ -83,4 +95,14 @@ export const controlerPrefixe = (p: string, max: number): string | null => {
 export const exempleCode = (prefixe: string, chiffres: number) => `${prefixe.trim().toUpperCase()}${'0'.repeat(Math.max(0, chiffres - 1))}1`;
 // Affichage : « RS_MAR15 (1,5 %) », « 30 jours » / « comptant ».
 export const texteRetenue = (x: RetenueCourte | null) => (x ? `${x.code}${x.taux != null ? ` (${Number(x.taux).toLocaleString('fr-FR', { maximumFractionDigits: 3 })} %)` : ''}` : 'Aucune');
+// S7b : la retenue par défaut proposée d'après un régime fiscal : le code de la même famille que la retenue en place
+// (honoraires : 3 % ou 10 %), sinon celui des achats (1,5 %, 1 %, 0,5 %) ; null si le régime n'en propose pas d'actif.
+export const retenueProposee = (regime: RegimeFiscalChoix | undefined, codeActuel: string | null, familles: { achats: string[]; honoraires: string[] }) => {
+  if (!regime) return null;
+  if (codeActuel && familles.honoraires.includes(codeActuel)) return regime.retenues.honoraires;
+  if (codeActuel && !familles.achats.includes(codeActuel)) return null;
+  return regime.retenues.achats;
+};
+// « CIN 01234567 », « Passeport K1234567 (FR) ».
+export const texteIdentifiant = (x: IdentifiantSecours) => `${x.type === 'cin' ? 'CIN' : x.typeLibelle} ${x.numero}${x.pays ? ` (${x.pays})` : ''}`;
 export const texteDelai = (jours: number) => (jours > 0 ? `${jours} jour${jours > 1 ? 's' : ''}` : 'Comptant');

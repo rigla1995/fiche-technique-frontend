@@ -302,6 +302,10 @@ function FenetreTaxe({ etatTx, taxe, role, onClose, onEnregistre, onRefus }: {
   const [achat, setAchat] = useState<number | null>(taxe?.compteAchat?.id ?? null);
   const [vente, setVente] = useState<number | null>(taxe?.compteVente?.id ?? null);
   const [immo, setImmo] = useState<number | null>(taxe?.compteImmo?.id ?? null);
+  // S7b : le code d'opération TEJ d'un code personnalisé de retenue (liste du paquet) ou de retenue de TVA.
+  const [codeTej, setCodeTej] = useState(taxe?.codeTej || '');
+  const choixTej = type === 'retenue' ? etatTx.codesTej : type === 'retenue_tva' ? etatTx.codesTejTva : [];
+  const tejFinal = choixTej.some((x) => x.code === codeTej) ? codeTej : '';
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const fixe = assiette === 'fixe';
@@ -325,6 +329,7 @@ function FenetreTaxe({ etatTx, taxe, role, onClose, onEnregistre, onRefus }: {
     if (creation) {
       Object.assign(corps, { code: c, libelle: libelle.trim(), type, assiette, compteAchatId: achat, compteVenteId: vente, compteImmoId: immo });
       if (fixe) corps.montant = valeurMontant; else corps.taux = valeurTaux;
+      if (tejFinal) corps.codeTej = tejFinal;
     } else {
       if (libelle.trim() !== taxe.libelle) corps.libelle = libelle.trim();
       if (achat !== (taxe.compteAchat?.id ?? null)) corps.compteAchatId = achat;
@@ -336,6 +341,7 @@ function FenetreTaxe({ etatTx, taxe, role, onClose, onEnregistre, onRefus }: {
         if (type !== taxe.type) corps.type = type;
         corps.assiette = assiette;
         if (fixe) corps.montant = valeurMontant; else corps.taux = valeurTaux;
+        if (tejFinal !== (taxe.codeTej || '')) corps.codeTej = tejFinal;
       }
       if (!Object.keys(corps).length) { onClose(); return; }
     }
@@ -383,6 +389,16 @@ function FenetreTaxe({ etatTx, taxe, role, onClose, onEnregistre, onRefus }: {
             : <input id="ft-valeur" value={taux} onChange={(e) => { setTaux(e.target.value); setErreur(null); }} disabled={envoi || figes} inputMode="decimal" placeholder="ex. 19 ou 1,5" style={inp} />}
         </div>
       </div>
+      {!figes && choixTej.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <label htmlFor="ft-tej" style={lbl}>Code TEJ (nature de l'opération sur la plateforme)</label>
+          <select id="ft-tej" value={tejFinal} onChange={(e) => { setCodeTej(e.target.value); setErreur(null); }} disabled={envoi} style={inp}>
+            <option value="">{type === 'retenue_tva' ? 'Aucun — à déclarer à la main sur TEJ' : 'Aucun — pas de certificat de retenue'}</option>
+            {choixTej.map((x) => <option key={x.code} value={x.code}>{x.code} — {x.libelle}</option>)}
+          </select>
+        </div>
+      )}
+      {figes && taxe?.codeTej && <p style={{ margin: '0 0 10px', fontSize: '0.76rem', color: '#64748b' }}>Code TEJ du paquet : <strong>{taxe.codeTej}</strong> (figé).</p>}
       <ChoixCompte id="ft-achat" libelle="Compte à l'achat" comptes={etatTx.comptes} valeur={achat} onChange={(id) => { setAchat(id); setErreur(null); }} disabled={envoi} facultatif aide="TVA déductible, retenue opérée, charge (timbre payé)…" />
       <ChoixCompte id="ft-vente" libelle="Compte à la vente" comptes={etatTx.comptes} valeur={vente} onChange={(id) => { setVente(id); setErreur(null); }} disabled={envoi} facultatif aide="TVA collectée, retenue subie, taxe collectée à reverser…" />
       <ChoixCompte id="ft-immo" libelle="Compte sur immobilisations" comptes={etatTx.comptes} valeur={immo} onChange={(id) => { setImmo(id); setErreur(null); }} disabled={envoi} facultatif aide="Facultatif : la TVA déductible sur immobilisations (43662), par exemple." />

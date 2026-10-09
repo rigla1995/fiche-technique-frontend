@@ -10,7 +10,7 @@ import { FormulaireExercice, FormulaireRegime, Modale } from '../DossierFormulai
 import { libelleNiveau } from '../comptables';
 import {
   controlerExercice, fmtDate, fmtMoisAnnee, libelleImpot, libellePersonne, libelleTva, messageDossier, ouiNon, statutDe, texteEtatAbonnement,
-  type Exercice, type FicheDossier, type Regime, type ResumeTenue,
+  type Exercice, type FicheDossier, type Regime, type ResumeFiscalite, type ResumeTenue,
 } from '../dossiers';
 import { signe } from '../echeancier';
 import { fmtMontant } from '../ecritures';
@@ -50,6 +50,16 @@ const texteDu = (r: ResumeTenue) => {
   if (du === 0n) return 'soldé';
   if (du < 0n) return `${fmtMontant(-du)} en votre faveur`;
   return `${fmtMontant(du)}${echu > 0n ? ` dont ${fmtMontant(echu)} échu` : ''}`;
+};
+
+// S7b : le compte rendu des taxes du mois (carte Taxes) : « septembre 2026 : TVA à payer 1 234,500 · 3 pièces à certifier ».
+const texteTaxes = (r: ResumeFiscalite) => {
+  if (!r.periode || !r.tva) return `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à retenue sans certificat (tous mois)`;
+  const aPayer = signe(r.tva.aPayer);
+  const credit = signe(r.tva.creditAReporter);
+  const tva = aPayer > 0n ? `TVA à payer ${fmtMontant(aPayer)}` : credit > 0n ? `crédit de TVA ${fmtMontant(credit)}` : 'TVA nulle';
+  const certificats = r.aProduire ? `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à retenue sans certificat (tous mois)` : r.certificatsMois ? `${r.certificatsMois} certificat${r.certificatsMois > 1 ? 's' : ''} ce mois` : 'aucun certificat à produire';
+  return `${fmtMoisAnnee(r.periode.debut)} : ${tva} · ${certificats}`;
 };
 
 // Une page par dossier : changer de dossier (navigation directe) repart d'un état neuf.
@@ -325,6 +335,13 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   </>
                 )}
               </Carte>
+              {/* S7b : les taxes du mois — état de TVA, retenues et certificats (PLAN-S7 §2 « S7b ») ; S7c y ajoutera la
+                  déclaration mensuelle. */}
+              {fiche.fiscalite && (
+                <Carte titre="🧾 Taxes" sousTitre="TVA du mois, retenues à la source et certificats TEJ">
+                  <LigneConfiguration libelle="Taxes du mois" lien={`/dossiers/${fiche.id}/taxes-mois${fiche.fiscalite.periode ? `?periode=${fiche.fiscalite.periode.id}` : ''}`} icone="🧾" valeur={texteTaxes(fiche.fiscalite)} />
+                </Carte>
+              )}
               <Carte titre="🔑 Accès" sousTitre="Les personnes qui voient ce dossier">
                 {fiche.acces.map((a, i) => (
                   <div key={`${a.email}-${i}`} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: '0.84rem', padding: '6px 0', borderBottom: '1px solid #f8fafc', flexWrap: 'wrap' }}>

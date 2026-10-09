@@ -56,6 +56,11 @@ export const lirePageDossiers = async (espaceId: number, p: ParametresListe = {}
 };
 
 export interface ResumeTenue { aLettrer: number; du: string; echu: string }
+export interface ResumeFiscalite {
+  periode: { id: number; debut: string; fin: string; etat: 'ouverte' | 'close' } | null;
+  tva: { aPayer: string; creditAReporter: string; nbBrouillard: number } | null;
+  aProduire: number; certificatsMois: number;
+}
 export interface FicheDossier {
   id: number; espace: EspaceDossiers; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow';
   identite: IdentiteLegale; identiteComplete: boolean; regime: Regime; pays: string; devise: string; decimales: number;
@@ -74,6 +79,9 @@ export interface FicheDossier {
   // S7a : lettrage et échéancier (carte « Tenue ») — par type de tiers : lignes validées à lettrer, dû non lettré
   // (brouillard compris) et sa part échue au jour de la lecture (montants en texte, signés).
   tenue: { fournisseurs: ResumeTenue; clients: ResumeTenue };
+  // S7b : taxes du mois (carte « Taxes ») — la période du jour, sa TVA à payer ou son crédit à reporter (brouillard compris),
+  // les pièces à retenue validées qui attendent leur certificat, les certificats produits pour les paiements du mois.
+  fiscalite?: ResumeFiscalite;
   avertissements?: string[];
   // S4b : « Reprendre l'identité de LabFlow » — nombre de champs repris (0 = identique).
   reprise?: number;
