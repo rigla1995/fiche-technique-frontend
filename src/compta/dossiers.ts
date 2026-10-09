@@ -60,6 +60,8 @@ export interface ResumeFiscalite {
   periode: { id: number; debut: string; fin: string; etat: 'ouverte' | 'close' } | null;
   tva: { aPayer: string; creditAReporter: string; nbBrouillard: number } | null;
   aProduire: number; certificatsMois: number;
+  // S7c : la déclaration mensuelle à faire (dernière période finie), son échéance et sa date de déclaration, ou null.
+  declaration?: { periode: { id: number; debut: string; fin: string }; echeance: string | null; declareeLe: string | null } | null;
 }
 export interface FicheDossier {
   id: number; espace: EspaceDossiers; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow';
