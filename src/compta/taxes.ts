@@ -29,6 +29,10 @@ export interface TaxesReponse {
   types: { valeur: TypeTaxe; libelle: string }[];
   assiettes: { valeur: Assiette; libelle: string }[];
   code: { max: number };
+  // S7b : les codes d'opération TEJ qu'un code personnalisé peut porter (retenue ; retenue de TVA).
+  codesTej: { code: string; libelle: string }[];
+  // S7b (relecture) : les codes des taxes additionnelles TEJ (retenues de TVA), donnée du paquet.
+  codesTejTva: { code: string; libelle: string }[];
   taxes: Taxe[];
   paquet: { pays: string; version: string; libelle: string; codes: CodePaquet[] } | null;
   comptes: CompteCourt[];
