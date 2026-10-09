@@ -13,7 +13,7 @@ import {
   type Exercice, type FicheDossier, type Regime, type ResumeFiscalite, type ResumeTenue,
 } from '../dossiers';
 import { signe } from '../echeancier';
-import { fmtMontant } from '../ecritures';
+import { aujourdhui, fmtMontant } from '../ecritures';
 import { bouton, pastille, petit } from '../styles';
 import { Carte, Ligne } from '../ui';
 
@@ -53,13 +53,15 @@ const texteDu = (r: ResumeTenue) => {
 };
 
 // S7b : le compte rendu des taxes du mois (carte Taxes) : « septembre 2026 : TVA à payer 1 234,500 · 3 pièces à certifier ».
-// S7c : la déclaration mensuelle à faire (carte Taxes) : « septembre 2026 : échéance le 20/10/2026 » ou « septembre 2026 :
-// déclarée le 18/10/2026 ».
+// S7c : la déclaration mensuelle à faire (carte Taxes) : « septembre 2026 : à déclarer, échéance le 20/10/2026 », « … :
+// échéance du 20/10/2026 dépassée, non marquée » ou « septembre 2026 : déclarée le 18/10/2026 ».
 const texteDeclaration = (r: ResumeFiscalite) => {
   const d = r.declaration;
   if (!d) return 'aucun mois fini à déclarer';
   const mois = fmtMoisAnnee(d.periode.debut);
-  return d.declareeLe ? `${mois} : déclarée le ${fmtDate(d.declareeLe)}` : `${mois} : à déclarer${d.echeance ? ` avant le ${fmtDate(d.echeance)}` : ''}`;
+  if (d.declareeLe) return `${mois} : déclarée le ${fmtDate(d.declareeLe)}`;
+  if (d.echeance && aujourdhui() > d.echeance) return `${mois} : échéance du ${fmtDate(d.echeance)} dépassée, non marquée`;
+  return `${mois} : à déclarer${d.echeance ? `, échéance le ${fmtDate(d.echeance)}` : ''}`;
 };
 const texteTaxes = (r: ResumeFiscalite) => {
   if (!r.periode || !r.tva) return `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à retenue sans certificat (tous mois)`;

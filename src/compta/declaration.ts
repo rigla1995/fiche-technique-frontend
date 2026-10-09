@@ -11,14 +11,16 @@ import type { EtatEcriture } from './ecritures';
 export interface PeriodeDeclaration { id: number; debut: string; fin: string; etat: 'ouverte' | 'close' }
 export interface Echeance { date: string; legale: string; jour: number; reportee: boolean }
 export interface LigneDeclaration { cle: string; rubrique: string; libelle: string; montant: string; corrigee?: boolean; saisie?: boolean }
-export interface NatureRetenue { cle: string; codeTej: string | null; code: string; libelle: string; taux: string | null; base: string; certifie: string; aCertifier: string; montant: string; nb: number }
+// S7c (relecture) : « nonCertifiable » — retenues dues mais que la plateforme ne sait pas certifier (déclarées quand même).
+export interface NatureRetenue { cle: string; codeTej: string | null; code: string; libelle: string; taux: string | null; base: string; certifie: string; aCertifier: string; nonCertifiable: string; montant: string; nb: number }
 export interface CodeTvaDeclaration { id: number; code: string; libelle: string; taux: string | null; collectee: string; deductible: string; deductibleImmo: string; baseVente: string; baseAchat: string }
 export interface LigneLiquidation { compteId: number; numero: string; libelle: string; debit: string; credit: string }
-export type RaisonLiquidation = 'DEJA' | 'PERIODE_EN_COURS' | 'BROUILLARD' | 'COMPTES' | 'JOURNAL' | 'ECART' | 'RIEN' | 'PAS_DE_PERIODE_OUVERTE';
+export type RaisonLiquidation = 'EXERCICE_CLOS' | 'DEJA' | 'PERIODE_EN_COURS' | 'BROUILLARD' | 'COMPTES' | 'JOURNAL' | 'ECART' | 'RIEN' | 'COMPTE_NON_IMPUTABLE' | 'PAS_DE_PERIODE_OUVERTE';
 export interface Signalement { code: string; gravite: 'bloquant' | 'attention' | 'info'; message: string }
 export interface DeclarationEnBase {
   id: number; saisies: Record<string, string>; tcl: string | null;
-  ecriture: { id: number; numero: string | null; numeroProvisoire: string | null; etat: EtatEcriture; date: string } | null;
+  // Une écriture contre-passée ne compte plus : une nouvelle se propose.
+  ecriture: { id: number; numero: string | null; numeroProvisoire: string | null; etat: EtatEcriture; date: string; total: string | null; contrepassee: boolean } | null;
   marque: { date: string; le: string; par: string | null; total: string; lignes: LigneDeclaration[] } | null;
   modifieLe: string; modifiePar: string | null;
 }
@@ -32,13 +34,16 @@ export interface DeclarationReponse {
     collectee: string; deductibleBs: string; deductibleImmo: string; deductible: string; retenuesSubies: string;
     creditReporte: string; resultat: string; aPayer: string; creditAReporter: string; compteCredit: string | null; codes: CodeTvaDeclaration[];
   };
-  retenues: { natures: NatureRetenue[]; tva: { code: string; libelle: string; montant: string }[]; total: string; bloquees: { ecritureId: number; reference: string; message: string }[]; brouillard: number };
+  retenues: {
+    natures: NatureRetenue[]; tva: { code: string; libelle: string; montant: string }[]; total: string;
+    sansCertificat: { ecritureId: number; reference: string; message: string }[]; exclues: { ecritureId: number; reference: string; message: string }[]; brouillard: number;
+  };
   collectees: { timbre: { montant: string; nb: number }; fodec: { montant: string; nb: number }; avance: { montant: string; nb: number } };
   tcl: { ca: string; tvaCollectee: string; base: string; assiette: 'ht' | 'ttc'; taux: string; exportateur: boolean; montant: string } | null;
   saisies: { cle: string; libelle: string; montant: string | null }[];
   lignes: LigneDeclaration[]; total: string;
   declaration: DeclarationEnBase | null; ecart: boolean;
-  liquidation: { lignes: LigneLiquidation[]; total: string; date: string | null; dateReelle: string | null; possible: boolean; raison: RaisonLiquidation | null };
+  liquidation: { lignes: LigneLiquidation[]; total: string; date: string | null; dateReelle: string | null; possible: boolean; raison: RaisonLiquidation | null; detail: string | null };
   historique: { periodeId: number; debut: string; fin: string; etat: 'ouverte' | 'close'; echeance: Echeance | null; marque: { date: string; total: string; par: string | null } | null; ecriture: DeclarationEnBase['ecriture']; preparee: boolean }[];
   signalements: Signalement[];
   nbBrouillard: number;
@@ -79,6 +84,8 @@ export const telechargerDeclarationPdf = (dossierId: number, periodeId: number, 
 
 // Pourquoi l'écriture de TVA ne se propose pas (texte de l'écran ; le serveur dit le sien en cas de refus).
 export const RAISONS_LIQUIDATION: Record<RaisonLiquidation, string> = {
+  EXERCICE_CLOS: 'L\'exercice de cette période est clos : la liquidation se saisit à la main dans l\'exercice ouvert.',
+  COMPTE_NON_IMPUTABLE: 'Un compte de la liquidation est désactivé ou subdivisé.',
   DEJA: 'L\'écriture de liquidation de ce mois existe déjà.',
   PERIODE_EN_COURS: 'Le mois n\'est pas fini : la TVA se liquide après la fin de la période.',
   BROUILLARD: 'La période porte des écritures en brouillard : validez-les ou supprimez-les d\'abord (page Écritures).',
@@ -86,5 +93,5 @@ export const RAISONS_LIQUIDATION: Record<RaisonLiquidation, string> = {
   JOURNAL: 'Aucun journal des opérations diverses actif dans ce dossier (page Journaux).',
   ECART: 'Les comptes de TVA ne rejoignent pas l\'état de TVA du mois : vérifiez les codes de taxe des écritures.',
   RIEN: 'Aucune TVA à liquider ce mois-ci.',
-  PAS_DE_PERIODE_OUVERTE: 'La période est close et aucune période ouverte ne la suit : rouvrez-la ou ouvrez l\'exercice suivant.',
+  PAS_DE_PERIODE_OUVERTE: 'La période est close et aucune période ouverte ne la suit dans son exercice : rouvrez-la (titulaire) pour dater l\'écriture du dernier jour du mois.',
 };

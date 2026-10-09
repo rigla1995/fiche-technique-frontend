@@ -4,9 +4,9 @@ import { useConfirm } from '../../components/common/ConfirmDialog';
 import BoutonAide from '../BoutonAide';
 import { Modale } from '../DossierFormulaires';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
-import { fmtJour, fmtMontant } from '../ecritures';
+import { ajouterJours, aujourdhui as aujourdhuiTunis, fmtJour, fmtMontant } from '../ecritures';
 import { signe } from '../echeancier';
-import { fmtTaux, libelleMois } from '../taxesMois';
+import { deMois, fmtTaux, libelleMois } from '../taxesMois';
 import {
   RAISONS_LIQUIDATION, demarquerDeclaration, lireDeclaration, marquerDeclaration, preparerDeclaration, proposerEcritureTva, telechargerDeclarationExcel, telechargerDeclarationPdf,
   type DeclarationReponse,
@@ -18,19 +18,23 @@ import { bouton, inp, lbl, pastille, petit } from '../styles';
 // main, écriture de liquidation de la TVA proposée ; question 7 : pas de vente à l'export pour l'instant) : pour une
 // période, les lignes de la déclaration (TVA à payer, retenues à la source par nature, retenues de TVA, avances, timbre,
 // FODEC, TCL, lignes saisies à la main) et le total à payer, l'échéance ; préparer (montants à la main, TCL corrigée) ;
-// l'écriture de liquidation (aperçu, proposer) ; marquer comme déclarée, retirer la marque ; la TVA, les retenues par
-// nature, l'historique de l'exercice, les signalements ; PDF et Excel. Écritures validées seulement. Le titulaire et le
-// niveau Complet écrivent ; tout le monde lit. Le serveur calcule et décide ; après chaque écriture la page se relit, et
-// rien ne se clique tant que la lecture n'est pas à jour.
+// l'écriture de liquidation (aperçu, proposer) ; marquer comme déclarée (avec l'écart et les lignes déclarées si les
+// montants ont changé depuis), retirer la marque ; la TVA, les retenues par nature, l'historique de l'exercice, les
+// signalements ; PDF et Excel. Écritures validées seulement. Le titulaire et le niveau Complet écrivent ; tout le monde
+// lit. Le serveur calcule et décide ; après chaque écriture la page se relit, rien ne se clique tant que la lecture n'est
+// pas à jour, et rien ne part (marquer, proposer, imprimer, exporter, changer de mois) tant qu'une saisie à la main n'est
+// pas enregistrée (relecture de S7c).
 type Zone = 'haut' | 'declaration' | 'saisies' | 'ecriture';
 type Refus = { message: string; statut?: number };
+type Brouillon = { cle: string; valeurs: Record<string, string>; tcl: string };
 const mono = 'ui-monospace, monospace';
 const montant = (v: string) => fmtMontant(signe(v));
 const nonNul = (v: string) => signe(v) !== 0n;
 const RE_MONTANT = /^\d{1,15}([.,]\d{1,3})?$/;
-const deMois = (iso: string) => { const m = libelleMois(iso); return /^[aeiouyàâéèêh]/i.test(m) ? `d'${m}` : `de ${m}`; };
+const nettoye = (v: string) => v.replace(/\s/g, '');
+const enSaisie = (t: string | null | undefined) => (t != null ? t.replace('.', ',') : '');
 const codeDe = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
-const lendemain = (iso: string) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + 1); return d.toISOString().slice(0, 10); };
+const PERSONNES: Record<string, string> = { physique: 'personne physique', morale: 'personne morale' };
 
 // Une page par dossier : changer de dossier (navigation directe) repart d'un état neuf.
 export default function ComptaDeclarationPage() {
@@ -55,6 +59,10 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
   const occupe = action !== '';
   const occupeRef = useRef(false);
   const [marque, setMarque] = useState<{ date: string; erreur: string } | null>(null);
+  // La saisie à la main en cours, attachée au CONTENU enregistré qu'elle modifie (période, montants, TCL) : une relecture
+  // qui ne touche pas aux montants (écriture proposée…) la garde ; un enregistrement la remplace.
+  const [brouillon, setBrouillon] = useState<Brouillon | null>(null);
+  const [fausses, setFausses] = useState<Set<string>>(() => new Set());
   const tour = useRef(0);
   const monte = useRef(true);
   useEffect(() => { monte.current = true; return () => { monte.current = false; }; }, []);
@@ -67,7 +75,7 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
         if (moi !== tour.current) return;
         const s = statutDe(err);
         // Une période inconnue (lien ancien) : la période par défaut à la place, et on le dit.
-        if (s === 404 && p != null) { setAvis('La période demandée n\'existe pas dans ce dossier : voici le dernier mois fini.'); setPeriodeId(null); setParametres({}, { replace: true }); return; }
+        if (s === 404 && p != null) { setAvis('La période demandée n\'existe pas dans ce dossier : voici la période par défaut.'); setPeriodeId(null); setParametres({}, { replace: true }); return; }
         if (s === 404) setEtat('introuvable');
         else if (s === 409 && codeDe(err) === 'EXERCICE_ABSENT') setEtat('sansExercice');
         else setErreurLecture({ cle: c, message: messageDossier(err, 'Lecture impossible, réessayez.') });
@@ -84,8 +92,28 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
   const actif = !!page && page.dossier.etat === 'actif';
   const ouvert = !!page && page.etatAbonnement === 'actif';
   const peutEcrire = !!page && page.droits.configurer && actif && ouvert;
+  const declaree = e?.declaration?.marque || null;
+
+  // La saisie à la main : valeurs enregistrées, brouillon courant, modifications non enregistrées.
+  const cleSaisies = e ? `${e.periode.id}|${JSON.stringify(e.saisies.map((s) => [s.cle, s.montant]))}|${e.declaration?.tcl ?? ''}` : '';
+  const initiales: Record<string, string> = e ? Object.fromEntries(e.saisies.map((s) => [s.cle, enSaisie(s.montant)])) : {};
+  const tclInitiale = enSaisie(e?.declaration?.tcl);
+  const courant = brouillon && brouillon.cle === cleSaisies ? brouillon : null;
+  const valeurs = courant ? courant.valeurs : initiales;
+  const tclSaisie = courant ? courant.tcl : tclInitiale;
+  const nonEnregistre = !!e && peutEcrire && !declaree && (e.saisies.some((s) => (valeurs[s.cle] || '') !== initiales[s.cle]) || tclSaisie !== tclInitiale);
+  const poser = (partie: Partial<Omit<Brouillon, 'cle'>>) => {
+    setFausses(new Set());
+    setBrouillon({ cle: cleSaisies, valeurs: { ...valeurs, ...(partie.valeurs || {}) }, tcl: partie.tcl ?? tclSaisie });
+  };
+
   const relire = () => { setErreurLecture(null); setEssai((n) => n + 1); };
-  const changerPeriode = (id: number) => { setPeriodeId(id); setMessage(null); setAvis(''); setParametres({ periode: String(id) }, { replace: true }); };
+  // Changer de mois : une saisie non enregistrée se confirme avant d'être abandonnée.
+  const changerPeriode = async (id: number) => {
+    if (nonEnregistre && !(await confirm({ title: 'Abandonner les montants non enregistrés ?', message: 'Les montants saisis à la main sur ce mois ne sont pas enregistrés : ils seront perdus.', tone: 'danger', confirmLabel: 'Abandonner', icon: '⚠️' }))) return;
+    setBrouillon(null);
+    setPeriodeId(id); setMessage(null); setAvis(''); setParametres({ periode: String(id) }, { replace: true });
+  };
 
   // Une action : un geste à la fois ; le message s'affiche près de son bouton ; un refus sur un état périmé ou des droits
   // changés (403, 404, 409) relit la page. → null si l'action a réussi, sinon le refus.
@@ -110,9 +138,16 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
   };
   const erreurDans = (zone: Zone, refus: Refus | null) => { if (refus?.message && monte.current) setMessage({ type: 'erreur', texte: refus.message, zone }); };
 
-  const preparer = async (saisies: Record<string, string>, tcl: string) => {
+  const enregistrer = async () => {
     if (!e) return;
-    const refus = await agir('preparer', 'saisies', async () => { await preparerDeclaration(e.dossier.id, e.periode.id, saisies, tcl); return 'Montants enregistrés : le total est recalculé.'; }, 'Les montants n\'ont pas pu être enregistrés, réessayez.');
+    const f = new Set([...e.saisies.filter((s) => nettoye(valeurs[s.cle] || '') && !RE_MONTANT.test(nettoye(valeurs[s.cle] || ''))).map((s) => s.cle), ...(nettoye(tclSaisie) && !RE_MONTANT.test(nettoye(tclSaisie)) ? ['tcl'] : [])]);
+    if (f.size) {
+      setFausses(f);
+      setMessage({ type: 'erreur', texte: `Montant en dinars, 3 décimales au plus (ex. 1 190,500) : ${[...f].map((c) => (c === 'tcl' ? 'TCL' : e.saisies.find((s) => s.cle === c)?.libelle)).join(', ')}.`, zone: 'saisies' });
+      return;
+    }
+    const corps = Object.fromEntries(e.saisies.map((s) => [s.cle, nettoye(valeurs[s.cle] || '')]));
+    const refus = await agir('preparer', 'saisies', async () => { await preparerDeclaration(e.dossier.id, e.periode.id, corps, nettoye(tclSaisie)); return 'Montants enregistrés : le total est recalculé.'; }, 'Les montants n\'ont pas pu être enregistrés, réessayez.');
     if (!refus && monte.current) relire();
     erreurDans('saisies', refus);
   };
@@ -121,7 +156,7 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
     const l = e.liquidation;
     const ok = await confirm({
       title: `Proposer l'écriture de TVA ${deMois(e.periode.fin)} ?`,
-      message: `Une écriture en brouillard dans le journal des opérations diverses, datée du ${fmtJour(l.date || '')}${l.dateReelle ? ` (vraie date : ${fmtJour(l.dateReelle)}, la période étant close)` : ''}, de ${montant(l.total)} D au débit et au crédit.`,
+      message: `Une écriture en brouillard dans le journal des opérations diverses, datée du ${fmtJour(l.date)}${l.dateReelle ? ` (vraie date : ${fmtJour(l.dateReelle)}, la période étant close)` : ''}, de ${montant(l.total)} D au débit et au crédit.`,
       details: [
         ...l.lignes.map((x) => `${x.numero} — ${x.libelle} : ${nonNul(x.debit) ? `débit ${montant(x.debit)}` : `crédit ${montant(x.credit)}`}`),
         'Vérifiez-la puis validez-la sur la page Écritures ; tant qu\'elle est en brouillard, elle se supprime et se propose de nouveau.',
@@ -131,7 +166,7 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
     if (!ok) return;
     const refus = await agir('proposer', 'ecriture', async () => {
       const r = await proposerEcritureTva(e.dossier.id, e.periode.id);
-      return `Écriture ${r.ecriture.numeroProvisoire} proposée en brouillard (${r.ecriture.reference}) : vérifiez-la puis validez-la sur la page Écritures.`;
+      return `Écriture ${r.ecriture.numeroProvisoire} proposée en brouillard (${r.ecriture.reference}, ${montant(r.ecriture.total)} D) : vérifiez-la puis validez-la sur la page Écritures.`;
     }, 'L\'écriture n\'a pas pu être proposée, réessayez.');
     if (!refus && monte.current) relire();
     erreurDans('ecriture', refus);
@@ -140,8 +175,9 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
   const marquer = async () => {
     if (!e || !marque) return;
     const d = marque.date;
+    const jour = aujourdhuiTunis() > e.aujourdhui ? aujourdhuiTunis() : e.aujourdhui;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { setMarque({ ...marque, erreur: 'Indiquez la date du dépôt sur le portail.' }); return; }
-    if (d > e.aujourdhui) { setMarque({ ...marque, erreur: 'La date du dépôt ne peut pas être après aujourd\'hui.' }); return; }
+    if (d > jour) { setMarque({ ...marque, erreur: 'La date du dépôt ne peut pas être après aujourd\'hui.' }); return; }
     if (d <= e.periode.fin) { setMarque({ ...marque, erreur: `La déclaration se dépose après la fin de la période (${fmtJour(e.periode.fin)}).` }); return; }
     const refus = await agir('marquer', 'declaration', async () => { const r = await marquerDeclaration(e.dossier.id, e.periode.id, d, e.total); return `Déclaration ${deMois(e.periode.fin)} marquée comme déposée le ${fmtJour(r.marque.date)} (total ${montant(r.marque.total)} D).`; }, 'La déclaration n\'a pas pu être marquée, réessayez.');
     if (!monte.current) return;
@@ -150,10 +186,10 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
     if (refus.message) setMarque((m) => (m ? { ...m, erreur: refus.message } : m));
   };
   const demarquer = async () => {
-    if (!e || !e.declaration?.marque) return;
+    if (!e || !declaree) return;
     const ok = await confirm({
       title: 'Retirer la marque « déclarée » ?',
-      message: `La déclaration ${deMois(e.periode.fin)} (déposée le ${fmtJour(e.declaration.marque.date)}, total ${montant(e.declaration.marque.total)} D) redevient modifiable ; l'état figé reste dans le journal.`,
+      message: `La déclaration ${deMois(e.periode.fin)} (déposée le ${fmtJour(declaree.date)}, total ${montant(declaree.total)} D) redevient modifiable ; l'état figé reste dans le journal.`,
       tone: 'danger', confirmLabel: 'Retirer la marque', icon: '↩️',
     });
     if (!ok) return;
@@ -165,7 +201,16 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
 
   const retour = { lien: `/dossiers/${page?.dossier.id ?? dossierId}`, libelle: page?.dossier.nom ?? 'Fiche du dossier' };
   const msg = (zone: Zone) => (message && message.zone === zone ? <Message type={message.type} texte={message.texte} /> : null);
-  const declaree = e?.declaration?.marque || null;
+  const bloqueParSaisie = nonEnregistre ? 'Enregistrez d\'abord les montants saisis à la main (carte « Lignes saisies à la main »).' : '';
+  // Les lignes déclarées (état figé au marquage), par clé : la colonne « Déclaré » quand les montants ont changé depuis.
+  const declarees = new Map((declaree?.lignes || []).map((l) => [l.cle, l]));
+  const montrerDeclare = !!declaree && !!e?.ecart;
+  const lignesAffichees = e ? [...e.lignes, ...(montrerDeclare ? (declaree?.lignes || []).filter((l) => !e.lignes.some((x) => x.cle === l.cle)).map((l) => ({ ...l, montant: '0.000' })) : [])] : [];
+  // La période de l'écriture de TVA (lien vers la page Écritures sur le bon mois).
+  const periodeEcriture = e?.declaration?.ecriture ? page?.exercices.flatMap((x) => x.periodes).find((p) => e.declaration?.ecriture && e.declaration.ecriture.date >= p.debut && e.declaration.ecriture.date <= p.fin) : null;
+  const alertes = e ? e.signalements.filter((s) => s.gravite !== 'info') : [];
+  // L'écriture de TVA en vigueur (une contre-passée ne compte plus).
+  const ecritureActive = e?.declaration?.ecriture && !e.declaration.ecriture.contrepassee ? e.declaration.ecriture : null;
   return (
     <div className="page">
       <div style={{
@@ -213,12 +258,12 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
           {avis && <div role="status" style={{ ...alerte, background: '#eff6ff', borderColor: '#bfdbfe', color: '#1e40af', marginBottom: 16 }}>{avis}</div>}
           {!ouvert && <div role="status" style={{ ...alerte, background: '#fffbeb', borderColor: '#fde68a', color: '#92400e', marginBottom: 16 }}>{texteEtatAbonnement(page.etatAbonnement, role)} : la page reste consultable ; rien ne se prépare ni ne se marque.</div>}
           {page.dossier.etat === 'archive' && ouvert && <div role="status" style={{ ...alerte, background: '#f8fafc', borderColor: '#cbd5e1', color: '#475569', marginBottom: 16 }}>Dossier archivé : rien ne s'écrit tant qu'il n'est pas désarchivé.</div>}
-          {ouvert && actif && !page.droits.configurer && <div role="status" style={{ ...alerte, background: '#f8fafc', borderColor: '#cbd5e1', color: '#475569', marginBottom: 16 }}>Votre niveau d'accès permet de consulter, d'imprimer et d'exporter la déclaration ; le titulaire et les gérants de niveau Complet la préparent et la marquent.</div>}
+          {ouvert && actif && !page.droits.configurer && <div role="status" style={{ ...alerte, background: '#f8fafc', borderColor: '#cbd5e1', color: '#475569', marginBottom: 16 }}>Votre niveau d'accès permet de consulter, d'imprimer et d'exporter la déclaration ; le titulaire et les gérants de niveau Complet la préparent, proposent l'écriture de TVA et la marquent.</div>}
 
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 14 }}>
             <div style={{ minWidth: 220 }}>
               <label htmlFor="dm-periode" style={lbl}>Période</label>
-              <select id="dm-periode" value={periodeId ?? page.periode.id} onChange={(ev) => changerPeriode(Number(ev.target.value))} disabled={occupe} style={inp}>
+              <select id="dm-periode" value={periodeId ?? page.periode.id} onChange={(ev) => { void changerPeriode(Number(ev.target.value)); }} disabled={occupe} style={inp}>
                 {page.exercices.map((x) => (
                   <optgroup key={x.id} label={`Exercice du ${fmtJour(x.debut)} au ${fmtJour(x.fin)}${x.etat === 'clos' ? ' (clos)' : ''}`}>
                     {x.periodes.map((p) => <option key={p.id} value={p.id}>{libelleMois(p.debut)}{p.etat === 'close' ? ' — close' : ''}</option>)}
@@ -228,11 +273,12 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
             </div>
             <span style={{ flex: '1 1 10px' }} />
             {e && !aJour && <span role="status" style={{ fontSize: '0.78rem', color: '#64748b', paddingBottom: 9 }}>Mise à jour…</span>}
-            <button type="button" onClick={() => e && telecharger('pdf', async () => { await telechargerDeclarationPdf(e.dossier.id, e.periode.id, e.periode.debut.slice(0, 7)); return 'Déclaration imprimée (PDF).'; }, 'Le PDF n\'a pas pu être produit, réessayez.')} disabled={fige} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>{action === 'pdf' ? 'Préparation…' : '📄 Imprimer (PDF)'}</button>
-            <button type="button" onClick={() => e && telecharger('excel', async () => { await telechargerDeclarationExcel(e.dossier.id, e.periode.id, e.periode.debut.slice(0, 7)); return 'Déclaration exportée (Excel).'; }, 'Export impossible, réessayez.')} disabled={fige} style={petit('#f0fdf4', '#166534', '#bbf7d0')}>{action === 'excel' ? 'Export…' : '📥 Exporter (Excel)'}</button>
+            <button type="button" onClick={() => e && telecharger('pdf', async () => { await telechargerDeclarationPdf(e.dossier.id, e.periode.id, e.periode.debut.slice(0, 7)); return 'Déclaration téléchargée (PDF) : ouvrez-la pour l\'imprimer.'; }, 'Le PDF n\'a pas pu être produit, réessayez.')} disabled={fige || nonEnregistre} title={bloqueParSaisie || undefined} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>{action === 'pdf' ? 'Préparation…' : '📄 Imprimer (PDF)'}</button>
+            <button type="button" onClick={() => e && telecharger('excel', async () => { await telechargerDeclarationExcel(e.dossier.id, e.periode.id, e.periode.debut.slice(0, 7)); return 'Déclaration téléchargée (Excel).'; }, 'Export impossible, réessayez.')} disabled={fige || nonEnregistre} title={bloqueParSaisie || undefined} style={petit('#f0fdf4', '#166534', '#bbf7d0')}>{action === 'excel' ? 'Export…' : '📥 Exporter (Excel)'}</button>
           </div>
           {msg('haut')}
           {!e && !erreurCourante && <div className="loading-text">Lecture…</div>}
+          {e && nonEnregistre && <div role="status" style={{ ...alerte, background: '#fffbeb', borderColor: '#fde68a', color: '#92400e', marginBottom: 12 }}>Des montants saisis à la main ne sont pas enregistrés : enregistrez-les avant d'imprimer, d'exporter, de proposer l'écriture de TVA ou de marquer la déclaration.</div>}
 
           {e && (
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
@@ -243,31 +289,50 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                   <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Écritures validées · période {e.periode.etat === 'close' ? 'close' : 'ouverte'}{e.echeance ? ` · échéance le ${fmtJour(e.echeance.date)}${e.echeance.reportee ? ` (le ${fmtJour(e.echeance.legale)} tombe un week-end)` : ''}` : ''}</span>
                 </div>
                 <div style={{ overflowX: 'auto', position: 'relative' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem', minWidth: 560 }}>
-                    <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th style={cellule}>Rubrique</th><th style={cellule}>Ligne</th><th style={{ ...cellule, textAlign: 'right' }}>Montant (D)</th></tr></thead>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead>
+                      <tr style={{ color: '#64748b', textAlign: 'left' }}>
+                        <th style={cellule}>Ligne</th>
+                        {montrerDeclare && <th style={{ ...cellule, textAlign: 'right' }}>Déclaré</th>}
+                        <th style={{ ...cellule, textAlign: 'right' }}>{montrerDeclare ? 'Recalculé' : 'Montant (D)'}</th>
+                      </tr>
+                    </thead>
                     <tbody>
-                      {e.lignes.map((l) => (
-                        <tr key={l.cle} style={{ borderTop: '1px solid #f1f5f9', color: nonNul(l.montant) ? '#0f172a' : '#94a3b8' }}>
-                          <td style={{ ...cellule, whiteSpace: 'nowrap', fontWeight: 600 }}>{l.rubrique}</td>
-                          <td style={cellule}>{l.libelle}{l.corrigee ? <span style={{ ...pastille('#fef3c7', '#92400e'), marginLeft: 6 }}>corrigé</span> : null}</td>
-                          <td style={nombre}>{montant(l.montant)}</td>
-                        </tr>
-                      ))}
+                      {lignesAffichees.map((l) => {
+                        const d = declarees.get(l.cle);
+                        const different = montrerDeclare && signe(d ? d.montant : '0') !== signe(l.montant);
+                        return (
+                          <tr key={l.cle} style={{ borderTop: '1px solid #f1f5f9', color: nonNul(l.montant) || (d && nonNul(d.montant)) ? '#0f172a' : '#94a3b8', background: different ? '#fffbeb' : undefined }}>
+                            <td style={cellule}>
+                              <span style={{ display: 'block', fontSize: '0.7rem', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.02em' }}>{l.rubrique}</span>
+                              {l.libelle}{l.corrigee ? <span style={{ ...pastille('#fef3c7', '#92400e'), marginLeft: 6 }}>corrigé</span> : null}
+                            </td>
+                            {montrerDeclare && <td style={nombre}>{d ? montant(d.montant) : '—'}</td>}
+                            <td style={{ ...nombre, fontWeight: different ? 800 : 400 }}>{montant(l.montant)}</td>
+                          </tr>
+                        );
+                      })}
                       <tr style={{ borderTop: '2px solid #c7d2fe', background: '#f8faff' }}>
-                        <td style={{ ...cellule, fontWeight: 800, color: '#1e1b4b' }}>Total à payer</td><td style={cellule} />
+                        <td style={{ ...cellule, fontWeight: 800, color: '#1e1b4b' }}>Total à payer</td>
+                        {montrerDeclare && <td style={{ ...nombre, fontWeight: 800 }}>{declaree ? montant(declaree.total) : ''}</td>}
                         <td style={{ ...nombre, fontWeight: 900, color: '#1e1b4b', fontSize: '0.92rem' }}>{montant(e.total)}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
                 {nonNul(e.tva.creditAReporter) && <p style={{ margin: 0, padding: '6px 18px', fontSize: '0.76rem', color: '#166534' }}>Crédit de TVA à reporter : {montant(e.tva.creditAReporter)} D (il passe au mois suivant ; il ne s'impute pas sur les autres impôts).</p>}
+                {montrerDeclare && declaree && (
+                  <div role="status" style={{ ...alerte, background: '#fffbeb', borderColor: '#fde68a', color: '#92400e', margin: '10px 18px' }}>
+                    Les montants ont changé depuis la déclaration du {fmtJour(declaree.date)} : déclaré {montant(declaree.total)} D, recalculé {montant(e.total)} D. Une déclaration rectificative peut être nécessaire (lignes surlignées).
+                  </div>
+                )}
                 {msg('declaration')}
                 <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: '#f8faff' }}>
                   {declaree
                     ? <span style={{ fontSize: '0.82rem', color: '#166534', fontWeight: 700 }}>✓ Déclarée le {fmtJour(declaree.date)}{declaree.par ? ` (marquée par ${declaree.par})` : ''} — total déclaré {montant(declaree.total)} D</span>
-                    : <span style={{ fontSize: '0.8rem', color: '#475569' }}>{e.finie ? 'Recopiez ces lignes sur le portail, payez, puis marquez la déclaration.' : `Le mois n'est pas fini : la déclaration se dépose à partir du ${fmtJour(lendemain(e.periode.fin))}.`}</span>}
+                    : <span style={{ fontSize: '0.8rem', color: '#475569' }}>{!e.finie ? `Le mois n'est pas fini : la déclaration se dépose à partir du ${fmtJour(ajouterJours(e.periode.fin, 1))}.` : peutEcrire ? 'Recopiez ces lignes sur le portail, payez, puis marquez la déclaration.' : 'Recopiez ces lignes sur le portail ; le titulaire ou un gérant de niveau Complet marque la déclaration.'}</span>}
                   <span style={{ flex: 1 }} />
-                  {peutEcrire && !declaree && e.finie && <button type="button" onClick={() => setMarque({ date: e.aujourdhui, erreur: '' })} disabled={fige} style={bouton('linear-gradient(135deg,#4338ca,#6366f1)', '#fff', 'transparent')}>✓ Marquer comme déclarée</button>}
+                  {peutEcrire && !declaree && e.finie && <button type="button" onClick={() => setMarque({ date: e.aujourdhui, erreur: '' })} disabled={fige || nonEnregistre} title={bloqueParSaisie || undefined} style={bouton('linear-gradient(135deg,#4338ca,#6366f1)', '#fff', 'transparent')}>✓ Marquer comme déclarée</button>}
                   {peutEcrire && declaree && <button type="button" onClick={() => { void demarquer(); }} disabled={fige} style={petit('#fff', '#be123c', '#fecdd3')}>{action === 'demarquer' ? 'Retrait…' : 'Retirer la marque'}</button>}
                 </div>
               </section>
@@ -278,7 +343,38 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                   <h2 id="dm-saisies" style={titreCadre}>Lignes saisies à la main et TCL</h2>
                   <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Salaires et autres impôts sans écriture : à reprendre de la paie ou des pièces</span>
                 </div>
-                <FormSaisies key={`${e.periode.id}-${e.declaration?.modifieLe ?? ''}`} e={e} modifiable={peutEcrire && !declaree} fige={fige} enCours={action === 'preparer'} onEnregistrer={(s, t) => { void preparer(s, t); }} onRefus={(texte) => setMessage({ type: 'erreur', texte, zone: 'saisies' })} />
+                <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (peutEcrire && !declaree && !fige && nonEnregistre) void enregistrer(); }} style={{ padding: '12px 18px', display: 'grid', gap: 10 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 10 }}>
+                    {e.saisies.map((s) => (
+                      <div key={s.cle}>
+                        <label htmlFor={`dm-s-${s.cle}`} style={lbl}>{s.libelle}</label>
+                        {peutEcrire && !declaree
+                          ? <input id={`dm-s-${s.cle}`} value={valeurs[s.cle] || ''} onChange={(ev) => poser({ valeurs: { [s.cle]: ev.target.value } })} disabled={fige} inputMode="decimal" placeholder="0,000" aria-invalid={fausses.has(s.cle) || undefined} style={{ ...inp, fontFamily: mono, textAlign: 'right', ...(fausses.has(s.cle) ? { borderColor: '#dc2626' } : {}) }} />
+                          : <input id={`dm-s-${s.cle}`} readOnly value={s.montant != null ? montant(s.montant) : '—'} style={{ ...inp, background: '#f8fafc', fontFamily: mono, textAlign: 'right' }} />}
+                      </div>
+                    ))}
+                    {e.tcl && (
+                      <div>
+                        <label htmlFor="dm-tcl" style={lbl}>TCL — calculée {montant(e.tcl.montant)} D</label>
+                        {peutEcrire && !declaree
+                          ? <input id="dm-tcl" value={tclSaisie} onChange={(ev) => poser({ tcl: ev.target.value })} disabled={fige} inputMode="decimal" placeholder={`${montant(e.tcl.montant)} (calcul)`} aria-invalid={fausses.has('tcl') || undefined} aria-describedby="dm-tcl-aide" style={{ ...inp, fontFamily: mono, textAlign: 'right', ...(fausses.has('tcl') ? { borderColor: '#dc2626' } : {}) }} />
+                          : <input id="dm-tcl" readOnly value={e.declaration?.tcl != null ? `${montant(e.declaration.tcl)} (corrigée)` : `${montant(e.tcl.montant)} (calcul)`} aria-describedby="dm-tcl-aide" style={{ ...inp, background: '#f8fafc', fontFamily: mono, textAlign: 'right' }} />}
+                        <span id="dm-tcl-aide" style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginTop: 3 }}>{Number(e.tcl.taux).toLocaleString('fr-FR')} % de {montant(e.tcl.base)} D ({e.tcl.assiette === 'ttc' ? 'chiffre d\'affaires brut, TVA comprise' : 'chiffre d\'affaires hors taxes'}{e.tcl.exportateur ? ', exportateur total' : ''}){peutEcrire && !declaree ? ' ; vide : le calcul' : ''}.</span>
+                      </div>
+                    )}
+                  </div>
+                  {peutEcrire && !declaree && (
+                    <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.76rem', color: nonEnregistre ? '#92400e' : '#64748b' }}>
+                        {fige && action === 'preparer' ? 'Mise à jour…' : nonEnregistre ? 'Modifications non enregistrées.' : e.declaration ? 'Montants enregistrés.' : 'Aucun montant saisi.'}{e.declaration?.modifiePar ? ` Dernière préparation par ${e.declaration.modifiePar}.` : ''}
+                      </span>
+                      <span style={{ flex: 1 }} />
+                      {nonEnregistre && <button type="button" onClick={() => { setBrouillon(null); setFausses(new Set()); }} disabled={fige} style={petit('#fff', '#475569', '#cbd5e1')}>Annuler les modifications</button>}
+                      <button type="submit" disabled={fige || !nonEnregistre} style={bouton('linear-gradient(135deg,#4338ca,#6366f1)', '#fff', 'transparent')}>{action === 'preparer' ? 'Enregistrement…' : '✓ Enregistrer'}</button>
+                    </div>
+                  )}
+                  {peutEcrire && declaree && <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Déclaration marquée : retirez la marque pour modifier ces montants.</span>}
+                </form>
                 {msg('saisies')}
               </section>
 
@@ -288,16 +384,17 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                   <h2 id="dm-ecriture" style={titreCadre}>Écriture de TVA (liquidation {deMois(e.periode.fin)})</h2>
                   <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Proposée en brouillard, à valider sur la page Écritures — jamais passée seule</span>
                 </div>
-                {e.declaration?.ecriture ? (
+                {ecritureActive ? (
                   <p style={{ margin: 0, padding: '14px 18px', fontSize: '0.84rem', color: '#334155' }}>
-                    Écriture <strong style={{ fontFamily: mono }}>{e.declaration.ecriture.numero || e.declaration.ecriture.numeroProvisoire}</strong> du {fmtJour(e.declaration.ecriture.date)} — {e.declaration.ecriture.etat === 'validee' ? <span style={pastille('#dcfce7', '#166534')}>Validée</span> : <span style={pastille('#fef3c7', '#92400e')}>Brouillard : à vérifier puis valider</span>}{' '}
-                    <Link to={`/dossiers/${e.dossier.id}/ecritures`} style={lienTexte}>Page Écritures</Link>
+                    Écriture <strong style={{ fontFamily: mono }}>{ecritureActive.numero || ecritureActive.numeroProvisoire}</strong> du {fmtJour(ecritureActive.date)}{ecritureActive.total ? ` (${montant(ecritureActive.total)} D)` : ''} — {ecritureActive.etat === 'validee' ? <span style={pastille('#dcfce7', '#166534')}>Validée</span> : <span style={pastille('#fef3c7', '#92400e')}>Brouillard : à vérifier puis valider</span>}{' '}
+                    <Link to={`/dossiers/${e.dossier.id}/ecritures${periodeEcriture ? `?periode=${periodeEcriture.id}` : ''}`} style={lienTexte}>Page Écritures</Link>
                   </p>
                 ) : (
                   <>
+                    {e.declaration?.ecriture?.contrepassee && <p style={{ margin: 0, padding: '10px 18px 0', fontSize: '0.8rem', color: '#475569' }}>L'écriture {e.declaration.ecriture.numero || e.declaration.ecriture.numeroProvisoire} a été contre-passée : une nouvelle se propose.</p>}
                     {e.liquidation.lignes.length > 0 && (
                       <div style={{ overflowX: 'auto', position: 'relative' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 520 }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 480 }}>
                           <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th style={cellule}>Compte</th><th style={cellule}>Libellé</th><th style={{ ...cellule, textAlign: 'right' }}>Débit</th><th style={{ ...cellule, textAlign: 'right' }}>Crédit</th></tr></thead>
                           <tbody>
                             {e.liquidation.lignes.map((x, i) => (
@@ -313,11 +410,12 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                     <div style={{ padding: '12px 18px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: '#f8faff' }}>
                       <span style={{ fontSize: '0.8rem', color: e.liquidation.possible ? '#334155' : '#92400e' }}>
                         {e.liquidation.possible
-                          ? `Datée du ${fmtJour(e.liquidation.date || '')}${e.liquidation.dateReelle ? ` avec sa vraie date (${fmtJour(e.liquidation.dateReelle)}) : la période est close` : ''} ; journal des opérations diverses.`
-                          : e.liquidation.raison ? RAISONS_LIQUIDATION[e.liquidation.raison] : ''}
+                          ? `Datée du ${fmtJour(e.liquidation.date)}${e.liquidation.dateReelle ? ` avec sa vraie date (${fmtJour(e.liquidation.dateReelle)}) : la période est close` : ''} ; journal des opérations diverses.`
+                          : e.liquidation.detail || (e.liquidation.raison ? RAISONS_LIQUIDATION[e.liquidation.raison] : '')}
+                        {!e.liquidation.possible && e.liquidation.raison === 'BROUILLARD' && <> <Link to={`/dossiers/${e.dossier.id}/ecritures?periode=${e.periode.id}`} style={lienTexte}>Écritures du mois</Link></>}
                       </span>
                       <span style={{ flex: 1 }} />
-                      {peutEcrire && e.liquidation.possible && <button type="button" onClick={() => { void proposer(); }} disabled={fige} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>{action === 'proposer' ? 'Proposition…' : '🧮 Proposer l\'écriture de TVA'}</button>}
+                      {peutEcrire && e.liquidation.possible && <button type="button" onClick={() => { void proposer(); }} disabled={fige || nonEnregistre} title={bloqueParSaisie || undefined} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>{action === 'proposer' ? 'Proposition…' : '🧮 Proposer l\'écriture de TVA'}</button>}
                     </div>
                   </>
                 )}
@@ -328,16 +426,17 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
               <section style={cadre} aria-labelledby="dm-tva">
                 <div style={enTeteCadre}>
                   <h2 id="dm-tva" style={titreCadre}>TVA {deMois(e.periode.fin)}</h2>
-                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Comme la page <Link to={`/dossiers/${e.dossier.id}/taxes-mois?periode=${e.periode.id}`} style={lienTexte}>Taxes du mois</Link>, écritures validées seulement</span>
+                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Écritures validées seulement — voir aussi la page <Link to={`/dossiers/${e.dossier.id}/taxes-mois?periode=${e.periode.id}&brouillard=0`} style={lienTexte}>Taxes du mois</Link> (sans le brouillard)</span>
                 </div>
+                {e.tva.codes.length === 0 && <p style={{ margin: 0, padding: '14px 18px 0', fontSize: '0.84rem', color: '#64748b' }}>Aucune ligne de TVA codée sur la période.</p>}
                 {e.tva.codes.length > 0 && (
                   <div style={{ overflowX: 'auto', position: 'relative' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 640 }}>
-                      <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th style={cellule}>Code</th><th style={{ ...cellule, textAlign: 'right' }}>Taux</th><th style={{ ...cellule, textAlign: 'right' }}>Base ventes</th><th style={{ ...cellule, textAlign: 'right' }}>Collectée</th><th style={{ ...cellule, textAlign: 'right' }}>Base achats</th><th style={{ ...cellule, textAlign: 'right' }}>Déductible</th><th style={{ ...cellule, textAlign: 'right' }}>Immobilisations</th></tr></thead>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 700 }}>
+                      <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th style={cellule}>Code</th><th style={cellule}>Libellé</th><th style={{ ...cellule, textAlign: 'right' }}>Taux</th><th style={{ ...cellule, textAlign: 'right' }}>Base ventes</th><th style={{ ...cellule, textAlign: 'right' }}>Collectée</th><th style={{ ...cellule, textAlign: 'right' }}>Base achats</th><th style={{ ...cellule, textAlign: 'right' }}>Déductible</th><th style={{ ...cellule, textAlign: 'right' }}>Immobilisations</th></tr></thead>
                       <tbody>
                         {e.tva.codes.map((c) => (
                           <tr key={c.id} style={{ borderTop: '1px solid #f1f5f9' }}>
-                            <td style={{ ...cellule, fontFamily: mono, fontWeight: 700 }}>{c.code}</td><td style={nombre}>{fmtTaux(c.taux)}</td>
+                            <td style={{ ...cellule, fontFamily: mono, fontWeight: 700 }}>{c.code}</td><td style={cellule}>{c.libelle}</td><td style={nombre}>{fmtTaux(c.taux)}</td>
                             <td style={nombre}>{nonNul(c.baseVente) ? montant(c.baseVente) : ''}</td><td style={nombre}>{nonNul(c.collectee) ? montant(c.collectee) : ''}</td>
                             <td style={nombre}>{nonNul(c.baseAchat) ? montant(c.baseAchat) : ''}</td><td style={nombre}>{nonNul(c.deductible) ? montant(c.deductible) : ''}</td><td style={nombre}>{nonNul(c.deductibleImmo) ? montant(c.deductibleImmo) : ''}</td>
                           </tr>
@@ -352,7 +451,7 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                   <Rangee libelle="− TVA déductible sur immobilisations" valeur={montant(e.tva.deductibleImmo)} />
                   {nonNul(e.tva.retenuesSubies) && <Rangee libelle="− Retenues de TVA subies" valeur={montant(e.tva.retenuesSubies)} />}
                   <Rangee libelle="− Crédit reporté" valeur={montant(e.tva.creditReporte)} />
-                  <Rangee fort libelle={signe(e.tva.resultat) > 0n ? 'TVA à payer' : signe(e.tva.resultat) < 0n ? 'Crédit à reporter' : 'Résultat'} valeur={montant(signe(e.tva.resultat) > 0n ? e.tva.aPayer : e.tva.creditAReporter)} couleur={signe(e.tva.resultat) > 0n ? '#b45309' : '#166534'} />
+                  <Rangee fort libelle={signe(e.tva.resultat) > 0n ? 'TVA à payer' : signe(e.tva.resultat) < 0n ? 'Crédit à reporter' : 'TVA nulle'} valeur={montant(signe(e.tva.resultat) > 0n ? e.tva.aPayer : e.tva.creditAReporter)} couleur={signe(e.tva.resultat) > 0n ? '#b45309' : '#166534'} />
                 </div>
               </section>
 
@@ -360,30 +459,31 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
               <section style={cadre} aria-labelledby="dm-retenues">
                 <div style={enTeteCadre}>
                   <h2 id="dm-retenues" style={titreCadre}>Retenues à la source par nature — paiements {deMois(e.periode.fin)}</h2>
-                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Certificats produits et paiements encore à certifier (page <Link to={`/dossiers/${e.dossier.id}/taxes-mois?periode=${e.periode.id}`} style={lienTexte}>Taxes du mois</Link>)</span>
+                  <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Certificats produits et paiements encore à certifier (page <Link to={`/dossiers/${e.dossier.id}/taxes-mois?periode=${e.periode.id}&brouillard=0`} style={lienTexte}>Taxes du mois</Link>)</span>
                 </div>
                 {e.retenues.natures.length === 0 && e.retenues.tva.length === 0 && <p style={{ margin: 0, padding: '14px 18px', fontSize: '0.84rem', color: '#64748b' }}>Aucune retenue opérée sur les paiements de ce mois.</p>}
                 {(e.retenues.natures.length > 0 || e.retenues.tva.length > 0) && (
                   <div style={{ overflowX: 'auto', position: 'relative' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 640 }}>
-                      <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th style={cellule}>Code TEJ</th><th style={cellule}>Nature</th><th style={{ ...cellule, textAlign: 'right' }}>Taux</th><th style={{ ...cellule, textAlign: 'right' }}>Base TTC</th><th style={{ ...cellule, textAlign: 'right' }}>Certifiée</th><th style={{ ...cellule, textAlign: 'right' }}>À certifier</th><th style={{ ...cellule, textAlign: 'right' }}>Retenue</th></tr></thead>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', minWidth: 780 }}>
+                      <thead><tr style={{ color: '#64748b', textAlign: 'left' }}><th style={cellule}>Code TEJ</th><th style={cellule}>Nature</th><th style={{ ...cellule, textAlign: 'right' }}>Taux</th><th style={{ ...cellule, textAlign: 'right' }}>Pièces</th><th style={{ ...cellule, textAlign: 'right' }}>Base</th><th style={{ ...cellule, textAlign: 'right' }}>Certifiée</th><th style={{ ...cellule, textAlign: 'right' }}>À certifier</th><th style={{ ...cellule, textAlign: 'right' }}>Sans certificat</th><th style={{ ...cellule, textAlign: 'right' }}>Retenue</th></tr></thead>
                       <tbody>
                         {e.retenues.natures.map((n) => (
                           <tr key={n.cle} style={{ borderTop: '1px solid #f1f5f9' }}>
-                            <td style={{ ...cellule, fontFamily: mono }}>{n.codeTej || '—'}</td><td style={cellule}>{n.code} · {n.libelle}</td><td style={nombre}>{fmtTaux(n.taux)}</td>
-                            <td style={nombre}>{montant(n.base)}</td><td style={nombre}>{nonNul(n.certifie) ? montant(n.certifie) : ''}</td><td style={nombre}>{nonNul(n.aCertifier) ? montant(n.aCertifier) : ''}</td><td style={{ ...nombre, fontWeight: 700 }}>{montant(n.montant)}</td>
+                            <td style={{ ...cellule, fontFamily: mono }}>{n.codeTej || '—'}</td><td style={cellule}>{n.code} · {n.libelle}</td><td style={nombre}>{fmtTaux(n.taux)}</td><td style={nombre}>{n.nb}</td>
+                            <td style={nombre}>{montant(n.base)}</td><td style={nombre}>{nonNul(n.certifie) ? montant(n.certifie) : ''}</td><td style={nombre}>{nonNul(n.aCertifier) ? montant(n.aCertifier) : ''}</td><td style={nombre}>{nonNul(n.nonCertifiable) ? montant(n.nonCertifiable) : ''}</td><td style={{ ...nombre, fontWeight: 700 }}>{montant(n.montant)}</td>
                           </tr>
                         ))}
                         {e.retenues.tva.map((x) => (
                           <tr key={x.code} style={{ borderTop: '1px solid #f1f5f9' }}>
-                            <td style={{ ...cellule, fontFamily: mono }}>{x.code}</td><td style={cellule}>{x.libelle}</td><td style={cellule} /><td style={cellule} /><td style={cellule} /><td style={cellule} /><td style={{ ...nombre, fontWeight: 700 }}>{montant(x.montant)}</td>
+                            <td style={{ ...cellule, fontFamily: mono }}>{x.code}</td><td style={cellule}>{x.libelle}</td><td style={cellule} /><td style={cellule} /><td style={cellule} /><td style={cellule} /><td style={cellule} /><td style={cellule} /><td style={{ ...nombre, fontWeight: 700 }}>{montant(x.montant)}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
                 )}
-                {e.retenues.bloquees.length > 0 && <p style={{ margin: 0, padding: '6px 18px 12px', fontSize: '0.76rem', color: '#92400e' }}>⚠️ Non comptées (à corriger sur la page Taxes du mois) : {e.retenues.bloquees.map((b) => `${b.reference} — ${b.message}`).join(' ; ')}</p>}
+                {e.retenues.sansCertificat.length > 0 && <p style={{ margin: 0, padding: '6px 18px 4px', fontSize: '0.76rem', color: '#92400e' }}>⚠️ Comptées sans certificat possible sur la plateforme (certificat à établir à la main sur TEJ) : {e.retenues.sansCertificat.map((b) => `${b.reference} — ${b.message}`).join(' ; ')}</p>}
+                {e.retenues.exclues.length > 0 && <p style={{ margin: 0, padding: '4px 18px 12px', fontSize: '0.76rem', color: '#b91c1c' }}>⛔ Non comptées : {e.retenues.exclues.map((b) => `${b.reference} — ${b.message}`).join(' ; ')}</p>}
               </section>
 
               {/* L'historique de l'exercice */}
@@ -402,14 +502,14 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                         return (
                           <tr key={h.periodeId} style={{ borderTop: '1px solid #f1f5f9', background: courant ? '#eef2ff' : undefined }}>
                             <td style={cellule}>
-                              {courant ? <strong>{libelleMois(h.debut)}</strong> : <button type="button" onClick={() => changerPeriode(h.periodeId)} disabled={occupe} style={lien}>{libelleMois(h.debut)}</button>}
+                              {courant ? <strong>{libelleMois(h.debut)}</strong> : <button type="button" onClick={() => { void changerPeriode(h.periodeId); }} disabled={occupe} style={lien}>{libelleMois(h.debut)}</button>}
                               {h.etat === 'close' ? <span style={{ color: '#94a3b8' }}> · close</span> : null}
                             </td>
                             <td style={{ ...cellule, whiteSpace: 'nowrap' }}>{h.echeance ? fmtJour(h.echeance.date) : '—'}</td>
                             <td style={cellule}>
                               {h.marque ? <span style={pastille('#dcfce7', '#166534')}>Déclarée le {fmtJour(h.marque.date)}</span>
                                 : h.fin >= e.aujourdhui ? <span style={{ color: '#94a3b8' }}>mois en cours ou à venir</span>
-                                  : enRetard ? <span style={pastille('#f1f5f9', '#475569')} title="Échéance passée sans déclaration marquée">Non marquée</span>
+                                  : enRetard ? <span style={pastille('#fee2e2', '#991b1b')}>Non marquée, échéance passée</span>
                                     : <span style={pastille('#fef3c7', '#92400e')}>À déclarer</span>}
                             </td>
                             <td style={nombre}>{h.marque ? montant(h.marque.total) : ''}</td>
@@ -429,18 +529,10 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                   <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Rien n'est passé d'office : à vérifier</span>
                 </div>
                 {e.signalements.length === 0 && <p style={{ margin: 0, padding: '14px 18px', fontSize: '0.84rem', color: '#64748b' }}>Aucun signalement.</p>}
-                {e.signalements.length > 0 && (
-                  <ul style={{ margin: 0, padding: '10px 18px 14px', listStyle: 'none', display: 'grid', gap: 6 }}>
-                    {e.signalements.map((s, i) => (
-                      <li key={`${s.code}-${i}`} style={{ fontSize: '0.8rem', color: s.gravite === 'bloquant' ? '#b91c1c' : s.gravite === 'attention' ? '#92400e' : '#475569', lineHeight: 1.5 }}>
-                        <span aria-hidden="true">{s.gravite === 'bloquant' ? '⛔' : s.gravite === 'attention' ? '⚠️' : 'ℹ️'}</span> {s.message}
-                      </li>
-                    ))}
-                  </ul>
-                )}
+                {e.signalements.length > 0 && <ListeSignalements liste={e.signalements} />}
               </section>
               <p style={{ margin: 0, fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5 }}>
-                LabFlow Compta prépare la déclaration, il ne la dépose pas : le portail de la Direction générale des impôts (impots.finances.gov.tn) ne propose pas de dépôt par fichier. Échéance au mois suivant : le 15 (personne physique), le 20 (personne morale télédéclarante), le 28 sinon ; reportée au lundi un week-end (jours fériés non pris en compte).
+                LabFlow Compta prépare la déclaration, il ne la dépose pas : le portail de la Direction générale des impôts (impots.finances.gov.tn) ne propose pas de dépôt par fichier.{e.echeance ? ` Échéance de ce dossier (${PERSONNES[e.regime.personne] || 'personne'}${e.regime.personne === 'morale' ? (e.regime.teledeclaration ? ' télédéclarante' : ' non télédéclarante') : ''}) : le ${e.echeance.jour} du mois suivant, reportée au lundi un samedi ou un dimanche (jours fériés non pris en compte).` : ''}
               </p>
             </div>
           )}
@@ -450,8 +542,14 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
       {marque && e && (
         <Modale titre={`Marquer la déclaration ${deMois(e.periode.fin)} comme déposée`} sousTitre={`Total à payer ${montant(e.total)} D${e.echeance ? ` · échéance le ${fmtJour(e.echeance.date)}` : ''}`}
           onClose={() => { if (!occupe) setMarque(null); }} onSubmit={() => { void marquer(); }} envoi={occupe} erreur={marque.erreur || null} libelleEnvoi="✓ Marquer comme déclarée" libelleAttente="Enregistrement…" libelleFermer="Fermer">
+          {alertes.length > 0 && (
+            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 10, padding: '10px 12px', marginBottom: 12, fontSize: '0.78rem', color: '#92400e' }}>
+              <strong>À vérifier avant de marquer :</strong>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 18, display: 'grid', gap: 3 }}>{alertes.map((s, i) => <li key={`${s.code}-${i}`}>{s.message}</li>)}</ul>
+            </div>
+          )}
           <label htmlFor="dm-date-depot" style={lbl}>Date du dépôt sur le portail</label>
-          <input id="dm-date-depot" type="date" value={marque.date} min={lendemain(e.periode.fin)} max={e.aujourdhui} onChange={(ev) => setMarque({ ...marque, date: ev.target.value, erreur: '' })} style={inp} />
+          <input id="dm-date-depot" type="date" value={marque.date} min={ajouterJours(e.periode.fin, 1)} max={aujourdhuiTunis() > e.aujourdhui ? aujourdhuiTunis() : e.aujourdhui} onChange={(ev) => setMarque({ ...marque, date: ev.target.value, erreur: '' })} style={inp} />
           <p style={{ margin: '8px 0 0', fontSize: '0.76rem', color: '#64748b', lineHeight: 1.5 }}>
             L'état de la déclaration est figé dans l'historique (lignes et total), sans effet comptable. Si les montants changent ensuite, la page le signale. La marque se retire si besoin.
           </p>
@@ -461,51 +559,20 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
   );
 }
 
-// Les lignes saisies à la main et la TCL corrigée : un formulaire par lecture (il repart des valeurs enregistrées).
-function FormSaisies({ e, modifiable, fige, enCours, onEnregistrer, onRefus }: {
-  e: DeclarationReponse; modifiable: boolean; fige: boolean; enCours: boolean; onEnregistrer: (saisies: Record<string, string>, tcl: string) => void; onRefus: (texte: string) => void;
-}) {
-  const [valeurs, setValeurs] = useState<Record<string, string>>(() => Object.fromEntries(e.saisies.map((s) => [s.cle, s.montant != null ? s.montant.replace('.', ',') : ''])));
-  const [tcl, setTcl] = useState(() => (e.declaration?.tcl != null ? e.declaration.tcl.replace('.', ',') : ''));
-  const initiales = Object.fromEntries(e.saisies.map((s) => [s.cle, s.montant != null ? s.montant.replace('.', ',') : '']));
-  const tclInitiale = e.declaration?.tcl != null ? e.declaration.tcl.replace('.', ',') : '';
-  const change = e.saisies.some((s) => (valeurs[s.cle] || '') !== initiales[s.cle]) || tcl !== tclInitiale;
-  const enregistrer = () => {
-    const nettoye = (v: string) => v.replace(/\s/g, '');
-    const fausses = [...e.saisies.filter((s) => nettoye(valeurs[s.cle] || '') && !RE_MONTANT.test(nettoye(valeurs[s.cle] || ''))).map((s) => s.libelle), ...(nettoye(tcl) && !RE_MONTANT.test(nettoye(tcl)) ? ['TCL'] : [])];
-    if (fausses.length) { onRefus(`Montant en dinars, 3 décimales au plus (ex. 1 190,500) : ${fausses.join(', ')}.`); return; }
-    onEnregistrer(Object.fromEntries(e.saisies.map((s) => [s.cle, nettoye(valeurs[s.cle] || '')])), nettoye(tcl));
-  };
+// Les signalements : la gravité est dite en texte (lecteurs d'écran), pas seulement par l'icône et la couleur.
+function ListeSignalements({ liste }: { liste: DeclarationReponse['signalements'] }) {
+  const GRAVITES = { bloquant: ['⛔', 'Bloquant', '#b91c1c'], attention: ['⚠️', 'À vérifier', '#92400e'], info: ['ℹ️', 'Pour information', '#475569'] } as const;
   return (
-    <form noValidate onSubmit={(ev) => { ev.preventDefault(); if (modifiable && !fige && change) enregistrer(); }} style={{ padding: '12px 18px', display: 'grid', gap: 10 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(240px, 100%), 1fr))', gap: 10 }}>
-        {e.saisies.map((s) => (
-          <div key={s.cle}>
-            <label htmlFor={`dm-s-${s.cle}`} style={lbl}>{s.libelle}</label>
-            {modifiable
-              ? <input id={`dm-s-${s.cle}`} value={valeurs[s.cle] || ''} onChange={(ev) => setValeurs((v) => ({ ...v, [s.cle]: ev.target.value }))} disabled={fige} inputMode="decimal" placeholder="0,000" style={{ ...inp, fontFamily: mono, textAlign: 'right' }} />
-              : <div style={{ ...inp, background: '#f8fafc', fontFamily: mono, textAlign: 'right' }}>{s.montant != null ? montant(s.montant) : '—'}</div>}
-          </div>
-        ))}
-        {e.tcl && (
-          <div>
-            <label htmlFor="dm-tcl" style={lbl}>TCL — calculée {montant(e.tcl.montant)} D</label>
-            {modifiable
-              ? <input id="dm-tcl" value={tcl} onChange={(ev) => setTcl(ev.target.value)} disabled={fige} inputMode="decimal" placeholder={`${montant(e.tcl.montant)} (calcul)`} style={{ ...inp, fontFamily: mono, textAlign: 'right' }} />
-              : <div style={{ ...inp, background: '#f8fafc', fontFamily: mono, textAlign: 'right' }}>{e.declaration?.tcl != null ? `${montant(e.declaration.tcl)} (corrigée)` : `${montant(e.tcl.montant)} (calcul)`}</div>}
-            <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748b', marginTop: 3 }}>{Number(e.tcl.taux).toLocaleString('fr-FR')} % de {montant(e.tcl.base)} D ({e.tcl.assiette === 'ttc' ? 'chiffre d\'affaires brut, TVA comprise' : 'chiffre d\'affaires hors taxes'}{e.tcl.exportateur ? ', exportateur total' : ''}) ; vide : le calcul.</span>
-          </div>
-        )}
-      </div>
-      {modifiable && (
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{change ? 'Modifications non enregistrées.' : 'Montants enregistrés.'}{e.declaration?.modifiePar ? ` Dernière préparation par ${e.declaration.modifiePar}.` : ''}</span>
-          <span style={{ flex: 1 }} />
-          <button type="submit" disabled={fige || !change} style={bouton('linear-gradient(135deg,#4338ca,#6366f1)', '#fff', 'transparent')}>{enCours ? 'Enregistrement…' : '✓ Enregistrer'}</button>
-        </div>
-      )}
-      {!modifiable && e.declaration?.marque && <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Déclaration marquée : retirez la marque pour modifier ces montants.</span>}
-    </form>
+    <ul style={{ margin: 0, padding: '10px 18px 14px', listStyle: 'none', display: 'grid', gap: 6 }}>
+      {liste.map((s, i) => {
+        const [icone, texte, couleur] = GRAVITES[s.gravite] || GRAVITES.info;
+        return (
+          <li key={`${s.code}-${i}`} style={{ fontSize: '0.8rem', color: couleur, lineHeight: 1.5 }}>
+            <span aria-hidden="true">{icone}</span> <span style={cache}>{texte} : </span>{s.message}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -551,3 +618,5 @@ const nombre: React.CSSProperties = { ...cellule, textAlign: 'right', fontFamily
 const alerte: React.CSSProperties = { background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 12, padding: '14px 18px', fontWeight: 600, fontSize: '0.86rem' };
 const lien: React.CSSProperties = { border: 'none', background: 'none', cursor: 'pointer', color: '#4338ca', fontWeight: 700, fontSize: '0.8rem', padding: 0, fontFamily: 'inherit' };
 const lienTexte: React.CSSProperties = { color: '#4338ca', fontWeight: 700, textDecoration: 'none' };
+// Texte lu par les lecteurs d'écran, invisible.
+const cache: React.CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
