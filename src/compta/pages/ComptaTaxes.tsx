@@ -304,7 +304,7 @@ function FenetreTaxe({ etatTx, taxe, role, onClose, onEnregistre, onRefus }: {
   const [immo, setImmo] = useState<number | null>(taxe?.compteImmo?.id ?? null);
   // S7b : le code d'opération TEJ d'un code personnalisé de retenue (liste du paquet) ou de retenue de TVA.
   const [codeTej, setCodeTej] = useState(taxe?.codeTej || '');
-  const choixTej = type === 'retenue' ? etatTx.codesTej : type === 'retenue_tva' ? etatTx.codesTejTva.map((c) => ({ code: c, libelle: c === 'RSTVA100' ? 'Retenue de TVA de 100 % (non-résidents)' : 'Retenue de TVA de 25 %' })) : [];
+  const choixTej = type === 'retenue' ? etatTx.codesTej : type === 'retenue_tva' ? etatTx.codesTejTva : [];
   const tejFinal = choixTej.some((x) => x.code === codeTej) ? codeTej : '';
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
@@ -393,7 +393,7 @@ function FenetreTaxe({ etatTx, taxe, role, onClose, onEnregistre, onRefus }: {
         <div style={{ marginBottom: 12 }}>
           <label htmlFor="ft-tej" style={lbl}>Code TEJ (nature de l'opération sur la plateforme)</label>
           <select id="ft-tej" value={tejFinal} onChange={(e) => { setCodeTej(e.target.value); setErreur(null); }} disabled={envoi} style={inp}>
-            <option value="">Aucun — pas de certificat de retenue</option>
+            <option value="">{type === 'retenue_tva' ? 'Aucun — à déclarer à la main sur TEJ' : 'Aucun — pas de certificat de retenue'}</option>
             {choixTej.map((x) => <option key={x.code} value={x.code}>{x.code} — {x.libelle}</option>)}
           </select>
         </div>

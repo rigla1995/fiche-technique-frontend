@@ -405,8 +405,11 @@ function FenetreTiers({ etat, type, tiers, role, onClose, onEnregistre, onRefus 
     const numeroId = idType === 'cin' ? idNumero.replace(/\s/g, '') : idNumero.trim().toUpperCase();
     if (idType && !numeroId) { setErreur('Indiquez le numéro de l\'identifiant, ou choisissez « Aucun ».'); return; }
     if (idType === 'cin' && !/^\d{8}$/.test(numeroId)) { setErreur('Le numéro de CIN a 8 chiffres.'); return; }
-    if (idType && idPays.trim() && !/^[A-Za-z]{2}$/.test(idPays.trim())) { setErreur('Le pays se note en deux lettres (TN, FR, DZ…).'); return; }
-    const identifiant = idType ? { type: idType, numero: numeroId, naissance: idNaissance || null, pays: idPays.trim().toUpperCase() || null } : null;
+    // Relecture : un champ caché (pays d'une CIN, date de naissance d'un « autre » identifiant) n'est jamais envoyé.
+    const avecNaissance = idType !== 'autre';
+    const avecPays = idType !== 'cin';
+    if (idType && avecPays && idPays.trim() && !/^[A-Za-z]{2}$/.test(idPays.trim())) { setErreur('Le pays se note en deux lettres (TN, FR, DZ…).'); return; }
+    const identifiant = idType ? { type: idType, numero: numeroId, naissance: avecNaissance ? idNaissance || null : null, pays: avecPays ? idPays.trim().toUpperCase() || null : null } : null;
     type Valeur = string | number | boolean | null | { type: string; numero: string; naissance: string | null; pays: string | null };
     const tout: Record<string, Valeur> = { code: c, nom: nom.trim(), matriculeFiscal: matricule.trim(), adresse: adresse.trim(), ville: ville.trim(), telephone: telephone.trim(), email: email.trim(), compteId, regimeTva: regime, retenueId, delaiPaiement: Number(d), regimeFiscal: regimeFiscal || null, resident, identifiant };
     let corps: Record<string, Valeur> = { ...tout, type };

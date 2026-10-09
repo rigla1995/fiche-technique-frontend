@@ -47,7 +47,11 @@ export interface Certificat {
   fichier: { id: number; nom: string; acte: number; le: string } | null;
   annulation: { le: string; par: string | null; motif: string | null; fichier: { id: number; nom: string } | null } | null;
 }
-export interface FichierTej { id: number; annee: number; mois: number; acte: number; nom: string; empreinte: string; nbAjouts: number; nbAnnulations: number; produitLe: string; produitPar: string | null }
+export interface FichierTej {
+  id: number; annee: number; mois: number; acte: number; nom: string; empreinte: string; nbAjouts: number; nbAnnulations: number; produitLe: string; produitPar: string | null;
+  // Un fichier refusé par la plateforme et retiré : il reste téléchargeable ; ses certificats sont redevenus « à mettre dans un fichier ».
+  retrait: { le: string; par: string | null; motif: string | null } | null;
+}
 export interface RetenueSubie {
   id: number; ecritureId: number; date: string; numero: string | null; numeroProvisoire: string; reference: string; etat: EtatEcriture; libelle: string; montant: string; compte: string;
   code: string | null; codeLibelle: string | null; tiers: { code: string; nom: string; type: 'fournisseur' | 'client' } | null;
@@ -62,7 +66,7 @@ export interface TaxesMoisReponse {
   tva: EtatTva;
   retenues: {
     paiements: Paiement[]; brouillard: Operation[]; problemes: Operation[]; borne: boolean;
-    autresMois: { mois: string; nb: number }[];
+    autresMois: { mois: string; nb: number; periodeId: number | null }[];
     parNature: { codeTej: string | null; code: string | null; libelle: string | null; nb: number; rs: string; aProduire: string; certifie: string }[];
   };
   certificats: Certificat[];
@@ -77,6 +81,7 @@ export interface TaxesMoisReponse {
 }
 export interface ProductionReponse { produits: { id: number; reference: string; tiers: string; tiersId: number; date: string; rs: string; operations: number }[] }
 export interface AnnulationReponse { annule: { id: number; reference: string; depose: boolean } }
+export interface RetraitReponse { retire: { id: number; nom: string; acte: number; ajouts: number; annulations: number } }
 
 const chemin = (dossierId: number | string, suite: string) => `/api/compta/dossiers/${encodeURIComponent(String(dossierId))}${suite}`;
 const parametres = (periodeId: number | null, brouillard: boolean) => ({ ...(periodeId ? { periode: String(periodeId) } : {}), ...(brouillard ? {} : { brouillard: '0' }) });
@@ -100,8 +105,14 @@ export const telechargerCertificat = (dossierId: number, c: { id: number; refere
   telechargerClasseur(chemin(dossierId, `/certificats/${c.id}/pdf`), `certificat-${c.reference}.pdf`, 'application/pdf');
 export const telechargerLot = (dossierId: number, periodeId: number) =>
   telechargerClasseur(adresse(chemin(dossierId, '/taxes-mois/certificats.pdf'), { periode: String(periodeId) }), `certificats-${dossierId}.pdf`, 'application/pdf');
-export const produireFichierTej = (dossierId: number, annee: number, mois: number, nom: string) =>
-  telechargerClasseur(chemin(dossierId, '/fichiers-tej'), nom, 'application/xml', { annee, mois });
+// Le fichier du mois : le serveur revérifie l'acte et les compteurs montrés à la confirmation (409 s'ils ont changé). → le nom servi.
+export const produireFichierTej = (dossierId: number, f: { annee: number; mois: number; acte: number; nbAjouts: number; nbAnnulations: number; nom: string | null }) =>
+  telechargerClasseur(chemin(dossierId, '/fichiers-tej'), f.nom || 'declaration-tej.xml', 'application/xml', { annee: f.annee, mois: f.mois, attendu: { acte: f.acte, nbAjouts: f.nbAjouts, nbAnnulations: f.nbAnnulations } });
+// Retirer un fichier refusé par la plateforme (le dernier du mois) : ses certificats redeviennent à mettre dans un fichier.
+export const retirerFichierTej = async (dossierId: number, fichierId: number, motif: string): Promise<RetraitReponse> => {
+  const { data } = await api.post(chemin(dossierId, `/fichiers-tej/${fichierId}/retirer`), { motif });
+  return data as RetraitReponse;
+};
 export const telechargerFichierTej = (dossierId: number, f: { id: number; nom: string }) =>
   telechargerClasseur(chemin(dossierId, `/fichiers-tej/${f.id}`), f.nom, 'application/xml');
 export const telechargerTaxesMois = (dossierId: number, periodeId: number, brouillard: boolean) =>
@@ -112,5 +123,7 @@ export const LIBELLES_SOURCE: Record<string, string> = { reglement: 'règlement 
 export const fmtTaux = (t: string | null) => (t == null ? '—' : `${Number(t).toLocaleString('fr-FR', { maximumFractionDigits: 3 })} %`);
 // Le libellé d'une période : « septembre 2026 ».
 export const libelleMois = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+// « de septembre 2026 », « d'octobre 2026 » (élision devant avril, août, octobre).
+export const deMois = (iso: string) => { const m = libelleMois(iso); return /^[aeiouyàâéèêh]/i.test(m) ? `d'${m}` : `de ${m}`; };
 // « 2026-09 » → « septembre 2026 ».
 export const libelleMoisCourt = (aaaamm: string) => libelleMois(`${aaaamm}-01`);

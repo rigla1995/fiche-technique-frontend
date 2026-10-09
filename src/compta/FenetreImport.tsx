@@ -12,7 +12,7 @@ import { lbl, petit } from './styles';
 // périmé (dossier archivé, accès retiré : 404, 409) passe par `onRefus` (convention de S3c : fenêtre fermée, liste relue).
 export function FenetreImport({ titre, sousTitre, aide, role, onClose, telechargerModele, importer, onRefus }: {
   titre: string; sousTitre?: string; aide: ReactNode; role: 'titulaire' | 'gerant'; onClose: () => void;
-  telechargerModele: () => Promise<void>; importer: (fichier: File) => Promise<void>; onRefus?: (err: unknown) => boolean;
+  telechargerModele: () => Promise<unknown>; importer: (fichier: File) => Promise<void>; onRefus?: (err: unknown) => boolean;
 }) {
   const [fichier, setFichier] = useState<File | null>(null);
   const [envoi, setEnvoi] = useState(false);

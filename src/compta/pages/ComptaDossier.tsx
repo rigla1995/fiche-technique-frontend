@@ -54,11 +54,11 @@ const texteDu = (r: ResumeTenue) => {
 
 // S7b : le compte rendu des taxes du mois (carte Taxes) : « septembre 2026 : TVA à payer 1 234,500 · 3 pièces à certifier ».
 const texteTaxes = (r: ResumeFiscalite) => {
-  if (!r.periode || !r.tva) return `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à certifier`;
+  if (!r.periode || !r.tva) return `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à retenue sans certificat (tous mois)`;
   const aPayer = signe(r.tva.aPayer);
   const credit = signe(r.tva.creditAReporter);
   const tva = aPayer > 0n ? `TVA à payer ${fmtMontant(aPayer)}` : credit > 0n ? `crédit de TVA ${fmtMontant(credit)}` : 'TVA nulle';
-  const certificats = r.aProduire ? `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à certifier` : r.certificatsMois ? `${r.certificatsMois} certificat${r.certificatsMois > 1 ? 's' : ''} ce mois` : 'aucun certificat à produire';
+  const certificats = r.aProduire ? `${r.aProduire} pièce${r.aProduire > 1 ? 's' : ''} à retenue sans certificat (tous mois)` : r.certificatsMois ? `${r.certificatsMois} certificat${r.certificatsMois > 1 ? 's' : ''} ce mois` : 'aucun certificat à produire';
   return `${fmtMoisAnnee(r.periode.debut)} : ${tva} · ${certificats}`;
 };
 
