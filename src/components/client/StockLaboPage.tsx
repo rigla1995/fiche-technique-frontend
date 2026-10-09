@@ -24,6 +24,9 @@ interface PtRecipeInfoLabo {
   prixComplet: boolean;
 }
 import GuideButton from './GuideButton';
+import { useConfirm } from '../common/ConfirmDialog';
+import ZonePieces from './factures/ZonePieces';
+import { enregistrerAvecConfirmation, messageErreur, type FichierChoisi } from './factures/pieces';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
 const currentYear = new Date().getFullYear();
@@ -202,6 +205,11 @@ export default function StockLaboPage() {
   const [bulkFournisseurId, setBulkFournisseurId] = useState('');
   const [bulkRefFacture, setBulkRefFacture] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
+  // Factures fournisseur, étape F1 : la facture du fournisseur jointe à la saisie (facultative), et le refus d'un
+  // enregistrement affiché (il était tu).
+  const [bulkPieces, setBulkPieces] = useState<FichierChoisi[]>([]);
+  const [bulkError, setBulkError] = useState('');
+  const { confirm } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: (timbreFiscal: boolean) => void } | null>(null);
 
@@ -438,6 +446,7 @@ export default function StockLaboPage() {
 
   const doBulkSave = async (timbreFiscal = false) => {
     setBulkSaving(true);
+    setBulkError('');
     try {
       const readyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const id = Number(idStr);
@@ -447,16 +456,24 @@ export default function StockLaboPage() {
         const prix = parseFloat(rs.prixUnitaire);
         return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
       });
-      for (const [idStr, rs] of readyEntries) {
-        await api.put(`/api/labo/${laboId}/stock/${Number(idStr)}`, {
-          quantite: parseFloat(rs.quantite),
-          prixUnitaire: parseFloat(rs.prixUnitaire),
+      // Factures fournisseur, étape F1 : toutes les lignes d'un seul envoi, avec les pièces (tout ou rien) ; une
+      // facture déjà saisie chez ce fournisseur demande confirmation.
+      if (readyEntries.length > 0) {
+        const issue = await enregistrerAvecConfirmation({
+          cible: { type: 'labo', id: Number(laboId) },
           dateAppro: bulkDate,
           fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
-          refFacture: bulkRefFacture.trim() || null,
-          tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
+          refFacture: bulkRefFacture.trim(),
           timbreFiscal,
-        });
+          lignes: readyEntries.map(([idStr, rs]) => ({
+            articleId: Number(idStr),
+            quantite: parseFloat(rs.quantite),
+            prixUnitaire: parseFloat(rs.prixUnitaire),
+            tauxTva: rs.tauxTva?.trim() ? parseFloat(rs.tauxTva) : null,
+          })),
+        }, bulkPieces, confirm, voc.ce('fournisseur'));
+        if (issue === 'annulee') { setBulkSaving(false); return; }
+        setBulkPieces([]);
       }
       const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
@@ -478,7 +495,9 @@ export default function StockLaboPage() {
         return next;
       });
       loadStock();
-    } catch { /* ignore */ }
+    } catch (e) {
+      setBulkError(messageErreur(e, 'Erreur lors de l\'enregistrement'));
+    }
     setBulkSaving(false);
   };
 
@@ -836,10 +855,15 @@ export default function StockLaboPage() {
                   style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
                   {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); setBulkPieces([]); }}>
                   Réinitialiser
                 </button>
               </div>
+            </div>
+            {bulkError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: '8px 0 0', textAlign: 'right' }}>{bulkError}</p>}
+            <div style={{ marginTop: 12 }}>
+              <ZonePieces fichiers={bulkPieces} onChange={setBulkPieces} accent="#7e22ce"
+                disabled={hasPTQuantity || bulkSaving || !canWrite} />
             </div>
           </div>
 
@@ -1331,6 +1355,7 @@ export default function StockLaboPage() {
           fournisseurNom={invoiceModal.fournisseurNom}
           refFacture={bulkRefFacture.trim() || null}
           theme="labo"
+          nbPieces={bulkPieces.length}
           onConfirm={(tf) => { setInvoiceModal(null); invoiceModal.onConfirm(tf); }}
           onCancel={() => setInvoiceModal(null)}
         />

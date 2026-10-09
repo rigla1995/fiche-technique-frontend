@@ -18,11 +18,13 @@ interface Props {
   theme: 'activite' | 'labo';
   onConfirm: (timbreFiscal: boolean) => void;
   onCancel: () => void;
+  /** Factures fournisseur, étape F1 : nombre de fichiers joints (undefined : la saisie n'en propose pas). */
+  nbPieces?: number;
 }
 
 const TIMBRE = 1;
 
-export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFacture, theme, onConfirm, onCancel }: Props) {
+export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFacture, theme, onConfirm, onCancel, nbPieces }: Props) {
   const [timbreFiscal, setTimbreFiscal] = useState(true);
   const voc = useVocabulaire();
 
@@ -91,6 +93,13 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
         </div>
 
         <div style={{ background: accentBg, borderTop: `1px solid ${accentBorder}`, padding: '10px 20px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {nbPieces !== undefined && (
+            <div style={{ fontSize: '0.8rem', color: nbPieces > 0 ? '#1d4ed8' : '#6b7280' }}>
+              {nbPieces > 0
+                ? `📎 ${nbPieces} fichier${nbPieces > 1 ? 's' : ''} de la facture ${nbPieces > 1 ? 'seront joints' : 'sera joint'}.`
+                : '📎 Sans pièce jointe : vous pourrez joindre la facture plus tard, depuis la page Factures.'}
+            </div>
+          )}
           {/* Timbre fiscal checkbox */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.84rem', fontWeight: 600, color: '#374151', userSelect: 'none' }}>
             <input

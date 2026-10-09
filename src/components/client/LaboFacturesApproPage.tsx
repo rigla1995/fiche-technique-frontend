@@ -6,6 +6,7 @@ import GuideButton from './GuideButton';
 import type { Destination } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
+import FenetrePieces from './factures/FenetrePieces';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -36,6 +37,8 @@ interface FactureRow {
   montantHT: number;
   montantTva: number;
   montantTTC: number;
+  // Factures fournisseur, étape F1 : nombre de pièces jointes (vraie facture du fournisseur).
+  nbPieces?: number;
   // Lot 1b : sens d'une facture interne de transfert vue du labo courant
   // (recue = labo_id = labo courant ET type_source = 'transfert' ET activite_id IS NULL) + contrepartie.
   sens?: 'emise' | 'recue' | null;
@@ -167,6 +170,15 @@ export default function LaboFacturesApproPage() {
     });
   };
 
+  // Factures fournisseur, étape F1 : la vraie facture (pièces jointes) d'une appro saisie ; le PDF fabriqué par
+  // LabFlow ne reste que pour les factures de transfert.
+  const [fenetrePieces, setFenetrePieces] = useState<{ id: number; titre: string } | null>(null);
+  const ouvrirPieces = (f: FactureRow) => setFenetrePieces({
+    id: f.id,
+    titre: `Facture ${f.refFacture ?? ''}${f.fournisseurNom ? ` — ${f.fournisseurNom}` : ''}`,
+  });
+  const majNombrePieces = (id: number, n: number) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, nbPieces: n } : x)));
+
   // Facture PDF (charte des factures acheteurs : émetteur = fournisseur)
   const ouvrirPdf = async (id: number) => {
     try {
@@ -207,6 +219,10 @@ export default function LaboFacturesApproPage() {
 
   return (
     <div className="page">
+      {fenetrePieces && (
+        <FenetrePieces factureId={fenetrePieces.id} titre={fenetrePieces.titre} accent="#6d28d9"
+          onFermer={() => setFenetrePieces(null)} onNombre={(n) => majNombrePieces(fenetrePieces.id, n)} />
+      )}
       {/* Hero */}
       <div style={{
         background: 'linear-gradient(135deg, #3b0764 0%, #7e22ce 55%, #a855f7 100%)',
@@ -319,12 +335,24 @@ export default function LaboFacturesApproPage() {
                       <div style={{ fontWeight: 800, color: '#059669', fontSize: '0.92rem' }}>{f.montantTTC.toFixed(3)} DT</div>
                     </div>
                     {/* span cliquable (l'en-tête entier est déjà un <button>) */}
-                    <span role="button" tabIndex={0} title="Ouvrir la facture PDF"
-                      onClick={(e) => { e.stopPropagation(); ouvrirPdf(f.id); }}
-                      onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); ouvrirPdf(f.id); } }}
-                      style={{ background: '#fff', border: '1px solid #c4b5fd', color: '#6d28d9', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                      📄 PDF
-                    </span>
+                    {f.typeSource === 'transfert' ? (
+                      <span role="button" tabIndex={0} title="Ouvrir la facture PDF"
+                        onClick={(e) => { e.stopPropagation(); ouvrirPdf(f.id); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); ouvrirPdf(f.id); } }}
+                        style={{ background: '#fff', border: '1px solid #c4b5fd', color: '#6d28d9', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        📄 PDF
+                      </span>
+                    ) : (
+                      <span role="button" tabIndex={0}
+                        title={(f.nbPieces ?? 0) > 0 ? `Voir la facture ${voc.du('fournisseur')}` : `Joindre la facture ${voc.du('fournisseur')}`}
+                        onClick={(e) => { e.stopPropagation(); ouvrirPieces(f); }}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.stopPropagation(); ouvrirPieces(f); } }}
+                        style={(f.nbPieces ?? 0) > 0
+                          ? { background: '#fff', border: '1px solid #c4b5fd', color: '#6d28d9', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }
+                          : { background: '#fffbeb', border: '1px dashed #f59e0b', color: '#b45309', borderRadius: 8, padding: '5px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                        {(f.nbPieces ?? 0) > 0 ? `📎 Voir la facture${(f.nbPieces ?? 0) > 1 ? ` (${f.nbPieces})` : ''}` : '📎 Joindre la facture'}
+                      </span>
+                    )}
                     <span style={{ color: '#7c3aed', fontSize: '1rem' }}>{isExpanded ? '▼' : '▶'}</span>
                   </div>
                 </button>

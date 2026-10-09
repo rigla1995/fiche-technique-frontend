@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1235 unité(s), 60 fichier(s).
+# 1241 unité(s), 62 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -1120,34 +1120,37 @@ src/components/client/ConfigurationVentePage.tsx
     miroir : Denrées valorisées (familles non consommables et vendables) — activez-les et définissez leur prix
 
 src/components/client/FacturesApproPage.tsx
-  l. 198
+  l. 214
     défaut : Factures Appro — Activités
     miroir : Factures Abr-Rentrée — Abr-Locaux
-  l. 200
+  l. 216
     défaut : Consultation des approvisionnements sous forme de factures
     miroir : Consultation des rentrées sous forme de factures
-  l. 209
+  l. 225
     défaut : 🏪 ⟦·⟧
     miroir : 🏪 ⟦·⟧
-  l. 227
+  l. 243
     défaut : 🚚 Fournisseur
     miroir : 🚚 Enseigne
-  l. 229
+  l. 245
     défaut : — Tous —
     miroir : — Toutes —
-  l. 269
+  l. 285
     défaut : ⟦?⟦·⟧|Sans fournisseur⟧
     miroir : ⟦?⟦·⟧|Sans enseigne⟧
-  l. 272
+  l. 288
     défaut : ⟦?Réf: ⟦·⟧|Sans réf.⟧ · ⟦·⟧<span>⟦?↗ Transfert|Manuel⟧</span>
     miroir : ⟦?Réf: ⟦·⟧|Sans réf.⟧ · ⟦·⟧<span>⟦?↗ Abr-Expédition|Manuelle⟧</span>
-  l. 310
+  l. 315
+    défaut : ⟦?Voir|Joindre⟧ la facture du fournisseur
+    miroir : ⟦?Voir|Joindre⟧ la facture de l'enseigne
+  l. 338
     défaut : Article
     miroir : Denrée
-  l. 313
+  l. 341
     défaut : Article
     miroir : Denrée
-  l. 342
+  l. 370
     défaut : Sous-total — ⟦·⟧ ⟦article|articles@>1⟧
     miroir : Sous-total — ⟦·⟧ ⟦denrée|denrées@>1⟧
 
@@ -1381,67 +1384,67 @@ src/components/client/GerantsPage.tsx
     miroir : 🛒 Base abr-clientes
 
 src/components/client/HistoriqueApproPage.tsx
-  l. 72
+  l. 73
     défaut : Date d'appro
     miroir : Date d'abr-rentrée
-  l. 100
+  l. 101
     défaut : Fournisseur
     miroir : Enseigne
-  l. 112
+  l. 113
     défaut : — Aucun —
     miroir : — Aucune —
-  l. 116
+  l. 117
     défaut : — Aucun fournisseur disponible —
     miroir : — Aucune enseigne disponible —
-  l. 127
+  l. 128
     défaut : ⚠️ Type Transfert — la modification de la quantité ajustera le stock du labo.
     miroir : ⚠️ Type Abr-Expédition — la modification de la quantité ajustera l'armoire de l'usine.
-  l. 175
+  l. 180
     défaut : Supprimer l'appro
     miroir : Supprimer l'abr-rentrée
-  l. 181
+  l. 186
     défaut : Article
     miroir : Denrée
-  l. 189
+  l. 194
     défaut : 📊 Impact stock : le stock de cet article sera recalculé après suppression.
     miroir : 📊 Impact armoire : l'armoire de cette denrée sera recalculée après suppression.
-  l. 193
+  l. 198
     défaut : ⚠️ Type Transfert — la quantité sera restituée dans le stock du labo source.
     miroir : ⚠️ Type Abr-Expédition — la quantité sera restituée dans l'armoire de l'usine source.
-  l. 421
+  l. 431
     défaut : Consultation et export de l'historique des approvisionnements
     miroir : Consultation et export de l'historique des rentrées
-  l. 451
+  l. 461
     défaut : 🏪 ⟦·⟧
     miroir : 🏪 ⟦·⟧
-  l. 456
+  l. 466
     défaut : ← sélectionner l'activité
     miroir : ← sélectionner le local
-  l. 474
+  l. 484
     défaut : Produits Transformés Utilisables
     miroir : Inventions Internes Utiles
-  l. 475
+  l. 485
     défaut : Produits Transformés Vendables
     miroir : Inventions Internes Vendues
-  l. 476
+  l. 486
     défaut : Produits Composés Valorisés
     miroir : Inventions Composées Valorisées
-  l. 479
+  l. 489
     défaut : 🧂 Article
     miroir : 🧂 Denrée
-  l. 486
+  l. 496
     défaut : 🚚 Fournisseur
     miroir : 🚚 Enseigne
-  l. 488
+  l. 498
     défaut : — Tous —
     miroir : — Toutes —
-  l. 493
+  l. 503
     défaut : ⇄ Type d'appro
     miroir : ⇄ Type d'abr-rentrée
-  l. 523
+  l. 533
     défaut : Article
     miroir : Denrée
-  l. 561
+  l. 571
     défaut : ⟦?Transfert|⟦?💰 Vente|⟦?↩️ Annul. vente|⟦?🔄 PT|Manuel⟧⟧⟧⟧
     miroir : ⟦?Abr-Expédition|⟦?💰 Abr-Encaissement|⟦?↩️ Annul. abr-encaissement|⟦?🔄 EI|Manuelle⟧⟧⟧⟧
 
@@ -1620,182 +1623,185 @@ src/components/client/InventairePage.tsx
     miroir : ⟦·⟧ ⟦denrée|denrées@>1⟧ inventoriées
 
 src/components/client/InvoiceConfirmModal.tsx
-  l. 48
+  l. 50
     défaut : Confirmation d'approvisionnement
     miroir : Confirmation de rentrée
-  l. 61
+  l. 63
     défaut : Article
     miroir : Denrée
-  l. 64
+  l. 66
     défaut : Article
     miroir : Denrée
-  l. 119
+  l. 128
     défaut : Confirmer l'appro
     miroir : Confirmer l'abr-rentrée
 
 src/components/client/LaboFacturesApproPage.tsx
-  l. 186
+  l. 198
     défaut : ↙ Transfert reçu⟦? ← ⟦·⟧|⟧
     miroir : ↙ Abr-Expédition reçue⟦? ← ⟦·⟧|⟧
-  l. 187
+  l. 199
     défaut : ↗ Transfert émis
     miroir : ↗ Abr-Expédition émise
-  l. 188
+  l. 200
     défaut : ↗ Transfert
     miroir : ↗ Abr-Expédition
-  l. 206
+  l. 218
     défaut : Labo introuvable.
     miroir : Usine introuvable.
-  l. 220
+  l. 236
     défaut : Factures Appro — Labo
     miroir : Factures Abr-Rentrée — Abr-Usine
-  l. 222
+  l. 238
     défaut : Consultation des approvisionnements sous forme de factures
     miroir : Consultation des rentrées sous forme de factures
-  l. 247
+  l. 263
     défaut : ⟦?🎯 Destination / Origine|🏪 Activité⟧
     miroir : ⟦?🎯 Destination / Origine|🏪 Local⟧
-  l. 249
+  l. 265
     défaut : — Toutes —
     miroir : — ⟦?Toutes|Tous⟧ —
-  l. 250
+  l. 266
     défaut : ⟦?🏭 |⟧⟦·⟧
     miroir : ⟦?🏭 |⟧⟦·⟧
-  l. 251
+  l. 267
     défaut : ↗ Transferts émis
     miroir : ↗ Abr-Expéditions émises
-  l. 252
+  l. 268
     défaut : ↙ Transferts reçus (origine : labo source)
     miroir : ↙ Abr-Expéditions reçues (origine : usine source)
-  l. 257
+  l. 273
     défaut : 🚚 Fournisseur
     miroir : 🚚 Enseigne
-  l. 259
+  l. 275
     défaut : — Tous —
     miroir : — Toutes —
-  l. 299
+  l. 315
     défaut : ⟦?⟦·⟧|Sans fournisseur⟧
     miroir : ⟦?⟦·⟧|Sans enseigne⟧
-  l. 302
+  l. 318
     défaut : ⟦?Réf: ⟦·⟧|Sans réf.⟧ · ⟦·⟧⟦·⟧⟦·⟧<span>⟦?⟦·⟧|Manuel⟧</span>
     miroir : ⟦?Réf: ⟦·⟧|Sans réf.⟧ · ⟦·⟧⟦·⟧⟦·⟧<span>⟦?⟦·⟧|Manuelle⟧</span>
-  l. 304
+  l. 320
     défaut :  · 🏪 <strong>⟦·⟧</strong>
     miroir :  · 🏪 <strong>⟦·⟧</strong>
-  l. 305
+  l. 321
     défaut :  · 🏭 <strong>⟦·⟧</strong>
     miroir :  · 🏭 <strong>⟦·⟧</strong>
-  l. 342
+  l. 347
+    défaut : ⟦?Voir|Joindre⟧ la facture du fournisseur
+    miroir : ⟦?Voir|Joindre⟧ la facture de l'enseigne
+  l. 370
     défaut : Article
     miroir : Denrée
-  l. 345
+  l. 373
     défaut : Article
     miroir : Denrée
-  l. 374
+  l. 402
     défaut : Sous-total — ⟦·⟧ ⟦article|articles@>1⟧
     miroir : Sous-total — ⟦·⟧ ⟦denrée|denrées@>1⟧
 
 src/components/client/LaboHistoriqueApproPage.tsx
-  l. 51
+  l. 52
     défaut : Manuel
     miroir : Manuelle
-  l. 52
+  l. 53
     défaut : Transfert émis
     miroir : Abr-Expédition émise
-  l. 53
+  l. 54
     défaut : Transfert reçu
     miroir : Abr-Expédition reçue
-  l. 54
+  l. 55
     défaut : Vente
     miroir : Abr-Encaissement
-  l. 55
+  l. 56
     défaut : PT
     miroir : EI
-  l. 75
+  l. 76
     défaut : Cette action modifiera les valeurs du <strong>stock labo</strong>. Assurez-vous que les données sont correctes avant de confirmer.
     miroir : Cette action modifiera les valeurs de l'<strong>armoire de l'usine</strong>. Assurez-vous que les données sont correctes avant de confirmer.
-  l. 152
+  l. 153
     défaut : Fournisseur
     miroir : Enseigne
-  l. 154
+  l. 155
     défaut : — Aucun —
     miroir : — Aucune —
-  l. 213
+  l. 218
     défaut : Supprimer l'appro
     miroir : Supprimer l'abr-rentrée
-  l. 218
+  l. 223
     défaut : Supprimer l'appro du <strong>⟦·⟧</strong> pour <strong>⟦·⟧</strong> (⟦·⟧ ⟦·⟧) ?
     miroir : Supprimer l'abr-rentrée du <strong>⟦·⟧</strong> pour <strong>⟦·⟧</strong> (⟦·⟧ ⟦·⟧) ?
-  l. 222
+  l. 227
     défaut : Cette entrée sera définitivement supprimée et le stock labo sera recalculé en conséquence.
     miroir : Cette entrée sera définitivement supprimée et l'armoire de l'usine sera recalculée en conséquence.
-  l. 389
+  l. 399
     défaut : Labo non spécifié.
     miroir : Usine non spécifiée.
-  l. 403
+  l. 413
     défaut : Historique Approvisionnement — ⟦?⟦·⟧|…⟧⟦<HelpButton/>⟧
     miroir : Historique Rentrée — ⟦?⟦·⟧|…⟧⟦<HelpButton/>⟧
-  l. 407
+  l. 417
     défaut : Labo — consultation et export des approvisionnements
     miroir : Usine — consultation et export des rentrées
-  l. 417
+  l. 427
     défaut : 🏭 ⟦·⟧
     miroir : 🏭 ⟦·⟧
-  l. 426
+  l. 436
     défaut : ← sélectionner le labo
     miroir : ← sélectionner l'usine
-  l. 444
+  l. 454
     défaut : Produits Transformés Utilisables
     miroir : Inventions Internes Utiles
-  l. 445
+  l. 455
     défaut : Produits Transformés Vendables
     miroir : Inventions Internes Vendues
-  l. 446
+  l. 456
     défaut : Produits Composés Valorisés
     miroir : Inventions Composées Valorisées
-  l. 449
+  l. 459
     défaut : 🧂 Article
     miroir : 🧂 Denrée
-  l. 451
+  l. 461
     défaut : — Tous —
     miroir : — Toutes —
-  l. 456
+  l. 466
     défaut : 🚚 Fournisseur
     miroir : 🚚 Enseigne
-  l. 458
+  l. 468
     défaut : — Tous —
     miroir : — Toutes —
-  l. 463
+  l. 473
     défaut : ⇄ Type d'appro
     miroir : ⇄ Type d'abr-rentrée
-  l. 470
+  l. 480
     défaut : Cliquez sur Rechercher pour afficher les approvisionnements.
     miroir : Cliquez sur Rechercher pour afficher les rentrées.
-  l. 477
+  l. 487
     défaut : Aucun approvisionnement trouvé pour cette période.
     miroir : Aucune rentrée trouvée pour cette période.
-  l. 498
+  l. 508
     défaut : Article
     miroir : Denrée
-  l. 545
+  l. 555
     défaut : Manuel
     miroir : Manuelle
-  l. 548
+  l. 558
     défaut : Réception d'un labo source
     miroir : Réception d'une usine source
-  l. 548
+  l. 558
     défaut : ↙ Reçu⟦? ← ⟦·⟧|⟧
     miroir : ↙ Reçue⟦? ← ⟦·⟧|⟧
-  l. 553
+  l. 563
     défaut : Transfert émis depuis ce labo
     miroir : Expédition émise depuis cette usine
-  l. 553
+  l. 563
     défaut : ⟦?↗ Transf.⟦? → ⟦·⟧|⟧|Transf.⟧
     miroir : ⟦?↗ Expéd.⟦? → ⟦·⟧|⟧|Expéd.⟧
-  l. 558
+  l. 568
     défaut : Vente
     miroir : Abr-Encaissement
-  l. 561
+  l. 571
     défaut : PT
     miroir : EI
 
@@ -2561,351 +2567,357 @@ src/components/client/ReferentielUnitesPage.tsx
     miroir : Les denrées liées perdront leur unité.
 
 src/components/client/StockLaboPage.tsx
-  l. 417
+  l. 425
     défaut : Stock insuffisant — disponible : ⟦·⟧ | demandé : ⟦·⟧
     miroir : Armoire insuffisante — disponible : ⟦·⟧ | demandé : ⟦·⟧
-  l. 667
+  l. 474
+    défaut : ce fournisseur
+    miroir : cette enseigne
+  l. 686
     défaut : Labo introuvable.
     miroir : Usine introuvable.
-  l. 692
+  l. 711
     défaut : 🏭
     miroir : 🏭
-  l. 693
+  l. 712
     défaut : Stock Labo⟦? — ⟦·⟧|⟧
     miroir : Armoire Abr-Usine⟦? — ⟦·⟧|⟧
-  l. 697
+  l. 716
     défaut : Gérez les stocks et approvisionnements de vos laboratoires
     miroir : Gérez les armoires et rentrées de vos usines centrales
-  l. 718
+  l. 737
     défaut : 🏭 ⟦·⟧
     miroir : 🏭 ⟦·⟧
-  l. 732
+  l. 751
     défaut : ← sélectionner le labo
     miroir : ← sélectionner l'usine
-  l. 754
+  l. 773
     défaut : 🧂 Article
     miroir : 🧂 Denrée
-  l. 756
+  l. 775
     défaut : — Tous —
     miroir : — Toutes —
-  l. 763
+  l. 782
     défaut : 🚚 Fournisseur
     miroir : 🚚 Enseigne
-  l. 766
+  l. 785
     défaut : — Tous —
     miroir : — Toutes —
-  l. 771
+  l. 790
     défaut : ⚠ Aucun fournisseur
     miroir : ⚠ Aucune enseigne
-  l. 807
+  l. 826
     défaut : Approvisionnement
     miroir : Rentrée
-  l. 814
+  l. 833
     défaut : Date d'appro <span>*</span>
     miroir : Date d'abr-rentrée <span>*</span>
-  l. 818
+  l. 837
     défaut : Fournisseur
     miroir : Enseigne
-  l. 826
+  l. 845
     défaut : ⚠ Aucun fournisseur
     miroir : ⚠ Aucune enseigne
-  l. 851
+  l. 875
     défaut : 🏭
     miroir : 🏭
-  l. 882
+  l. 906
     défaut : Article
     miroir : Denrée
-  l. 883
+  l. 907
     défaut : Stock Actuel
     miroir : Armoire Actuelle
-  l. 897
+  l. 921
     défaut : Hist.Appro · Unité
     miroir : Hist.Abr-Rentrée · Unité
-  l. 898
+  l. 922
     défaut : Pertes · PT · Transfert
     miroir : Abr-Abandons · EI · Abr-Expédition
-  l. 924
+  l. 948
     défaut : PT
     miroir : EI
-  l. 927
+  l. 951
     défaut : Produit valorisé composé — fabriqué au labo puis transféré vers les activités (vendu en valorisé).
     miroir : Invention valorisée composée — fabriquée à l'usine puis transférée vers les locaux (vendue en valorisé).
-  l. 935
+  l. 959
     défaut : 5 derniers appros
     miroir : 5 dernières abr-rentrées
-  l. 949
+  l. 973
     défaut : ↑ appro ⟦·⟧
     miroir : ↑ abr-rentrée ⟦·⟧
-  l. 951
+  l. 975
     défaut : ↘ pertes ⟦?-⟦·⟧|0⟧
     miroir : ↘ abr-abandons ⟦?-⟦·⟧|0⟧
-  l. 953
+  l. 977
     défaut : PT -⟦·⟧
     miroir : EI -⟦·⟧
-  l. 987
+  l. 1011
     défaut : Prix indisponible : certains composants de la recette n'ont pas encore de prix (PMP).
     miroir : Prix indisponible : certains composants de l'assemblage n'ont pas encore de prix (PMP).
-  l. 989
+  l. 1013
     défaut : Calculé automatiquement depuis les prix des articles du labo
     miroir : Calculé automatiquement depuis les prix des denrées de l'usine
-  l. 1028
+  l. 1052
     défaut : Enregistrer une perte
     miroir : Enregistrer un abandon
-  l. 1025
+  l. 1049
     défaut : 📉 Perte
     miroir : 📉 Abr-Abandon
-  l. 1035
+  l. 1059
     défaut : Portions personnalisées pour cet appro
     miroir : Échantillons personnalisés pour cette abr-rentrée
-  l. 1058
+  l. 1082
     défaut : Fournisseur
     miroir : Enseigne
-  l. 1067
+  l. 1091
     défaut : Manuel
     miroir : Manuelle
-  l. 1068
+  l. 1092
     défaut : ↙ Reçu⟦? ← ⟦·⟧|⟧
     miroir : ↙ Reçue⟦? ← ⟦·⟧|⟧
-  l. 1069
+  l. 1093
     défaut : ⟦?↗ Transf.⟦? → ⟦·⟧|⟧|Transfert⟧
     miroir : ⟦?↗ Expéd.⟦? → ⟦·⟧|⟧|Abr-Expédition⟧
-  l. 1070
+  l. 1094
     défaut : 🔄 PT
     miroir : 🔄 EI
-  l. 1071
+  l. 1095
     défaut : 🗑️ Perte
     miroir : 🗑️ Abr-Abandon
-  l. 1072
+  l. 1096
     défaut : 💰 Vente
     miroir : 💰 Abr-Encaissement
-  l. 1129
+  l. 1153
     défaut : 🧂 Article
     miroir : 🧂 Denrée
-  l. 1131
+  l. 1155
     défaut : — Tous —
     miroir : — Toutes —
-  l. 1135
+  l. 1159
     défaut : 🔍 Nom article
     miroir : 🔍 Nom denrée
-  l. 1145
+  l. 1169
     défaut : Aucun article assigné à ce labo.
     miroir : Aucune denrée assignée à cette usine.
-  l. 1150
+  l. 1174
     défaut : Aucune activité liée à ce labo.
     miroir : Aucun local lié à cette usine.
-  l. 1229
+  l. 1253
     défaut : 📉 Déclarer une perte — ⟦·⟧
     miroir : 📉 Déclarer un abandon — ⟦·⟧
-  l. 1238
+  l. 1262
     défaut : Aucun approvisionnement enregistré pour cet article cette année.
     miroir : Aucune rentrée enregistrée pour cette denrée cette année.
-  l. 1241
+  l. 1265
     défaut : Enregistrez d'abord un appro avant de déclarer une perte.
     miroir : Enregistrez d'abord une abr-rentrée avant de déclarer un abandon.
-  l. 1253
+  l. 1277
     défaut : Stock disponible
     miroir : Armoire disponible
-  l. 1269
+  l. 1293
     défaut : ⚠ Dépasse le stock disponible (⟦·⟧)
     miroir : ⚠ Dépasse l'armoire disponible (⟦·⟧)
-  l. 1274
+  l. 1298
     défaut : Type de perte
     miroir : Type d'abandon
-  l. 1278
+  l. 1302
     défaut : Date de perte
     miroir : Date d'abandon
-  l. 1283
+  l. 1307
     défaut : Premier appro : ⟦·⟧
     miroir : Première abr-rentrée : ⟦·⟧
-  l. 1290
+  l. 1314
     défaut : Prix unitaire appro
     miroir : Prix unitaire abr-rentrée
-  l. 1310
+  l. 1334
     défaut : ⟦?…|Enregistrer la perte⟧
     miroir : ⟦?…|Enregistrer l'abandon⟧
-  l. 1345
+  l. 1370
     défaut : ⚠️ Appro existant — ⟦·⟧
     miroir : ⚠️ Abr-Rentrée existante — ⟦·⟧
-  l. 1349
+  l. 1374
     défaut : Tu as déjà un appro à cette date (<strong>⟦·⟧</strong>) avec la quantité <strong>⟦·⟧</strong>.
     miroir : Tu as déjà une abr-rentrée à cette date (<strong>⟦·⟧</strong>) avec la quantité <strong>⟦·⟧</strong>.
-  l. 1353
+  l. 1378
     défaut : Es-tu sûr d'ajouter <strong>⟦·⟧</strong> ? Car ça te fait un total d'appro de <strong>⟦·⟧ + ⟦·⟧ = ⟦·⟧</strong>
     miroir : Es-tu sûr d'ajouter <strong>⟦·⟧</strong> ? Car ça te fait un total d'abr-rentrée de <strong>⟦·⟧ + ⟦·⟧ = ⟦·⟧</strong>
 
 src/components/client/StockPage.tsx
-  l. 145
+  l. 148
     défaut : Stock insuffisant — disponible : ⟦·⟧ | demandé : ⟦·⟧
     miroir : Armoire insuffisante — disponible : ⟦·⟧ | demandé : ⟦·⟧
-  l. 157
+  l. 160
     défaut : 📉 Enregistrer une perte
     miroir : 📉 Enregistrer un abandon
-  l. 165
+  l. 168
     défaut : ✓ Perte enregistrée
     miroir : ✓ Abandon enregistré
-  l. 168
+  l. 171
     défaut : Aucun approvisionnement enregistré pour cet article.
     miroir : Aucune rentrée enregistrée pour cette denrée.
-  l. 171
+  l. 174
     défaut : Enregistrez d'abord un appro avant de déclarer une perte.
     miroir : Enregistrez d'abord une abr-rentrée avant de déclarer un abandon.
-  l. 179
+  l. 182
     défaut : Stock disponible
     miroir : Armoire disponible
-  l. 191
+  l. 194
     défaut : ⚠ Dépasse le stock disponible (⟦·⟧)
     miroir : ⚠ Dépasse l'armoire disponible (⟦·⟧)
-  l. 197
+  l. 200
     défaut : Type de perte
     miroir : Type d'abandon
-  l. 203
+  l. 206
     défaut : Date de la perte
     miroir : Date de l'abandon
-  l. 207
+  l. 210
     défaut : Premier appro : ⟦·⟧
     miroir : Première abr-rentrée : ⟦·⟧
-  l. 214
+  l. 217
     défaut : Prix unitaire appro
     miroir : Prix unitaire abr-rentrée
-  l. 234
+  l. 237
     défaut : ⟦?…|Enregistrer la perte⟧
     miroir : ⟦?…|Enregistrer l'abandon⟧
-  l. 278
+  l. 281
     défaut : 🚚 Affectation Fournisseur
     miroir : 🚚 Affectation Abr-Enseigne
-  l. 285
+  l. 288
     défaut : Fournisseur
     miroir : Enseigne
-  l. 291
+  l. 294
     défaut : — Aucun fournisseur —
     miroir : — Aucune enseigne —
-  l. 293
+  l. 296
     défaut : ⟦?🏭|🚚⟧ ⟦·⟧
     miroir : ⟦?🏭|🚚⟧ ⟦·⟧
-  l. 343
+  l. 346
     défaut : 🏭 Fournisseur Labo
     miroir : 🏭 Enseigne Abr-Usine
-  l. 350
+  l. 353
     défaut : Fournisseur
     miroir : Enseigne
-  l. 357
+  l. 360
     défaut : Géré automatiquement par le labo — non modifiable.
     miroir : Gérée automatiquement par l'usine — non modifiable.
-  l. 388
+  l. 391
     défaut : ⟦·⟧⟦| ingrédient(s)@≠1⟧
     miroir : ⟦·⟧⟦| provision(s)@≠1⟧
-  l. 393
+  l. 396
     défaut : ⚠️ Appro existant — ⟦·⟧
     miroir : ⚠️ Abr-Rentrée existante — ⟦·⟧
-  l. 397
+  l. 400
     défaut : Tu as déjà un appro à cette date (<strong>⟦·⟧</strong>) avec la quantité <strong>⟦·⟧</strong>.
     miroir : Tu as déjà une abr-rentrée à cette date (<strong>⟦·⟧</strong>) avec la quantité <strong>⟦·⟧</strong>.
-  l. 401
+  l. 404
     défaut : Es-tu sûr d'ajouter <strong>⟦·⟧</strong> ? Car ça te fait un total d'appro de <strong>⟦·⟧ + ⟦·⟧ = ⟦·⟧</strong>
     miroir : Es-tu sûr d'ajouter <strong>⟦·⟧</strong> ? Car ça te fait un total d'abr-rentrée de <strong>⟦·⟧ + ⟦·⟧ = ⟦·⟧</strong>
-  l. 1031
+  l. 674
+    défaut : ce fournisseur
+    miroir : cette enseigne
+  l. 1062
     défaut : Approvisionnement
     miroir : Rentrée
-  l. 1038
+  l. 1069
     défaut : Date d'appro <span>*</span>
     miroir : Date d'abr-rentrée <span>*</span>
-  l. 1042
+  l. 1073
     défaut : Fournisseur
     miroir : Enseigne
-  l. 1050
+  l. 1081
     défaut : ⚠ Aucun fournisseur
     miroir : ⚠ Aucune enseigne
-  l. 1090
+  l. 1127
     défaut : Article
     miroir : Denrée
-  l. 1091
+  l. 1128
     défaut : Stock Actuel
     miroir : Armoire Actuelle
-  l. 1105
+  l. 1142
     défaut : Hist.Appro · Unité
     miroir : Hist.Abr-Rentrée · Unité
-  l. 1106
+  l. 1143
     défaut : ↑Appro · ⇄Trf · ↘Pertes · PT
     miroir : ↑Abr-Rentrée · ⇄Abr-Expéd. · ↘Abr-Abandons · EI
-  l. 1149
+  l. 1186
     défaut : Produit fabriqué au labo — reçu uniquement par transfert depuis le labo, pas d'appro manuel ici.
     miroir : Invention fabriquée à l'usine — reçue uniquement par expédition depuis l'usine, pas d'abr-rentrée manuelle ici.
-  l. 1149
+  l. 1186
     défaut : ⇄ Transfert uniquement
     miroir : ⇄ Abr-Expédition uniquement
-  l. 1161
+  l. 1198
     défaut : ↑ appro ⟦·⟧
     miroir : ↑ abr-rentrée ⟦·⟧
-  l. 1163
+  l. 1200
     défaut : ↘ pertes ⟦·⟧
     miroir : ↘ abr-abandons ⟦·⟧
-  l. 1164
+  l. 1201
     défaut : PT ⟦·⟧
     miroir : EI ⟦·⟧
-  l. 1166
+  l. 1203
     défaut : 💰 VENTE −⟦·⟧
     miroir : 💰 ENCAISSEMENT −⟦·⟧
-  l. 1192
+  l. 1229
     défaut : ⟦?Reçu uniquement par transfert depuis le labo — pas d'appro manuel ici.|⟦?⚠️ Prix incomplet pour certains articles — calcul partiel|⟦·⟧⟧⟧
     miroir : ⟦?Reçue uniquement par expédition depuis l'usine — pas d'abr-rentrée manuelle ici.|⟦?⚠️ Prix incomplet pour certaines denrées — calcul partiel|⟦·⟧⟧⟧
-  l. 1213
+  l. 1250
     défaut : Prix indisponible : certains composants de la recette n'ont pas encore de prix (PMP).
     miroir : Prix indisponible : certains composants de l'assemblage n'ont pas encore de prix (PMP).
-  l. 1215
+  l. 1252
     défaut : ⟦?PMP des transferts reçus du labo|Calculé automatiquement depuis les prix des articles⟧
     miroir : ⟦?PMP des expéditions reçues de l'usine|Calculé automatiquement depuis les prix des denrées⟧
-  l. 1261
+  l. 1298
     défaut : Enregistrer une perte
     miroir : Enregistrer un abandon
-  l. 1261
+  l. 1298
     défaut : 📉 Perte
     miroir : 📉 Abr-Abandon
-  l. 1268
+  l. 1305
     défaut : Portions personnalisées
     miroir : Échantillons personnalisés
-  l. 1292
+  l. 1329
     défaut : Fournisseur
     miroir : Enseigne
-  l. 1301
+  l. 1338
     défaut : ⟦?Transfert|⟦?💰 Vente|⟦?↩️ Annul. vente|⟦?🔄 PT|⟦?🗑️ Perte|Manuel⟧⟧⟧⟧⟧
     miroir : ⟦?Abr-Expédition|⟦?💰 Abr-Encaissement|⟦?↩️ Annul. abr-encaissement|⟦?🔄 EI|⟦?🗑️ Abr-Abandon|Manuelle⟧⟧⟧⟧⟧
-  l. 1393
+  l. 1430
     défaut : Impossible de charger le stock. Veuillez réessayer.
     miroir : Impossible de charger l'armoire. Veuillez réessayer.
-  l. 1436
+  l. 1473
     défaut : 🏪 ⟦·⟧
     miroir : 🏪 ⟦·⟧
-  l. 1450
+  l. 1487
     défaut : ← sélectionner l'activité
     miroir : ← sélectionner le local
-  l. 1466
+  l. 1503
     défaut : 🧂 Article
     miroir : 🧂 Denrée
-  l. 1468
+  l. 1505
     défaut : — Tous —
     miroir : — Toutes —
-  l. 1477
+  l. 1514
     défaut : 🚚 Fournisseur
     miroir : 🚚 Enseigne
-  l. 1480
+  l. 1517
     défaut : — Tous —
     miroir : — Toutes —
-  l. 1482
+  l. 1519
     défaut : ⟦?🏭|🚚⟧ ⟦·⟧
     miroir : ⟦?🏭|🚚⟧ ⟦·⟧
-  l. 1487
+  l. 1524
     défaut : ⚠ Aucun fournisseur
     miroir : ⚠ Aucune enseigne
-  l. 1558
+  l. 1595
     défaut : Impossible de charger les activités. Veuillez recharger la page.
     miroir : Impossible de charger les locaux. Veuillez recharger la page.
-  l. 1589
+  l. 1626
     défaut : 📦
     miroir : 📦
-  l. 1594
+  l. 1631
     défaut : Gérez les stocks et approvisionnements de vos activités
     miroir : Gérez les armoires et rentrées de vos locaux
-  l. 1609
+  l. 1646
     défaut : Stock Activités
     miroir : Armoire Abr-Locaux
 
@@ -3483,6 +3495,16 @@ src/components/client/dashboardV2Widgets.tsx
   l. 271
     défaut : Valorisé
     miroir : Valorisée
+
+src/components/client/factures/FenetrePieces.tsx
+  l. 96
+    défaut : Aucune pièce : joignez la facture reçue du fournisseur (PDF, scan ou photo).
+    miroir : Aucune pièce : joignez la facture reçue de l'enseigne (PDF, scan ou photo).
+
+src/components/client/factures/ZonePieces.tsx
+  l. 74
+    défaut : ⟦?Nouveau fichier|Facture du fournisseur⟧
+    miroir : ⟦?Nouveau fichier|Facture de l'enseigne⟧
 
 src/components/common/AssistantChat.tsx
   l. 135
