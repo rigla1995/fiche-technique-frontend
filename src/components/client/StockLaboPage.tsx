@@ -26,6 +26,7 @@ interface PtRecipeInfoLabo {
 import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
+import LectureFacture, { PastilleLue, type ResultatLecture } from './factures/LectureFacture';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
@@ -104,7 +105,7 @@ interface AssignIngredient {
   activities: { activiteId: number; nom: string; assigned: boolean }[];
 }
 
-interface Fournisseur { id: number; nom: string }
+interface Fournisseur { id: number; nom: string; isLabo?: boolean }
 
 
 export default function StockLaboPage() {
@@ -213,13 +214,29 @@ export default function StockLaboPage() {
   const [piecesEnPreparation, setPiecesEnPreparation] = useState(false);
   const [generationPieces, setGenerationPieces] = useState(0);
   const viderPieces = () => { libererFichiers(bulkPieces); setBulkPieces([]); setPiecesEnPreparation(false); setGenerationPieces((g) => g + 1); };
+  // Étape F2 : champs remplis par la lecture de la facture (pastille « lu » jusqu'à ce qu'on les modifie), date choisie à
+  // la main (la date lue ne la remplace plus), et ce que la lecture a trouvé (timbre, totaux, résumé gardé sur la facture).
+  const [champsLus, setChampsLus] = useState<{ fournisseur?: boolean; ref?: boolean; date?: boolean }>({});
+  const [dateChoisie, setDateChoisie] = useState(false);
+  const [resultatLecture, setResultatLecture] = useState<ResultatLecture | null>(null);
+  // Lecture de la facture en cours : « Enregistrer » attend (le récapitulatif montrerait des valeurs qui vont changer).
+  const [lectureEnCours, setLectureEnCours] = useState(false);
+  const remettreAZero = () => {
+    setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError('');
+    setChampsLus({}); setDateChoisie(false); setResultatLecture(null); viderPieces();
+  };
+  const rechargerFournisseurs = async () => {
+    if (!laboId) return;
+    const { data } = await api.get(`/api/labo/${laboId}/fournisseurs`);
+    setFournisseurs(data);
+  };
   const piecesCourantes = useRef<FichierChoisi[]>([]);
   useEffect(() => { piecesCourantes.current = bulkPieces; }, [bulkPieces]);
   useEffect(() => () => libererFichiers(piecesCourantes.current), []);
   const [bulkError, setBulkError] = useState('');
   const { confirm } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
-  const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: (timbreFiscal: boolean) => void } | null>(null);
+  const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: (timbreFiscal: boolean, timbreMontant: number) => void } | null>(null);
 
   const today = todayStr();
 
@@ -452,9 +469,10 @@ export default function StockLaboPage() {
     } catch { /* ignore */ }
   };
 
-  const doBulkSave = async (timbreFiscal = false) => {
+  const doBulkSave = async (timbreFiscal = false, timbreMontant = 1) => {
     setBulkSaving(true);
     setBulkError('');
+    let factureEnregistree = false;
     try {
       const readyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const id = Number(idStr);
@@ -473,6 +491,8 @@ export default function StockLaboPage() {
           fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
           refFacture: bulkRefFacture.trim(),
           timbreFiscal,
+          timbreMontant,
+          lecture: resultatLecture?.lecture ?? null,
           lignes: readyEntries.map(([idStr, rs]) => ({
             articleId: Number(idStr),
             quantite: parseFloat(rs.quantite),
@@ -481,7 +501,7 @@ export default function StockLaboPage() {
           })),
         }, bulkPieces, confirm, voc.ce('fournisseur'));
         if (issue === 'annulee') { setBulkSaving(false); return; }
-        viderPieces();
+        factureEnregistree = true;
       }
       const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
@@ -494,9 +514,11 @@ export default function StockLaboPage() {
         });
       }
 
+      if (factureEnregistree) remettreAZero();
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
+      setChampsLus({}); setDateChoisie(false); setResultatLecture(null);
       setRowState((prev) => {
         const next = { ...prev };
         for (const id of Object.keys(next)) next[Number(id)] = { ...next[Number(id)], tauxTva: '' };
@@ -545,7 +567,7 @@ export default function StockLaboPage() {
       ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
       : null;
 
-    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf) => doBulkSave(tf) });
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf, tm) => doBulkSave(tf, tm) });
   };
 
 
@@ -837,13 +859,13 @@ export default function StockLaboPage() {
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
               <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date {voc.de('appro', false, 'court')} <span style={{ color: '#ef4444' }}>*</span></label>
-                <input type="date" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600, maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date {voc.de('appro', false, 'court')} <span style={{ color: '#ef4444' }}>*</span><PastilleLue visible={!!champsLus.date} /></label>
+                <input type="date" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: '#fff', fontWeight: 600, maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => { setBulkDate(e.target.value); setDateChoisie(true); setChampsLus((p) => ({ ...p, date: false })); }} />
               </div>
               <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>{voc.Nom('fournisseur')}</label>
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>{voc.Nom('fournisseur')}<PastilleLue visible={!!champsLus.fournisseur} /></label>
                 {hasFournisseurs ? (
-                  <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)} disabled={hasPTQuantity}>
+                  <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => { setBulkFournisseurId(e.target.value); setChampsLus((p) => ({ ...p, fournisseur: false })); }} disabled={hasPTQuantity}>
                     <option value="">— Sélectionner —</option>
                     {fournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
                   </select>
@@ -854,16 +876,16 @@ export default function StockLaboPage() {
                 )}
               </div>
               <div>
-                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture {!hasPTQuantity && <span style={{ color: '#ef4444' }}>*</span>}</label>
-                <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 160, opacity: hasPTQuantity ? 0.5 : 1 }} placeholder={hasPTQuantity ? '—' : 'N° facture…'} value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} disabled={hasPTQuantity} />
+                <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture {!hasPTQuantity && <span style={{ color: '#ef4444' }}>*</span>}<PastilleLue visible={!!champsLus.ref} /></label>
+                <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #7e22ce', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 160, opacity: hasPTQuantity ? 0.5 : 1 }} placeholder={hasPTQuantity ? '—' : 'N° facture…'} value={bulkRefFacture} onChange={(e) => { setBulkRefFacture(e.target.value); setChampsLus((p) => ({ ...p, ref: false })); }} disabled={hasPTQuantity} />
               </div>
               <div style={{ flex: 1 }} />
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
-                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation}
+                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation || lectureEnCours}
                   style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
-                  {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
+                  {bulkSaving ? '…' : lectureEnCours ? 'Lecture…' : `Enregistrer (${readyCount + ptReadyCount})`}
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); viderPieces(); }}>
+                <button className="btn btn-ghost btn-sm" onClick={remettreAZero}>
                   Réinitialiser
                 </button>
               </div>
@@ -872,6 +894,26 @@ export default function StockLaboPage() {
             <div style={{ marginTop: 12 }}>
               <ZonePieces key={generationPieces} fichiers={bulkPieces} onChange={setBulkPieces} accent="#7e22ce"
                 onPreparation={setPiecesEnPreparation} disabled={hasPTQuantity || bulkSaving || !canWrite} />
+              {laboId && (
+                <LectureFacture
+                  key={`lecture-${generationPieces}`}
+                  fichiers={bulkPieces} enPreparation={piecesEnPreparation}
+                  cible={{ type: 'labo', id: Number(laboId) }}
+                  fournisseursDuLieu={fournisseurs.filter((f) => !f.isLabo)}
+                  fournisseurId={bulkFournisseurId} refFacture={bulkRefFacture} dateChoisie={dateChoisie}
+                  dateMin={yearStart} dateMax={todayStr()} accent="#7e22ce" disabled={bulkSaving || !canWrite}
+                  onRemplir={(c) => {
+                    if (c.fournisseurId !== undefined) setBulkFournisseurId(c.fournisseurId);
+                    if (c.refFacture !== undefined) setBulkRefFacture(c.refFacture);
+                    if (c.date !== undefined) setBulkDate(c.date || todayStr()); // vide : retour à la date du jour
+                    setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: c.fournisseurId !== '' } : {}), ...(c.refFacture !== undefined ? { ref: c.refFacture !== '' } : {}), ...(c.date !== undefined ? { date: c.date !== '' } : {}) }));
+                  }}
+                  onFournisseursModifies={rechargerFournisseurs}
+                  onResultat={setResultatLecture}
+                  onLecture={setLectureEnCours}
+                  champsLus={champsLus}
+                />
+              )}
             </div>
           </div>
 
@@ -1364,7 +1406,9 @@ export default function StockLaboPage() {
           refFacture={bulkRefFacture.trim() || null}
           theme="labo"
           nbPieces={bulkPieces.length}
-          onConfirm={(tf) => { setInvoiceModal(null); invoiceModal.onConfirm(tf); }}
+          timbreLu={resultatLecture?.timbre ?? null}
+          totauxLus={resultatLecture?.totaux ?? null}
+          onConfirm={(tf, tm) => { setInvoiceModal(null); invoiceModal.onConfirm(tf, tm); }}
           onCancel={() => setInvoiceModal(null)}
         />
       )}

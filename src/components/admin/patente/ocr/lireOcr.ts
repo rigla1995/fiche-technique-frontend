@@ -19,7 +19,7 @@ import type { Arretable } from './travailleur.ts';
 // `cacheMethod: 'none'` : par défaut, tesseract.js garde le modèle de langue dans IndexedDB sous une clé fixe, sans
 // jamais le revalider. Ici rien n'est conservé par l'application : le modèle est tenu par le cache HTTP du navigateur,
 // que le serveur revalide à chaque usage.
-const FICHIERS = {
+export const FICHIERS = {
   workerPath: '/ocr/worker.min.js', corePath: '/ocr/core/', langPath: '/ocr/lang/', gzip: true, workerBlobURL: false, cacheMethod: 'none',
 };
 
@@ -34,7 +34,7 @@ function toile(largeur: number, hauteur: number): { canvas: HTMLCanvasElement; c
   return { canvas, ctx };
 }
 
-function sourceCanvas(image: HTMLCanvasElement): Source {
+export function sourceCanvas(image: HTMLCanvasElement): Source {
   return {
     largeur: image.width,
     hauteur: image.height,
@@ -58,7 +58,7 @@ function sourceCanvas(image: HTMLCanvasElement): Source {
 
 // tesseract.js refuse un ImageData, et pour un canvas il appelle toBlob, bridé à ~1 s dans un onglet masqué : on lui
 // passe une adresse « data: » en PNG, produite de façon synchrone.
-function enPng(image: Pixels): string {
+export function enPng(image: Pixels): string {
   const { canvas, ctx } = toile(image.width, image.height);
   ctx.putImageData(new ImageData(versRgba(image), image.width, image.height), 0, 0);
   return canvas.toDataURL('image/png');
@@ -97,7 +97,7 @@ function moteurTesseract(travailleur: TravailleurOcr): Moteur {
 //   cœur qui ne démarre pas, réseau figé         rien du tout : seul le délai de la lecture y met fin.
 // Dans les trois cas tesseract.js ne rend pas son worker : on note donc le Worker qu'il ouvre (`noterWorker`), pour
 // pouvoir l'arrêter quand même.
-function ouvrirTravailleur(suivi: SuiviLecture): { pret: Promise<TravailleurOcr>; ouvert: Arretable | null } {
+export function ouvrirTravailleur(suivi: SuiviLecture): { pret: Promise<TravailleurOcr>; ouvert: Arretable | null } {
   const enErreur = (raison: unknown): Error => (raison instanceof Error ? raison : new Error(String(raison)));
   let signaler: (raison: unknown) => void = () => {};
   const panne = new Promise<never>((_, rejeter) => { signaler = (raison) => rejeter(enErreur(raison)); });

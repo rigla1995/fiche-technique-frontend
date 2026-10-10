@@ -133,8 +133,23 @@ export interface FactureAEnregistrer {
   fournisseurId: number | null;
   refFacture: string;
   timbreFiscal: boolean;
+  /** Étape F2 : montant du timbre (1, 1,5 ou 2 D ; 1 par défaut). */
+  timbreMontant?: number;
   lignes: LigneFacture[];
   confirmerDoublon?: boolean;
+  /** Étape F2 : ce que la lecture de la facture a proposé (gardé sur la facture, pour comparer plus tard). */
+  lecture?: LectureEnvoyee | null;
+}
+/** Résumé de la lecture envoyé au serveur (le serveur ne garde que ces champs). */
+export interface LectureEnvoyee {
+  source: 'pdf' | 'ocr';
+  matricule: string | null;
+  nom: string | null;
+  numero: string | null;
+  date: string | null;
+  totaux: { ht: number | null; tva: number | null; timbre: number | null; ttc: number | null; fodec: number | null; remise: number | null };
+  fournisseur: 'reconnu' | 'propose' | 'nouveau' | 'choisi' | null;
+  duree: number | null;
 }
 export interface FactureSemblable { id: number | null; dateFacture: string; lieuNom: string | null; montantTTC: number | null; memeFacture: boolean }
 

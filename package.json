@@ -12,7 +12,8 @@
     "vocab:check": "node scripts/vocab-check.mjs",
     "vocab:test": "node --test scripts/vocab.test.mjs scripts/vocab-check.test.mjs",
     "vocab:sync": "node scripts/sync-vocab-back.mjs",
-    "patente:test": "node --test scripts/patente-fusion.test.mjs scripts/patente-rne.test.mjs scripts/patente-code2d.test.mjs scripts/patente-ocr.test.mjs"
+    "patente:test": "node --test scripts/patente-fusion.test.mjs scripts/patente-rne.test.mjs scripts/patente-code2d.test.mjs scripts/patente-ocr.test.mjs",
+    "factures:test": "node --test scripts/factures-lecture.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

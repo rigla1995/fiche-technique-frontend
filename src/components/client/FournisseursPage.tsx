@@ -5,17 +5,31 @@ import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import GuideButton from './GuideButton';
+import { useConfirm } from '../common/ConfirmDialog';
+import { controlerMatriculeFiscal } from '../admin/matriculeFiscal';
+import LecturePatente, { NoteLu, PastilleLu } from '../admin/patente/LecturePatente';
+import { valeurRecopiee } from '../admin/patente/fusion';
+import type { ChampIdentite, ChampLu } from '../admin/patente/types';
+import { IDENTITE_VIDE, type IdentiteLegale } from '../../utils/identiteLegale';
 import type { Fournisseur, FournisseurApproActivite, Activite, Labo } from '../../types';
 
 interface FournisseurFormData {
   nom: string;
   adresse: string;
   telephone: string;
+  // Étape F2 (factures fournisseur) : identité légale — le matricule fiscal permet de reconnaître ses factures.
+  raisonSociale: string;
+  matriculeFiscal: string;
+  email: string;
+  ville: string;
   activiteIds: number[];
   laboIds: number[];
 }
 
-const empty: FournisseurFormData = { nom: '', adresse: '', telephone: '', activiteIds: [], laboIds: [] };
+const empty: FournisseurFormData = { nom: '', adresse: '', telephone: '', raisonSociale: '', matriculeFiscal: '', email: '', ville: '', activiteIds: [], laboIds: [] };
+// Champs de la fiche que la lecture de la patente sait remplir (les autres champs lus sont ignorés ici).
+type ChampFiche = 'raisonSociale' | 'matriculeFiscal' | 'adresse' | 'ville';
+const CHAMPS_PATENTE: ChampFiche[] = ['raisonSociale', 'matriculeFiscal', 'adresse', 'ville'];
 
 const labelStyle: React.CSSProperties = {
   fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)',
@@ -30,6 +44,7 @@ const thStyle: React.CSSProperties = {
 export default function FournisseursPage() {
   const { canWrite } = useAuth();
   const voc = useVocabulaire();
+  const { alerte } = useConfirm();
 
   const [fournisseurs, setFournisseurs] = useState<Fournisseur[]>([]);
   const [activites, setActivites] = useState<Activite[]>([]);
@@ -42,6 +57,10 @@ export default function FournisseursPage() {
   const [foPage, setFoPage] = useState(1);
   const [search, setSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<Fournisseur | null>(null);
+  // Lecture de la patente du fournisseur : pastilles « lu » et dernier champ où le curseur s'est posé (recopie).
+  const [lus, setLus] = useState<Partial<Record<ChampIdentite, ChampLu>>>({});
+  const [champActif, setChampActif] = useState<ChampFiche | null>(null);
+  const [lecture, setLecture] = useState(false);
 
   const FOURN_PAGE_SIZE = 10;
 
@@ -68,12 +87,17 @@ export default function FournisseursPage() {
     const defaultForm: FournisseurFormData = { ...empty, activiteIds: activites.map((a) => a.id) };
     setForm(defaultForm);
     setError('');
+    setLus({});
     setModal({ mode: 'create' });
   };
 
   const openEdit = (f: Fournisseur) => {
-    setForm({ nom: f.nom, adresse: f.adresse ?? '', telephone: f.telephone ?? '', activiteIds: f.activiteIds, laboIds: f.laboIds ?? [] });
+    setForm({
+      nom: f.nom, adresse: f.adresse ?? '', telephone: f.telephone ?? '', raisonSociale: f.raisonSociale ?? '', matriculeFiscal: f.matriculeFiscal ?? '',
+      email: f.email ?? '', ville: f.ville ?? '', activiteIds: f.activiteIds, laboIds: f.laboIds ?? [],
+    });
     setError('');
+    setLus({});
     setModal({ mode: 'edit', item: f });
   };
 
@@ -83,14 +107,46 @@ export default function FournisseursPage() {
   const toggleLabo = (id: number) =>
     setForm((prev) => ({ ...prev, laboIds: prev.laboIds.includes(id) ? prev.laboIds.filter((x) => x !== id) : [...prev.laboIds, id] }));
 
+  // Un champ retouché à la main n'est plus « lu ».
+  const setChamp = (k: keyof FournisseurFormData, v: string) => {
+    setForm((p) => ({ ...p, [k]: v }));
+    if (lus[k as ChampIdentite]) setLus((l) => { const reste = { ...l }; delete reste[k as ChampIdentite]; return reste; });
+  };
+  // La patente remplit les champs VIDES de la fiche (le nom aussi, s'il est vide : la raison sociale lue).
+  const identite: IdentiteLegale = {
+    ...IDENTITE_VIDE, raisonSociale: form.raisonSociale || null, matriculeFiscal: form.matriculeFiscal || null, adresse: form.adresse || null, ville: form.ville || null,
+  };
+  const remplirDepuisPatente = (champs: Partial<IdentiteLegale>, nouveaux: Partial<Record<ChampIdentite, ChampLu>>) => {
+    const retenus = CHAMPS_PATENTE.filter((c) => champs[c]);
+    if (!retenus.length) return;
+    setForm((p) => {
+      const suivant = { ...p };
+      for (const c of retenus) suivant[c] = c === 'matriculeFiscal' ? controlerMatriculeFiscal(champs[c]).valeur : String(champs[c]);
+      if (!p.nom.trim() && champs.raisonSociale) suivant.nom = champs.raisonSociale;
+      return suivant;
+    });
+    setLus((l) => ({ ...l, ...Object.fromEntries(retenus.map((c) => [c, nouveaux[c]])) }));
+  };
+  const recopier = (ligne: string) => {
+    if (!champActif) return;
+    const valeur = valeurRecopiee(champActif, ligne);
+    setChamp(champActif, champActif === 'matriculeFiscal' ? controlerMatriculeFiscal(valeur).valeur : valeur);
+  };
+  const mf = controlerMatriculeFiscal(form.matriculeFiscal);
+
   const save = async () => {
     if (!form.nom.trim()) { setError('Le nom est requis.'); return; }
+    if (!mf.ok) { setError(mf.erreur ?? 'Matricule fiscal invalide.'); return; }
     setSaving(true);
     setError('');
     try {
       const activiteIds = form.activiteIds;
       const laboIds = form.laboIds;
-      const payload = { nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null, activiteIds, laboIds };
+      const payload = {
+        nom: form.nom.trim(), adresse: form.adresse.trim() || null, telephone: form.telephone.trim() || null,
+        raisonSociale: form.raisonSociale.trim() || null, matriculeFiscal: form.matriculeFiscal.trim() || null,
+        email: form.email.trim() || null, ville: form.ville.trim() || null, activiteIds, laboIds,
+      };
 
       const base = '/api/entreprise/fournisseurs';
       if (modal?.mode === 'edit' && modal.item) {
@@ -114,7 +170,13 @@ export default function FournisseursPage() {
       await api.delete(`${base}/${f.id}`);
       setDeleteConfirm(null);
       load();
-    } catch { /* ignore */ }
+    } catch (e: unknown) {
+      // Étape F2 : le serveur refuse de supprimer un fournisseur cité par des appros ou des factures.
+      setDeleteConfirm(null);
+      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      await alerte({ title: 'Suppression impossible', message: msg ?? 'Erreur serveur', tone: 'danger' });
+      load();
+    }
   };
 
   const activiteLabel = (id: number) => activites.find((a) => a.id === id)?.nom ?? `#${id}`;
@@ -126,7 +188,10 @@ export default function FournisseursPage() {
     ? nonLaboFournisseurs.filter((f) =>
         f.nom.toLowerCase().includes(search.toLowerCase()) ||
         (f.telephone ?? '').includes(search) ||
-        (f.adresse ?? '').toLowerCase().includes(search.toLowerCase())
+        (f.adresse ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (f.raisonSociale ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (f.ville ?? '').toLowerCase().includes(search.toLowerCase()) ||
+        (!!f.matriculeFiscal && /[0-9]/.test(search) && f.matriculeFiscal.toUpperCase().replace(/[^0-9A-Z]/g, '').includes(search.toUpperCase().replace(/[^0-9A-Z]/g, '')))
       )
     : nonLaboFournisseurs;
   const foTotalPages = Math.max(1, Math.ceil(filteredFournisseurs.length / FOURN_PAGE_SIZE));
@@ -198,7 +263,7 @@ export default function FournisseursPage() {
       >
         <FilterField label="Recherche" span>
           <FilterInput
-            type="text" placeholder="Nom, téléphone, adresse…" value={search}
+            type="text" placeholder="Nom, matricule, téléphone, ville…" value={search}
             onChange={(e) => { setSearch(e.target.value); setFoPage(1); }}
           />
         </FilterField>
@@ -274,9 +339,17 @@ export default function FournisseursPage() {
                     onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(234,88,12,0.07)')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = idx % 2 === 0 ? 'var(--surface)' : 'rgba(234,88,12,0.03)')}
                   >
-                    <td style={{ fontWeight: 700, padding: '10px 14px' }}>{f.nom}</td>
-                    <td style={{ color: 'var(--text-muted)', padding: '10px 14px' }}>{f.telephone ?? '—'}</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px 14px' }}>{f.adresse ?? '—'}</td>
+                    <td style={{ fontWeight: 700, padding: '10px 14px' }}>
+                      {f.nom}
+                      {(f.matriculeFiscal || (f.raisonSociale && f.raisonSociale !== f.nom)) && (
+                        <div style={{ fontSize: '0.74rem', fontWeight: 500, color: 'var(--text-muted)', marginTop: 2 }}>
+                          {f.raisonSociale && f.raisonSociale !== f.nom ? f.raisonSociale : ''}
+                          {f.matriculeFiscal ? `${f.raisonSociale && f.raisonSociale !== f.nom ? ' · ' : ''}MF ${f.matriculeFiscal}` : ''}
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ color: 'var(--text-muted)', padding: '10px 14px' }}>{f.telephone ?? '—'}{f.email && <div style={{ fontSize: '0.74rem' }}>{f.email}</div>}</td>
+                    <td style={{ color: 'var(--text-muted)', fontSize: '0.85rem', padding: '10px 14px' }}>{[f.adresse, f.ville && !(f.adresse ?? '').toLowerCase().includes(f.ville.toLowerCase()) ? f.ville : null].filter(Boolean).join(', ') || '—'}</td>
                     <td style={{ padding: '10px 14px' }}>
                       <div className="fournisseur-card-acts">
                         {f.activiteIds.length === 0
@@ -409,17 +482,44 @@ export default function FournisseursPage() {
               >×</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <LecturePatente valeur={identite} disabled={saving || !canWrite} champActif={champActif} onRemplir={remplirDepuisPatente} onRecopier={recopier} onLecture={setLecture} />
               <div>
                 <label style={labelStyle}>Nom *</label>
-                <input className="input" style={{ width: '100%' }} placeholder={`Nom ${voc.du('fournisseur')}`} value={form.nom} onChange={(e) => setForm((p) => ({ ...p, nom: e.target.value }))} />
+                <input className="input" style={{ width: '100%' }} placeholder={`Nom ${voc.du('fournisseur')}`} value={form.nom} onChange={(e) => setChamp('nom', e.target.value)} onFocus={() => setChampActif(null)} />
               </div>
               <div>
-                <label style={labelStyle}>Téléphone</label>
-                <input className="input" style={{ width: '100%' }} placeholder="+216 …" value={form.telephone} onChange={(e) => setForm((p) => ({ ...p, telephone: e.target.value }))} />
+                <label style={labelStyle}>Raison sociale<PastilleLu lu={lus.raisonSociale} /></label>
+                <input className="input" style={{ width: '100%' }} placeholder="Telle qu'imprimée sur ses factures (optionnel)" value={form.raisonSociale} onChange={(e) => setChamp('raisonSociale', e.target.value)} onFocus={() => setChampActif('raisonSociale')} maxLength={200} />
+                <NoteLu lu={lus.raisonSociale} />
               </div>
               <div>
-                <label style={labelStyle}>Adresse</label>
-                <input className="input" style={{ width: '100%' }} placeholder="Adresse (optionnel)" value={form.adresse} onChange={(e) => setForm((p) => ({ ...p, adresse: e.target.value }))} />
+                <label style={labelStyle}>Matricule fiscal<PastilleLu lu={lus.matriculeFiscal} /></label>
+                <input className="input" style={{ width: '100%' }} placeholder="1234567A/A/M/000 (optionnel)" value={form.matriculeFiscal} onChange={(e) => setChamp('matriculeFiscal', e.target.value)} onFocus={() => setChampActif('matriculeFiscal')} maxLength={40} />
+                <NoteLu lu={lus.matriculeFiscal} />
+                {form.matriculeFiscal.trim() && (!mf.ok || mf.avertissement)
+                  ? <div style={{ fontSize: '0.76rem', marginTop: 3, color: mf.ok ? '#b45309' : 'var(--danger)' }}>{mf.ok ? mf.avertissement : mf.erreur}</div>
+                  : <div style={{ fontSize: '0.74rem', marginTop: 3, color: 'var(--text-muted)' }}>Les factures déposées seront reconnues par ce matricule.</div>}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+                <div>
+                  <label style={labelStyle}>Téléphone</label>
+                  <input className="input" style={{ width: '100%' }} placeholder="+216 …" value={form.telephone} onChange={(e) => setChamp('telephone', e.target.value)} onFocus={() => setChampActif(null)} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Email</label>
+                  <input className="input" style={{ width: '100%' }} type="email" placeholder="contact@… (optionnel)" value={form.email} onChange={(e) => setChamp('email', e.target.value)} onFocus={() => setChampActif(null)} maxLength={200} />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
+                <div>
+                  <label style={labelStyle}>Adresse<PastilleLu lu={lus.adresse} /></label>
+                  <input className="input" style={{ width: '100%' }} placeholder="Adresse (optionnel)" value={form.adresse} onChange={(e) => setChamp('adresse', e.target.value)} onFocus={() => setChampActif('adresse')} />
+                  <NoteLu lu={lus.adresse} />
+                </div>
+                <div>
+                  <label style={labelStyle}>Ville<PastilleLu lu={lus.ville} /></label>
+                  <input className="input" style={{ width: '100%' }} placeholder="Ville (optionnel)" value={form.ville} onChange={(e) => setChamp('ville', e.target.value)} onFocus={() => setChampActif('ville')} maxLength={100} />
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>{voc.Pl('activite')} {voc.acc('activite', 'liés', 'liées')}</label>
@@ -453,7 +553,7 @@ export default function FournisseursPage() {
               <button className="btn btn-ghost" onClick={() => setModal(null)}>Annuler</button>
               <button
                 onClick={save}
-                disabled={saving || !canWrite}
+                disabled={saving || !canWrite || lecture}
                 style={{
                   background: 'linear-gradient(135deg, #ea580c, #f97316)',
                   boxShadow: '0 4px 14px rgba(234,88,12,0.35)',
