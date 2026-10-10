@@ -84,7 +84,7 @@ export default function FournisseursImportPage() {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: CL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>1️⃣</div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a' }}>Téléchargez le modèle</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Colonnes : Nom / Téléphone / Adresse</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Colonnes : Nom / Téléphone / Adresse / Ville / Matricule fiscal / Email</div>
           </div>
         </div>
         <button onClick={downloadTemplate}
@@ -92,7 +92,7 @@ export default function FournisseursImportPage() {
           📄 Télécharger modele_fournisseurs.xlsx
         </button>
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 10 }}>
-          Seul le <strong>Nom</strong> est obligatoire. Les noms déjà présents dans votre répertoire seront ignorés.
+          Seul le <strong>Nom</strong> est obligatoire. Les noms déjà présents dans votre répertoire seront ignorés. Le <strong>matricule fiscal</strong> permet de reconnaître les factures déposées ; un matricule déjà présent est refusé. L'ancien modèle à trois colonnes reste accepté.
         </div>
       </div>
 

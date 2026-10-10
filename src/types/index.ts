@@ -586,6 +586,11 @@ export interface Fournisseur {
   adresse: string | null;
   telephone: string | null;
   isLabo?: boolean;
+  /** Factures fournisseur, étape F2 : identité légale (matricule fiscal unique par compte). */
+  raisonSociale?: string | null;
+  matriculeFiscal?: string | null;
+  email?: string | null;
+  ville?: string | null;
   activiteIds: number[];
   laboIds: number[];
   createdAt?: string;

@@ -14,6 +14,7 @@ import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fou
 import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
+import LectureFacture, { PastilleLue, type ResultatLecture } from './factures/LectureFacture';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 
 const currentYear = new Date().getFullYear();
@@ -446,6 +447,8 @@ interface StockMatrixProps {
   onSaveSeuilMin?: (ingredientId: number, seuilMin: number | null) => Promise<void>;
   onSavePerte?: (ingredientId: number, quantite: number, typePerte: string, datePerte: string) => Promise<void>;
   onRefresh?: () => void;
+  /** Factures fournisseur, étape F2 : recharge la liste des fournisseurs (rattachement ou création depuis une facture lue). */
+  onFournisseursModifies?: () => Promise<void>;
 }
 
 interface PtComposant {
@@ -464,7 +467,7 @@ interface PtRecipeInfo {
   prixComplet: boolean;
 }
 
-function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, fournisseurs = [], onSave, onSavePT: _onSavePT, onSaveSeuilMin, onSavePerte, onRefresh }: StockMatrixProps) {
+function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fournisseurFilter, refFactureFilter, activiteId, fournisseurs = [], onSave, onSavePT: _onSavePT, onSaveSeuilMin, onSavePerte, onRefresh, onFournisseursModifies }: StockMatrixProps) {
   const { t } = useTranslation();
   const voc = useVocabulaire();
   const { canWrite } = useAuth();
@@ -526,6 +529,17 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [piecesEnPreparation, setPiecesEnPreparation] = useState(false);
   const [generationPieces, setGenerationPieces] = useState(0);
   const viderPieces = () => { libererFichiers(bulkPieces); setBulkPieces([]); setPiecesEnPreparation(false); setGenerationPieces((g) => g + 1); };
+  // Étape F2 : champs remplis par la lecture de la facture (pastille « lu » jusqu'à ce qu'on les modifie), date choisie à
+  // la main (la date lue ne la remplace plus), et ce que la lecture a trouvé (timbre, totaux, résumé gardé sur la facture).
+  const [champsLus, setChampsLus] = useState<{ fournisseur?: boolean; ref?: boolean; date?: boolean }>({});
+  const [dateChoisie, setDateChoisie] = useState(false);
+  const [resultatLecture, setResultatLecture] = useState<ResultatLecture | null>(null);
+  // Lecture de la facture en cours : « Enregistrer » attend (le récapitulatif montrerait des valeurs qui vont changer).
+  const [lectureEnCours, setLectureEnCours] = useState(false);
+  const remettreAZero = () => {
+    setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError('');
+    setChampsLus({}); setDateChoisie(false); setResultatLecture(null); viderPieces();
+  };
   const piecesCourantes = useRef<FichierChoisi[]>([]);
   useEffect(() => { piecesCourantes.current = bulkPieces; }, [bulkPieces]);
   useEffect(() => () => libererFichiers(piecesCourantes.current), []);
@@ -544,7 +558,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [invoiceModal, setInvoiceModal] = useState<{
     lines: InvoiceLineItem[];
     fournisseurNom: string | null;
-    onConfirm: (timbreFiscal: boolean) => void;
+    onConfirm: (timbreFiscal: boolean, timbreMontant: number) => void;
   } | null>(null);
 
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
@@ -652,7 +666,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (!isOpen) await fetchHistory(id);
   };
 
-  const doBulkSave = async (timbreFiscal = false) => {
+  const doBulkSave = async (timbreFiscal = false, timbreMontant = 1) => {
     setBulkSaving(true);
     setBulkError('');
     try {
@@ -673,6 +687,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
           refFacture: bulkRefFacture.trim(),
           timbreFiscal,
+          timbreMontant,
+          lecture: resultatLecture?.lecture ?? null,
           lignes: readyEntries.map(([idStr, row]) => ({
             articleId: Number(idStr),
             quantite: parseFloat(row.quantite),
@@ -681,10 +697,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           })),
         }, bulkPieces, confirm, voc.ce('fournisseur'));
         if (issue === 'annulee') { setBulkSaving(false); return; }
-        viderPieces();
-        setBulkDate(todayStr());
-        setBulkFournisseurId('');
-        setBulkRefFacture('');
+        remettreAZero();
         setBulkSaving(false);
         onRefresh?.();
         return;
@@ -729,6 +742,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
+      setChampsLus({}); setDateChoisie(false); setResultatLecture(null);
       setRows((prev) => {
         const next = { ...prev };
         for (const id of Object.keys(next)) {
@@ -779,7 +793,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
       : null;
 
-    const doConflictCheckThenSave = async (timbreFiscal = false) => {
+    const doConflictCheckThenSave = async (timbreFiscal = false, timbreMontant = 1) => {
       // Bouton bloqué dès la confirmation (la lecture des historiques prend un instant : pas de second envoi).
       setBulkSaving(true);
       const histMap: Record<number, StockHistoryEntry[]> = {};
@@ -802,13 +816,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
       if (conflicts.length > 0) {
         setBulkSaving(false);
-        setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(timbreFiscal); } });
+        setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(timbreFiscal, timbreMontant); } });
         return;
       }
-      await doBulkSave(timbreFiscal);
+      await doBulkSave(timbreFiscal, timbreMontant);
     };
 
-    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf) => doConflictCheckThenSave(tf) });
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf, tm) => doConflictCheckThenSave(tf, tm) });
   };
 
   let filtered = entries;
@@ -966,7 +980,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           refFacture={bulkRefFacture.trim() || null}
           theme="activite"
           nbPieces={activiteId ? bulkPieces.length : undefined}
-          onConfirm={(tf) => { setInvoiceModal(null); invoiceModal.onConfirm(tf); }}
+          timbreLu={resultatLecture?.timbre ?? null}
+          totauxLus={resultatLecture?.totaux ?? null}
+          onConfirm={(tf, tm) => { setInvoiceModal(null); invoiceModal.onConfirm(tf, tm); }}
           onCancel={() => setInvoiceModal(null)}
         />
       )}
@@ -1077,13 +1093,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'flex-end' }}>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date {voc.de('appro', false, 'court')} <span style={{ color: '#ef4444' }}>*</span></label>
-            <input type="date" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: '#fff', fontWeight: 600, maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => setBulkDate(e.target.value)} />
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Date {voc.de('appro', false, 'court')} <span style={{ color: '#ef4444' }}>*</span><PastilleLue visible={!!champsLus.date} /></label>
+            <input type="date" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: '#fff', fontWeight: 600, maxWidth: 150 }} min={yearStart} max={todayStr()} value={bulkDate} onChange={(e) => { setBulkDate(e.target.value); setDateChoisie(true); setChampsLus((p) => ({ ...p, date: false })); }} />
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>{voc.Nom('fournisseur')}</label>
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>{voc.Nom('fournisseur')}<PastilleLue visible={!!champsLus.fournisseur} /></label>
             {hasFournisseurs ? (
-              <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => setBulkFournisseurId(e.target.value)} disabled={hasPTQuantity}>
+              <select className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 200, opacity: hasPTQuantity ? 0.5 : 1 }} value={bulkFournisseurId} onChange={(e) => { setBulkFournisseurId(e.target.value); setChampsLus((p) => ({ ...p, fournisseur: false })); }} disabled={hasPTQuantity}>
                 <option value="">— Sélectionner —</option>
                 {nonLaboFournisseurs.map((f) => <option key={f.id} value={String(f.id)}>{f.nom}</option>)}
               </select>
@@ -1094,17 +1110,17 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             )}
           </div>
           <div>
-            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture {!hasPTQuantity && <span style={{ color: '#ef4444' }}>*</span>}</label>
-            <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 160, opacity: hasPTQuantity ? 0.5 : 1 }} placeholder={hasPTQuantity ? '—' : 'N° facture…'} value={bulkRefFacture} onChange={(e) => setBulkRefFacture(e.target.value)} disabled={hasPTQuantity} />
+            <label style={{ fontSize: '0.62rem', fontWeight: 700, color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 3 }}>Réf Facture {!hasPTQuantity && <span style={{ color: '#ef4444' }}>*</span>}<PastilleLue visible={!!champsLus.ref} /></label>
+            <input type="text" className="input" style={{ padding: '6px 10px', borderRadius: 7, fontSize: '0.82rem', border: '1.5px solid #1e40af', background: hasPTQuantity ? '#f1f5f9' : '#fff', fontWeight: 600, maxWidth: 160, opacity: hasPTQuantity ? 0.5 : 1 }} placeholder={hasPTQuantity ? '—' : 'N° facture…'} value={bulkRefFacture} onChange={(e) => { setBulkRefFacture(e.target.value); setChampsLus((p) => ({ ...p, ref: false })); }} disabled={hasPTQuantity} />
           </div>
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation}
+              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation || lectureEnCours}
                 style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
-                {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
+                {bulkSaving ? '…' : lectureEnCours ? 'Lecture…' : `Enregistrer (${readyCount + ptReadyCount})`}
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); viderPieces(); }}>
+              <button className="btn btn-ghost btn-sm" onClick={remettreAZero}>
                 Réinitialiser
               </button>
             </div>
@@ -1115,6 +1131,24 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           <div style={{ marginTop: 12 }}>
             <ZonePieces key={generationPieces} fichiers={bulkPieces} onChange={setBulkPieces} accent="#1e40af"
               onPreparation={setPiecesEnPreparation} disabled={hasPTQuantity || bulkSaving || !canWrite} />
+            <LectureFacture
+              key={`lecture-${generationPieces}`}
+              fichiers={bulkPieces} enPreparation={piecesEnPreparation}
+              cible={{ type: 'activite', id: activiteId }}
+              fournisseursDuLieu={nonLaboFournisseurs}
+              fournisseurId={bulkFournisseurId} refFacture={bulkRefFacture} dateChoisie={dateChoisie}
+              dateMin={yearStart} dateMax={todayStr()} accent="#1e40af" disabled={bulkSaving || !canWrite}
+              onRemplir={(c) => {
+                if (c.fournisseurId !== undefined) setBulkFournisseurId(c.fournisseurId);
+                if (c.refFacture !== undefined) setBulkRefFacture(c.refFacture);
+                if (c.date !== undefined) setBulkDate(c.date || todayStr()); // vide : retour à la date du jour
+                setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: c.fournisseurId !== '' } : {}), ...(c.refFacture !== undefined ? { ref: c.refFacture !== '' } : {}), ...(c.date !== undefined ? { date: c.date !== '' } : {}) }));
+              }}
+              onFournisseursModifies={async () => { await onFournisseursModifies?.(); }}
+              onResultat={setResultatLecture}
+              onLecture={setLectureEnCours}
+              champsLus={champsLus}
+            />
           </div>
         )}
       </div>
@@ -1449,6 +1483,13 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
     if (selectedId) loadStock(selectedId);
   }, [selectedId, loadStock]);
 
+  // Étape F2 : la liste des fournisseurs seule (la grille en cours de saisie n'est pas rechargée).
+  const rechargerFournisseurs = async () => {
+    if (!selectedId) return;
+    const { data } = await api.get(`/api/entreprise/activites/${selectedId}/fournisseurs`);
+    setFournisseurs(data as Fournisseur[]);
+  };
+
   const handleSave = async (ingredientId: number, quantite: string, prixUnitaire: string, dateAppro: string, fournisseurId?: number | null, refFacture?: string | null, tauxTva?: number | null, timbreFiscal?: boolean) => {
     await onSave(selectedId, ingredientId, quantite, prixUnitaire, dateAppro, fournisseurId, refFacture, tauxTva, timbreFiscal);
     if (selectedId) loadStock(selectedId);
@@ -1568,6 +1609,7 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
           onSavePT={handleSavePT}
           onSaveSeuilMin={handleSaveSeuilMin}
           onRefresh={() => { if (selectedId) loadStock(selectedId); }}
+          onFournisseursModifies={rechargerFournisseurs}
         />
       )}
     </div>
