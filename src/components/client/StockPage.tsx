@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
@@ -12,6 +12,9 @@ import InvoiceConfirmModal, { type InvoiceLineItem } from './InvoiceConfirmModal
 import ApproPreviewPanel, { ProductionAlertPanel, type PreviewLine } from './ApproPreviewPanel';
 import type { Activite, StockEntry, StockHistoryEntry, ActiviteTypesSummary, Fournisseur } from '../../types';
 import GuideButton from './GuideButton';
+import { useConfirm } from '../common/ConfirmDialog';
+import ZonePieces from './factures/ZonePieces';
+import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -516,6 +519,17 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [bulkRefFacture, setBulkRefFacture] = useState('');
   const [bulkSaving, setBulkSaving] = useState(false);
   const [bulkError, setBulkError] = useState('');
+  // Factures fournisseur, étape F1 : la facture du fournisseur jointe à la saisie (facultative).
+  const [bulkPieces, setBulkPieces] = useState<FichierChoisi[]>([]);
+  // Préparation d'un fichier en cours (envoi bloqué) ; génération de la zone (une préparation d'avant une remise à zéro
+  // est jetée) ; vignettes libérées en quittant l'écran.
+  const [piecesEnPreparation, setPiecesEnPreparation] = useState(false);
+  const [generationPieces, setGenerationPieces] = useState(0);
+  const viderPieces = () => { libererFichiers(bulkPieces); setBulkPieces([]); setPiecesEnPreparation(false); setGenerationPieces((g) => g + 1); };
+  const piecesCourantes = useRef<FichierChoisi[]>([]);
+  useEffect(() => { piecesCourantes.current = bulkPieces; }, [bulkPieces]);
+  useEffect(() => () => libererFichiers(piecesCourantes.current), []);
+  const { confirm } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string; error?: string } | null>(null);
 
   // ── Conflict confirmation modal
@@ -650,6 +664,31 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         const prix = parseFloat(row.prixUnitaire);
         return !isNaN(qty) && qty > 0 && !isNaN(prix) && prix > 0;
       });
+      // Factures fournisseur, étape F1 : toutes les lignes d'un seul envoi, avec les pièces (tout ou rien) ; une
+      // facture déjà saisie chez ce fournisseur demande confirmation.
+      if (readyEntries.length > 0 && activiteId) {
+        const issue = await enregistrerAvecConfirmation({
+          cible: { type: 'activite', id: activiteId },
+          dateAppro: bulkDate,
+          fournisseurId: bulkFournisseurId ? Number(bulkFournisseurId) : null,
+          refFacture: bulkRefFacture.trim(),
+          timbreFiscal,
+          lignes: readyEntries.map(([idStr, row]) => ({
+            articleId: Number(idStr),
+            quantite: parseFloat(row.quantite),
+            prixUnitaire: parseFloat(row.prixUnitaire),
+            tauxTva: row.tauxTva.trim() ? parseFloat(row.tauxTva) : null,
+          })),
+        }, bulkPieces, confirm, voc.ce('fournisseur'));
+        if (issue === 'annulee') { setBulkSaving(false); return; }
+        viderPieces();
+        setBulkDate(todayStr());
+        setBulkFournisseurId('');
+        setBulkRefFacture('');
+        setBulkSaving(false);
+        onRefresh?.();
+        return;
+      }
       for (const [idStr, row] of readyEntries) {
         const ingId = Number(idStr);
         await onSave(ingId, row.quantite, row.prixUnitaire, bulkDate,
@@ -698,8 +737,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         return next;
       });
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de l\'enregistrement';
-      setBulkError(msg);
+      setBulkError(messageErreur(e, 'Erreur lors de l\'enregistrement'));
     }
     setBulkSaving(false);
   };
@@ -742,6 +780,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       : null;
 
     const doConflictCheckThenSave = async (timbreFiscal = false) => {
+      // Bouton bloqué dès la confirmation (la lecture des historiques prend un instant : pas de second envoi).
+      setBulkSaving(true);
       const histMap: Record<number, StockHistoryEntry[]> = {};
       await Promise.all(readyIds.map(async (id) => { histMap[id] = await fetchHistory(id); }));
 
@@ -761,6 +801,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       }
 
       if (conflicts.length > 0) {
+        setBulkSaving(false);
         setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(timbreFiscal); } });
         return;
       }
@@ -924,6 +965,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           fournisseurNom={invoiceModal.fournisseurNom}
           refFacture={bulkRefFacture.trim() || null}
           theme="activite"
+          nbPieces={activiteId ? bulkPieces.length : undefined}
           onConfirm={(tf) => { setInvoiceModal(null); invoiceModal.onConfirm(tf); }}
           onCancel={() => setInvoiceModal(null)}
         />
@@ -1058,17 +1100,23 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite}
+              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation}
                 style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
                 {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); }}>
+              <button className="btn btn-ghost btn-sm" onClick={() => { setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError(''); viderPieces(); }}>
                 Réinitialiser
               </button>
             </div>
             {bulkError && <p style={{ color: 'var(--danger)', fontSize: '0.8rem', margin: 0, textAlign: 'right' }}>{bulkError}</p>}
           </div>
         </div>
+        {activiteId && (
+          <div style={{ marginTop: 12 }}>
+            <ZonePieces key={generationPieces} fichiers={bulkPieces} onChange={setBulkPieces} accent="#1e40af"
+              onPreparation={setPiecesEnPreparation} disabled={hasPTQuantity || bulkSaving || !canWrite} />
+          </div>
+        )}
       </div>
 
       {Object.entries(groups).sort(([a], [b]) => a.localeCompare(b)).map(([cat, items]) => {
@@ -1496,7 +1544,7 @@ function ActivityStockSection({ label: _label, activities, initialActiviteId, on
       {loading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : loadError ? (
-        <div className="alert alert-danger" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="alert alert-error" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <span>⚠️ {loadError}</span>
           <button className="btn btn-ghost btn-sm" onClick={() => loadStock(selectedId)}>Réessayer</button>
         </div>
@@ -1600,7 +1648,7 @@ export default function StockPage() {
       {activitesLoading ? (
         <p className="text-muted">{t('common.loading')}</p>
       ) : activitesError ? (
-        <div className="alert alert-danger">⚠️ {activitesError}</div>
+        <div className="alert alert-error">⚠️ {activitesError}</div>
       ) : (
         <>
           {typesSummary?.hasActivites && allActivities.length > 0 ? (

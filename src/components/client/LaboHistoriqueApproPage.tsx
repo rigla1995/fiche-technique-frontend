@@ -9,6 +9,7 @@ import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import type { Vocab } from '../../vocab/vocab';
 import type { Labo } from '../../types';
+import { codeErreur } from './factures/pieces';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -192,16 +193,20 @@ function DeleteModal({
   const voc = useVocabulaire();
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
+  // Factures fournisseur, étape F1 : dernière ligne d'une facture qui a une pièce jointe → la facture et sa pièce
+  // partent avec elle ; le serveur le dit (409), un second clic confirme.
+  const [derniereLigne, setDerniereLigne] = useState<string | null>(null);
 
   const handleDelete = async () => {
     setDeleting(true);
     setError('');
     try {
-      await api.delete(`/api/labo/${laboId}/historique/${entry.id}`);
+      await api.delete(`/api/labo/${laboId}/historique/${entry.id}${derniereLigne !== null ? '?confirmerFacture=1' : ''}`);
       onDeleted(entry.id);
       onClose();
     } catch (e: unknown) {
-      setError(apiMsg(e, 'Erreur lors de la suppression'));
+      if (codeErreur(e) === 'DERNIERE_LIGNE_FACTURE') setDerniereLigne(apiMsg(e, 'C\'est la dernière ligne de sa facture.'));
+      else setError(apiMsg(e, 'Erreur lors de la suppression'));
     }
     setDeleting(false);
   };
@@ -222,12 +227,17 @@ function DeleteModal({
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: 16 }}>
             Cette entrée sera définitivement supprimée et {voc.le('stock')} {voc.compl('labo')} sera {voc.acc('stock', 'recalculé', 'recalculée')} en conséquence.
           </p>
+          {derniereLigne && (
+            <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: 8, padding: '8px 12px', fontSize: '0.82rem', color: '#991b1b', fontWeight: 600, marginBottom: 10 }}>
+              📎 {derniereLigne}
+            </div>
+          )}
           {error && <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: 8 }}>{error}</p>}
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
             <button className="btn btn-ghost" onClick={onClose} disabled={deleting}>Annuler</button>
             <button className="btn btn-danger" onClick={handleDelete} disabled={deleting}
               style={{ background: '#dc2626', color: '#fff', border: 'none' }}>
-              {deleting ? '…' : 'Supprimer'}
+              {deleting ? '…' : derniereLigne ? 'Supprimer la ligne, la facture et sa pièce' : 'Supprimer'}
             </button>
           </div>
         </div>
