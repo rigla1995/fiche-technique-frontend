@@ -110,7 +110,8 @@ const iso = (a: number, m: number, j: number): string | null => {
 export function datesDuTexte(texte: string): { iso: string; index: number; fin: number }[] {
   const res: { iso: string; index: number; fin: number }[] = [];
   const s = sansAccents(texte).toLowerCase();
-  const numeriques = /(?<![\d])(\d{1,2})\s?[/.-]\s?(\d{1,2})\s?[/.-]\s?(\d{4}|\d{2})(?![\d])|(?<![\d])(\d{4})-(\d{2})-(\d{2})(?![\d])/g;
+  // L'année n'est pas suivie d'un autre séparateur chiffré : « 12 - 03/10/2026 » n'est pas le 12/03/2010.
+  const numeriques = /(?<![\d])(\d{1,2})\s?[/.-]\s?(\d{1,2})\s?[/.-]\s?(\d{4}|\d{2})(?![\d]|[/.-]\d)|(?<![\d])(\d{4})-(\d{2})-(\d{2})(?![\d])/g;
   for (const m of s.matchAll(numeriques)) {
     const v = m[1] ? iso(Number(m[3]), Number(m[2]), Number(m[1])) : iso(Number(m[4]), Number(m[5]), Number(m[6]));
     if (v) res.push({ iso: v, index: m.index ?? 0, fin: (m.index ?? 0) + m[0].length });

@@ -3502,36 +3502,36 @@ src/components/client/factures/FenetrePieces.tsx
     miroir : Aucune pièce : joignez la facture reçue de l'enseigne (PDF, scan ou photo).
 
 src/components/client/factures/LectureFacture.tsx
-  l. 289
+  l. 314
     défaut : Fournisseur :
     miroir : Enseigne :
-  l. 308
+  l. 333
     défaut : Oui, c'est lui⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
     miroir : Oui, c'est elle⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
-  l. 323
+  l. 348
     défaut : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucun fournisseur connu ne correspond</span>
     miroir : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucune enseigne connue ne correspond</span>
-  l. 328
+  l. 353
     défaut : Créer le fournisseur…
     miroir : Créer l'enseigne…
-  l. 389
+  l. 415
     défaut : Fournisseur créé, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
     miroir : Enseigne créée, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
 
 src/components/client/factures/NouveauFournisseurModal.tsx
-  l. 93
+  l. 95
     défaut : Nouveau fournisseur — d'après la facture
     miroir : Nouvelle enseigne — d'après la facture
-  l. 97
+  l. 99
     défaut : Valeurs lues sur la facture : relisez-les et corrigez-les avant de créer le fournisseur. La fiche sera rattachée ⟦?à l'activité|au labo⟧ de cette saisie.
     miroir : Valeurs lues sur la facture : relisez-les et corrigez-les avant de créer l'enseigne. La fiche sera rattachée ⟦?au local|à l'usine⟧ de cette saisie.
-  l. 125
+  l. 128
     défaut : Ou bien c'est un fournisseur déjà enregistré
     miroir : Ou bien c'est une enseigne déjà enregistrée
-  l. 131
+  l. 134
     défaut : C'est lui
     miroir : C'est elle
-  l. 144
+  l. 147
     défaut : ⟦?…|Créer le fournisseur⟧
     miroir : ⟦?…|Créer l'enseigne⟧
 

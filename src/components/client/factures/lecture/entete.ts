@@ -36,7 +36,7 @@ export interface MatriculeVu {
 }
 
 const LIBELLE_MF = /(m\s?\.?\s?f\b|matricule|identifiant\s+(fiscal|unique)|code\s+t\.?\s?v\.?\s?a|i\.?\s?f\.?\s?:|n[°ºo]?\s*fiscal|\bt\.?v\.?a\s*:)/i;
-const BLOC_CLIENT = /(^\s*(client|doit|destinataire|acheteur)\b|\b(client|doit|destinataire|acheteur)\s*:|\bfactur[ée]e?\s+[àa](?=\s|:|$)|\badress[ée]e?\s+[àa](?=\s|:|$)|\blivr[ée]e?\s+[àa](?=\s|:|$))/i;
+const BLOC_CLIENT = /((?<!\bm(?:r|me|\.)\s*)\b(clients?|doit|destinataire|acheteur)\b|\bfactur[ée]e?\s+[àa](?=\s|:|$)|\badress[ée]e?\s+[àa](?=\s|:|$)|\blivr[ée]e?\s+[àa](?=\s|:|$))/i;
 const SEP = String.raw`\s?[/|\\.\- ]?\s?`;
 
 function matriculesDeRangee(p: Place, ocr: boolean, libelleProche: boolean): Omit<MatriculeVu, 'duClient'>[] {
@@ -123,9 +123,7 @@ function nomFournisseur(pages: readonly PageLue[], client: Destinataire, ancre: 
   const candidats: { s: Rangee; place: Place; score: number }[] = [];
   // Le nom est AU-DESSUS du tableau des lignes : on s'arrête à son titre (« Désignation | Qté | … »).
   // Titre non lu (photo) : la première rangée qui porte deux montants au millime ouvre le tableau.
-  const titreLu = page.rangees.findIndex((r) => TITRE_LIGNES.test(plat(r.texte)));
-  const chiffree = page.rangees.findIndex((r) => nombresDeRangee(r).filter((n) => /[.,]\d{3}$/.test(n.brut)).length >= 2);
-  const titre = [titreLu, chiffree].filter((i) => i >= 0).reduce((a, b) => Math.min(a, b), Infinity);
+  const titre = debutTableau(page);
   const admissible = (q: Rangee): boolean => {
     const t = q.texte.trim();
     return lettres(t) >= 3 && lettres(t) >= t.replace(/\s/g, '').length * 0.5 && !PAS_UN_NOM.test(t) && confiance(q) >= 50;
@@ -228,7 +226,9 @@ const REFERENCE = new RegExp(String.raw`r[ée]f(?:[ée]rence)?\.?\s*(?:facture)?
 const AUTRE_REFERENCE = /(votre|v\/|n\/)\s*r[ée]f|r[ée]f(?:[ée]rence)?\.?\s*(commande|cmd|bl|bon|client|devis|livraison)/i;
 const nettoyerNumero = (s: string): string => s.replace(/[.:,;_-]+$/, '').trim();
 // « FV-2026- 00437 » (une espace lue après un séparateur) : recollé avant la recherche du numéro.
-const recolle = (t: string): string => t.replace(/(\d)\s+([-/])\s*(?=\d)/g, '$1$2').replace(/([-/])\s+(?=\d)/g, '$1');
+const recolle = (t: string): string => t
+  .replace(/(\d)\s+([-/])\s*(?=\d)(?!\d{1,2}[/.-]\d{1,2})/g, '$1$2')
+  .replace(/([-/])\s+(?=\d)(?!\d{1,2}[/.-]\d{1,2})/g, '$1');
 /** Numéro lu ; `incomplet` : il finissait par un séparateur (« FV-2026- ») — la suite n'a pas été lue. */
 interface NumeroLu { valeur: string; incomplet: boolean }
 const estDate = (s: string): boolean => datesDuTexte(s).some((d) => d.index === 0 && d.fin >= s.length - 1);
@@ -251,7 +251,9 @@ function sous(pages: readonly PageLue[], p: Place, x0: number, x1: number, accep
  * montants au millime) ; Infinity s'il n'y en a pas. L'en-tête est au-dessus. */
 function debutTableau(page: PageLue): number {
   const titre = page.rangees.findIndex((r) => TITRE_LIGNES.test(plat(r.texte)));
-  const chiffree = page.rangees.findIndex((r) => nombresDeRangee(r).filter((n) => /[.,]\d{3}$/.test(n.brut)).length >= 2);
+  const COORDONNEES = /t[ée]l|fax|gsm|mob|r\.?\s?c\b|capital|rib|iban|m\.?\s?f\b|matricule/i;
+  const chiffreeSeule = (r: Rangee) => !COORDONNEES.test(r.texte) && nombresDeRangee(r).filter((n) => /[.,]\d{3}$/.test(n.brut)).length >= 2;
+  const chiffree = page.rangees.findIndex((r, i) => chiffreeSeule(r) && Boolean(page.rangees[i + 1]) && chiffreeSeule(page.rangees[i + 1]));
   return [titre, chiffree].filter((i) => i >= 0).reduce((a, b) => Math.min(a, b), Infinity);
 }
 
@@ -290,15 +292,15 @@ function numeroFacture(pages: readonly PageLue[]): NumeroLu | null {
     if (p.i >= tableaux[p.page - 1]) continue;
     for (const s of segments(p.r)) {
       if (!NUMERO_TITRE.test(s.texte) || /\d/.test(s.texte.replace(NUMERO_TITRE, ''))) continue;
-      const seul = !/factur/i.test(s.texte);
-      const accepte = (t: string) => { const v = valide(t.split(' ')[0]); return Boolean(v) && !(seul && /^\d{1,3}$/.test(v!.valeur)); };
-      const v = sous(pages, p, s.mots[0].x0, s.mots[s.mots.length - 1].x1, accepte);
+      const v = sous(pages, p, s.mots[0].x0, s.mots[s.mots.length - 1].x1, (t) => Boolean(valide(t.split(' ')[0])));
       if (v) return valide(v.split(' ')[0]);
     }
   }
   for (const p of places) {
     const m = p.r.texte.match(REFERENCE);
-    if (!m || AUTRE_REFERENCE.test(p.r.texte.slice(0, (m.index ?? 0) + m[0].length - m[1].length))) continue;
+    // Le libellé qui précède la valeur, et quelques caractères avant lui (« Votre réf ») — pas toute la rangée.
+    const debut = m?.index ?? 0;
+    if (!m || AUTRE_REFERENCE.test(p.r.texte.slice(Math.max(0, debut - 8), debut + m[0].length - m[1].length))) continue;
     const v = valide(m[1]);
     if (v) return v;
   }
@@ -322,31 +324,36 @@ function dateFacture(pages: readonly PageLue[]): string | null {
       if (d) return d.iso;
     }
   }
-  // 2. Titre de colonne « Date », valeur dessous.
+  // 2. Titre de colonne « Date », valeur dessous — au-dessus du tableau des lignes (dont la colonne « Date » est celle
+  // des bons de livraison d'une facture récapitulative).
+  const tableaux = pages.map(debutTableau);
   for (const p of places) {
+    if (p.i >= tableaux[p.page - 1]) continue;
     for (const s of segments(p.r)) {
       if (!/^\s*date(\s+(de\s+(la\s+)?)?facture)?\s*:?\s*$/i.test(s.texte)) continue;
       const v = sous(pages, p, s.mots[0].x0, s.mots[s.mots.length - 1].x1, (t) => datesDuTexte(t).length > 0);
       if (v) return datesDuTexte(v)[0].iso;
     }
   }
-  // 3. « Facture N° 12 du 03/10/2026 », « Tunis, le 03/10/2026 ».
-  for (const p of places) {
-    for (const s of segments(p.r, 3)) {
-      const t = s.texte;
-      const libelle = t.search(/\bdu\b|\ble\b/i);
-      if (libelle < 0 || PAS_LA_DATE.test(t) || HEURE.test(t)) continue;
-      const d = datesDuTexte(t).find((x) => x.index > libelle);
+  // 3. « Facture N° 12 du 03/10/2026 », « Tunis, le 03/10/2026 » ; 4. première date du haut de la première page. Une date
+  // accompagnée d'une heure n'est prise qu'en dernier recours (horodatage d'impression, ou ticket de caisse).
+  const page = pages[0];
+  for (const avecHeure of [false, true]) {
+    for (const p of places) {
+      for (const s of segments(p.r, 3)) {
+        const t = s.texte;
+        const libelle = t.search(/\bdu\b|\ble\b/i);
+        if (libelle < 0 || PAS_LA_DATE.test(t) || (!avecHeure && HEURE.test(t))) continue;
+        const d = datesDuTexte(t).find((x) => x.index > libelle);
+        if (d) return d.iso;
+      }
+    }
+    for (const r of page?.rangees ?? []) {
+      if (r.y0 > page.hauteur * 0.45) break;
+      if (PAS_LA_DATE.test(r.texte) || (!avecHeure && HEURE.test(r.texte))) continue;
+      const d = datesDuTexte(r.texte)[0];
       if (d) return d.iso;
     }
-  }
-  // 4. Première date du haut de la première page.
-  const page = pages[0];
-  for (const r of page?.rangees ?? []) {
-    if (r.y0 > page.hauteur * 0.45) break;
-    if (PAS_LA_DATE.test(r.texte) || HEURE.test(r.texte)) continue;
-    const d = datesDuTexte(r.texte)[0];
-    if (d) return d.iso;
   }
   return null;
 }
@@ -356,7 +363,7 @@ function dateFacture(pages: readonly PageLue[]): string | null {
 type CleTotal = 'ht' | 'remise' | 'fodec' | 'tva' | 'timbre' | 'ttc';
 // Ordre des essais sur le texte « à plat » (sans accents, minuscules). Le premier libellé qui couvre une position la garde.
 const LIBELLES: [CleTotal, RegExp][] = [
-  ['ttc', /\b(?:total|montant|net)\s*(?:a\s*payer\s*)?t\s?\.?\s?t\s?\.?\s?c\b\.?|\bnet\s*a\s*payer\b|\btotal\s*a\s*payer\b|\btotal\s*general\b|\bmontant\s*total\b(?!\s*(?:h\s?\.?\s?t\b|hors))|\btotal\s*facture\b/g],
+  ['ttc', /\b(?:total|montant|net)\s*(?:total\s*)?(?:a\s*payer\s*)?t\s?\.?\s?t\s?\.?\s?c\b\.?|\bnet\s*a\s*payer\b|\btotal\s*a\s*payer\b|\btotal\s*general\b|\bmontant\s*total\b(?!\s*(?:h\s?\.?\s?t\b|hors))|\btotal\s*facture\b/g],
   ['ht', /\b(?:total|montant|net|base)\s*(?:net\s*)?(?:h\s?\.?\s?t\b\.?|hors\s*taxes?)(?:\s*net\b)?|\bnet\s*h\s?\.?\s?t\b\.?|\btotal\s*brut\b/g],
   ['remise', /\bremise\b|\bescompte\b/g],
   ['fodec', /\bfodec\b/g],
@@ -397,7 +404,10 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
   // Priorité du libellé retenu pour chaque montant (le plus bas de la page l'emporte à priorité égale).
   const prios: Partial<Record<CleTotal, number>> = {};
   const prioDessous: Partial<Record<CleTotal, number>> = {};
+  // Tous les montants lus sous un libellé de TTC (« Total TTC », « Net à payer »…), dans l'ordre de la page.
+  const candidatsTtc: number[] = [];
   const poser = (cible: Partial<Record<CleTotal, number>>, p: Partial<Record<CleTotal, number>>, l: LibelleTrouve, v: number) => {
+    if (l.cle === 'ttc') candidatsTtc.push(v);
     if ((p[l.cle] ?? 0) > l.prio) return;
     cible[l.cle] = v;
     p[l.cle] = l.prio;
@@ -464,14 +474,16 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
   for (const k of Object.keys(dessousLus) as CleTotal[]) if (valeurs[k] === undefined) valeurs[k] = dessousLus[k];
   const tva = valeurs.tva ?? (liste.length && liste.every((x) => x.montant !== null) ? millime(liste.reduce((s, x) => s + (x.montant ?? 0), 0)) : null);
   const ht = valeurs.ht ?? null;
-  const ttc = valeurs.ttc ?? null;
   const timbre = valeurs.timbre !== undefined && valeurs.timbre <= 10 ? valeurs.timbre : null;
   const fodec = valeurs.fodec ?? null;
+  const tolerance = source === 'pdf' ? 0.0015 : 0.011;
+  // « Total TTC 1190,000 » avant le timbre puis « Net à payer 1191,000 », ou « Total TTC » puis un « Net à payer » diminué
+  // d'une retenue à la source : le TTC est le montant qui recoupe les autres ; à défaut, le libellé le plus explicite.
+  const somme = ht !== null && tva !== null ? ht + (fodec ?? 0) + tva + (timbre ?? 0) : null;
+  const recoupe = somme === null ? undefined : candidatsTtc.filter((v) => Math.abs(v - somme) <= tolerance).pop();
+  const ttc = recoupe ?? valeurs.ttc ?? null;
   let coherents: boolean | null = null;
-  if (ht !== null && ttc !== null && tva !== null) {
-    const tolerance = source === 'pdf' ? 0.0015 : 0.011;
-    coherents = Math.abs(ht + (fodec ?? 0) + tva + (timbre ?? 0) - ttc) <= tolerance;
-  }
+  if (somme !== null && ttc !== null) coherents = Math.abs(somme - ttc) <= tolerance;
   return { ht, remise: valeurs.remise ?? null, fodec, tva, timbre, ttc, parTaux: liste, coherents };
 }
 

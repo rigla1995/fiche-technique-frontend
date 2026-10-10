@@ -206,11 +206,19 @@ export async function lireFacture(
   // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné, et sur arrêt demandé).
   verifier();
   const page1 = canvas;
-  const entete = await avecTravailleur(
+  // Arrêt demandé : la lecture rend la main tout de suite (le worker arrêté laisse sa reconnaissance en suspens).
+  const arretee = new Promise<never>((_, rejeter) => {
+    if (!signal) return;
+    const f = () => rejeter(new LectureArretee('Lecture arrêtée.'));
+    if (signal.aborted) f(); else signal.addEventListener('abort', f, { once: true });
+  });
+  arretee.catch(() => {});
+  const entete = await Promise.race([arretee, avecTravailleur(
     () => ouvrirTravailleur(suivi),
     async (travailleur) => {
       const stop = () => { void travailleur.terminate(); };
       signal?.addEventListener('abort', stop, { once: true });
+      if (signal?.aborted) stop(); // arrêt demandé pendant le chargement du lecteur
       try {
         const m = moteur(travailleur);
         let e = await lireImageFacture(sourceCanvas(page1), m, client, (etape, a) => suivi(etape, derniere ? (a ?? 0) * 0.7 : a));
@@ -232,7 +240,7 @@ export async function lireFacture(
       }
     },
     DELAI_LECTURE,
-  );
+  )]);
   verifier();
   suivi(ETAPE_OCR, 1);
   return fin(entete);

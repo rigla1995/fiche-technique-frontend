@@ -1141,8 +1141,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
               onRemplir={(c) => {
                 if (c.fournisseurId !== undefined) setBulkFournisseurId(c.fournisseurId);
                 if (c.refFacture !== undefined) setBulkRefFacture(c.refFacture);
-                if (c.date !== undefined) setBulkDate(c.date);
-                setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: c.fournisseurId !== '' } : {}), ...(c.refFacture !== undefined ? { ref: c.refFacture !== '' } : {}), ...(c.date !== undefined ? { date: true } : {}) }));
+                if (c.date !== undefined) setBulkDate(c.date || todayStr()); // vide : retour à la date du jour
+                setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: c.fournisseurId !== '' } : {}), ...(c.refFacture !== undefined ? { ref: c.refFacture !== '' } : {}), ...(c.date !== undefined ? { date: c.date !== '' } : {}) }));
               }}
               onFournisseursModifies={async () => { await onFournisseursModifies?.(); }}
               onResultat={setResultatLecture}

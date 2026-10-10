@@ -16,6 +16,8 @@ export interface FicheProposee {
   adresse: string;
   telephone: string;
   email: string;
+  /** Réserve de la lecture sur le matricule (« lettre-clé à vérifier », « autre matricule lu »), montrée sous le champ. */
+  noteMatricule?: string;
 }
 
 interface Props {
@@ -103,6 +105,7 @@ export default function NouveauFournisseurModal({ initiale, cible, fournisseursD
             <label style={lbl} htmlFor="nf-mf">Matricule fiscal</label>
             <input id="nf-mf" className="input" style={{ width: '100%' }} value={f.matriculeFiscal} onChange={champ('matriculeFiscal')} placeholder="1234567A/A/M/000" maxLength={40} />
             {f.matriculeFiscal.trim() && (!mf.ok || mf.avertissement) && <div style={{ fontSize: '0.74rem', marginTop: 3, color: mf.ok ? '#b45309' : 'var(--danger)' }}>{mf.ok ? mf.avertissement : mf.erreur}</div>}
+            {initiale.noteMatricule && f.matriculeFiscal === initiale.matriculeFiscal && <div style={{ fontSize: '0.74rem', marginTop: 3, color: '#b45309' }}>Lu sur la facture : {initiale.noteMatricule}.</div>}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10 }}>
             <div><label style={lbl} htmlFor="nf-adr">Adresse</label><input id="nf-adr" className="input" style={{ width: '100%' }} value={f.adresse} onChange={champ('adresse')} maxLength={500} /></div>

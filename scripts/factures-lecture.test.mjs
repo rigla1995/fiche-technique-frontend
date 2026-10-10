@@ -222,6 +222,57 @@ test('relecture F2 : « MR BRICOLAGE » n\'est pas un bloc client ; « Total TTC
   assert.deepEqual([e.totaux.ht, e.totaux.ttc, e.totaux.coherents], [1000, 1191, true]);
 });
 
+test('contre-relecture F2 : « Total TTC » avant le timbre, puis « Net à payer » : le TTC est celui qui recoupe', () => {
+  const e = lireEntete([page([
+    [40, [[40, 'SOCIETE X']], 14],
+    [500, [[345, 'Total HT'], [500, '1000,000']]],
+    [514, [[345, 'TVA 19%'], [500, '190,000']]],
+    [528, [[345, 'Total TTC'], [500, '1190,000']]],
+    [542, [[345, 'Timbre fiscal'], [500, '1,000']]],
+    [556, [[345, 'Net à payer'], [500, '1191,000']]],
+  ])], 'pdf');
+  assert.deepEqual([e.totaux.ttc, e.totaux.coherents], [1191, true]);
+  assert.ok(!e.avertissements.some((m) => /Totaux lus/.test(m)));
+});
+
+test('contre-relecture F2 : dates — facture récapitulative, date avec l\'heure, numéro suivi d\'une date', () => {
+  const recap = lireEntete([page([
+    [40, [[40, 'SOCIETE X']], 14],
+    [80, [[40, 'Facture N° 45 du 30/09/2026']]],
+    [200, [[40, 'Date'], [120, 'N° BL'], [200, 'Désignation'], [400, 'Montant']]],
+    [217, [[40, '02/09/2026'], [120, 'BL-12'], [200, 'Farine'], [400, '45,000']]],
+  ])], 'pdf');
+  assert.equal(recap.date?.valeur, '2026-09-30');
+  const heure = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [80, [[40, 'Facture N° 77 du 01/10/2026 10:30']]]])], 'pdf');
+  assert.equal(heure.date?.valeur, '2026-10-01');
+  const ticket = lireEntete([page([[20, [[10, 'HYPER MARKET']], 11], [84, [[10, '27/09/2026 18:42 CAISSE 07']]]], 600, 226)], 'pdf');
+  assert.equal(ticket.date?.valeur, '2026-09-27');
+  const tiret = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [80, [[40, 'Facture N° 12 - 03/10/2026']]]])], 'pdf');
+  assert.deepEqual([tiret.numero?.valeur, tiret.date?.valeur], ['12', '2026-10-03']);
+});
+
+test('contre-relecture F2 : bloc client en libellé long, téléphone à points, « N° » seul, « Réf client » puis « Réf »', () => {
+  const nom = lireEntete([page([
+    [40, [[40, 'GROSSISTE NORD']], 12],
+    [130, [[300, 'Coordonnées client']]],
+    [143, [[300, 'RESTAURANT EXEMPLE SARL']], 16],
+  ])], 'pdf');
+  assert.equal(nom.nom?.valeur, 'GROSSISTE NORD');
+  const vus = matriculesVus([page([[40, [[40, 'SOCIETE X']], 14], [60, [[40, `M.F Client ${MF_CLIENT}`]]]])], 'pdf');
+  assert.equal(vus[0]?.duClient, true);
+  const tel = lireEntete([page([
+    [40, [[40, 'SOCIETE X']], 14],
+    [60, [[40, 'Tél : 71.234.567 Fax : 71.234.568']]],
+    [80, [[400, 'FACTURE']]],
+    [96, [[400, 'N° 437']]],
+  ])], 'pdf');
+  assert.equal(tel.numero?.valeur, '437');
+  const seul = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [100, [[40, 'N°'], [140, 'Date']]], [116, [[40, '45'], [140, '03/10/2026']]]])], 'pdf');
+  assert.equal(seul.numero?.valeur, '45');
+  const ref = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [80, [[40, 'Réf client : C001 Réf : FV-437']]]])], 'pdf');
+  assert.equal(ref.numero?.valeur, 'FV-437');
+});
+
 test('lireEntete : totaux en titres de colonnes (valeurs dessous), FODEC, récapitulatif de TVA à plusieurs taux', () => {
   const colonnes = lireEntete([page([
     [40, [[40, 'SOCIETE X']], 14],

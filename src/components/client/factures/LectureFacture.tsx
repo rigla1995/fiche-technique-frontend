@@ -60,6 +60,10 @@ interface Props {
 const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toFixed(3).replace('.', ','));
 const fmtDate = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 const sansEspaces = (s: string) => s.toUpperCase().replace(/\s+/g, '');
+/** Durée maximale d'une lecture vue de l'écran (chargement, réseau, reconnaissance) : au-delà, « Enregistrer » se rouvre. */
+const DELAI_ECRAN = 150_000;
+const API_DELAI = { timeout: 15_000 };
+const INVISIBLE: React.CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
 
 const encart = (fond: string, bord: string, texte: string): React.CSSProperties => ({
   background: fond, border: `1px solid ${bord}`, color: texte, borderRadius: 8, padding: '7px 10px', fontSize: '0.78rem', lineHeight: 1.45,
@@ -135,8 +139,15 @@ export default function LectureFacture({
       generation.current += 1;
       arret.current?.abort();
       arret.current = null;
-      courant.current.onResultat(null);
-      courant.current.onLecture?.(false);
+      const c = courant.current;
+      c.onResultat(null);
+      c.onLecture?.(false);
+      // Les champs remplis par la lecture de l'ancien fichier ne valent plus : ils sont vidés (une saisie à la main reste).
+      const vider: { fournisseurId?: string; refFacture?: string; date?: string } = {};
+      if (c.champsLus.ref) vider.refFacture = '';
+      if (c.champsLus.fournisseur) vider.fournisseurId = '';
+      if (c.champsLus.date) vider.date = '';
+      if (Object.keys(vider).length) c.onRemplir(vider);
     }
     if (!premier) { dernierLu.current = null; return; }
     if (enPreparation || premier === dernierLu.current) return;
@@ -150,11 +161,20 @@ export default function LectureFacture({
       setCleLue(premier);
       setLu(null); setRapp(null); setErreur(null); setRefuse(false); setActionErreur(null);
       setEtape('Chargement du lecteur…');
+      // Garde de l'écran : une lecture bloquée (réseau, rendu d'un PDF) ne garde pas « Enregistrer » fermé.
+      const delai = setTimeout(() => {
+        if (!vivant()) return;
+        generation.current += 1;
+        controle.abort();
+        setEtape(null);
+        setErreur("La lecture prend trop de temps : la facture sera quand même jointe ; saisissez l'en-tête à la main.");
+        courant.current.onLecture?.(false);
+      }, DELAI_ECRAN);
       try {
         if (!client.current) {
           // Gardé seulement en cas de réussite : un échec passager est retenté à la lecture suivante.
           try {
-            const { data } = await api.get('/api/entreprise');
+            const { data } = await api.get('/api/entreprise', API_DELAI);
             const id = data as { nom?: string; identite?: { matriculeFiscal?: string | null; raisonSociale?: string | null; nomCommercial?: string | null } } | null;
             client.current = { matricule: id?.identite?.matriculeFiscal ?? null, noms: [id?.identite?.raisonSociale, id?.identite?.nomCommercial, id?.nom] };
           } catch { /* lecture sans le destinataire : aucun matricule ne sera ajouté à une fiche */ }
@@ -166,7 +186,7 @@ export default function LectureFacture({
           if (vivant()) setEtape(a === undefined ? etapeLue : `${etapeLue} ${Math.round(a * 100)} %`);
         }, controle.signal);
         if (!vivant()) return;
-        const liste = ((await api.get('/api/entreprise/fournisseurs').catch(() => ({ data: [] }))).data as FournisseurDuCompte[]).filter((f) => !f.isLabo);
+        const liste = ((await api.get('/api/entreprise/fournisseurs', API_DELAI).catch(() => ({ data: [] }))).data as FournisseurDuCompte[]).filter((f) => !f.isLabo);
         if (!vivant()) return;
         const r = rapprocher({ matricule: e.matricule?.valeur, nom: e.nom?.valeur }, liste);
         setCompte(liste);
@@ -198,6 +218,7 @@ export default function LectureFacture({
           : estErreurDeChunk(err) ? 'LabFlow a été mis à jour : rechargez la page pour lire les factures, ou saisissez à la main.'
             : "La lecture n'a pas abouti : la facture sera quand même jointe ; saisissez l'en-tête à la main.");
       } finally {
+        clearTimeout(delai);
         if (vivant()) {
           setEtape(null);
           courant.current.onLecture?.(false);
@@ -208,7 +229,8 @@ export default function LectureFacture({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [premier, enPreparation]);
 
-  if (!premier || cleLue !== premier) return null;
+  // Panneau du fichier courant seulement ; la zone annoncée aux lecteurs d'écran, elle, reste en place.
+  const visible = Boolean(premier) && cleLue === premier;
 
   /**
    * Choisir un fournisseur du compte : rattaché à ce lieu s'il ne l'est pas ; `matricule` (lu, ou corrigé dans la fenêtre)
@@ -256,27 +278,30 @@ export default function LectureFacture({
     adresse: lu?.adresse?.valeur ?? '',
     telephone: lu?.telephone?.valeur ?? '',
     email: lu?.email?.valeur ?? '',
+    noteMatricule: lu?.matricule?.note,
   });
 
   const t = lu?.totaux;
   const choisiNom = fournisseursDuLieu.find((f) => String(f.id) === fournisseurId)?.nom ?? null;
   const reconnu = rapp && rapp.etat !== 'nouveau' ? rapp.fournisseur : null;
   const autreChoisi = Boolean(reconnu && fournisseurId && String(reconnu.id) !== fournisseurId);
-  // Matricule lu ajouté à la fiche proposée seulement s'il est sûr : lettre-clé juste, seul lu, client connu.
-  const matriculeSur = lu?.matricule && !lu.matricule.note && clientConnu ? lu.matricule.valeur : null;
+  // Matricule lu ajouté à la fiche proposée seulement s'il est sûr : lettre-clé juste, seul lu, client connu (une forme
+  // courte, « 1234567A », est sûre si sa clé l'est).
+  const matriculeSur = lu?.matricule && !/lettre-clé|autre/.test(lu.matricule.note ?? '') && clientConnu ? lu.matricule.valeur : null;
   const refDiffere = lu?.numero && !lu.numero.note && refFacture.trim() && sansEspaces(refFacture) !== sansEspaces(lu.numero.valeur);
 
   return (
     <>
+      {/* Annonce aux lecteurs d'écran : le début et la fin, pas chaque pourcentage. */}
+      <span role="status" style={INVISIBLE}>
+        {!visible ? '' : etape ? 'Lecture de la facture en cours' : lu ? 'Facture lue' : erreur ? 'Lecture impossible' : ''}
+      </span>
+      {visible && (
       <div style={{ marginTop: 10, border: `1px solid ${accent}33`, borderRadius: 10, padding: '10px 12px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: accent }}>🔎 Lu sur la facture</span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
             {etape ?? (lu ? `${lu.source === 'pdf' ? 'texte du PDF' : 'reconnaissance des caractères'} · ${String(lu.duree).replace('.', ',')} s · lu sur cet appareil, rien n'est envoyé ailleurs` : '')}
-          </span>
-          {/* Annonce aux lecteurs d'écran : le début et la fin, pas chaque pourcentage. */}
-          <span role="status" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
-            {etape ? 'Lecture de la facture en cours' : lu ? 'Facture lue' : erreur ? 'Lecture impossible' : ''}
           </span>
         </div>
 
@@ -370,8 +395,9 @@ export default function LectureFacture({
           </>
         )}
       </div>
+      )}
 
-      {modal && (
+      {visible && modal && (
         <NouveauFournisseurModal
           initiale={modal}
           cible={cible}
