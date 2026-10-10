@@ -2,7 +2,7 @@
 // client (ou le gérant) relit et valide (réponse 7 : « il faut le créer mais le client / gérant valide »). Le nouveau
 // fournisseur est rattaché au lieu de la saisie (activité ou labo). Si c'est en fait un fournisseur déjà enregistré
 // (sous un autre nom), on le choisit dans la liste : le matricule lu lui est ajouté.
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import api from '../../../api/client';
 import { useVocabulaire } from '../../../hooks/useVocabulaire';
 import { controlerMatriculeFiscal } from '../../admin/matriculeFiscal';
@@ -23,8 +23,10 @@ interface Props {
   cible: { type: 'activite' | 'labo'; id: number };
   fournisseursDuCompte: FournisseurConnu[];
   onFermer: () => void;
-  onCree: (id: number, nom: string) => void | Promise<void>;
-  onExistant: (f: FournisseurConnu) => void;
+  /** Fournisseur créé : son identifiant, son nom et son matricule (tels qu'enregistrés). */
+  onCree: (id: number, nom: string, matricule: string | null) => void | Promise<void>;
+  /** C'est un fournisseur déjà enregistré : le matricule et la raison sociale de la fenêtre (corrigés s'il y a lieu). */
+  onExistant: (f: FournisseurConnu, saisie: { matriculeFiscal: string; raisonSociale: string }) => void;
   erreurCode: (e: unknown) => string | null;
 }
 
@@ -45,6 +47,14 @@ export default function NouveauFournisseurModal({ initiale, cible, fournisseursD
     window.addEventListener('keydown', echap);
     return () => window.removeEventListener('keydown', echap);
   }, [enCours, onFermer]);
+  // Focus : sur le nom à l'ouverture, rendu au bouton d'origine à la fermeture.
+  const nomRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const avant = document.activeElement as HTMLElement | null;
+    nomRef.current?.focus();
+    return () => { avant?.focus?.(); };
+  }, []);
+  const saisie = () => ({ matriculeFiscal: mf.ok ? mf.valeur : '', raisonSociale: f.raisonSociale.trim() });
 
   const mf = controlerMatriculeFiscal(f.matriculeFiscal);
   const champ = (cle: keyof FicheProposee) => (e: React.ChangeEvent<HTMLInputElement>) => setF((p) => ({ ...p, [cle]: e.target.value }));
@@ -62,7 +72,7 @@ export default function NouveauFournisseurModal({ initiale, cible, fournisseursD
         ...(cible.type === 'activite' ? { activiteIds: [cible.id] } : { laboIds: [cible.id] }),
       });
       window.dispatchEvent(new Event('fournisseur-created'));
-      await onCree((data as { id: number }).id, f.nom.trim());
+      await onCree((data as { id: number }).id, f.nom.trim(), (data as { matriculeFiscal?: string | null }).matriculeFiscal ?? null);
     } catch (e) {
       // Matricule déjà porté par un fournisseur du compte (peut-être hors de la vue d'un gérant) : on propose de le prendre.
       const autre = (e as { response?: { data?: { fournisseur?: { id: number; nom: string } } } }).response?.data?.fournisseur;
@@ -87,7 +97,7 @@ export default function NouveauFournisseurModal({ initiale, cible, fournisseursD
           <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             Valeurs lues sur la facture : relisez-les et corrigez-les avant de créer {voc.le('fournisseur')}. La fiche sera rattachée {cible.type === 'activite' ? voc.au('activite') : voc.au('labo')} de cette saisie.
           </p>
-          <div><label style={lbl} htmlFor="nf-nom">Nom *</label><input id="nf-nom" className="input" style={{ width: '100%' }} value={f.nom} onChange={champ('nom')} maxLength={255} /></div>
+          <div><label style={lbl} htmlFor="nf-nom">Nom *</label><input id="nf-nom" ref={nomRef} className="input" style={{ width: '100%' }} value={f.nom} onChange={champ('nom')} maxLength={255} /></div>
           <div><label style={lbl} htmlFor="nf-rs">Raison sociale</label><input id="nf-rs" className="input" style={{ width: '100%' }} value={f.raisonSociale} onChange={champ('raisonSociale')} maxLength={200} /></div>
           <div>
             <label style={lbl} htmlFor="nf-mf">Matricule fiscal</label>
@@ -104,7 +114,7 @@ export default function NouveauFournisseurModal({ initiale, cible, fournisseursD
             <div style={{ background: '#fee2e2', border: '1px solid #fecaca', color: '#b91c1c', borderRadius: 8, padding: '7px 10px', fontSize: '0.8rem' }}>
               {erreur}
               {existant && (
-                <button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft: 8, fontWeight: 700 }} onClick={() => onExistant(existant)}>
+                <button type="button" className="btn btn-ghost btn-sm" style={{ marginLeft: 8, fontWeight: 700 }} onClick={() => onExistant(existant, saisie())}>
                   Prendre « {existant.nom} »
                 </button>
               )}
@@ -119,12 +129,12 @@ export default function NouveauFournisseurModal({ initiale, cible, fournisseursD
                   {candidats.map((c) => <option key={c.id} value={String(c.id)}>{c.nom}{c.matriculeFiscal ? ` (MF ${c.matriculeFiscal})` : ''}</option>)}
                 </select>
                 <button type="button" className="btn btn-ghost btn-sm" disabled={!choixId || enCours}
-                  onClick={() => { const c = candidats.find((x) => String(x.id) === choixId); if (c) onExistant(c); }}>
+                  onClick={() => { const c = candidats.find((x) => String(x.id) === choixId); if (c) onExistant(c, saisie()); }}>
                   C'est {voc.acc('fournisseur', 'lui', 'elle')}
                 </button>
               </div>
               <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 3 }}>
-                Le matricule lu lui sera ajouté s'il n'en a pas : la prochaine facture le reconnaîtra seule.
+                Le matricule ci-dessus est ajouté à sa fiche quand elle n'en a pas : la prochaine facture sera reconnue d'office.
               </div>
             </div>
           )}

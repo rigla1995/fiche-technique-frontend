@@ -161,6 +161,67 @@ test('lireEntete : numéro et date — « Facture n° X du … », titres de col
   assert.equal(c.date?.valeur, '2026-10-01');
 });
 
+test('lireEntete : numéro tronqué (« FV-2026- ») signalé, numéro coupé par une espace recollé', () => {
+  const tronque = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [40, [[400, 'FACTURE']]], [60, [[400, 'N° FV-2026-']]]])], 'ocr');
+  assert.equal(tronque.numero?.valeur, 'FV-2026');
+  assert.equal(tronque.numero?.aRelire, true);
+  assert.match(tronque.numero?.note ?? '', /incomplet/);
+  const coupe = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [60, [[40, 'Facture N° FV-2026- 00437']]]])], 'pdf');
+  assert.equal(coupe.numero?.valeur, 'FV-2026-00437');
+  assert.equal(coupe.numero?.note, undefined);
+});
+
+test('relecture F2 : la colonne « N° » du tableau des lignes n\'est pas le numéro de la facture', () => {
+  const e = lireEntete([page([
+    [40, [[40, 'SOCIETE X']], 14],
+    [40, [[400, 'FACTURE']]],
+    [58, [[400, 'N° : FV-2026-00437']]],
+    [200, [[40, 'N°'], [80, 'Désignation'], [300, 'Qté'], [400, 'Montant HT']]],
+    [217, [[40, '1'], [80, 'Farine'], [300, '2'], [400, '45,000']]],
+  ])], 'pdf');
+  assert.equal(e.numero?.valeur, 'FV-2026-00437');
+  const seul = lireEntete([page([
+    [40, [[40, 'SOCIETE X']], 14],
+    [200, [[40, 'N°'], [80, 'Article']]],
+    [217, [[40, '1'], [80, 'Farine 12,000 45,000']]],
+  ])], 'pdf');
+  assert.equal(seul.numero, null);
+});
+
+test('relecture F2 : la date d\'édition ne passe pas devant la colonne « Date » ; une date à l\'heure près non plus', () => {
+  const e = lireEntete([page([
+    [40, [[40, 'SOCIETE X']], 14],
+    [140, [[40, 'N° Facture'], [170, 'Date']]],
+    [158, [[40, 'F0026361'], [170, '03/09/2026']]],
+    [800, [[40, 'Édité le 10/10/2026 à 14:32']]],
+  ])], 'pdf');
+  assert.equal(e.date?.valeur, '2026-09-03');
+  const ticket = lireEntete([page([[20, [[10, 'HYPER MARKET']], 11], [84, [[10, 'DATE: 27/09/2026 18:42 CAISSE 07']]]], 600, 226)], 'pdf');
+  assert.equal(ticket.date?.valeur, '2026-09-27', 'un libellé « DATE » explicite garde sa date, même avec l\'heure');
+});
+
+test('relecture F2 : « Votre réf » n\'est pas le numéro ; « 2026 - 437 » recollé', () => {
+  const v = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [80, [[40, 'Votre réf : CMD-118']]]])], 'pdf');
+  assert.equal(v.numero, null);
+  const c = lireEntete([page([[40, [[40, 'SOCIETE X']], 14], [80, [[40, 'Facture N° 2026 - 437']]]])], 'pdf');
+  assert.equal(c.numero?.valeur, '2026-437');
+});
+
+test('relecture F2 : « MR BRICOLAGE » n\'est pas un bloc client ; « Total TTC » passe devant « Net à payer » ; « Montant total HT » est un HT', () => {
+  const vus = matriculesVus([page([[40, [[40, 'MR BRICOLAGE']], 14], [60, [[40, `MF : ${MF_FOURNISSEUR}`]]]])], 'pdf');
+  assert.equal(vus[0]?.duClient, false);
+  const e = lireEntete([page([
+    [40, [[40, 'SOCIETE X']], 14],
+    [500, [[345, 'Montant total HT'], [500, '1000,000']]],
+    [514, [[345, 'TVA'], [500, '190,000']]],
+    [528, [[345, 'Timbre'], [500, '1,000']]],
+    [542, [[345, 'Total TTC'], [500, '1191,000']]],
+    [556, [[345, 'Retenue à la source 1,5 %'], [500, '17,865']]],
+    [570, [[345, 'Net à payer'], [500, '1173,135']]],
+  ])], 'pdf');
+  assert.deepEqual([e.totaux.ht, e.totaux.ttc, e.totaux.coherents], [1000, 1191, true]);
+});
+
 test('lireEntete : totaux en titres de colonnes (valeurs dessous), FODEC, récapitulatif de TVA à plusieurs taux', () => {
   const colonnes = lireEntete([page([
     [40, [[40, 'SOCIETE X']], 14],

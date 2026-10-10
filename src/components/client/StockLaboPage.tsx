@@ -219,6 +219,8 @@ export default function StockLaboPage() {
   const [champsLus, setChampsLus] = useState<{ fournisseur?: boolean; ref?: boolean; date?: boolean }>({});
   const [dateChoisie, setDateChoisie] = useState(false);
   const [resultatLecture, setResultatLecture] = useState<ResultatLecture | null>(null);
+  // Lecture de la facture en cours : « Enregistrer » attend (le récapitulatif montrerait des valeurs qui vont changer).
+  const [lectureEnCours, setLectureEnCours] = useState(false);
   const remettreAZero = () => {
     setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError('');
     setChampsLus({}); setDateChoisie(false); setResultatLecture(null); viderPieces();
@@ -470,6 +472,7 @@ export default function StockLaboPage() {
   const doBulkSave = async (timbreFiscal = false, timbreMontant = 1) => {
     setBulkSaving(true);
     setBulkError('');
+    let factureEnregistree = false;
     try {
       const readyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const id = Number(idStr);
@@ -498,7 +501,7 @@ export default function StockLaboPage() {
           })),
         }, bulkPieces, confirm, voc.ce('fournisseur'));
         if (issue === 'annulee') { setBulkSaving(false); return; }
-        remettreAZero();
+        factureEnregistree = true;
       }
       const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
         const stockRow = stock.find((r) => r.ingredientId === Number(idStr));
@@ -511,9 +514,11 @@ export default function StockLaboPage() {
         });
       }
 
+      if (factureEnregistree) remettreAZero();
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
+      setChampsLus({}); setDateChoisie(false); setResultatLecture(null);
       setRowState((prev) => {
         const next = { ...prev };
         for (const id of Object.keys(next)) next[Number(id)] = { ...next[Number(id)], tauxTva: '' };
@@ -876,9 +881,9 @@ export default function StockLaboPage() {
               </div>
               <div style={{ flex: 1 }} />
               <div style={{ display: 'flex', gap: 8, alignSelf: 'flex-end' }}>
-                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation}
+                <button className="btn btn-primary btn-sm" onClick={saveBulk} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation || lectureEnCours}
                   style={{ background: canSaveBulk ? 'linear-gradient(135deg, #7e22ce, #a855f7)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(126,34,206,0.3)' : undefined }}>
-                  {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
+                  {bulkSaving ? '…' : lectureEnCours ? 'Lecture…' : `Enregistrer (${readyCount + ptReadyCount})`}
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={remettreAZero}>
                   Réinitialiser
@@ -901,10 +906,12 @@ export default function StockLaboPage() {
                     if (c.fournisseurId !== undefined) setBulkFournisseurId(c.fournisseurId);
                     if (c.refFacture !== undefined) setBulkRefFacture(c.refFacture);
                     if (c.date !== undefined) setBulkDate(c.date);
-                    setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: true } : {}), ...(c.refFacture !== undefined ? { ref: true } : {}), ...(c.date !== undefined ? { date: true } : {}) }));
+                    setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: c.fournisseurId !== '' } : {}), ...(c.refFacture !== undefined ? { ref: c.refFacture !== '' } : {}), ...(c.date !== undefined ? { date: true } : {}) }));
                   }}
                   onFournisseursModifies={rechargerFournisseurs}
                   onResultat={setResultatLecture}
+                  onLecture={setLectureEnCours}
+                  champsLus={champsLus}
                 />
               )}
             </div>

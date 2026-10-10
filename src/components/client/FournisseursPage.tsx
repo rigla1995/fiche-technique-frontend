@@ -498,7 +498,7 @@ export default function FournisseursPage() {
                 <NoteLu lu={lus.matriculeFiscal} />
                 {form.matriculeFiscal.trim() && (!mf.ok || mf.avertissement)
                   ? <div style={{ fontSize: '0.76rem', marginTop: 3, color: mf.ok ? '#b45309' : 'var(--danger)' }}>{mf.ok ? mf.avertissement : mf.erreur}</div>
-                  : <div style={{ fontSize: '0.74rem', marginTop: 3, color: 'var(--text-muted)' }}>Ses factures déposées le reconnaîtront par ce matricule.</div>}
+                  : <div style={{ fontSize: '0.74rem', marginTop: 3, color: 'var(--text-muted)' }}>Les factures déposées seront reconnues par ce matricule.</div>}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14 }}>
                 <div>

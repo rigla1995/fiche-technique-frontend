@@ -151,7 +151,18 @@ const lisibleEnImage = (f: FichierALire): Blob | null =>
  * Lit l'en-tête d'une facture. `client` : matricule et noms du client (jamais pris pour le fournisseur).
  * Lève LectureImpossible (message à afficher) ; les autres erreurs sont des pannes (« La lecture n'a pas abouti »).
  */
-export async function lireFacture(fichiers: FichierALire[], client: Destinataire, suivi: SuiviLecture = () => {}): Promise<EnteteLu & { duree: number }> {
+/** Un en-tête lu sur le texte d'un PDF qui ne dit rien (police sans table de caractères : texte illisible). */
+const muet = (e: EnteteLu): boolean => !e.matricule && !e.numero && !e.date && e.totaux.ttc === null && e.totaux.ht === null;
+
+/** Lecture arrêtée (fichier remplacé, écran quitté). */
+export class LectureArretee extends Error {
+  name = 'LectureArretee';
+}
+
+export async function lireFacture(
+  fichiers: FichierALire[], client: Destinataire, suivi: SuiviLecture = () => {}, signal?: AbortSignal,
+): Promise<EnteteLu & { duree: number }> {
+  const verifier = () => { if (signal?.aborted) throw new LectureArretee('Lecture arrêtée.'); };
   const debut = performance.now();
   const lisibles = fichiers.filter((f) => f.type === 'application/pdf' || lisibleEnImage(f));
   const premier = lisibles[0];
@@ -171,7 +182,12 @@ export async function lireFacture(fichiers: FichierALire[], client: Destinataire
     type LuPdf = { entete: EnteteLu; p1: null; pN: null } | { entete: null; p1: HTMLCanvasElement; pN: HTMLCanvasElement | null };
     const lu = await avecPdf<LuPdf>(octets, async (pdf) => {
       const { pages, caracteres } = await textePdf(pdf);
-      if (caracteres >= CARACTERES_MIN) return { entete: lireEntete(pages, 'pdf', client), p1: null, pN: null };
+      if (caracteres >= CARACTERES_MIN) {
+        const entete = lireEntete(pages, 'pdf', client);
+        // Texte présent mais muet (polices sans table de caractères) : la page se lit alors comme une image.
+        if (!muet(entete)) return { entete, p1: null, pN: null };
+      }
+      verifier();
       // PDF numérisé : la page 1 en image (et la dernière, rendue tout de suite : le PDF se ferme après).
       const p1 = await rendrePage(pdf, 1);
       const pN = pdf.numPages > 1 ? await rendrePage(pdf, pdf.numPages) : null;
@@ -187,22 +203,37 @@ export async function lireFacture(fichiers: FichierALire[], client: Destinataire
   const autre = lisibles.length > 1 ? lisibles[lisibles.length - 1] : null;
   if (!derniere && autre && autre.type !== 'application/pdf') derniere = () => dessinerImage(lisibleEnImage(autre) as Blob);
 
-  // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné).
+  // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné, et sur arrêt demandé).
+  verifier();
   const page1 = canvas;
   const entete = await avecTravailleur(
     () => ouvrirTravailleur(suivi),
     async (travailleur) => {
-      const m = moteur(travailleur);
-      let e = await lireImageFacture(sourceCanvas(page1), m, client, (etape, a) => suivi(etape, derniere ? (a ?? 0) * 0.7 : a));
-      // Totaux absents de la première page (facture de plusieurs pages ou photos) : la dernière les porte.
-      if (derniere && e.totaux.coherents !== true) {
-        const d = await lireImageFacture(sourceCanvas(await derniere()), m, client, (etape, a) => suivi(etape, 0.7 + 0.3 * (a ?? 0)));
-        e = completer(e, d);
+      const stop = () => { void travailleur.terminate(); };
+      signal?.addEventListener('abort', stop, { once: true });
+      try {
+        const m = moteur(travailleur);
+        let e = await lireImageFacture(sourceCanvas(page1), m, client, (etape, a) => suivi(etape, derniere ? (a ?? 0) * 0.7 : a));
+        verifier();
+        // Totaux absents de la première page (facture de plusieurs pages ou photos) : la dernière les porte. Si elle ne
+        // se lit pas, la lecture de la première page est gardée.
+        if (derniere && e.totaux.coherents !== true) {
+          try {
+            const d = await lireImageFacture(sourceCanvas(await derniere()), m, client, (etape, a) => suivi(etape, 0.7 + 0.3 * (a ?? 0)));
+            e = completer(e, d);
+          } catch (err) {
+            verifier();
+            console.warn('[facture] dernière page illisible', err instanceof Error ? err.name : '');
+          }
+        }
+        return e;
+      } finally {
+        signal?.removeEventListener('abort', stop);
       }
-      return e;
     },
     DELAI_LECTURE,
   );
+  verifier();
   suivi(ETAPE_OCR, 1);
   return fin(entete);
 }

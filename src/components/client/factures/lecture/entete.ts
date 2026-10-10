@@ -36,7 +36,7 @@ export interface MatriculeVu {
 }
 
 const LIBELLE_MF = /(m\s?\.?\s?f\b|matricule|identifiant\s+(fiscal|unique)|code\s+t\.?\s?v\.?\s?a|i\.?\s?f\.?\s?:|n[°ºo]?\s*fiscal|\bt\.?v\.?a\s*:)/i;
-const BLOC_CLIENT = /\b(client|doit|factur[ée]e?\s+[àa]|destinataire|acheteur|adress[ée]e?\s+[àa]|livr[ée]e?\s+[àa]|m\.\s|mr\b|mme\b)/i;
+const BLOC_CLIENT = /(^\s*(client|doit|destinataire|acheteur)\b|\b(client|doit|destinataire|acheteur)\s*:|\bfactur[ée]e?\s+[àa](?=\s|:|$)|\badress[ée]e?\s+[àa](?=\s|:|$)|\blivr[ée]e?\s+[àa](?=\s|:|$))/i;
 const SEP = String.raw`\s?[/|\\.\- ]?\s?`;
 
 function matriculesDeRangee(p: Place, ocr: boolean, libelleProche: boolean): Omit<MatriculeVu, 'duClient'>[] {
@@ -224,9 +224,11 @@ const NUMEROS: RegExp[] = [
 const NUMERO_TITRE = /(factures?\s*(n\s?[°ºo*'"]|num)|(n\s?[°ºo*'"]|num[ée]ro)\s*\.?\s*(de\s+(la\s+)?)?facture|^\s*n\s?[°ºo]\s*\.?\s*$)/i;
 const NUMERO_SEUL = new RegExp(String.raw`^\s*(?:n\s?[°ºo*'"]|num(?:[ée]ro)?)\s*\.?\s*:?\s*${VAL}`, 'i');
 const REFERENCE = new RegExp(String.raw`r[ée]f(?:[ée]rence)?\.?\s*(?:facture)?\s*:\s*${VAL}`, 'i');
+// « Votre réf », « Réf commande », « Réf BL », « Réf client » : la référence de quelqu'un d'autre, pas le n° de la facture.
+const AUTRE_REFERENCE = /(votre|v\/|n\/)\s*r[ée]f|r[ée]f(?:[ée]rence)?\.?\s*(commande|cmd|bl|bon|client|devis|livraison)/i;
 const nettoyerNumero = (s: string): string => s.replace(/[.:,;_-]+$/, '').trim();
 // « FV-2026- 00437 » (une espace lue après un séparateur) : recollé avant la recherche du numéro.
-const recolle = (t: string): string => t.replace(/([-/])\s+(?=\d)/g, '$1');
+const recolle = (t: string): string => t.replace(/(\d)\s+([-/])\s*(?=\d)/g, '$1$2').replace(/([-/])\s+(?=\d)/g, '$1');
 /** Numéro lu ; `incomplet` : il finissait par un séparateur (« FV-2026- ») — la suite n'a pas été lue. */
 interface NumeroLu { valeur: string; incomplet: boolean }
 const estDate = (s: string): boolean => datesDuTexte(s).some((d) => d.index === 0 && d.fin >= s.length - 1);
@@ -245,8 +247,17 @@ function sous(pages: readonly PageLue[], p: Place, x0: number, x1: number, accep
   return null;
 }
 
+/** Index de la première rangée du tableau des lignes d'une page (titre « Désignation | Qté… », ou première rangée à deux
+ * montants au millime) ; Infinity s'il n'y en a pas. L'en-tête est au-dessus. */
+function debutTableau(page: PageLue): number {
+  const titre = page.rangees.findIndex((r) => TITRE_LIGNES.test(plat(r.texte)));
+  const chiffree = page.rangees.findIndex((r) => nombresDeRangee(r).filter((n) => /[.,]\d{3}$/.test(n.brut)).length >= 2);
+  return [titre, chiffree].filter((i) => i >= 0).reduce((a, b) => Math.min(a, b), Infinity);
+}
+
 function numeroFacture(pages: readonly PageLue[]): NumeroLu | null {
   const places = toutes(pages);
+  const tableaux = pages.map(debutTableau);
   const valide = (v: string | undefined): NumeroLu | null => {
     if (!v) return null;
     const n = nettoyerNumero(v);
@@ -260,16 +271,9 @@ function numeroFacture(pages: readonly PageLue[]): NumeroLu | null {
       }
     }
   }
-  // Titre de colonne (« N° Facture | Date | Client ») : la valeur est dessous.
-  for (const p of places) {
-    for (const s of segments(p.r)) {
-      if (!NUMERO_TITRE.test(s.texte) || /\d/.test(s.texte.replace(NUMERO_TITRE, ''))) continue;
-      const v = sous(pages, p, s.mots[0].x0, s.mots[s.mots.length - 1].x1, (t) => Boolean(valide(t.split(' ')[0])));
-      if (v) return valide(v.split(' ')[0]);
-    }
-  }
   // « N° : FV-2026-00437 » sous un titre « FACTURE » (cadre de l'en-tête), dans la même colonne.
   for (const p of places) {
+    if (p.i >= tableaux[p.page - 1]) continue;
     for (const s of segments(p.r)) {
       const v = valide(recolle(s.texte).match(NUMERO_SEUL)?.[1]);
       if (!v) continue;
@@ -280,22 +284,39 @@ function numeroFacture(pages: readonly PageLue[]): NumeroLu | null {
       }
     }
   }
+  // Titre de colonne (« N° Facture | Date | Client ») : la valeur est dessous — seulement AU-DESSUS du tableau des lignes
+  // (sa colonne « N° » numérote les lignes) ; sous un « N° » seul, un numéro de 1 à 3 chiffres n'est pas pris.
   for (const p of places) {
-    const v = valide(p.r.texte.match(REFERENCE)?.[1]);
+    if (p.i >= tableaux[p.page - 1]) continue;
+    for (const s of segments(p.r)) {
+      if (!NUMERO_TITRE.test(s.texte) || /\d/.test(s.texte.replace(NUMERO_TITRE, ''))) continue;
+      const seul = !/factur/i.test(s.texte);
+      const accepte = (t: string) => { const v = valide(t.split(' ')[0]); return Boolean(v) && !(seul && /^\d{1,3}$/.test(v!.valeur)); };
+      const v = sous(pages, p, s.mots[0].x0, s.mots[s.mots.length - 1].x1, accepte);
+      if (v) return valide(v.split(' ')[0]);
+    }
+  }
+  for (const p of places) {
+    const m = p.r.texte.match(REFERENCE);
+    if (!m || AUTRE_REFERENCE.test(p.r.texte.slice(0, (m.index ?? 0) + m[0].length - m[1].length))) continue;
+    const v = valide(m[1]);
     if (v) return v;
   }
   return null;
 }
 
-const PAS_LA_DATE = /([ée]ch[ée]ance|livraison|naissance|impression|[ée]dition|valid|commande|bl\b|bon\s+de|p[ée]riode|jusqu|r[èe]glement|paiement)/i;
+// Dates qui ne sont pas celle de la facture : échéance, livraison, édition ou impression du document…
+const PAS_LA_DATE = /([ée]ch[ée]ance|livraison|naissance|impression|imprim[ée]|[ée]dition|[ée]dit[ée]|g[ée]n[ée]r[ée]|valid|commande|bl\b|bon\s+de|p[ée]riode|jusqu|r[èe]glement|paiement)/i;
+// Une heure à côté d'une date sans libellé « date » : un horodatage (impression, envoi), pas la date de la facture.
+const HEURE = /\b\d{1,2}\s?[:h]\s?\d{2}\b/i;
 
 function dateFacture(pages: readonly PageLue[]): string | null {
   const places = toutes(pages);
-  // 1. « Date (de la facture) : 03/10/2026 », ou « Facture N° 12 du 03/10/2026 », ou « Tunis, le 03/10/2026 ».
+  // 1. Libellé explicite : « Date (de la facture) : 03/10/2026 ».
   for (const p of places) {
     for (const s of segments(p.r, 3)) {
       const t = s.texte;
-      const libelle = t.search(/\bdate\b|\bdu\b|\ble\b/i);
+      const libelle = t.search(/\bdate\b/i);
       if (libelle < 0 || PAS_LA_DATE.test(t)) continue;
       const d = datesDuTexte(t).find((x) => x.index > libelle);
       if (d) return d.iso;
@@ -309,11 +330,21 @@ function dateFacture(pages: readonly PageLue[]): string | null {
       if (v) return datesDuTexte(v)[0].iso;
     }
   }
-  // 3. Première date du haut de la première page.
+  // 3. « Facture N° 12 du 03/10/2026 », « Tunis, le 03/10/2026 ».
+  for (const p of places) {
+    for (const s of segments(p.r, 3)) {
+      const t = s.texte;
+      const libelle = t.search(/\bdu\b|\ble\b/i);
+      if (libelle < 0 || PAS_LA_DATE.test(t) || HEURE.test(t)) continue;
+      const d = datesDuTexte(t).find((x) => x.index > libelle);
+      if (d) return d.iso;
+    }
+  }
+  // 4. Première date du haut de la première page.
   const page = pages[0];
   for (const r of page?.rangees ?? []) {
     if (r.y0 > page.hauteur * 0.45) break;
-    if (PAS_LA_DATE.test(r.texte)) continue;
+    if (PAS_LA_DATE.test(r.texte) || HEURE.test(r.texte)) continue;
     const d = datesDuTexte(r.texte)[0];
     if (d) return d.iso;
   }
@@ -325,7 +356,7 @@ function dateFacture(pages: readonly PageLue[]): string | null {
 type CleTotal = 'ht' | 'remise' | 'fodec' | 'tva' | 'timbre' | 'ttc';
 // Ordre des essais sur le texte « à plat » (sans accents, minuscules). Le premier libellé qui couvre une position la garde.
 const LIBELLES: [CleTotal, RegExp][] = [
-  ['ttc', /\b(?:total|montant|net)\s*(?:a\s*payer\s*)?t\s?\.?\s?t\s?\.?\s?c\b\.?|\bnet\s*a\s*payer\b|\btotal\s*a\s*payer\b|\btotal\s*general\b|\bmontant\s*total\b|\btotal\s*facture\b/g],
+  ['ttc', /\b(?:total|montant|net)\s*(?:a\s*payer\s*)?t\s?\.?\s?t\s?\.?\s?c\b\.?|\bnet\s*a\s*payer\b|\btotal\s*a\s*payer\b|\btotal\s*general\b|\bmontant\s*total\b(?!\s*(?:h\s?\.?\s?t\b|hors))|\btotal\s*facture\b/g],
   ['ht', /\b(?:total|montant|net|base)\s*(?:net\s*)?(?:h\s?\.?\s?t\b\.?|hors\s*taxes?)(?:\s*net\b)?|\bnet\s*h\s?\.?\s?t\b\.?|\btotal\s*brut\b/g],
   ['remise', /\bremise\b|\bescompte\b/g],
   ['fodec', /\bfodec\b/g],
@@ -334,7 +365,9 @@ const LIBELLES: [CleTotal, RegExp][] = [
   ['tva', /\b(?:total|montant)\s*(?:de\s*la\s*)?t\s?\.?\s?v\s?\.?\s?a\b\.?|(?<!code\s{0,3})\bt\.?\s?v\.?\s?a\b\.?(?!\s*(?:\(?\d{1,2}(?:[.,]\d+)?\s*%|intracom|n\s?[°o]|:?\s*\d{7}))/g],
 ];
 
-interface LibelleTrouve { cle: CleTotal; de: number; a: number; x0: number; x1: number }
+interface LibelleTrouve { cle: CleTotal; de: number; a: number; x0: number; x1: number; prio: number }
+// « Total TTC » l'emporte sur « Net à payer » (qui peut être APRÈS une retenue à la source) et « Total général ».
+const TTC_EXPLICITE = /t\s?\.?\s?t\s?\.?\s?c/;
 
 function libellesDeRangee(r: Rangee): LibelleTrouve[] {
   const t = plat(r.texte);
@@ -347,7 +380,7 @@ function libellesDeRangee(r: Rangee): LibelleTrouve[] {
       const i = m.index ?? 0;
       if (couvert(i)) continue;
       const de = motA(r, i), a = motA(r, i + Math.max(0, m[0].trimEnd().length - 1));
-      trouves.push({ cle, de, a, x0: r.mots[de].x0, x1: r.mots[a].x1 });
+      trouves.push({ cle, de, a, x0: r.mots[de].x0, x1: r.mots[a].x1, prio: cle === 'ttc' && !TTC_EXPLICITE.test(m[0]) ? 1 : 2 });
     }
   }
   return trouves.sort((x, y) => x.de - y.de);
@@ -361,6 +394,14 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
   const valeurs: Partial<Record<CleTotal, number>> = {};
   // Montants pris SOUS un titre de colonne : moins sûrs qu'un libellé suivi de son montant, ils ne servent qu'à défaut.
   const dessousLus: Partial<Record<CleTotal, number>> = {};
+  // Priorité du libellé retenu pour chaque montant (le plus bas de la page l'emporte à priorité égale).
+  const prios: Partial<Record<CleTotal, number>> = {};
+  const prioDessous: Partial<Record<CleTotal, number>> = {};
+  const poser = (cible: Partial<Record<CleTotal, number>>, p: Partial<Record<CleTotal, number>>, l: LibelleTrouve, v: number) => {
+    if ((p[l.cle] ?? 0) > l.prio) return;
+    cible[l.cle] = v;
+    p[l.cle] = l.prio;
+  };
   const parTaux = new Map<number, TvaLue>();
   const places = toutes(pages);
   places.forEach((p, k) => {
@@ -382,7 +423,7 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
       libelles.forEach((l, n) => {
         const fin = libelles[n + 1]?.de ?? Infinity;
         const siens = nombres.filter((x) => x.de > l.a && x.de < fin);
-        if (siens.length) valeurs[l.cle] = Math.abs(siens[siens.length - 1].valeur);
+        if (siens.length) poser(valeurs, prios, l, Math.abs(siens[siens.length - 1].valeur));
       });
       return;
     }
@@ -397,7 +438,7 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
       const proche = dessous
         .map((n) => ({ n, d: Math.abs((n.x0 + n.x1) / 2 - centre) }))
         .sort((a, b) => a.d - b.d)[0];
-      if (proche && proche.d < Math.max(l.x1 - l.x0, 4 * r.hauteur)) dessousLus[l.cle] = Math.abs(proche.n.valeur);
+      if (proche && proche.d < Math.max(l.x1 - l.x0, 4 * r.hauteur)) poser(dessousLus, prioDessous, l, Math.abs(proche.n.valeur));
     }
   });
   // Tableau récapitulatif de la TVA (« Taux | Base | Montant ») : rangées qui commencent par un taux.

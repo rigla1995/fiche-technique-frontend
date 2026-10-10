@@ -534,6 +534,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [champsLus, setChampsLus] = useState<{ fournisseur?: boolean; ref?: boolean; date?: boolean }>({});
   const [dateChoisie, setDateChoisie] = useState(false);
   const [resultatLecture, setResultatLecture] = useState<ResultatLecture | null>(null);
+  // Lecture de la facture en cours : « Enregistrer » attend (le récapitulatif montrerait des valeurs qui vont changer).
+  const [lectureEnCours, setLectureEnCours] = useState(false);
   const remettreAZero = () => {
     setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError('');
     setChampsLus({}); setDateChoisie(false); setResultatLecture(null); viderPieces();
@@ -740,6 +742,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       setBulkDate(todayStr());
       setBulkFournisseurId('');
       setBulkRefFacture('');
+      setChampsLus({}); setDateChoisie(false); setResultatLecture(null);
       setRows((prev) => {
         const next = { ...prev };
         for (const id of Object.keys(next)) {
@@ -1113,9 +1116,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           <div style={{ flex: 1 }} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignSelf: 'flex-end' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation}
+              <button className="btn btn-primary btn-sm" onClick={saveBulkMatrix} disabled={!canSaveBulk || bulkSaving || !canWrite || piecesEnPreparation || lectureEnCours}
                 style={{ background: canSaveBulk ? 'linear-gradient(135deg, #1e40af, #2563eb)' : undefined, border: 'none', boxShadow: canSaveBulk ? '0 3px 10px rgba(30,64,175,0.3)' : undefined }}>
-                {bulkSaving ? '…' : `Enregistrer (${readyCount + ptReadyCount})`}
+                {bulkSaving ? '…' : lectureEnCours ? 'Lecture…' : `Enregistrer (${readyCount + ptReadyCount})`}
               </button>
               <button className="btn btn-ghost btn-sm" onClick={remettreAZero}>
                 Réinitialiser
@@ -1139,10 +1142,12 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                 if (c.fournisseurId !== undefined) setBulkFournisseurId(c.fournisseurId);
                 if (c.refFacture !== undefined) setBulkRefFacture(c.refFacture);
                 if (c.date !== undefined) setBulkDate(c.date);
-                setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: true } : {}), ...(c.refFacture !== undefined ? { ref: true } : {}), ...(c.date !== undefined ? { date: true } : {}) }));
+                setChampsLus((p) => ({ ...p, ...(c.fournisseurId !== undefined ? { fournisseur: c.fournisseurId !== '' } : {}), ...(c.refFacture !== undefined ? { ref: c.refFacture !== '' } : {}), ...(c.date !== undefined ? { date: true } : {}) }));
               }}
               onFournisseursModifies={async () => { await onFournisseursModifies?.(); }}
               onResultat={setResultatLecture}
+              onLecture={setLectureEnCours}
+              champsLus={champsLus}
             />
           </div>
         )}
