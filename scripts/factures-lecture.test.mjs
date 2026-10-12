@@ -591,6 +591,51 @@ test('relecture 12/10 : « aucun timbre » jamais conclu sur une facture avec TV
   assert.equal(brut.totaux.ht, 900);
 });
 
+// ── Deuxième document réel du client (12/10, valeurs fictives ici) : même grossiste, « NET A PAYE » lu « AT A PAYE ». ──
+// Règle du client : un document hors taxe (aucune TVA, aucun TTC imprimés) se saisit avec TVA 0 et TTC = HT.
+
+test('essai client 2 : « AT A PAYE » (NET mal lu) est un TTC ; document hors taxe sans TTC lu → TVA 0, TTC = HT', () => {
+  const blSans = (bas) => page([
+    [30, [[300, 'Sté. Volailles du Cap Bon']], 16],
+    [96, [[300, `M.F : ${MF6}`]]],
+    [130, [[30, 'BON LIVRAISON N° : BL2600176']]],
+    [150, [[60, 'Date : 03/10/2026']]],
+    [235, [[20, 'Réf. Désignation Unité Qte P.U. Remise Montant']]],
+    [250, [[20, '336 ESCALOPE DINDE PANEE PIECE 5,000 21,000 0% 105,000']]],
+    [265, [[20, '018 ESCALOPE DE DINDE KG 5,000 19,000 0% 95,000']]],
+    [700, [[20, 'Arrêté le présent BON LIVRAISON à la'], [280, 'Rubrique Base Taux Montant']]],
+    [728, [[280, 'HORS TAXE 200,000 200,000']]],
+    ...bas,
+    [800, [[40, `Société : Volailles du Cap Bon, Code TVA ${MF6.replace(/\//g, '')}`]]],
+  ]);
+  for (const source of ['pdf', 'ocr']) {
+    const a = lireEntete([blSans([[745, [[280, 'AT A PAYE'], [480, '200,000']], 14]])], source);
+    assert.deepEqual([a.totaux.ht, a.totaux.tva, a.totaux.timbre, a.totaux.ttc, a.totaux.coherents], [200, 0, 0, 200, true], source);
+    // Ligne « à payer » illisible : la règle hors taxe donne le même résultat.
+    const b = lireEntete([blSans([[745, [[280, 'eus']], 14]])], source);
+    assert.deepEqual([b.totaux.ht, b.totaux.tva, b.totaux.timbre, b.totaux.ttc, b.totaux.coherents], [200, 0, 0, 200, true], source);
+  }
+});
+
+test('essai client 2 : la règle « hors taxe » ne s\'applique pas dès qu\'une TVA ou un TTC est imprimé', () => {
+  const facture = (lignes) => lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [80, [[300, 'Facture N° 2026-17 du 05/10/2026']]], ...lignes])], 'ocr');
+  // Colonne « TVA » du tableau, total TTC illisible : rien n'est déduit.
+  const a = facture([[200, [[40, 'Désignation Qté P.U TVA Montant']]], [217, [[40, 'Farine 10 1,200 19% 12,000']]], [600, [[300, 'Total hors taxe'], [480, '12,000']]]]);
+  assert.deepEqual([a.totaux.tva, a.totaux.ttc], [null, null]);
+  // « Total TTC » imprimé mais sans montant lu : rien n'est déduit.
+  const b = facture([[600, [[300, 'Hors taxe'], [480, '12,000']]], [614, [[300, 'Total TTC']]]]);
+  assert.deepEqual([b.totaux.tva, b.totaux.ttc], [null, null]);
+  // Ni BL ni « hors taxe » (un simple « Total HT ») : rien n'est déduit.
+  const c = facture([[600, [[300, 'Total HT'], [480, '12,000']]]]);
+  assert.deepEqual([c.totaux.tva, c.totaux.ttc], [null, null]);
+  // « À payer sous 30 jours » : 30 n'est pas un TTC (le libellé vague n'accepte qu'un montant au millime).
+  const e = facture([[590, [[40, 'Conditions : à payer sous 30 jours']]], [600, [[300, 'Total HT'], [480, '12,000']]]]);
+  assert.equal(e.totaux.ttc, null);
+  // « Exonéré de TVA » n'empêche pas la règle.
+  const d = facture([[590, [[40, 'Produits exonérés de TVA']]], [600, [[300, 'Montant hors taxe'], [480, '12,000']]]]);
+  assert.deepEqual([d.totaux.tva, d.totaux.ttc], [0, 12]);
+});
+
 test('essai client : rangées — un mot de logo très haut n\'absorbe pas les lignes ; une « ligne » de deux lignes est recoupée', () => {
   const w = (t, x0, y0, x1, y1) => ({ t, x0, y0, x1, y1, c: 90 });
   // Lettre du logo (lue seule, sur toute la hauteur de l'en-tête) à gauche ; adresse et téléphone à droite.

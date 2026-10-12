@@ -482,7 +482,8 @@ function dateSauf(pages: readonly PageLue[], pasLaDate: RegExp): string | null {
 type CleTotal = 'ht' | 'remise' | 'fodec' | 'tva' | 'timbre' | 'ttc';
 // Ordre des essais sur le texte « à plat » (sans accents, minuscules). Le premier libellé qui couvre une position la garde.
 const LIBELLES: [CleTotal, RegExp][] = [
-  ['ttc', /\b(?:total|montant|net)\s*(?:total\s*)?(?:a\s*payer\s*)?t\s?\.?\s?t\s?\.?\s?c\b\.?|\bnet\s*a\s*pay(?:er|e)\b|\btotal\s*a\s*payer\b|\btotal\s*general\b|\bmontant\s*total\b(?!\s*(?:h\s?\.?\s?t\b|hors))|\btotal\s*facture\b/g],
+  // (« … à payer » seul : « NET » mal lu sur une photo — « AT A PAYE » —, « Montant à payer » ; libellé faible.)
+  ['ttc', /\b(?:total|montant|net)\s*(?:total\s*)?(?:a\s*payer\s*)?t\s?\.?\s?t\s?\.?\s?c\b\.?|\bnet\s*a\s*pay(?:er|e)\b|\ba\s*pay(?:er|e)\b|\btotal\s*a\s*payer\b|\btotal\s*general\b|\bmontant\s*total\b(?!\s*(?:h\s?\.?\s?t\b|hors))|\btotal\s*facture\b/g],
   ['ht', /\b(?:total|montant|net|base)\s*(?:net\s*)?(?:h\s?\.?\s?t\b\.?|hors\s*taxes?)(?:\s*net\b)?|\bnet\s*h\s?\.?\s?t\b\.?|\btotal\s*brut\b|(?<!brut\s{0,3})\bhors\s*taxes?\b/g],
   ['remise', /\bremise\b|\bescompte\b/g],
   ['fodec', /\bfodec\b/g],
@@ -491,7 +492,9 @@ const LIBELLES: [CleTotal, RegExp][] = [
   ['tva', /\b(?:total|montant)\s*(?:de\s*la\s*)?t\s?\.?\s?v\s?\.?\s?a\b\.?|(?<!code\s{0,3})\bt\.?\s?v\.?\s?a\b\.?(?!\s*(?:\(?\d{1,2}(?:[.,]\d+)?\s*%|intracom|n\s?[°o]|:?\s*\d{7}))/g],
 ];
 
-interface LibelleTrouve { cle: CleTotal; de: number; a: number; x0: number; x1: number; prio: number }
+/** `auMillime` : libellé trop vague pour un nombre quelconque (« à payer » seul : « à payer sous 30 jours ») — seul un
+ * montant écrit au millime (« 200,000 ») lui est attribué. */
+interface LibelleTrouve { cle: CleTotal; de: number; a: number; x0: number; x1: number; prio: number; auMillime?: boolean }
 // « Total TTC » l'emporte sur « Net à payer » (qui peut être APRÈS une retenue à la source) et « Total général ».
 const TTC_EXPLICITE = /t\s?\.?\s?t\s?\.?\s?c/;
 
@@ -508,7 +511,7 @@ function libellesDeRangee(r: Rangee): LibelleTrouve[] {
       const de = motA(r, i), a = motA(r, i + Math.max(0, m[0].trimEnd().length - 1));
       // « Hors taxe » seul (« HORS TAXE 321,200 », total d'un bon de livraison) cède devant un « Total HT ».
       const faible = (cle === 'ttc' && !TTC_EXPLICITE.test(m[0])) || (cle === 'ht' && /^hors/.test(m[0]));
-      trouves.push({ cle, de, a, x0: r.mots[de].x0, x1: r.mots[a].x1, prio: faible ? 1 : 2 });
+      trouves.push({ cle, de, a, x0: r.mots[de].x0, x1: r.mots[a].x1, prio: faible ? 1 : 2, auMillime: cle === 'ttc' && /^a\s*pay/.test(m[0]) });
     }
   }
   return trouves.sort((x, y) => x.de - y.de);
@@ -553,7 +556,7 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
     if (nombres.length) {
       libelles.forEach((l, n) => {
         const fin = libelles[n + 1]?.de ?? Infinity;
-        const siens = nombres.filter((x) => x.de > l.a && x.de < fin);
+        const siens = nombres.filter((x) => x.de > l.a && x.de < fin && (!l.auMillime || /[.,]\d{3}$/.test(x.brut)));
         if (siens.length) poser(valeurs, prios, l, Math.abs(siens[siens.length - 1].valeur));
       });
       return;
@@ -567,6 +570,7 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
     for (const l of libelles) {
       const centre = (l.x0 + l.x1) / 2;
       const proche = dessous
+        .filter((n) => !l.auMillime || /[.,]\d{3}$/.test(n.brut))
         .map((n) => ({ n, d: Math.abs((n.x0 + n.x1) / 2 - centre) }))
         .sort((a, b) => a.d - b.d)[0];
       if (proche && proche.d < Math.max(l.x1 - l.x0, 4 * r.hauteur)) poser(dessousLus, prioDessous, l, Math.abs(proche.n.valeur));
@@ -602,16 +606,30 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
   // d'une retenue à la source : le TTC est le montant qui recoupe les autres ; à défaut, le libellé le plus explicite.
   const somme = ht !== null && tvaLue !== null ? ht + (fodec ?? 0) + tvaLue + (timbre ?? 0) : null;
   const recoupe = somme === null ? undefined : candidatsTtc.filter((v) => Math.abs(v - somme) <= tolerance).pop();
-  const ttc = recoupe ?? valeurs.ttc ?? null;
+  let ttc = recoupe ?? valeurs.ttc ?? null;
   // Aucune TVA imprimée, et HT (+ FODEC + timbre) = TTC : document exonéré (bon de livraison, produits sans TVA) — TVA 0.
-  const tva = tvaLue === null && ht !== null && ttc !== null && Math.abs(ttc - (ht + (fodec ?? 0) + (timbre ?? 0))) <= tolerance ? 0 : tvaLue;
+  let tva = tvaLue === null && ht !== null && ttc !== null && Math.abs(ttc - (ht + (fodec ?? 0) + (timbre ?? 0))) <= tolerance ? 0 : tvaLue;
+  // Document HORS TAXE (règle du client, 12/10) : bon de livraison, ou total « HORS TAXE », sans aucune TVA ni aucun TTC
+  // imprimés (le mot n'apparaît nulle part, hors « Code TVA » du matricule et « exonéré de TVA ») et sans TTC lu : TVA 0,
+  // TTC = HT. Le moindre « TVA » ou « TTC » sur la page (colonne, total mal lu) empêche de conclure.
+  if (ttc === null && tva === null && ht !== null && !liste.length) {
+    const textes = places.map((p) => plat(p.r.texte));
+    const mentionTva = textes.some((t) => /\bt\s?\.?\s?v\s?\.?\s?a\b/.test(t.replace(/\bcode\s*t\s?\.?\s?v\s?\.?\s?a\b/g, ''))
+      && !/exoner|non\s*assujetti|suspension|hors\s*champ/.test(t));
+    const mentionTtc = textes.some((t) => /\bt\s?\.?\s?t\s?\.?\s?c\b/.test(t));
+    if (!mentionTva && !mentionTtc && (estBonDeLivraison(pages) || textes.some((t) => /\bhors\s*taxes?\b/.test(t)))) {
+      tva = 0;
+      ttc = millime(ht + (fodec ?? 0));
+    }
+  }
   let coherents: boolean | null = null;
   if (ht !== null && tva !== null && ttc !== null) coherents = Math.abs(ht + (fodec ?? 0) + tva + (timbre ?? 0) - ttc) <= tolerance;
   // « Aucun timbre » : seulement pour un document SANS TVA (bon de livraison, produits exonérés) dont les totaux se
   // recoupent sans timbre, où le mot « timbre » n'apparaît nulle part (même avec un montant illisible) et où aucun autre
   // montant « à payer » ne diffère du TTC. Une facture tunisienne porte presque toujours un timbre : sinon, on ne conclut rien.
-  if (coherents && tva === 0 && timbre === null && valeurs.timbre === undefined && ttc !== null
-    && !places.some((p) => /timb/i.test(p.r.texte)) && candidatsTtc.every((v) => Math.abs(v - ttc) <= tolerance)) timbre = 0;
+  const ttcLu = ttc;
+  if (coherents && tva === 0 && timbre === null && valeurs.timbre === undefined && ttcLu !== null
+    && !places.some((p) => /timb/i.test(p.r.texte)) && candidatsTtc.every((v) => Math.abs(v - ttcLu) <= tolerance)) timbre = 0;
   return { ht, remise: valeurs.remise ?? null, fodec, tva, timbre, ttc, parTaux: liste, coherents };
 }
 
