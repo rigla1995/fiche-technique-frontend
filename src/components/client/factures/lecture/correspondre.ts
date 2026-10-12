@@ -181,6 +181,26 @@ export function probablesPour(ctx: Contexte): (designation: string) => ArticleCo
   };
 }
 
+/**
+ * Recherche d'un article à la main (un compte peut en avoir des milliers) : chaque mot tapé doit se retrouver dans le
+ * nom, sans accents ni casse (« far t45 » trouve « Farine pâtissière T45 »). L'ordre de `liste` est gardé (déjà achetés
+ * chez ce fournisseur, puis les plus proches de la désignation), les noms où chaque mot tapé commence un mot d'abord.
+ * Sans recherche : les `suggestions` premiers. → au plus `max` articles, et le nombre total trouvé.
+ */
+export function chercherArticles<T extends { nom: string }>(liste: readonly T[], recherche: string, max = 30, suggestions = 8): { trouves: T[]; total: number } {
+  const mots = normaliserDesignation(recherche).split(' ').filter(Boolean);
+  if (!mots.length) return { trouves: liste.slice(0, suggestions), total: liste.length };
+  const debutDeMot: T[] = [];
+  const ailleurs: T[] = [];
+  for (const a of liste) {
+    const nom = ` ${normaliserDesignation(a.nom)}`;
+    if (!mots.every((m) => nom.includes(m))) continue;
+    (mots.every((m) => nom.includes(` ${m}`)) ? debutDeMot : ailleurs).push(a);
+  }
+  const tous = [...debutDeMot, ...ailleurs];
+  return { trouves: tous.slice(0, max), total: tous.length };
+}
+
 /** Ce que LabFlow propose pour une ligne lue. `designationCle` (désignation lue sans ses rangées de lot ou de date)
  * sert à la clé apprise. */
 export function proposer(l: { designation: string; designationCle?: string | null; reference?: string | null; unite?: string | null }, ctx: Contexte): Proposition {

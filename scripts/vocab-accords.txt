@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1295 unité(s), 67 fichier(s).
+# 1300 unité(s), 67 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -1120,40 +1120,46 @@ src/components/client/ConfigurationVentePage.tsx
     miroir : Denrées valorisées (familles non consommables et vendables) — activez-les et définissez leur prix
 
 src/components/client/CorrespondancesPage.tsx
-  l. 80
-    défaut : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera l'article. Les factures déjà validées ne changent pas.
-    miroir : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera la denrée. Les factures déjà validées ne changent pas.
-  l. 106
-    défaut : Ce que LabFlow a appris de vos factures validées : chaque ligne du fournisseur → votre article et sa conversion
-    miroir : Ce que LabFlow a appris de vos factures validées : chaque ligne de l'enseigne → votre denrée et sa conversion
-  l. 111
-    défaut : ← Fournisseurs
-    miroir : ← Enseignes
-  l. 119
-    défaut : Fournisseur
-    miroir : Enseigne
-  l. 121
-    défaut : Tous les fournisseurs
-    miroir : Toutes les enseignes
-  l. 126
-    défaut : Désignation, réf., article…
-    miroir : Désignation, réf., denrée…
-  l. 132
-    défaut : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant un appro, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture du fournisseur se reconnaîtra seule.
-    miroir : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant une abr-rentrée, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture de l'enseigne se reconnaîtra seule.
-  l. 143
-    défaut : Fournisseur
-    miroir : Enseigne
-  l. 143
-    défaut : → Article LabFlow
-    miroir : → Denrée LabFlow
-  l. 165
-    défaut : Articles
-    miroir : Denrées
-  l. 168
+  l. 64
+    défaut : un article
+    miroir : une denrée
+  l. 64
+    défaut : Aucun article trouvé
+    miroir : Aucune denrée trouvée
+  l. 65
     défaut : Hors stock
     miroir : Hors armoire
-  l. 182
+  l. 65
+    défaut : Hors stock
+    miroir : Hors armoire
+  l. 88
+    défaut : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera l'article. Les factures déjà validées ne changent pas.
+    miroir : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera la denrée. Les factures déjà validées ne changent pas.
+  l. 114
+    défaut : Ce que LabFlow a appris de vos factures validées : chaque ligne du fournisseur → votre article et sa conversion
+    miroir : Ce que LabFlow a appris de vos factures validées : chaque ligne de l'enseigne → votre denrée et sa conversion
+  l. 119
+    défaut : ← Fournisseurs
+    miroir : ← Enseignes
+  l. 127
+    défaut : Fournisseur
+    miroir : Enseigne
+  l. 129
+    défaut : Tous les fournisseurs
+    miroir : Toutes les enseignes
+  l. 134
+    défaut : Désignation, réf., article…
+    miroir : Désignation, réf., denrée…
+  l. 140
+    défaut : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant un appro, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture du fournisseur se reconnaîtra seule.
+    miroir : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant une abr-rentrée, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture de l'enseigne se reconnaîtra seule.
+  l. 151
+    défaut : Fournisseur
+    miroir : Enseigne
+  l. 151
+    défaut : → Article LabFlow
+    miroir : → Denrée LabFlow
+  l. 183
     défaut : ⟦?⟦·⟧|Hors stock⟧ <span>(hors stock)</span>
     miroir : ⟦?⟦·⟧|Hors armoire⟧ <span>(hors armoire)</span>
 
@@ -3603,70 +3609,79 @@ src/components/client/factures/NouveauFournisseurModal.tsx
     miroir : ⟦?…|Créer l'enseigne⟧
 
 src/components/client/factures/VerifierFacture.tsx
-  l. 133
+  l. 134
     défaut : La liste des articles n'a pas pu être chargée.
     miroir : La liste des denrées n'a pas pu être chargée.
-  l. 210
-    défaut : ⟦·⟧ à choisir (article ou hors stock)
-    miroir : ⟦·⟧ à choisir (denrée ou hors armoire)
-  l. 230
-    défaut : ⟦·⟧ au prix par unité trop petit pour le millime : choisissez un article à l'unité plus grande (kg plutôt que g, paquet ou carton plutôt que pièce)
-    miroir : ⟦·⟧ au prix par unité trop petit pour le millime : choisissez une denrée à l'unité plus grande (kg plutôt que g, paquet ou carton plutôt que pièce)
-  l. 232
-    défaut : aucune ligne n'entre en stock (choisissez au moins un article)
-    miroir : aucune ligne n'entre en armoire (choisissez au moins une denrée)
-  l. 233
-    défaut : liste des articles non chargée
-    miroir : liste des denrées non chargée
-  l. 258
-    défaut : ce fournisseur
-    miroir : cette enseigne
-  l. 272
-    défaut : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les articles que vous avez créés depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
-    miroir : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les denrées que vous avez créées depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
-  l. 305
-    défaut : article créé
-    miroir : denrée créée
-  l. 307
-    défaut : Article non créé.
-    miroir : Denrée non créée.
-  l. 411
-    défaut : Chargement des articles…
-    miroir : Chargement des denrées…
-  l. 442
-    défaut : ⟦?hors stock|⟦·⟧⟧
-    miroir : ⟦?hors armoire|⟦·⟧⟧
-  l. 471
-    défaut : Article LabFlow
-    miroir : Denrée LabFlow
-  l. 475
-    défaut : Déjà achetés chez ce fournisseur
-    miroir : Déjà achetées chez cette enseigne
-  l. 479
-    défaut : ⟦?Autres articles|Articles⟧
-    miroir : ⟦?Autres denrées|Denrées⟧
-  l. 480
-    défaut : ⟦·⟧ (⟦·⟧)⟦?| — hors de ⟦?cette activité|ce labo⟧⟧
-    miroir : ⟦·⟧ (⟦·⟧)⟦?| — hors de ⟦?ce local|cette usine⟧⟧
-  l. 482
+  l. 165
+    défaut : un article
+    miroir : une denrée
+  l. 165
+    défaut : Aucun article trouvé
+    miroir : Aucune denrée trouvée
+  l. 166
+    défaut : Hors stock
+    miroir : Hors armoire
+  l. 166
     défaut : Hors stock (reste sur la facture)
     miroir : Hors armoire (reste sur la facture)
-  l. 500
+  l. 168
+    défaut : Déjà achetés chez ce fournisseur
+    miroir : Déjà achetées chez cette enseigne
+  l. 169
+    défaut : Autres articles
+    miroir : Autres denrées
+  l. 170
+    défaut : hors de ⟦?cette activité|ce labo⟧
+    miroir : hors de ⟦?ce local|cette usine⟧
+  l. 219
+    défaut : ⟦·⟧ à choisir (article ou hors stock)
+    miroir : ⟦·⟧ à choisir (denrée ou hors armoire)
+  l. 239
+    défaut : ⟦·⟧ au prix par unité trop petit pour le millime : choisissez un article à l'unité plus grande (kg plutôt que g, paquet ou carton plutôt que pièce)
+    miroir : ⟦·⟧ au prix par unité trop petit pour le millime : choisissez une denrée à l'unité plus grande (kg plutôt que g, paquet ou carton plutôt que pièce)
+  l. 241
+    défaut : aucune ligne n'entre en stock (choisissez au moins un article)
+    miroir : aucune ligne n'entre en armoire (choisissez au moins une denrée)
+  l. 242
+    défaut : liste des articles non chargée
+    miroir : liste des denrées non chargée
+  l. 267
+    défaut : ce fournisseur
+    miroir : cette enseigne
+  l. 281
+    défaut : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les articles que vous avez créés depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
+    miroir : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les denrées que vous avez créées depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
+  l. 314
+    défaut : article créé
+    miroir : denrée créée
+  l. 316
+    défaut : Article non créé.
+    miroir : Denrée non créée.
+  l. 420
+    défaut : Chargement des articles…
+    miroir : Chargement des denrées…
+  l. 450
+    défaut : ⟦?hors stock|⟦·⟧⟧
+    miroir : ⟦?hors armoire|⟦·⟧⟧
+  l. 479
+    défaut : Article LabFlow
+    miroir : Denrée LabFlow
+  l. 498
     défaut : + Créer l'article
     miroir : + Créer la denrée
-  l. 504
+  l. 502
     défaut : → en stock : <strong>⟦·⟧ ⟦·⟧</strong>⟦·⟧⟦·⟧⟦·⟧
     miroir : → en armoire : <strong>⟦·⟧ ⟦·⟧</strong>⟦·⟧⟦·⟧⟦·⟧
-  l. 507
+  l. 505
     défaut :  · ajouté à ⟦?cette activité|ce labo⟧
     miroir :  · ajoutée à ⟦?ce local|cette usine⟧
-  l. 515
+  l. 513
     défaut : Nom de l'article
     miroir : Nom de la denrée
-  l. 517
+  l. 515
     défaut : Unité (stock)
     miroir : Unité (armoire)
-  l. 585
+  l. 583
     défaut : ⟦·⟧ ⟦ligne|lignes@>1⟧ en stock⟦?, ⟦·⟧ hors stock|⟧ · la pièce (⟦·⟧ ⟦fichier|fichiers@>1⟧) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
     miroir : ⟦·⟧ ⟦ligne|lignes@>1⟧ en armoire⟦?, ⟦·⟧ hors armoire|⟧ · la pièce (⟦·⟧ ⟦fichier|fichiers@>1⟧) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
 

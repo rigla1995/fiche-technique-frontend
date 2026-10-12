@@ -13,7 +13,8 @@ import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { useAuth } from '../../context/AuthContext';
 import { useConfirm } from '../common/ConfirmDialog';
 import { messageErreur } from './factures/pieces';
-import { NATURES } from './factures/lecture/correspondre';
+import { NATURES, probablesPour } from './factures/lecture/correspondre';
+import ChoixArticle from './factures/ChoixArticle';
 
 interface Correspondance {
   id: number; fournisseurId: number; fournisseurNom: string; cle: string; designation: string; reference: string | null;
@@ -56,6 +57,13 @@ export default function CorrespondancesPage() {
     && (!recherche.trim() || plat(`${c.designation} ${c.reference ?? ''} ${c.articleNom ?? ''}`).includes(plat(recherche.trim()))));
   const pagees = filtrees.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
   const unite = (id: number) => articles.find((a) => a.id === id)?.unitName ?? '';
+  // Choix d'un autre article : champ de recherche, suggestions = les plus proches de la désignation.
+  const articlesConnus = useMemo(() => articles.map((a) => ({ id: a.id, nom: a.name, unite: a.unitName ?? '' })), [articles]);
+  const classer = useMemo(() => probablesPour({ correspondances: [], achats: [], articles: articlesConnus }), [articlesConnus]);
+  const libellesChoix = {
+    unArticle: voc.un('article'), aucunArticle: `${voc.Aucun('article')} ${voc.acc('article', 'trouvé', 'trouvée')}`,
+    horsStock: `Hors ${voc.nom('stock')}`, groupeHorsStock: `Hors ${voc.nom('stock')}`, aChoisir: '— À choisir —',
+  };
 
   const enregistrer = async () => {
     if (!edition) return;
@@ -160,15 +168,8 @@ export default function CorrespondancesPage() {
                     <td style={cellule}>
                       {enEdition && edition ? (
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-                          <select className="input" style={{ padding: '4px 6px', fontSize: '0.8rem', maxWidth: 240 }} value={edition.choix}
-                            onChange={(e) => setEdition({ ...edition, choix: e.target.value })}>
-                            <optgroup label={voc.Titre('article', true)}>
-                              {articles.map((a) => <option key={a.id} value={`a:${a.id}`}>{a.name}{a.unitName ? ` (${a.unitName})` : ''}</option>)}
-                            </optgroup>
-                            <optgroup label={`Hors ${voc.nom('stock')}`}>
-                              {NATURES.map((n) => <option key={n.valeur} value={`h:${n.valeur}`}>{n.libelle}</option>)}
-                            </optgroup>
-                          </select>
+                          <ChoixArticle valeur={edition.choix} articles={classer(c.designation)} natures={NATURES} libelles={libellesChoix}
+                            onChoix={(choix) => setEdition({ ...edition, choix })} style={{ flex: '1 1 220px', maxWidth: 320 }} />
                           {edition.choix.startsWith('a:') && (
                             <span style={{ fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                               1 {c.uniteFacture || 'unité'} =
