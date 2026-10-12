@@ -3502,19 +3502,19 @@ src/components/client/factures/FenetrePieces.tsx
     miroir : Aucune pièce : joignez la facture reçue de l'enseigne (PDF, scan ou photo).
 
 src/components/client/factures/LectureFacture.tsx
-  l. 314
+  l. 316
     défaut : Fournisseur :
     miroir : Enseigne :
-  l. 333
+  l. 335
     défaut : Oui, c'est lui⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
     miroir : Oui, c'est elle⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
-  l. 348
+  l. 350
     défaut : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucun fournisseur connu ne correspond</span>
     miroir : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucune enseigne connue ne correspond</span>
-  l. 353
+  l. 355
     défaut : Créer le fournisseur…
     miroir : Créer l'enseigne…
-  l. 415
+  l. 417
     défaut : Fournisseur créé, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
     miroir : Enseigne créée, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
 
