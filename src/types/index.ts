@@ -572,6 +572,8 @@ export interface HistoriqueApproEntry {
   createdByNom?: string | null;
   tauxTva?: number | null;
   prixUnitaireTva?: number | null;
+  /** Étape F3 (factures fournisseur) : ligne d'une facture validée — ni modifiable ni supprimable seule. */
+  factureValidee?: boolean;
 }
 
 export interface FournisseurApproActivite {

@@ -13,7 +13,7 @@ import type { PSM, Worker as TravailleurOcr } from 'tesseract.js';
 import type { Pixels } from '../../../admin/patente/ocr/pixels';
 import { enPng, ouvrirTravailleur, sourceCanvas } from '../../../admin/patente/ocr/lireOcr';
 import { avecTravailleur } from '../../../admin/patente/ocr/travailleur';
-import { ETAPE_OCR, completer, lireImageFacture } from './chaineOcr';
+import { ETAPE_OCR, ajouterPages, completer, lireImageFacture, situer } from './chaineOcr';
 import type { MoteurFacture } from './chaineOcr';
 import { lireEntete } from './entete';
 import { construireRangees, motsDePdf } from './rangees';
@@ -166,6 +166,8 @@ export async function lireFacture(
   const debut = performance.now();
   const lisibles = fichiers.filter((f) => f.type === 'application/pdf' || lisibleEnImage(f));
   const premier = lisibles[0];
+  // Rang de chaque fichier lu dans la facture déposée (étape F3 : la ligne cliquée est encadrée sur sa page).
+  const rangFichier = (f: FichierALire | null | undefined) => Math.max(0, f ? fichiers.indexOf(f) : 0);
   if (!premier) {
     throw new LectureImpossible(fichiers.some((f) => /hei[cf]/.test(f.type))
       ? "Photo HEIC sans copie lisible : la facture sera jointe, saisissez l'en-tête à la main."
@@ -176,32 +178,36 @@ export async function lireFacture(
   // PDF avec texte : aucune reconnaissance de caractères.
   let canvas: HTMLCanvasElement | null = null;
   let derniere: (() => Promise<HTMLCanvasElement>) | null = null;
+  let place = { fichier: 0, page: 1 }; // place de la dernière page lue, si elle l'est
   if (premier.type === 'application/pdf') {
     suivi('Lecture du PDF…');
     const octets = new Uint8Array(await premier.fichier.arrayBuffer());
-    type LuPdf = { entete: EnteteLu; p1: null; pN: null } | { entete: null; p1: HTMLCanvasElement; pN: HTMLCanvasElement | null };
+    type LuPdf = { entete: EnteteLu; p1: null; pN: null; n: number } | { entete: null; p1: HTMLCanvasElement; pN: HTMLCanvasElement | null; n: number };
     const lu = await avecPdf<LuPdf>(octets, async (pdf) => {
       const { pages, caracteres } = await textePdf(pdf);
       if (caracteres >= CARACTERES_MIN) {
-        const entete = lireEntete(pages, 'pdf', client);
+        const entete = situer(lireEntete(pages, 'pdf', client), rangFichier(premier));
         // Texte présent mais muet (polices sans table de caractères) : la page se lit alors comme une image.
-        if (!muet(entete)) return { entete, p1: null, pN: null };
+        if (!muet(entete)) return { entete, p1: null, pN: null, n: pdf.numPages };
       }
       verifier();
       // PDF numérisé : la page 1 en image (et la dernière, rendue tout de suite : le PDF se ferme après).
       const p1 = await rendrePage(pdf, 1);
       const pN = pdf.numPages > 1 ? await rendrePage(pdf, pdf.numPages) : null;
-      return { entete: null, p1, pN };
+      return { entete: null, p1, pN, n: pdf.numPages };
     });
     if (lu.entete) return fin(lu.entete);
     canvas = lu.p1;
-    if (lu.pN) { const pN = lu.pN; derniere = async () => pN; }
+    if (lu.pN) { const pN = lu.pN; derniere = async () => pN; place = { fichier: rangFichier(premier), page: lu.n }; }
   } else {
     suivi('Préparation de l\'image…');
     canvas = await dessinerImage(lisibleEnImage(premier) as Blob);
   }
   const autre = lisibles.length > 1 ? lisibles[lisibles.length - 1] : null;
-  if (!derniere && autre && autre.type !== 'application/pdf') derniere = () => dessinerImage(lisibleEnImage(autre) as Blob);
+  if (!derniere && autre && autre.type !== 'application/pdf') {
+    derniere = () => dessinerImage(lisibleEnImage(autre) as Blob);
+    place = { fichier: rangFichier(autre), page: 1 };
+  }
 
   // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné, et sur arrêt demandé).
   verifier();
@@ -221,14 +227,14 @@ export async function lireFacture(
       if (signal?.aborted) stop(); // arrêt demandé pendant le chargement du lecteur
       try {
         const m = moteur(travailleur);
-        let e = await lireImageFacture(sourceCanvas(page1), m, client, (etape, a) => suivi(etape, derniere ? (a ?? 0) * 0.7 : a));
+        let e = situer(await lireImageFacture(sourceCanvas(page1), m, client, (etape, a) => suivi(etape, derniere ? (a ?? 0) * 0.7 : a)), rangFichier(premier));
         verifier();
         // Totaux absents de la première page (facture de plusieurs pages ou photos) : la dernière les porte. Si elle ne
         // se lit pas, la lecture de la première page est gardée.
         if (derniere && e.totaux.coherents !== true) {
           try {
             const d = await lireImageFacture(sourceCanvas(await derniere()), m, client, (etape, a) => suivi(etape, 0.7 + 0.3 * (a ?? 0)));
-            e = completer(e, d);
+            e = ajouterPages(completer(e, d), situer(d, place.fichier, place.page));
           } catch (err) {
             verifier();
             console.warn('[facture] dernière page illisible', err instanceof Error ? err.name : '');
@@ -244,4 +250,46 @@ export async function lireFacture(
   verifier();
   suivi(ETAPE_OCR, 1);
   return fin(entete);
+}
+
+/** Page affichée dans la fenêtre « Vérifier la facture » (étape F3) : image locale (à libérer), place dans la facture. */
+export interface ApercuPage { fichier: number; page: number; url: string }
+
+/**
+ * Images des pages de la facture déposée, pour la fenêtre « Vérifier la facture » : chaque page d'un PDF (5 au plus par
+ * fichier) rendue en image, chaque photo telle quelle (une photo HEIC : sa copie JPEG). Rien ne quitte le navigateur.
+ * L'appelant libère les adresses (URL.revokeObjectURL) en fermant la fenêtre.
+ */
+export async function apercusDeFacture(fichiers: FichierALire[], signal?: AbortSignal): Promise<ApercuPage[]> {
+  const res: ApercuPage[] = [];
+  try {
+    for (const [k, f] of fichiers.entries()) {
+      if (signal?.aborted) break;
+      if (f.type === 'application/pdf') {
+        const octets = new Uint8Array(await f.fichier.arrayBuffer());
+        await avecPdf(octets, async (pdf) => {
+          // Les 5 premières pages, et la dernière (celle que la lecture relit pour les totaux d'une facture longue).
+          const numeros = [...Array(Math.min(pdf.numPages, PAGES_TEXTE)).keys()].map((x) => x + 1);
+          if (pdf.numPages > PAGES_TEXTE) numeros.push(pdf.numPages);
+          for (const n of numeros) {
+            if (signal?.aborted) break;
+            const canvas = await rendrePage(pdf, n);
+            const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, 'image/jpeg', 0.85));
+            if (blob) res.push({ fichier: k, page: n, url: URL.createObjectURL(blob) });
+          }
+        });
+      } else {
+        const image = lisibleEnImage(f);
+        if (image) res.push({ fichier: k, page: 1, url: URL.createObjectURL(image) });
+      }
+    }
+  } catch (e) {
+    res.forEach((a) => URL.revokeObjectURL(a.url));
+    throw e;
+  }
+  if (signal?.aborted) {
+    res.forEach((a) => URL.revokeObjectURL(a.url));
+    return [];
+  }
+  return res;
 }

@@ -5,6 +5,7 @@
 // présente en tableau ; des contrôles (clé du matricule, date plausible, HT + FODEC + TVA + timbre = TTC).
 // Le matricule et le nom du CLIENT, imprimés comme destinataire, ne sont jamais pris pour ceux du fournisseur.
 import { cleAttendue, corrigerChiffres } from '../../../admin/patente/ocr/matricule.ts';
+import { lireLignes } from './lignes.ts';
 import { datesDuTexte, millime, nombresDeRangee } from './nombres.ts';
 import type { NombreLu } from './nombres.ts';
 import { motA, rangee, segments } from './rangees.ts';
@@ -710,6 +711,9 @@ export function lireEntete(pages: readonly PageLue[], source: SourceLue, client:
     date,
     totaux: t,
     lignes: pages.flatMap((p) => p.rangees.map((r) => r.texte)).filter(Boolean),
+    // Étape F3 : les lignes du tableau, à faire vérifier dans la fenêtre « Vérifier la facture ».
+    lignesFacture: lireLignes(pages, source),
+    pages: pages.map((p, k) => ({ largeur: p.largeur, hauteur: p.hauteur, fichier: 0, page: k + 1 })),
     avertissements,
   };
 }

@@ -109,9 +109,11 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
   return (
     <ConfirmContext.Provider value={{ confirm, prompt, alerte }}>
       {children}
+      {/* Au-dessus de tout (1300) : les fenêtres de la saisie des appros (1150, au-dessus du panneau « Aperçu saisie »
+          à 1100) demandent aussi des confirmations (étape F3, factures fournisseur). */}
       {pending && (
         <div onMouseDown={(e) => { if (e.target === e.currentTarget) settle(false); }}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 1300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <style>{`@keyframes cdlg-pop { from { opacity: 0; transform: translateY(10px) scale(0.97); } to { opacity: 1; transform: none; } }`}</style>
           <div role="dialog" aria-modal="true" aria-label={pending.opts.title}
             style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: '22px 24px', boxShadow: '0 24px 60px rgba(15,23,42,0.35)', animation: 'cdlg-pop 0.16s ease-out' }}>
