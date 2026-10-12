@@ -96,7 +96,7 @@ export default function DetailFactureValidee({ factureId, refFacture, montantTTC
               <tr key={l.rang}>
                 <td style={cellule}>
                   <div style={{ fontWeight: 600 }}>{l.designation}</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{[l.reference && `réf. ${l.reference}`, l.unite].filter(Boolean).join(' · ')}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{[l.reference && `code ${voc.nom('fournisseur')} ${l.reference}`, l.unite].filter(Boolean).join(' · ')}</div>
                 </td>
                 <td style={{ ...cellule, textAlign: 'right' }}>{fNb(l.quantite)}</td>
                 <td style={{ ...cellule, textAlign: 'right' }}>{f3(l.prixUnitaire)}{l.remise > 0 ? <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>remise {fNb(l.remise)} %</div> : null}</td>
