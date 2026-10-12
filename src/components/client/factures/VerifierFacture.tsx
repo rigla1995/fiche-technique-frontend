@@ -120,7 +120,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
     setCtxErreur(null);
     setLignes((ls) => (ls.length ? ls : preparer(c)));
   };
-  const erreurContexte = (e: unknown) => setCtxErreur(messageErreur(e, 'La liste des articles n\'a pas pu être chargée.'));
+  const erreurContexte = (e: unknown) => setCtxErreur(messageErreur(e, `La liste ${voc.du('article', true)} n'a pas pu être chargée.`));
   const charger = () => { lireContexte().then(({ data }) => appliquer(data as Contexte)).catch(erreurContexte); };
   useEffect(() => {
     let vivant = true;
@@ -186,7 +186,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const compter = (f: (l: LigneEdition, i: number) => boolean) => lignes.filter(f).length;
   if (!lignes.length) blocages.push('aucune ligne');
   const aChoisir = compter((l) => !l.choix);
-  if (aChoisir) blocages.push(`${n(aChoisir)} à choisir (${voc.nom('article')} ou hors stock)`);
+  if (aChoisir) blocages.push(`${n(aChoisir)} à choisir (${voc.nom('article')} ou hors ${voc.nom('stock')})`);
   const aConfirmer = compter((l) => Boolean(l.choix) && l.etat === 'proposee');
   if (aConfirmer) blocages.push(`${aConfirmer} proposition${aConfirmer > 1 ? 's' : ''} à confirmer`);
   const sansTva = compter((_, i) => valeurs[i].t === null || valeurs[i].t! < 0 || valeurs[i].t! > 100);
@@ -194,7 +194,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const malLues = compter((l, i) => !l.designation.trim() || !(valeurs[i].q! > 0) || valeurs[i].m === null || valeurs[i].m! < 0
     || (Boolean(valeurs[i].article) && !(valeurs[i].conv! > 0)));
   if (malLues) blocages.push(`${n(malLues)} incomplète${malLues > 1 ? 's' : ''} (désignation, quantité, montant ou conversion)`);
-  if (lignes.length && !valeurs.some((v) => v.article)) blocages.push(`aucune ligne n'entre en stock (choisissez au moins ${voc.un('article')})`);
+  if (lignes.length && !valeurs.some((v) => v.article)) blocages.push(`aucune ligne n'entre en ${voc.nom('stock')} (choisissez au moins ${voc.un('article')})`);
   if (!ctx) blocages.push(`liste ${voc.du('article', true)} non chargée`);
   const remiseLue = nb(remiseGlobale);
   if (remiseGlobale.trim() && (remiseLue === null || remiseLue < 0)) blocages.push('remise globale illisible');
@@ -380,7 +380,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
                         <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>{i + 1}</span>
                         <span style={{ padding: '1px 8px', borderRadius: 10, fontSize: '0.66rem', fontWeight: 800, background: v.horsStock ? '#e0e7ff' : e.fond, color: v.horsStock ? '#3730a3' : e.texte }}>
-                          {v.horsStock && l.etat !== 'proposee' ? 'hors stock' : e.libelle}
+                          {v.horsStock && l.etat !== 'proposee' ? `hors ${voc.nom('stock')}` : e.libelle}
                         </span>
                         {l.raison && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{l.raison}</span>}
                         {l.lue?.aRelire && <span style={{ fontSize: '0.68rem', color: '#b45309' }} title="Lecture fragile : relisez cette ligne sur la facture">à relire</span>}
@@ -419,7 +419,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                             <optgroup label={dejaAchetes.length ? `Autres ${voc.nom('article', true)}` : voc.Titre('article', true)}>
                               {autres.map((a) => <option key={a.id} value={`a:${a.id}`}>{a.nom} ({a.unite}){a.selectionne ? '' : ' — ajouté ici'}</option>)}
                             </optgroup>
-                            <optgroup label="Hors stock (reste sur la facture)">
+                            <optgroup label={`Hors ${voc.nom('stock')} (reste sur la facture)`}>
                               {NATURES.map((x) => <option key={x.valeur} value={`h:${x.valeur}`}>{x.libelle}</option>)}
                             </optgroup>
                           </select>
@@ -439,7 +439,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                       </div>
                       {v.article && v.q !== null && v.conv !== null && v.conv > 0 && (
                         <div style={{ fontSize: '0.74rem', color: '#334155', marginTop: 4 }}>
-                          → en stock : <strong>{fNb(Math.round(v.q * v.conv * 1000) / 1000)} {v.article.unite}</strong>
+                          → en {voc.nom('stock')} : <strong>{fNb(Math.round(v.q * v.conv * 1000) / 1000)} {v.article.unite}</strong>
                           {prixStock !== null && <> à <strong>{f3(prixStock)}</strong> DT HT / {v.article.unite}</>}
                           {!v.article.selectionne && <span style={{ color: 'var(--text-muted)' }}> · {voc.acc('article', 'ajouté', 'ajoutée')} {cible.type === 'activite' ? `à ${voc.ce('activite')}` : `à ${voc.ce('labo')}`}</span>}
                           {ecart !== null && Math.abs(ecart) > 30 && (
@@ -451,7 +451,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                         <div onClick={(ev) => ev.stopPropagation()} style={{ marginTop: 6, padding: 8, border: '1px dashed #cbd5e1', borderRadius: 8, display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'flex-end' }}>
                           <label style={{ flex: '2 1 180px' }}><span style={etiquette}>Nom {voc.du('article')}</span>
                             <input style={{ ...petit, width: '100%' }} value={l.creation.nom} maxLength={100} onChange={(ev) => modifier(i, { creation: { ...l.creation!, nom: ev.target.value } }, false)} /></label>
-                          <label style={{ flex: '1 1 110px' }}><span style={etiquette}>Unité de stock</span>
+                          <label style={{ flex: '1 1 110px' }}><span style={etiquette}>Unité ({voc.nom('stock')})</span>
                             <select style={{ ...petit, width: '100%' }} value={l.creation.uniteId} onChange={(ev) => modifier(i, { creation: { ...l.creation!, uniteId: ev.target.value } }, false)}>
                               <option value="">—</option>
                               {(unites ?? []).map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
@@ -514,7 +514,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
             {!erreur && blocages.length > 0 && <div style={{ color: '#92400e' }}>Avant de valider : {blocages.join(' ; ')}.</div>}
             {!erreur && !blocages.length && (
               <div style={{ color: '#334155' }}>
-                {nbStock} ligne{nbStock > 1 ? 's' : ''} en stock{lignes.length - nbStock ? `, ${lignes.length - nbStock} hors stock` : ''} · la pièce ({fichiers.length} fichier{fichiers.length > 1 ? 's' : ''}) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
+                {nbStock} ligne{nbStock > 1 ? 's' : ''} en {voc.nom('stock')}{lignes.length - nbStock ? `, ${lignes.length - nbStock} hors ${voc.nom('stock')}` : ''} · la pièce ({fichiers.length} fichier{fichiers.length > 1 ? 's' : ''}) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
               </div>
             )}
           </div>

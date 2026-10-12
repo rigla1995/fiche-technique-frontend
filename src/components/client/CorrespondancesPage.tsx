@@ -77,7 +77,7 @@ export default function CorrespondancesPage() {
   const oublier = async (c: Correspondance) => {
     const ok = await confirm({
       title: 'Oublier cette correspondance ?',
-      message: `« ${c.designation} » de ${c.fournisseurNom} ne sera plus reconnue : la prochaine facture demandera de nouveau ${voc.le('article')}. Les factures déjà validées ne changent pas.`,
+      message: `« ${c.designation} » de ${c.fournisseurNom} ne sera plus reconnue : la prochaine facture redemandera ${voc.le('article')}. Les factures déjà validées ne changent pas.`,
       confirmLabel: 'Oublier', tone: 'danger',
     });
     if (!ok) return;
@@ -165,7 +165,7 @@ export default function CorrespondancesPage() {
                             <optgroup label={voc.Titre('article', true)}>
                               {articles.map((a) => <option key={a.id} value={`a:${a.id}`}>{a.name}{a.unitName ? ` (${a.unitName})` : ''}</option>)}
                             </optgroup>
-                            <optgroup label="Hors stock">
+                            <optgroup label={`Hors ${voc.nom('stock')}`}>
                               {NATURES.map((n) => <option key={n.valeur} value={`h:${n.valeur}`}>{n.libelle}</option>)}
                             </optgroup>
                           </select>
@@ -179,7 +179,7 @@ export default function CorrespondancesPage() {
                           )}
                         </div>
                       ) : c.horsStock ? (
-                        <span style={{ color: '#3730a3' }}>{NATURES.find((n) => n.valeur === c.horsStock)?.libelle ?? 'Hors stock'} <span style={{ color: 'var(--text-muted)' }}>(hors stock)</span></span>
+                        <span style={{ color: '#3730a3' }}>{NATURES.find((n) => n.valeur === c.horsStock)?.libelle ?? `Hors ${voc.nom('stock')}`} <span style={{ color: 'var(--text-muted)' }}>(hors {voc.nom('stock')})</span></span>
                       ) : (
                         <>
                           <div style={{ fontWeight: 600 }}>{c.articleNom}</div>

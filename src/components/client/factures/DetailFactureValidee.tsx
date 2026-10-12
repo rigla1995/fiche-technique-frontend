@@ -48,7 +48,7 @@ export default function DetailFactureValidee({ factureId, refFacture, montantTTC
   const supprimer = async () => {
     const ok = await confirm({
       title: `Supprimer la facture ${refFacture ?? ''} ?`,
-      message: `Toute la facture part, définitivement : ses lignes, ce qu'elle a fait entrer en stock, et sa pièce jointe (${montantTTC.toFixed(3)} DT TTC). Ce que LabFlow a appris de ses lignes est gardé. Vous pourrez la déposer de nouveau.`,
+      message: `Toute la facture part, définitivement : ses lignes, ce qu'elle a fait entrer en ${voc.nom('stock')}, et sa pièce jointe (${montantTTC.toFixed(3)} DT TTC). Ce que LabFlow a appris de ses lignes est gardé. Vous pourrez la déposer de nouveau.`,
       confirmLabel: 'Supprimer la facture',
       tone: 'danger',
     });
@@ -63,7 +63,7 @@ export default function DetailFactureValidee({ factureId, refFacture, montantTTC
     }
   };
 
-  const libelleHors = (n: string | null) => NATURES.find((x) => x.valeur === n)?.libelle ?? 'Hors stock';
+  const libelleHors = (n: string | null) => NATURES.find((x) => x.valeur === n)?.libelle ?? `Hors ${voc.nom('stock')}`;
 
   return (
     <div style={{ overflowX: 'auto' }}>
@@ -85,7 +85,7 @@ export default function DetailFactureValidee({ factureId, refFacture, montantTTC
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
           <thead>
             <tr style={{ background: `${accent}10` }}>
-              {['Ligne de la facture', 'Qté', 'Prix HT', 'TVA', 'Montant HT', `${voc.Nom('article')} LabFlow`, 'En stock'].map((h, i) => (
+              {['Ligne de la facture', 'Qté', 'Prix HT', 'TVA', 'Montant HT', `${voc.Nom('article')} LabFlow`, `En ${voc.nom('stock')}`].map((h, i) => (
                 <th key={h} style={{ ...cellule, fontWeight: 700, textAlign: i === 0 || i === 5 ? 'left' : 'right', color: accent, textTransform: 'uppercase', fontSize: '0.64rem', letterSpacing: '0.05em' }}>{h}</th>
               ))}
             </tr>
@@ -102,7 +102,7 @@ export default function DetailFactureValidee({ factureId, refFacture, montantTTC
                 <td style={{ ...cellule, textAlign: 'right' }}>{fNb(l.tauxTva)} %</td>
                 <td style={{ ...cellule, textAlign: 'right', fontWeight: 700 }}>{f3(l.montant)}</td>
                 <td style={cellule}>
-                  {l.horsStock ? <span style={{ color: '#3730a3' }}>{libelleHors(l.horsStock)} <span style={{ color: 'var(--text-muted)' }}>(hors stock)</span></span>
+                  {l.horsStock ? <span style={{ color: '#3730a3' }}>{libelleHors(l.horsStock)} <span style={{ color: 'var(--text-muted)' }}>(hors {voc.nom('stock')})</span></span>
                     : l.articleNom ? <>{l.articleNom}{l.conversion != null && l.conversion !== 1 ? <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>1 {l.unite || 'unité'} = {fNb(l.conversion)} {l.uniteStock}</div> : null}</>
                       : <span style={{ color: 'var(--text-muted)' }}>{voc.Nom('article')} {voc.acc('article', 'supprimé', 'supprimée')}</span>}
                 </td>

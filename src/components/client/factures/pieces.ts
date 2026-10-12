@@ -205,7 +205,7 @@ export async function validerAvecConfirmation(
     const existantes = (e as { response?: { data?: { factures?: FactureSemblable[] } } }).response?.data?.factures ?? [];
     const ok = await confirmer({
       title: 'Facture déjà saisie ?',
-      message: `Une facture n° ${f.refFacture} de ${ceFournisseur} a déjà été saisie à la main. Vérifiez que ce n'est pas la même : ses articles entreraient deux fois en stock.`,
+      message: `Une facture n° ${f.refFacture} de ${ceFournisseur} a déjà été saisie à la main. Vérifiez que ce n'est pas la même : elle serait comptée deux fois.`,
       details: existantes.map((x) => `${fmtJour(x.dateFacture)}${x.lieuNom ? ` · ${x.lieuNom}` : ''}${x.montantTTC != null ? ` · ${x.montantTTC.toFixed(3)} DT TTC` : ''}`),
       confirmLabel: 'Valider quand même',
       tone: 'primary',

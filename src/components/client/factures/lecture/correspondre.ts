@@ -12,7 +12,7 @@ export const NATURES: { valeur: NatureHorsStock; libelle: string }[] = [
   { valeur: 'livraison', libelle: 'Frais de livraison' },
   { valeur: 'consigne', libelle: 'Consigne' },
   { valeur: 'service', libelle: 'Service' },
-  { valeur: 'autre', libelle: 'Autre (hors stock)' },
+  { valeur: 'autre', libelle: 'Autre frais' },
 ];
 
 export interface ArticleConnu { id: number; nom: string; unite: string; categorie?: string | null; selectionne?: boolean }
@@ -109,7 +109,7 @@ export function proposerConversion(designation: string, uniteFacture: string | n
   if (!stock && nombreDans && nombreDans > 1) {
     return { n: nombreDans, sure: true, raison: `${fmt(nombreDans)} ${uniteStock} par unité de la facture` };
   }
-  return { n: 1, sure: false, raison: 'une unité de la facture = une unité de stock (à vérifier)' };
+  return { n: 1, sure: false, raison: 'à vérifier' };
 }
 
 // ── Article proposé ──────────────────────────────────────────────────────────────────────────────────────────────
@@ -186,7 +186,7 @@ export function proposer(l: { designation: string; reference?: string | null; un
   // 3. Hors stock reconnaissable (transport, consigne…).
   const plat = normaliserDesignation(l.designation);
   for (const [motif, nature] of HORS_STOCK) {
-    if (motif.test(plat)) return { etat: 'proposee', articleId: null, horsStock: nature, conversion: 1, conversionSure: true, raison: 'hors stock (d\'après la désignation)' };
+    if (motif.test(plat)) return { etat: 'proposee', articleId: null, horsStock: nature, conversion: 1, conversionSure: true, raison: 'd\'après la désignation' };
   }
   // 4. Le nom d'un article se retrouve en entier dans la désignation (déjà acheté chez ce fournisseur d'abord).
   const achetes = new Set(ctx.achats.map((a) => a.articleId));
