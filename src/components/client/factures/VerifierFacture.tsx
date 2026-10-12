@@ -52,6 +52,7 @@ interface LigneEdition {
 }
 
 const TIMBRES = [0, 1, 1.5, 2];
+const VALEUR_MAX = 9999999.999; // quantité (et quantité en stock) au plus, comme le serveur (DECIMAL(10,3))
 const f3 = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '' : n.toFixed(3).replace('.', ','));
 const fNb = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '' : String(Math.round(n * 1e6) / 1e6).replace('.', ','));
 /** Nombre saisi (« 1 234,5 », « 12.5 », « 19 % ») ; null si vide ou illisible. */
@@ -186,9 +187,12 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
     }]);
   };
 
-  // Lignes lisibles (nombres) et totaux recalculés.
+  // Lignes lisibles (nombres, arrondis comme au serveur : millime, TVA au centième, conversion au millionième) et
+  // totaux recalculés.
+  const arrondi = (x: number | null, pas: number) => (x === null ? null : Math.round(x * pas) / pas);
   const valeurs = lignes.map((l) => {
-    const q = nb(l.quantite), m = nb(l.montant), p = nb(l.prix), r = nb(l.remise) ?? 0, t = nb(l.tva), conv = nb(l.conversion);
+    const q = arrondi(nb(l.quantite), 1000), m = arrondi(nb(l.montant), 1000), p = arrondi(nb(l.prix), 1000);
+    const r = arrondi(nb(l.remise), 1000) ?? 0, t = arrondi(nb(l.tva), 100), conv = arrondi(nb(l.conversion), 1e6);
     const article = l.choix.startsWith('a:') ? articles.get(Number(l.choix.slice(2))) ?? null : null;
     return { q, m, p, r, t, conv, article, horsStock: l.choix.startsWith('h:') ? l.choix.slice(2) as NatureHorsStock : null };
   });
@@ -211,17 +215,19 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   // Mêmes contrôles que le serveur : une ligne refusée là-bas ne doit pas pouvoir partir d'ici.
   const malLues = compter((l, i) => {
     const v = valeurs[i];
-    return !l.designation.trim() || !(v.q! > 0) || v.m === null || (Boolean(v.article) && v.m < 0)
-      || (Boolean(l.prix.trim()) && v.p === null) || (Boolean(l.remise.trim()) && nb(l.remise) === null)
-      || v.r < 0 || v.r > 100
-      || (Boolean(v.article) && (!(v.conv! > 0) || Math.round((v.q ?? 0) * (v.conv ?? 0) * 1000) / 1000 <= 0));
+    return !l.designation.trim() || !(v.q! > 0) || v.q! > VALEUR_MAX || v.m === null || (Boolean(v.article) && v.m < 0)
+      || (Boolean(l.prix.trim()) && v.p === null) || (Boolean(v.article) && v.p !== null && v.p < 0)
+      || (Boolean(l.remise.trim()) && nb(l.remise) === null) || v.r < 0 || v.r > 100
+      || (Boolean(v.article) && (!(v.conv! > 0) || Math.round((v.q ?? 0) * (v.conv ?? 0) * 1000) / 1000 <= 0
+        || (v.q ?? 0) * (v.conv ?? 0) > VALEUR_MAX));
   });
   if (malLues) blocages.push(`${n(malLues)} incomplète${malLues > 1 ? 's' : ''} ou illisible${malLues > 1 ? 's' : ''} (désignation, quantité, prix, remise de 0 à 100 %, montant ou conversion)`);
+  if (lignes.length && calcul.ht < 0) blocages.push('total HT négatif (les retours dépassent les achats)');
   const conversionsDouteuses = compter((l, i) => Boolean(valeurs[i].article) && !l.conversionSure);
   if (conversionsDouteuses) blocages.push(`conversion à vérifier sur ${n(conversionsDouteuses)} (✓ Conversion juste, ou corrigez-la)`);
   const arrondis = valeurs.map((v, i) => (v.article && v.q && v.conv ? ecartArrondiStock(calcul.couts[i], v.q, v.conv, calcul.prixStock[i]) : null));
   const tropPetits = arrondis.filter((x) => x !== null).length;
-  if (tropPetits) blocages.push(`${n(tropPetits)} au prix par unité trop petit pour le millime : choisissez ${voc.un('article')} à l'unité plus grande (kg plutôt que g)`);
+  if (tropPetits) blocages.push(`${n(tropPetits)} au prix par unité trop petit pour le millime : choisissez ${voc.un('article')} à l'unité plus grande (kg plutôt que g, paquet ou carton plutôt que pièce)`);
   if (lignes.length > 300) blocages.push('300 lignes au plus par facture');
   if (lignes.length && !valeurs.some((v) => v.article)) blocages.push(`aucune ligne n'entre en ${voc.nom('stock')} (choisissez au moins ${voc.un('article')})`);
   if (!ctx) blocages.push(`liste ${voc.du('article', true)} non chargée`);
@@ -241,7 +247,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
         const base = {
           designation: l.designation.trim(), reference: l.reference.trim() || null, unite: l.unite.trim() || null,
           // Texte LU : la clé apprise se calcule dessus (la facture suivante sera lue pareil, pas corrigée pareil).
-          ...(l.lue ? { designationLue: l.lue.designationPremiere || l.lue.designation, referenceLue: l.lue.reference ?? '' } : {}),
+          ...(l.lue ? { designationLue: l.lue.designationCle || l.lue.designation, referenceLue: l.lue.reference ?? '' } : {}),
           quantite: v.q as number, prixUnitaire: v.p, remise: v.r, tauxTva: v.t as number, montant: v.m as number,
         };
         return v.article ? { ...base, articleId: v.article.id, conversion: v.conv as number } : { ...base, horsStock: v.horsStock as NatureHorsStock };

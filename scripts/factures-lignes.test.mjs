@@ -190,15 +190,92 @@ test('relecture : colonnes TTC seules ramenées en HT avec le taux de la ligne (
   assert.deepEqual([l.montant, l.prixUnitaire, l.tauxTva, l.luEnTtc, l.aRelire], [10, 5, 19, true, true]);
 });
 
-test('relecture : un intertitre n\'est collé à aucune ligne ; une rangée de remise ou de TVA au pied n\'est pas une ligne', () => {
+test('relecture : un intertitre n\'est collé à aucune ligne ; une rangée de remise n\'est pas une ligne et n\'arrête pas le tableau', () => {
   const p = page([
     [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
     [220, [[40, 'BOISSONS']]],
     [240, [[40, 'Eau minérale 1,5 L'], [305, '6'], [360, '0,600'], [500, '3,600']]],
     [260, [[40, 'Remise 5%'], [500, '0,180']]],
     [280, [[40, 'Jus orange'], [305, '1'], [360, '2,000'], [500, '2,000']]],
+    [296, [[40, 'CONSERVES']]],
+    [312, [[40, 'Concentré tomate 800 g'], [305, '2'], [360, '3,100'], [500, '6,200']]],
+    [340, [[40, 'TVA 19%'], [360, '11,620'], [500, '2,208']]],
+    [360, [[40, 'Riz long 5 kg'], [305, '1'], [360, '17,250'], [500, '17,250']]],
   ]);
-  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designation), ['Eau minérale 1,5 L']);
+  // « CONSERVES » : 0,6 hauteur de blanc, sans chiffre → intertitre ; le récapitulatif de TVA arrête le tableau.
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designation), ['Eau minérale 1,5 L', 'Jus orange', 'Concentré tomate 800 g']);
+});
+
+test('contre-relecture : suite d\'une désignation en majuscules ou commençant par une majuscule (juste dessous)', () => {
+  const p = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'P.U. HT'], [500, 'Montant HT']]],
+    [220, [[40, 'FARINE PATISSIERE T45'], [305, '2'], [360, '41,500'], [500, '83,000']]],
+    [231, [[40, 'SAC 25 KG']]],
+    [250, [[40, 'LAIT DEMI ECREME UHT'], [305, '5'], [360, '8,700'], [500, '43,500']]],
+    [261, [[40, 'PACK 6 X 1 L']]],
+    [280, [[40, "Thon à l'huile 160 g"], [305, '3'], [360, '132,000'], [500, '396,000']]],
+    [296, [[40, 'Carton 48']]],
+    [320, [[40, 'FROMAGE RAPE']]],
+    [331, [[40, 'EMMENTAL 1 KG'], [305, '2'], [360, '24,600'], [500, '49,200']]],
+    [360, [[350, 'Total HT'], [500, '571,700']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designation),
+    ['FARINE PATISSIERE T45 SAC 25 KG', 'LAIT DEMI ECREME UHT PACK 6 X 1 L', "Thon à l'huile 160 g Carton 48", 'FROMAGE RAPE EMMENTAL 1 KG']);
+});
+
+test('contre-relecture : clé = désignation sans les rangées de lot ou de date (deux conditionnements, deux clés)', () => {
+  const p = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'P.U. HT'], [500, 'Montant HT']]],
+    [220, [[40, 'Eau minérale Safia pack'], [305, '10'], [360, '3,600'], [500, '36,000']]],
+    [231, [[40, '6 x 1,5 L']]],
+    [250, [[40, 'Eau minérale Safia pack'], [305, '10'], [360, '2,400'], [500, '24,000']]],
+    [261, [[40, '6 x 0,5 L']]],
+    [262 + 10, [[40, 'Lot 2345 DLC 12/11/2026']]],
+    [300, [[350, 'Total HT'], [500, '60,000']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designationCle), ['Eau minérale Safia pack 6 x 1,5 L', 'Eau minérale Safia pack 6 x 0,5 L']);
+});
+
+test('contre-relecture : titre « Désignation » centré, désignation courte (« Oeufs ») gardée', () => {
+  const p = page([
+    [200, [[40, 'N°'], [140, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
+    [220, [[45, '1'], [65, 'Sel fin 1 kg'], [305, '5'], [360, '0,450'], [500, '2,250']]],
+    [240, [[45, '2'], [65, 'Oeufs'], [305, '1'], [360, '12,000'], [500, '12,000']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designation), ['Sel fin 1 kg', 'Oeufs']);
+});
+
+test('contre-relecture : un total chiffré (« Total | 17 | 213,500 ») arrête le tableau', () => {
+  const p = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'P.U. HT'], [430, 'TVA'], [500, 'Montant HT']]],
+    [220, [[40, 'Farine T45 sac 25 kg'], [305, '2'], [360, '41,500'], [435, '7%'], [500, '83,000']]],
+    [240, [[40, 'Lait UHT 1 L'], [305, '15'], [360, '8,700'], [435, '7%'], [500, '130,500']]],
+    [270, [[40, 'Total'], [305, '17'], [500, '213,500']]],
+    [290, [[40, 'TVA 7%'], [360, '213,500'], [500, '14,945']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designation), ['Farine T45 sac 25 kg', 'Lait UHT 1 L']);
+});
+
+test('contre-relecture : « Report » en haut d\'une page suivante sauté, « A reporter » en bas arrête la page', () => {
+  const titre = [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]];
+  const p1 = page([titre, [220, [[40, 'Sucre 1 kg'], [305, '5'], [360, '1,350'], [500, '6,750']]], [240, [[40, 'A reporter'], [500, '6,750']]]]);
+  const p2 = page([titre, [220, [[40, 'Report'], [500, '6,750']]], [240, [[40, 'Lait entier 1 L'], [305, '5'], [360, '8,700'], [500, '43,500']]]]);
+  assert.deepEqual(lireLignes([p1, p2], 'pdf').map((l) => l.designation), ['Sucre 1 kg', 'Lait entier 1 L']);
+});
+
+test('contre-relecture : P.U. HT et montant TTC — montant HT = quantité × prix, le TTC contrôle', () => {
+  const avecTva = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [350, 'P.U. HT'], [430, 'TVA'], [500, 'Montant TTC']]],
+    [220, [[40, 'Fromage râpé 1 kg'], [305, '3'], [350, '12,345'], [435, '19%'], [500, '44,072']]],
+  ]);
+  const [l] = lireLignes([avecTva], 'pdf');
+  assert.deepEqual([l.montant, l.luEnTtc, l.aRelire], [37.035, false, false]);
+  const sansTva = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [350, 'P.U. HT'], [500, 'Montant TTC']]],
+    [220, [[40, 'Fromage râpé 1 kg'], [305, '3'], [350, '12,345'], [500, '44,072']]],
+  ]);
+  const [m] = lireLignes([sansTva], 'pdf');
+  assert.deepEqual([m.montant, m.prixUnitaire, m.luEnTtc], [37.035, 12.345, false]);
 });
 
 test('relecture : sans titre (photo), une rangée qui commence par un n° est lue', () => {
@@ -209,12 +286,12 @@ test('relecture : sans titre (photo), une rangée qui commence par un n° est lu
   assert.deepEqual(lireLignes([p], 'ocr').map((l) => [l.designation, l.quantite, l.montant]), [['Eau minérale 1,5 L', 5, 18]]);
 });
 
-test('relecture : première rangée gardée pour la clé (n° de lot dessous)', () => {
+test('relecture : rangée de lot hors de la clé (n° de lot dessous)', () => {
   const p = page([
     [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
     [220, [[40, 'Farine T45 sac 25 kg'], [305, '1'], [360, '41,500'], [500, '41,500']]],
     [231, [[40, '(lot 2345 dlc 12/2026)']]],
   ]);
   const [l] = lireLignes([p], 'pdf');
-  assert.deepEqual([l.designation, l.designationPremiere], ['Farine T45 sac 25 kg (lot 2345 dlc 12/2026)', 'Farine T45 sac 25 kg']);
+  assert.deepEqual([l.designation, l.designationCle], ['Farine T45 sac 25 kg (lot 2345 dlc 12/2026)', 'Farine T45 sac 25 kg']);
 });

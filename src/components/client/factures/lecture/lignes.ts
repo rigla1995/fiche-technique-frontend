@@ -156,9 +156,9 @@ const TAUX_TUNISIENS = [0, 6, 7, 12, 13, 19];
 
 interface Brute {
   des: string[];
-  /** Désignation de la première rangée seulement : la clé d'apprentissage (un n° de lot sur la rangée suivante change
-   * d'une facture à l'autre). */
-  desPremiere: string | null;
+  /** Rangées de la désignation qui font la clé d'apprentissage : toutes, sauf une rangée suivante de lot ou de date
+   * (elle change d'une facture à l'autre). */
+  desCle: string[];
   ref: string[];
   unite: string[];
   qte: number | null;
@@ -172,7 +172,7 @@ interface Brute {
   rangees: Rangee[];
 }
 
-const vide = (): Brute => ({ des: [], desPremiere: null, ref: [], unite: [], qte: null, pu: null, puTtc: null, remise: null, tva: null, montant: null, ttc: null, nombres: [], rangees: [] });
+const vide = (): Brute => ({ des: [], desCle: [], ref: [], unite: [], qte: null, pu: null, puTtc: null, remise: null, tva: null, montant: null, ttc: null, nombres: [], rangees: [] });
 
 /** Les nombres d'une rangée, hors désignation et hors colonnes TTC (une désignation porte souvent « 25 kg »). */
 function nombresHorsDesignation(r: Rangee, colonnes: ColonneVue[] | null): { valeur: number; pourcent: boolean }[] {
@@ -239,6 +239,11 @@ function finaliser(b: Brute, source: SourceLue): LigneLue | null {
     if (d && tva === null) tva = d.tva;
   }
   if (tva !== null && !(tva >= 0 && tva <= 30)) tva = null;
+  // P.U. HT imprimé avec un montant TTC : le montant HT est quantité × prix (exact) ; le TTC ne sert que de contrôle.
+  if (montant === null && b.ttc !== null && qte !== null && pu !== null) {
+    montant = millime(qte * pu * (1 - (remise ?? 0) / 100));
+    if (tva !== null && Math.abs(montant * (1 + tva / 100) - b.ttc) > Math.max(0.011, Math.abs(b.ttc) * 0.001)) aRelire = true;
+  }
   // Colonnes TTC seules : ramenées en HT avec le taux de la ligne (sinon la fenêtre le fera avec le taux de la facture).
   const luEnTtc = montant === null && b.ttc !== null;
   if (luEnTtc) {
@@ -263,9 +268,9 @@ function finaliser(b: Brute, source: SourceLue): LigneLue | null {
   if (controle === false) aRelire = true;
   const unite = b.unite.join(' ').trim() || null;
   const reference = b.ref.join(' ').trim() || null;
-  const premiere = (b.desPremiere ?? designation).replace(/\s+/g, ' ').trim();
+  const cle = (b.desCle.length ? b.desCle.join(' ') : designation).replace(/\s+/g, ' ').trim();
   return {
-    designation: designation.slice(0, 300), designationPremiere: premiere.slice(0, 300),
+    designation: designation.slice(0, 300), designationCle: cle.slice(0, 300),
     reference: reference ? reference.slice(0, 60) : null, unite: unite ? unite.slice(0, 30) : null,
     quantite: qte, prixUnitaire: pu, remise: remise && remise > 0 ? remise : null, tauxTva: tva, montant, controle, aRelire,
     luEnTtc, montantTtc: luEnTtc ? b.ttc : null, prixTtc: luEnTtc ? b.puTtc : null,
@@ -273,9 +278,25 @@ function finaliser(b: Brute, source: SourceLue): LigneLue | null {
   };
 }
 
-/** La rangée prolonge-t-elle la désignation d'avant ? (« (carton 48) », « demi-écrémé 1 L », « de tournesol »…) */
-const prolonge = (precedente: string, suite: string) => /^[\p{Ll}(\d-]/u.test(suite.trim())
-  || /\b(de|du|des|d|a|au|aux|en|et|pour|avec|sans)$|[,(-]$/.test(plat(precedente));
+/**
+ * La rangée `suite` (sa désignation) prolonge-t-elle la désignation d'avant ? Jamais à une hauteur de texte ou plus (un
+ * intertitre « BOISSONS » est séparé comme une ligne) ; oui juste dessous dans un PDF (moins d'une demi-hauteur : la
+ * même cellule, « SAC 25 KG » sous « FARINE PATISSIERE » — sur une image, les positions lues ne sont pas assez sûres :
+ * un débris de lecture se collerait) ou quand elle en a l'air (« (carton 48) », « de tournesol »). `chiffres` : une
+ * suite qui porte un chiffre (« Carton 48 ») en est une — pas quand la suite est elle-même une ligne chiffrée.
+ */
+const prolonge = (precedente: string, suite: string, blanc: number, h: number, chiffres: boolean, pdf: boolean) => blanc < 0.9 * h
+  && ((pdf && blanc < 0.5 * h) || /^[\p{Ll}(\d-]/u.test(suite.trim()) || (chiffres && /\d/.test(suite))
+    || /\b(de|du|des|d|a|au|aux|en|et|pour|avec|sans)$|[,(-]$/.test(plat(precedente)));
+
+/** Rangée de lot ou de date sous une désignation : hors de la clé apprise (elle change à chaque livraison). */
+const LOT_OU_DATE = /\b(lot|dlc|ddm|dluo|exp|peremption|fab)\b|\b\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}\b|\b\d{2}[/.-]20\d{2}\b/;
+
+// Rangées sautées sans arrêter le tableau : une remise, un escompte ou un sous-total entre deux lignes, le report en
+// haut d'une page suivante.
+const SAUTEE = /^(sous[\s-]?total|remise\b|escompte|ristourne|report\b)/;
+// Un total ou une taxe arrête le tableau même chiffré (« Total | 17 | 213,500 », « TVA 7% | 213,500 | 14,945 »).
+const TOTAL_OU_TAXE = /^(total|totaux|sous[\s-]?total|net\s*a\s*pay|net\s*h\.?t|montant\s*(h\.?t|t\.?t\.?c|total|net|a\s*payer)|arrete|timbre|taux\b|tva\b|t\.v\.a\b|fodec|retenue|a\s*reporter)/;
 
 /** Jeton d'une colonne N° ou Réf. collé à la désignation sur une image : un numéro, un code (chiffres et lettres). */
 const estCode = (t: string, genre: Colonne) => (genre === 'num'
@@ -328,7 +349,11 @@ function lignesSousTitre(page: PageLue, debut: number, colonnes: ColonneVue[], s
     for (const c of cs) {
       const col = colonneDe(c, colonnes);
       const v = nombreDe(c.texte);
-      switch (col.genre) {
+      // Titre « Désignation » centré : une cellule de lettres qui commence après le titre N°/Réf. est une désignation
+      // (« Oeufs », plus proche du titre N° que du sien), pas un code.
+      const genre = colGauche && col === colGauche && c.x0 > colGauche.x1 && /\p{L}{2,}/u.test(c.texte) && !estCode(c.texte, colGauche.genre)
+        ? 'des' : col.genre;
+      switch (genre) {
         case 'des': b.des.push(c.texte); break;
         case 'ref': b.ref.push(c.texte); break;
         case 'num': break;
@@ -347,38 +372,44 @@ function lignesSousTitre(page: PageLue, debut: number, colonnes: ColonneVue[], s
         case 'ttc': if (v !== null) b.ttc = v; break;
       }
     }
-    // Fin du tableau : une rangée de totaux SANS quantité ni prix (une désignation « Base pizza… » reste une ligne).
+    // Fin du tableau : une rangée de totaux SANS quantité ni prix (une désignation « Base pizza… » reste une ligne), ou
+    // un total ou une taxe même chiffrés ; une remise ou un sous-total entre deux lignes est sauté.
     const chiffree = b.qte !== null || b.pu !== null || b.puTtc !== null;
     const premier = plat(cs[0]?.texte ?? '');
     const finLue = FIN.test(premier) || cs.some((c) => colonneDe(c, colonnes).genre !== 'des' && FIN.test(plat(c.texte)))
       || (MOT_FIN.test(t) && !cs.some((c) => colonneDe(c, colonnes).genre === 'des' && !MOT_FIN.test(plat(c.texte))));
-    if (finLue && !chiffree) break;
+    if ((finLue && !chiffree) || TOTAL_OU_TAXE.test(premier)) {
+      if (SAUTEE.test(premier)) continue;
+      break;
+    }
     b.nombres = nombresHorsDesignation(r, colonnes);
     const aDesNombres = [b.qte, b.pu, b.montant, b.ttc, b.puTtc].some((x) => x !== null);
     const aUneDesignation = b.des.some((d) => /\p{L}/u.test(d));
-    if (aUneDesignation) b.desPremiere = b.des.join(' ');
+    const texteDes = b.des.join(' ');
+    if (aUneDesignation) b.desCle = [texteDes];
+    const blancSous = (avant: Brute) => r.y0 - avant.rangees[avant.rangees.length - 1].y1;
     if (aUneDesignation && aDesNombres) {
       pousser();
       // Une désignation en attente n'est collée que si cette rangée en est la suite ; sinon c'était un intertitre.
-      if (enAttente && prolonge(enAttente.des.join(' '), b.des.join(' '))) {
+      if (enAttente && prolonge(enAttente.des.join(' '), texteDes, blancSous(enAttente), r.hauteur, false, source === 'pdf')) {
         b.des.unshift(...enAttente.des); b.ref.unshift(...enAttente.ref); b.rangees.unshift(...enAttente.rangees);
-        b.desPremiere = enAttente.desPremiere;
+        b.desCle = [...enAttente.desCle, ...(LOT_OU_DATE.test(plat(texteDes)) ? [] : [texteDes])];
       }
       enAttente = null;
       courante = b;
     } else if (aUneDesignation) {
       // Suite de la désignation précédente (rangée proche, qui la prolonge), sinon une ligne dont les nombres suivent.
       const prec = courante as Brute | null;
-      const derniere = prec?.rangees[prec.rangees.length - 1];
-      if (prec && derniere && r.y0 - derniere.y1 < 0.9 * r.hauteur && !b.ref.length && prolonge(prec.des.join(' '), b.des.join(' '))) {
+      if (prec && !b.ref.length && prolonge(prec.des.join(' '), texteDes, blancSous(prec), r.hauteur, true, source === 'pdf')) {
         prec.des.push(...b.des);
+        if (!LOT_OU_DATE.test(plat(texteDes))) prec.desCle.push(texteDes);
         prec.rangees.push(r);
       } else {
         pousser();
         enAttente = b;
       }
     } else if (aDesNombres && enAttente) {
-      b.des = enAttente.des; b.desPremiere = enAttente.desPremiere; b.ref = [...enAttente.ref, ...b.ref]; b.rangees.unshift(...enAttente.rangees);
+      b.des = enAttente.des; b.desCle = enAttente.desCle; b.ref = [...enAttente.ref, ...b.ref]; b.rangees.unshift(...enAttente.rangees);
       enAttente = null;
       pousser();
       courante = b;
@@ -404,7 +435,7 @@ function lignesDeTicket(page: PageLue, source: SourceLue): LigneLue[] {
     if (!avant || QTE_X_PRIX.test(plat(avant.texte))) return;
     const b = vide();
     b.des = [avant.texte];
-    b.desPremiere = avant.texte;
+    b.desCle = [avant.texte];
     b.qte = q; b.pu = pu; b.montant = montant;
     b.nombres = ns.map((n) => ({ valeur: n.valeur, pourcent: false }));
     b.rangees = [avant, r];
@@ -441,7 +472,7 @@ function lignesSansTitre(page: PageLue, source: SourceLue): LigneLue[] {
     if (!d) continue;
     const b = vide();
     b.des = des.map((c) => c.texte);
-    b.desPremiere = b.des.join(' ');
+    b.desCle = [b.des.join(' ')];
     b.ref = cs.slice(0, debut).filter((c) => /\p{L}/u.test(c.texte) || c.texte.replace(/\D/g, '').length > 2).map((c) => c.texte);
     b.qte = d.qte; b.pu = d.pu; b.remise = d.remise; b.tva = d.tva; b.montant = d.montant;
     b.nombres = nombres;

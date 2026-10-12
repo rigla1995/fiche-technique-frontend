@@ -91,9 +91,9 @@ export interface PageVue { largeur: number; hauteur: number; fichier: number; pa
 /** Ligne du tableau d'une facture (étape F3). Montants HT ; `remise` et `tauxTva` en %. */
 export interface LigneLue {
   designation: string;
-  /** Désignation de la première rangée seulement : sert à la clé d'apprentissage (une rangée suivante — n° de lot,
-   * date limite — change d'une facture à l'autre). */
-  designationPremiere: string;
+  /** Désignation sans ses rangées de lot ou de date (n° de lot, DLC : changent d'une facture à l'autre) : sert à la clé
+   * d'apprentissage. Le conditionnement d'une rangée suivante (« 6 x 0,5 L ») en fait partie. */
+  designationCle: string;
   /** Référence produit du fournisseur (colonne « Réf. », « Code »). */
   reference: string | null;
   unite: string | null;

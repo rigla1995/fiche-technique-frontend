@@ -116,8 +116,8 @@ test('relecture : même réf. mais désignation sans rapport → proposée, jama
   assert.match(p.raison, /même réf\./);
 });
 
-test('relecture : clé cherchée sur la première rangée lue (un n° de lot dessous ne change rien)', () => {
-  const p = proposer({ designation: 'POULET ENTIER Lot 2345 DLC 12/2026', designationPremiere: 'POULET ENTIER', unite: 'KG' }, ctx);
+test('relecture : clé cherchée sur la désignation lue sans le n° de lot', () => {
+  const p = proposer({ designation: 'POULET ENTIER Lot 2345 DLC 12/2026', designationCle: 'POULET ENTIER', unite: 'KG' }, ctx);
   assert.deepEqual([p.etat, p.articleId], ['reconnue', 5]);
 });
 
@@ -139,6 +139,12 @@ test('relecture : totaux — déconsigne négative hors remise et FODEC (même c
 test('relecture : prix par g trop petit pour le millime signalé ; au kg, rien', () => {
   assert.ok(ecartArrondiStock(83, 2, 25000, 0.002) > 0);
   assert.equal(ecartArrondiStock(83, 2, 25, 1.66), null);
+});
+
+test('contre-relecture : petit article à la pièce admis (≤ 2 %, comme le serveur) ; quelques millimes signalés', () => {
+  assert.equal(ecartArrondiStock(42.5, 1000, 1, 0.043), null, '1 000 gobelets à 0,0425');
+  assert.equal(ecartArrondiStock(42.42, 1000, 1, 0.042), null, '1 000 serviettes avec FODEC');
+  assert.ok(ecartArrondiStock(12.5, 1000, 1, 0.013) > 0, '1 000 cure-dents à 0,0125');
 });
 
 test('relecture : articles classés une fois par contexte, même résultat qu\'articlesProbables', () => {

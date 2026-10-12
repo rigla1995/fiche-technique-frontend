@@ -181,8 +181,9 @@ export function probablesPour(ctx: Contexte): (designation: string) => ArticleCo
   };
 }
 
-/** Ce que LabFlow propose pour une ligne lue. `designationPremiere` (première rangée lue) sert à la clé apprise. */
-export function proposer(l: { designation: string; designationPremiere?: string | null; reference?: string | null; unite?: string | null }, ctx: Contexte): Proposition {
+/** Ce que LabFlow propose pour une ligne lue. `designationCle` (désignation lue sans ses rangées de lot ou de date)
+ * sert à la clé apprise. */
+export function proposer(l: { designation: string; designationCle?: string | null; reference?: string | null; unite?: string | null }, ctx: Contexte): Proposition {
   const articles = new Map(ctx.articles.map((a) => [a.id, a]));
   const avecConversion = (articleId: number, raison: string, etat: EtatLigne, conversionApprise?: number): Proposition => {
     if (conversionApprise !== undefined) return { etat, articleId, horsStock: null, conversion: conversionApprise, conversionSure: true, raison };
@@ -190,7 +191,7 @@ export function proposer(l: { designation: string; designationPremiere?: string 
     return { etat, articleId, horsStock: null, conversion: c.n, conversionSure: c.sure, raison };
   };
   // 1. Même ligne déjà validée chez ce fournisseur.
-  const cle = cleDeLigne({ reference: l.reference, designation: l.designationPremiere ?? l.designation });
+  const cle = cleDeLigne({ reference: l.reference, designation: l.designationCle ?? l.designation });
   const exacte = cle ? ctx.correspondances.find((c) => c.cle === cle) : undefined;
   if (exacte && (exacte.horsStock || (exacte.articleId && articles.has(exacte.articleId)))) {
     const fois = exacte.emplois > 1 ? `déjà validée sur ${exacte.emplois} factures` : exacte.emplois === 1 ? 'déjà validée sur une facture' : 'corrigée dans Correspondances';
@@ -268,12 +269,13 @@ export function totauxRecalcules(
 }
 
 /**
- * Le prix par unité de stock se garde au millime (comme le serveur) : pour une unité trop petite (g, ml), l'arrondi
- * fausserait la valeur du stock. → écart en DT si au-delà de la tolérance du serveur (5 millimes ou 0,5 %), sinon null.
+ * Le prix par unité de stock se garde au millime (comme le serveur) : pour une unité trop petite (g, ml, pièce à
+ * quelques millimes), l'arrondi fausserait la valeur du stock. → écart en DT si au-delà de la tolérance du serveur
+ * (5 millimes ou 2 % : un prix d'au moins 25 millimes passe toujours), sinon null.
  */
 export function ecartArrondiStock(cout: number, quantite: number, conversion: number, prixStock: number | null): number | null {
   if (prixStock === null) return null;
   const enStock = Math.round(quantite * conversion * 1000) / 1000;
   const ecart = Math.abs(enStock * prixStock - cout);
-  return ecart > Math.max(0.005, 0.005 * Math.abs(cout)) ? Math.round(ecart * 1000) / 1000 : null;
+  return ecart > Math.max(0.005, 0.02 * Math.abs(cout)) ? Math.round(ecart * 1000) / 1000 : null;
 }
