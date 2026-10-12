@@ -218,7 +218,7 @@ export async function validerAvecConfirmation(
 
 export async function listerPieces(factureId: number) {
   const { data } = await api.get(`/api/factures/${factureId}/pieces`);
-  return data as { factureId: number; modifiable: boolean; pieces: Piece[] };
+  return data as { factureId: number; modifiable: boolean; validee?: boolean; pieces: Piece[] };
 }
 export async function joindrePieces(factureId: number, fichiers: FichierChoisi[]) {
   const { data } = await api.post(`/api/factures/${factureId}/pieces`, formulaire({}, fichiers), MULTIPART);

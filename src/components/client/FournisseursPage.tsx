@@ -235,6 +235,16 @@ export default function FournisseursPage() {
         showReset={!!search}
         actions={canWrite && (
           <>
+            <Link to="/client/fournisseurs/correspondances"
+              style={{
+                height: 36, display: 'inline-flex', alignItems: 'center', gap: 6,
+                background: '#fff7ed', border: '1px solid #fdba74', borderRadius: 8,
+                color: '#c2410c', fontWeight: 700, padding: '0 14px',
+                fontSize: '0.83rem', whiteSpace: 'nowrap', textDecoration: 'none',
+              }}
+            >
+              🔗 Correspondances
+            </Link>
             <Link to="/client/fournisseurs/import"
               style={{
                 height: 36, display: 'inline-flex', alignItems: 'center', gap: 6,

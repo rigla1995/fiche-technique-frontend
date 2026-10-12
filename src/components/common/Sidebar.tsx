@@ -643,9 +643,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <li>
                     {(lockLevel0)
                       ? <LockedLink label={voc.Pl('fournisseur')} reason={`Créez ${voc.un('activite')} ou ${voc.un('labo')} pour débloquer`} />
-                      : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">{voc.Pl('fournisseur')}</span></NavLink>
+                      : <NavLink to="/client/fournisseurs" className={({ isActive }) => `sidebar-link ${isActive && !location.pathname.startsWith('/client/fournisseurs/correspondances') ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🚚</span><span className="link-label">{voc.Pl('fournisseur')}</span></NavLink>
                     }
                   </li>
+                  {/* Factures fournisseur, étape F3 : ce que LabFlow a appris des factures validées. */}
+                  {!lockLevel0 && (
+                    <li>
+                      <NavLink to="/client/fournisseurs/correspondances" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🔗</span><span className="link-label">Correspondances</span></NavLink>
+                    </li>
+                  )}
 
                   {/* Gérants — sous Fournisseurs ; visible si l'abonnement le permet, déverrouillé au niveau 1 */}
                   {user?.role === 'client' && showGerants && (

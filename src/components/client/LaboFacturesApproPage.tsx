@@ -7,6 +7,7 @@ import type { Destination } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import FenetrePieces from './factures/FenetrePieces';
+import DetailFactureValidee from './factures/DetailFactureValidee';
 import { useAuth } from '../../context/AuthContext';
 
 const currentYear = new Date().getFullYear();
@@ -40,6 +41,8 @@ interface FactureRow {
   montantTTC: number;
   // Factures fournisseur, étape F1 : nombre de pièces jointes (vraie facture du fournisseur).
   nbPieces?: number;
+  // Étape F3 : facture lue puis validée (plus modifiable, supprimable en entier).
+  validee?: boolean;
   // Lot 1b : sens d'une facture interne de transfert vue du labo courant
   // (recue = labo_id = labo courant ET type_source = 'transfert' ET activite_id IS NULL) + contrepartie.
   sens?: 'emise' | 'recue' | null;
@@ -322,7 +325,7 @@ export default function LaboFacturesApproPage() {
                         {f.activiteNom && <> · {voc.icon('activite')} <strong>{f.activiteNom}</strong></>}
                         {!f.activiteNom && f.sens === 'emise' && f.contrepartieNom && <> · {voc.icon('labo')} <strong>{f.contrepartieNom}</strong></>}
                         <span style={{ marginLeft: 8, background: f.typeSource === 'transfert' ? (f.sens === 'recue' ? '#0e7490' : '#6d28d9') : '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
-                          {f.typeSource === 'transfert' ? badgeTransfert(f) : voc.acc('appro', 'Manuel', 'Manuelle')}
+                          {f.typeSource === 'transfert' ? badgeTransfert(f) : f.validee ? '🔒 Validée' : voc.acc('appro', 'Manuel', 'Manuelle')}
                         </span>
                       </div>
                     </div>
@@ -362,7 +365,12 @@ export default function LaboFacturesApproPage() {
                   </div>
                 </button>
 
-                {isExpanded && (
+                {isExpanded && f.validee && (
+                  <DetailFactureValidee factureId={f.id} refFacture={f.refFacture} montantTTC={f.montantTTC} accent="#7e22ce"
+                    peutSupprimer={canWrite}
+                    onSupprimee={() => { setFactures((prev) => prev.filter((x) => x.id !== f.id)); setExpandedIds((prev) => { const s = new Set(prev); s.delete(f.id); return s; }); }} />
+                )}
+                {isExpanded && !f.validee && (
                   <div style={{ overflowX: 'auto' }}>
                     {loadingLignes.has(f.id) ? (
                       <p style={{ padding: '12px 16px', color: 'var(--text-muted)', fontSize: '0.82rem', fontStyle: 'italic' }}>Chargement des lignes…</p>
