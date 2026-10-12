@@ -32,6 +32,8 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const { confirm } = useConfirm();
   const [pieces, setPieces] = useState<Piece[] | null>(null);
   const [modifiable, setModifiable] = useState(false);
+  // Étape F3 : facture lue puis validée — sa pièce ne se change plus.
+  const [validee, setValidee] = useState(false);
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [nouveaux, setNouveaux] = useState<FichierChoisi[]>([]);
@@ -60,7 +62,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   useEffect(() => {
     let annule = false;
     listerPieces(factureId)
-      .then((r) => { if (!annule) { setPieces(r.pieces); setModifiable(r.modifiable); } })
+      .then((r) => { if (!annule) { setPieces(r.pieces); setModifiable(r.modifiable); setValidee(Boolean(r.validee)); } })
       .catch((e) => { if (!annule) { setPieces([]); setErreur(messageErreur(e, 'Pièces indisponibles : réessayez.')); } });
     return () => { annule = true; };
   }, [factureId]);
@@ -184,6 +186,9 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
                 </div>
               )}
             </div>
+          )}
+          {pieces !== null && validee && (
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>🔒 Facture lue puis validée : sa pièce ne se change plus. Pour la refaire, supprimez la facture entière.</p>
           )}
           {pieces !== null && modifiable && !canWrite && (
             <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>Compte en lecture seule : les pièces se consultent, sans ajout ni suppression.</p>

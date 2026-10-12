@@ -78,7 +78,41 @@ export interface EnteteLu {
   totaux: TotauxLus;
   /** Texte lu, une rangée par entrée (affiché sur demande). */
   lignes: string[];
+  /** Lignes du tableau de la facture (étape F3), à faire vérifier ; vide si aucune n'a été reconnue. */
+  lignesFacture: LigneLue[];
+  /** Pages lues, dans l'ordre des cadres (`cadre.page` = rang ici, à partir de 1) : taille dans les unités des cadres,
+   * et place dans la facture déposée (rang du fichier à partir de 0, numéro de page dans ce fichier). */
+  pages: PageVue[];
   avertissements: string[];
+}
+
+export interface PageVue { largeur: number; hauteur: number; fichier: number; page: number }
+
+/** Ligne du tableau d'une facture (étape F3). Montants HT ; `remise` et `tauxTva` en %. */
+export interface LigneLue {
+  designation: string;
+  /** Désignation sans ses rangées de lot ou de date (n° de lot, DLC : changent d'une facture à l'autre) : sert à la clé
+   * d'apprentissage. Le conditionnement d'une rangée suivante (« 6 x 0,5 L ») en fait partie. */
+  designationCle: string;
+  /** Référence produit du fournisseur (colonne « Réf. », « Code »). */
+  reference: string | null;
+  unite: string | null;
+  quantite: number | null;
+  prixUnitaire: number | null;
+  remise: number | null;
+  tauxTva: number | null;
+  /** Montant HT net de la ligne, tel qu'imprimé (ou déduit, alors `aRelire`). */
+  montant: number | null;
+  /** quantité × prix − remise = montant (au millime ; à 10 millimes près sur une image) ; null s'il manque une valeur. */
+  controle: boolean | null;
+  aRelire: boolean;
+  /** Montants lus dans des colonnes TTC (sans montant HT) : ramenés en HT avec le taux de la ligne quand il est connu,
+   * sinon gardés ici (`montantTtc`, `prixTtc`) pour que la fenêtre les ramène avec le taux de la facture. */
+  luEnTtc: boolean;
+  montantTtc: number | null;
+  prixTtc: number | null;
+  /** Emplacement sur la page (unités de la page lue, y vers le bas). */
+  cadre: { page: number; x0: number; y0: number; x1: number; y1: number };
 }
 
 /** Ce que l'appelant sait du client : son matricule et son nom ne sont jamais pris pour ceux du fournisseur. */

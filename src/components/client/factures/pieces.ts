@@ -159,9 +159,69 @@ export async function enregistrerFacture(f: FactureAEnregistrer, fichiers: Fichi
   return data as { factureId: number; ajoutee: boolean; nbLignes: number; nbPieces: number };
 }
 
+/** Étape F3 : une ligne de la facture telle que validée — un article (et sa conversion) ou une nature hors stock. */
+export interface LigneValidee {
+  designation: string;
+  reference: string | null;
+  /** Texte LU (désignation sans ses rangées de lot ou de date, référence) : la clé d'apprentissage se calcule dessus. */
+  designationLue?: string;
+  referenceLue?: string;
+  unite: string | null;
+  quantite: number;
+  prixUnitaire: number | null;
+  remise: number;
+  tauxTva: number;
+  montant: number;
+  articleId?: number;
+  conversion?: number;
+  horsStock?: 'transport' | 'livraison' | 'consigne' | 'service' | 'autre';
+}
+export interface FactureAValider extends Omit<FactureAEnregistrer, 'lignes' | 'fournisseurId'> {
+  fournisseurId: number;
+  fodec: number | null;
+  remiseGlobale: number | null;
+  lignes: LigneValidee[];
+}
+export interface FactureValidee { factureId: number; nbLignes: number; nbStock: number; nbPieces: number; appris: number; montantTTC: number }
+
+/** POST /api/appros/facture/validee : la facture lue et vérifiée, ses pièces, ce qui est appris — tout ou rien. */
+export async function validerFacture(f: FactureAValider, fichiers: FichierChoisi[]) {
+  const { data } = await api.post('/api/appros/facture/validee', formulaire({ ...f }, fichiers), MULTIPART);
+  return data as FactureValidee;
+}
+
+/**
+ * Valide la facture ; une facture SAISIE À LA MAIN du même numéro chez ce fournisseur (409 FACTURE_EXISTANTE) demande
+ * confirmation, puis l'envoi repart avec `confirmerDoublon`. Une facture déjà VALIDÉE (FACTURE_VALIDEE_EXISTANTE) est
+ * un refus : l'erreur est relancée, comme toute autre. → la facture validée, ou null si la personne renonce.
+ */
+export async function validerAvecConfirmation(
+  f: FactureAValider,
+  fichiers: FichierChoisi[],
+  confirmer: (o: { title: string; message?: string; details?: string[]; confirmLabel?: string; tone?: 'danger' | 'primary' | 'info'; icon?: string }) => Promise<boolean>,
+  ceFournisseur: string,
+): Promise<FactureValidee | null> {
+  try {
+    return await validerFacture(f, fichiers);
+  } catch (e) {
+    if (codeErreur(e) !== 'FACTURE_EXISTANTE') throw e;
+    const existantes = (e as { response?: { data?: { factures?: FactureSemblable[] } } }).response?.data?.factures ?? [];
+    const ok = await confirmer({
+      title: 'Facture déjà saisie ?',
+      message: `Une facture n° ${f.refFacture} de ${ceFournisseur} a déjà été saisie à la main. Vérifiez que ce n'est pas la même : elle serait comptée deux fois.`,
+      details: existantes.map((x) => `${fmtJour(x.dateFacture)}${x.lieuNom ? ` · ${x.lieuNom}` : ''}${x.montantTTC != null ? ` · ${x.montantTTC.toFixed(3)} DT TTC` : ''}`),
+      confirmLabel: 'Valider quand même',
+      tone: 'primary',
+      icon: '⚠️',
+    });
+    if (!ok) return null;
+    return validerFacture({ ...f, confirmerDoublon: true }, fichiers);
+  }
+}
+
 export async function listerPieces(factureId: number) {
   const { data } = await api.get(`/api/factures/${factureId}/pieces`);
-  return data as { factureId: number; modifiable: boolean; pieces: Piece[] };
+  return data as { factureId: number; modifiable: boolean; validee?: boolean; pieces: Piece[] };
 }
 export async function joindrePieces(factureId: number, fichiers: FichierChoisi[]) {
   const { data } = await api.post(`/api/factures/${factureId}/pieces`, formulaire({}, fichiers), MULTIPART);
