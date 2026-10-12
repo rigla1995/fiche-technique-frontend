@@ -60,6 +60,8 @@ function matriculesDeRangee(p: Place, ocr: boolean, libelleProche: boolean): Omi
       const fin = complet ? `${m[3]}/${m[4]}/${corrigerChiffres(m[5])}` : null;
       if (!new RegExp(String.raw`^\d{${n}}$`).test(brut) || (fin && !/^\d{3}$/.test(fin.slice(4)))) continue;
       const identifiant = brut.padStart(7, '0');
+      // Forme courte à 6 chiffres : seulement si sa lettre-clé est juste (sinon « Capital : 150000 D », un agrément…).
+      if (n === 6 && !complet && cleAttendue(identifiant) !== m[2]) continue;
       const index = m.index ?? 0;
       const de = motA(p.r, index), a = motA(p.r, index + m[0].length - 1);
       candidats.push({
@@ -152,15 +154,31 @@ export function nomPropre(t: string): string {
   return s;
 }
 
-// Le nom du fournisseur se répète souvent (bandeau du logo, pied de page « Société : … ») ; un mot de logo, non.
-// Répété : les deux tiers de ses mots significatifs se retrouvent ensemble sur une autre rangée du document.
+// Le nom du fournisseur se répète souvent (bandeau du logo, pied de page « Société : X, adresse… ») ; un mot de logo,
+// non. Répété : les deux tiers de ses mots significatifs se retrouvent au DÉBUT d'une autre rangée — avant la première
+// coordonnée (adresse, téléphone, e-mail, site, matricule, nombre…), sans autre étiquette que « Société : » —, hors du
+// bloc du client. Une localité reprise dans l'adresse du pied de page, ou une marque dans l'e-mail, ne compte pas.
+const COORDONNEE = motif(/\b(t[ée]l|fax|gsm|mob|e-?mail|courriel|www|http|site|m\s?\.?\s?f|matricule|mat\s?\.?\s?fisc|code\s+t\.?\s?v\.?\s?a|r\.?\s?c|registre|rib|iban|capital|adresse|si[èe]ge|rue|avenue|av|route|km|cit[ée]|zone|z\.?i|souk|march[ée]|immeuble|r[ée]sidence|b\.?p)\b|@|\d{3,}/i);
+function debutDeRangee(q: Rangee): string | null {
+  if (BLOC_CLIENT.test(q.texte) || /\blivr/i.test(q.texte)) return null;
+  const coupe = q.texte.search(COORDONNEE);
+  let t = (coupe < 0 ? q.texte : q.texte.slice(0, coupe)).trim();
+  const deuxPoints = t.indexOf(':');
+  if (deuxPoints >= 0) {
+    if (!ETIQUETTE_NOM.test(t.slice(0, deuxPoints).trim())) return null;
+    t = t.slice(deuxPoints + 1);
+  }
+  return t;
+}
 function repete(pages: readonly PageLue[], s: Rangee, r: Rangee): boolean {
   const mots = [...new Set(nomComparable(s.texte).split(' ').filter((m) => m.length >= 3))];
   if (!mots.length || (mots.length === 1 && mots[0].length < 4)) return false;
   const requis = mots.length === 1 ? 1 : Math.ceil((2 * mots.length) / 3);
   return pages.some((p) => p.rangees.some((q) => {
     if (q === r) return false;
-    const autres = new Set(nomComparable(q.texte).split(' '));
+    const debut = debutDeRangee(q);
+    if (!debut) return false;
+    const autres = new Set(nomComparable(debut).split(' '));
     return mots.filter((m) => autres.has(m)).length >= requis;
   }));
 }
@@ -175,9 +193,10 @@ function nomFournisseur(pages: readonly PageLue[], client: Destinataire, ancre: 
   // Le nom est AU-DESSUS du tableau des lignes : on s'arrête à son titre (« Désignation | Qté | … »).
   // Titre non lu (photo) : la première rangée qui porte deux montants au millime ouvre le tableau.
   const titre = debutTableau(page);
-  // Taille plafonnée à deux fois celle du texte courant : un mot de logo (3 ou 4 fois plus haut) ne gagne pas par sa taille.
+  // Taille plafonnée à trois fois celle du texte courant (`courant`) : un mot de logo (4 ou 5 fois plus haut) ne gagne
+  // pas par sa seule taille ; un vrai nom, rarement plus de 2 à 2,5 fois plus grand, n'est pas touché.
   const tailles = page.rangees.map((r) => r.hauteur).sort((a, b) => a - b);
-  const plafond = 2 * (tailles[Math.floor(tailles.length / 2)] ?? Infinity);
+  const courant = tailles[Math.floor(tailles.length / 2)] ?? Infinity;
   const admissible = (q: Rangee): boolean => {
     const t = q.texte.trim();
     return lettres(t) >= 3 && lettres(t) >= t.replace(/\s/g, '').length * 0.5 && !PAS_UN_NOM.test(t) && confiance(q) >= 50;
@@ -198,8 +217,12 @@ function nomFournisseur(pages: readonly PageLue[], client: Destinataire, ancre: 
       // juridique, le bloc du matricule du fournisseur juste dessous (même colonne), le nom répété ailleurs.
       const auDessusDuMf = Boolean(ancre && ancre.place.page === 1 && i < ancre.place.i && ancre.place.i - i <= 8
         && s.mots[0].x0 < ancre.x1 + 2 * s.hauteur && s.mots[s.mots.length - 1].x1 > ancre.x0 - 2 * s.hauteur);
-      const score = Math.min(s.hauteur, plafond) * (FORME.test(t) ? 1.35 : 1) * (auDessusDuMf ? 1.5 : 1) * (repete(pages, s, r) ? 1.6 : 1)
-        * (ADRESSE.test(t) ? 0.6 : 1) * (1 - 0.3 * (r.y0 / page.hauteur));
+      // Un mot isolé, sans forme juridique et jamais répété (« Volcap » d'un logo) : plafonné à deux fois le texte courant
+      // et compté moins — sur une photo floue, le matricule peut manquer à la première lecture, et avec lui un indice.
+      const forme = FORME.test(t), rep = repete(pages, s, r);
+      const logo = !forme && !rep && nomComparable(t).split(' ').filter(Boolean).length <= 1;
+      const score = Math.min(s.hauteur, (logo ? 2 : 3) * courant) * (logo ? 0.7 : 1) * (forme ? 1.35 : 1) * (auDessusDuMf ? 1.5 : 1)
+        * (rep ? 1.6 : 1) * (ADRESSE.test(t) ? 0.6 : 1) * (1 - 0.3 * (r.y0 / page.hauteur));
       candidats.push({ s, place: { r, page: 1, i, hauteurPage: page.hauteur }, score });
     }
   });
@@ -216,7 +239,11 @@ function nomFournisseur(pages: readonly PageLue[], client: Destinataire, ancre: 
   // Nom long imprimé sur deux lignes : la rangée voisine, même taille de texte, même marge gauche, le complète (un
   // titre d'une autre colonne, « FACTURE », peut s'intercaler : on regarde deux rangées après, une avant).
   const s = meilleur.s;
-  const voisin = (q: Rangee, dessous: boolean): boolean => Math.abs(q.hauteur - s.hauteur) <= 0.3 * s.hauteur
+  // Même taille à 15 % près (la ligne de localité, juste dessous et un peu plus petite, n'est pas la suite du nom) ; à
+  // 30 % quand la première ligne appelle une suite (« SOCIÉTÉ MÉDITERRANÉENNE DE ») — tailles lues moins sûres sur une image.
+  const appelleUneSuite = (t: string): boolean => /(?:^|\s)(de|du|des|d'|et|&|la|le|les|pour|en|-|—)$/i.test(t.trim());
+  const voisin = (q: Rangee, dessous: boolean): boolean => Math.abs(q.hauteur - s.hauteur)
+      <= (appelleUneSuite((dessous ? s : q).texte) ? 0.3 : 0.15) * s.hauteur
     && Math.abs(q.mots[0].x0 - s.mots[0].x0) <= 2 * s.hauteur
     && (dessous ? q.y0 - s.y1 : s.y0 - q.y1) < 1.2 * s.hauteur
     && lettres(q.texte) >= 2 && !PAS_UN_NOM.test(q.texte) && !q.texte.includes(':') && !ADRESSE.test(q.texte);
@@ -370,13 +397,28 @@ function numeroFacture(pages: readonly PageLue[]): NumeroLu | null {
     const v = valide(m[1]);
     if (v) return v;
   }
-  for (const p of places) {
-    for (const s of segments(p.r)) {
-      const v = valide(recolle(s.texte).match(NUMERO_BL)?.[1]);
-      if (v) return { ...v, bl: true };
+  // Bon de livraison : son numéro, seulement si le document EN EST UN (une facture cite souvent « selon BL N° … »).
+  if (estBonDeLivraison(pages)) {
+    for (const p of places) {
+      if (p.i >= tableaux[p.page - 1]) continue;
+      for (const s of segments(p.r)) {
+        const v = valide(recolle(s.texte).match(NUMERO_BL)?.[1]);
+        if (v) return { ...v, bl: true };
+      }
     }
   }
   return null;
+}
+
+// Document qui est un bon de livraison : titre « Bon (de) livraison » au-dessus du tableau des lignes, et nulle part le
+// mot « facture ».
+const TITRE_BL = /\bbons?\s*(?:de\s*)?livraisons?\b/i;
+function estBonDeLivraison(pages: readonly PageLue[]): boolean {
+  if (pages.some((p) => p.rangees.some((r) => /factur/i.test(r.texte)))) return false;
+  return pages.some((p) => {
+    const tableau = debutTableau(p);
+    return p.rangees.some((r, i) => i < tableau && TITRE_BL.test(r.texte));
+  });
 }
 
 // Dates qui ne sont pas celle de la facture : échéance, livraison, édition ou impression du document…
@@ -385,10 +427,12 @@ const PAS_LA_DATE_BL = /([ée]ch[ée]ance|naissance|impression|imprim[ée]|[ée]
 // Une heure à côté d'une date sans libellé « date » : un horodatage (impression, envoi), pas la date de la facture.
 const HEURE = /\b\d{1,2}\s?[:h]\s?\d{2}\b/i;
 
-function dateFacture(pages: readonly PageLue[], bl = false): string | null {
+// Bon de livraison : une date sans rien autour d'abord ; à défaut, la sienne (« Bon de livraison N° 12 du … »).
+const dateFacture = (pages: readonly PageLue[], bl = false): string | null =>
+  dateSauf(pages, PAS_LA_DATE) ?? (bl ? dateSauf(pages, PAS_LA_DATE_BL) : null);
+
+function dateSauf(pages: readonly PageLue[], pasLaDate: RegExp): string | null {
   const places = toutes(pages);
-  // Bon de livraison sans facture : sa date (« Bon de livraison N° 12 du … ») est celle du document.
-  const pasLaDate = bl ? PAS_LA_DATE_BL : PAS_LA_DATE;
   // 1. Libellé explicite : « Date (de la facture) : 03/10/2026 ».
   for (const p of places) {
     for (const s of segments(p.r, 3)) {
@@ -439,7 +483,7 @@ type CleTotal = 'ht' | 'remise' | 'fodec' | 'tva' | 'timbre' | 'ttc';
 // Ordre des essais sur le texte « à plat » (sans accents, minuscules). Le premier libellé qui couvre une position la garde.
 const LIBELLES: [CleTotal, RegExp][] = [
   ['ttc', /\b(?:total|montant|net)\s*(?:total\s*)?(?:a\s*payer\s*)?t\s?\.?\s?t\s?\.?\s?c\b\.?|\bnet\s*a\s*pay(?:er|e)\b|\btotal\s*a\s*payer\b|\btotal\s*general\b|\bmontant\s*total\b(?!\s*(?:h\s?\.?\s?t\b|hors))|\btotal\s*facture\b/g],
-  ['ht', /\b(?:total|montant|net|base)\s*(?:net\s*)?(?:h\s?\.?\s?t\b\.?|hors\s*taxes?)(?:\s*net\b)?|\bnet\s*h\s?\.?\s?t\b\.?|\btotal\s*brut\b|\bhors\s*taxes?\b/g],
+  ['ht', /\b(?:total|montant|net|base)\s*(?:net\s*)?(?:h\s?\.?\s?t\b\.?|hors\s*taxes?)(?:\s*net\b)?|\bnet\s*h\s?\.?\s?t\b\.?|\btotal\s*brut\b|(?<!brut\s{0,3})\bhors\s*taxes?\b/g],
   ['remise', /\bremise\b|\bescompte\b/g],
   ['fodec', /\bfodec\b/g],
   ['timbre', /\b(?:droit\s*de\s*)?timbre(?:\s*fiscal)?\b/g],
@@ -563,9 +607,11 @@ function totaux(pages: readonly PageLue[], source: SourceLue): TotauxLus {
   const tva = tvaLue === null && ht !== null && ttc !== null && Math.abs(ttc - (ht + (fodec ?? 0) + (timbre ?? 0))) <= tolerance ? 0 : tvaLue;
   let coherents: boolean | null = null;
   if (ht !== null && tva !== null && ttc !== null) coherents = Math.abs(ht + (fodec ?? 0) + tva + (timbre ?? 0) - ttc) <= tolerance;
-  // Totaux qui se recoupent SANS timbre, et aucun autre montant « à payer » (un « Net à payer » plus élevé trahirait un
-  // timbre non lu) : le document n'en porte pas.
-  if (coherents && timbre === null && ttc !== null && candidatsTtc.every((v) => Math.abs(v - ttc) <= tolerance)) timbre = 0;
+  // « Aucun timbre » : seulement pour un document SANS TVA (bon de livraison, produits exonérés) dont les totaux se
+  // recoupent sans timbre, où le mot « timbre » n'apparaît nulle part (même avec un montant illisible) et où aucun autre
+  // montant « à payer » ne diffère du TTC. Une facture tunisienne porte presque toujours un timbre : sinon, on ne conclut rien.
+  if (coherents && tva === 0 && timbre === null && valeurs.timbre === undefined && ttc !== null
+    && !places.some((p) => /timb/i.test(p.r.texte)) && candidatsTtc.every((v) => Math.abs(v - ttc) <= tolerance)) timbre = 0;
   return { ht, remise: valeurs.remise ?? null, fodec, tva, timbre, ttc, parTaux: liste, coherents };
 }
 

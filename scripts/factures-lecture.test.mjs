@@ -443,7 +443,8 @@ test('essai client : « Hors taxe » seul cède devant « Total HT » ; un « Ne
     [628, [[300, 'TVA'], [480, '19,000']]],
     [642, [[300, 'Total TTC'], [480, '119,000']]],
   ])], 'pdf');
-  assert.deepEqual([a.totaux.ht, a.totaux.ttc, a.totaux.coherents, a.totaux.timbre], [100, 119, true, 0]);
+  // (Facture AVEC TVA : on ne conclut jamais « aucun timbre », même quand les totaux se recoupent sans lui.)
+  assert.deepEqual([a.totaux.ht, a.totaux.ttc, a.totaux.coherents, a.totaux.timbre], [100, 119, true, null]);
   // Timbre non lu, mais « Net à payer » = TTC + 1 : on ne dit pas « aucun timbre ».
   const b = lireEntete([page([
     [40, [[40, 'SOCIETE EXEMPLE']], 16],
@@ -493,6 +494,101 @@ test('essai client : un grand mot de logo ne passe pas devant le nom placé au-d
   // Sans ces indices (ni matricule dessous, ni répétition), le plus grand texte reste le nom : le logo.
   const seul = page([[30, [[40, 'Volcap']], 32], [34, [[330, 'Volailles du Cap Bon']], 13]]);
   assert.equal(lireEntete([seul], 'pdf').nom?.valeur, 'Volcap');
+});
+
+// ── Relecture contradictoire de la correction du 12/10 (cas confirmés par le relecteur, tous corrigés) ──
+
+test('relecture 12/10 : sur une FACTURE, le n° et la date d\'un BL cité ne sont jamais pris', () => {
+  const MF_F = mf('1384297');
+  const a = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL'], [400, 'FACTURE']], 16],
+    [60, [[40, `M.F : ${MF_F}`], [400, 'FV-2026-00437']]],
+    [90, [[40, 'Selon BL N° 4410 du 01/09/2026']]],
+    [105, [[40, 'Tunis, le 05/10/2026']]],
+  ])], 'pdf');
+  assert.equal(a.numero, null);
+  assert.equal(a.date?.valeur, '2026-10-05');
+  assert.match(a.avertissements.join(' '), /Numéro de facture non lu/);
+  // Photo : « Facture » mal lu, « Date BL » avant « Date » ; ligne du tableau « Transport selon BL N° 4410 ».
+  const b = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL']], 16],
+    [80, [[300, 'Factnre N° 2026-17']]],
+    [95, [[300, 'BL N° 4410 - Date BL : 01/09/2026']]],
+    [110, [[300, 'Date : 05/10/2026']]],
+  ])], 'ocr');
+  assert.equal(b.numero, null);
+  assert.equal(b.date?.valeur, '2026-10-05');
+  const c = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [80, [[300, 'Date : 05/10/2026']]],
+    [200, [[40, 'Désignation Qté P.U Montant']]], [217, [[40, 'Transport selon BL N° 4410 1 50,000 50,000']]],
+  ])], 'pdf');
+  assert.equal(c.numero, null);
+});
+
+test('relecture 12/10 : le plafond de taille ne fait perdre ni le vrai nom, ni ne donne celui du client', () => {
+  const MF_F = mf('1384297');
+  const lignes = (h) => Array.from({ length: 20 }, (_, k) => [260 + k * 12, [[40, `Article numero ${k + 1} 2 1,500 3,000`]], h]);
+  const a = lireEntete([page([
+    [40, [[40, 'PRIMEURS TRABELSI']], 18], [64, [[40, 'Import Export fruits et légumes']], 12],
+    [82, [[40, 'Bir El Kassaa Ben Arous']], 9], [94, [[40, `M.F : ${MF_F}`]], 9],
+    [240, [[40, 'Désignation Qté P.U Montant']], 9], ...lignes(8),
+  ])], 'pdf');
+  assert.equal(a.nom?.valeur, 'PRIMEURS TRABELSI');
+  const b = lireEntete([page([
+    [40, [[40, 'PRIMEURS TRABELSI']], 20], [70, [[40, 'Bir El Kassaa Ben Arous']], 9],
+    [120, [[330, 'STE JASMIN RESTAURATION SARL']], 14], [200, [[40, 'Désignation Qté P.U Montant']], 9], ...lignes(7),
+  ])], 'pdf');
+  assert.equal(b.nom?.valeur, 'PRIMEURS TRABELSI');
+});
+
+test('relecture 12/10 : une répétition ne compte que comme nom (ni localité d\'adresse, ni e-mail, ni client)', () => {
+  const MF_F = mf('1384297');
+  const MF_C = mf('1658423');
+  for (const h of [12, 14, 15]) {
+    const e = lireEntete([page([
+      [40, [[40, 'PRIMEURS TRABELSI']], h], [58, [[40, 'Bir El Kassaa']]], [70, [[40, 'Ben Arous']]], [82, [[40, `M.F : ${MF_F}`]]],
+      [200, [[40, 'Désignation Qté P.U Montant']]], [217, [[40, 'Tomates 10 1,200 12,000']]],
+      [800, [[40, 'Adresse : Bir El Kassaa 2059 Ben Arous - Tél : 71 222 333']]],
+    ])], 'pdf');
+    assert.equal(e.nom?.valeur, 'PRIMEURS TRABELSI', `h=${h}`);
+  }
+  for (const contact of ['Email : contact@volcap.tn', 'Site : www.volcap.com.tn']) {
+    const e = lireEntete([page([
+      [30, [[40, 'Volcap']], 32], [34, [[330, 'Sté. Volailles du Cap Bon']], 13],
+      [56, [[330, 'Souk municipal - Rue des Tanneurs Tunis']]], [68, [[330, contact]]], [92, [[330, `M.F : ${MF_F}`]]],
+      [235, [[20, 'Réf. Désignation Unité Qte P.U. Remise Montant']]],
+      [790, [[40, 'Société : Volailles du Cap Bon, Souk municipal - Rue des Tanneurs Tunis']]],
+    ])], 'pdf');
+    assert.equal(e.nom?.valeur, 'Sté. Volailles du Cap Bon', contact);
+  }
+  const client = lireEntete([page([
+    [40, [[40, 'PRIMEURS TRABELSI']], 16], [62, [[40, 'Bir El Kassaa Ben Arous']]],
+    [100, [[330, 'Client']]], [112, [[330, 'Code : 411002']]], [124, [[330, 'RESTAURANT LE JASMIN']], 12], [136, [[330, `M.F : ${MF_C}`]]],
+    [200, [[40, 'Désignation Qté P.U Montant']]], [217, [[40, 'Tomates 10 1,200 12,000']]],
+    [780, [[40, 'Livraison : RESTAURANT LE JASMIN - Ariana']]],
+  ])], 'pdf', { matricule: MF_C, noms: ['STE JASMIN DE RESTAURATION'] });
+  assert.equal(client.nom?.valeur, 'PRIMEURS TRABELSI');
+});
+
+test('relecture 12/10 : « aucun timbre » jamais conclu sur une facture avec TVA ; capital et « brut hors taxe » écartés', () => {
+  const MF_F = mf('1384297');
+  const base = [[40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [500, [[345, 'Total HT'], [500, '1000,000']]], [514, [[345, 'TVA 19%'], [500, '190,000']]], [528, [[345, 'Total TTC'], [500, '1190,000']]]];
+  for (const [libelle, montant, apayer, source] of [['Timb. fiscal', '1,000', 'Montant à payer', 'pdf'], ['Timbre fiscal', '1000', 'Reste à payer', 'ocr'], ['D.T.', '1,000', 'Net à régler', 'pdf']]) {
+    const e = lireEntete([page([...base, [542, [[345, libelle], [500, montant]]], [556, [[345, apayer], [500, '1191,000']]]])], source);
+    assert.equal(e.totaux.timbre, null, libelle);
+  }
+  // Capital de 6 chiffres suivi de « D », agrément sous le matricule : pas un « autre matricule ».
+  for (const ligne of [[800, [[40, `M.F : ${MF_F} - Capital : 150000 D`]]], [72, [[40, 'Agrément N° 245871 B']]]]) {
+    const e = lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [60, [[40, `M.F : ${MF_F}`]]], ligne])], 'pdf');
+    assert.equal(e.matricule?.valeur, MF_F);
+    assert.doesNotMatch(e.matricule?.note ?? '', /autre/);
+  }
+  const brut = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [690, [[280, 'Rubrique Base Taux Montant']]],
+    [704, [[280, 'BRUT HORS TAXE 1000,000 1000,000']]], [718, [[280, 'REMISE 100,000']]], [732, [[280, 'Total HT 900,000']]],
+    [746, [[280, 'TVA 19% 900,000 171,000']]], [760, [[280, 'NET A PAYE'], [480, '1071,000']]],
+  ])], 'pdf');
+  assert.equal(brut.totaux.ht, 900);
 });
 
 test('essai client : rangées — un mot de logo très haut n\'absorbe pas les lignes ; une « ligne » de deux lignes est recoupée', () => {

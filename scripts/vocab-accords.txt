@@ -1623,16 +1623,16 @@ src/components/client/InventairePage.tsx
     miroir : ⟦·⟧ ⟦denrée|denrées@>1⟧ inventoriées
 
 src/components/client/InvoiceConfirmModal.tsx
-  l. 61
+  l. 62
     défaut : Confirmation d'approvisionnement
     miroir : Confirmation de rentrée
-  l. 74
+  l. 75
     défaut : Article
     miroir : Denrée
-  l. 77
+  l. 78
     défaut : Article
     miroir : Denrée
-  l. 153
+  l. 154
     défaut : Confirmer l'appro
     miroir : Confirmer l'abr-rentrée
 
@@ -3519,19 +3519,19 @@ src/components/client/factures/LectureFacture.tsx
     miroir : Enseigne créée, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
 
 src/components/client/factures/NouveauFournisseurModal.tsx
-  l. 95
+  l. 96
     défaut : Nouveau fournisseur — d'après la facture
     miroir : Nouvelle enseigne — d'après la facture
-  l. 99
+  l. 100
     défaut : Valeurs lues sur la facture : relisez-les et corrigez-les avant de créer le fournisseur. La fiche sera rattachée ⟦?à l'activité|au labo⟧ de cette saisie.
     miroir : Valeurs lues sur la facture : relisez-les et corrigez-les avant de créer l'enseigne. La fiche sera rattachée ⟦?au local|à l'usine⟧ de cette saisie.
-  l. 128
+  l. 129
     défaut : Ou bien c'est un fournisseur déjà enregistré
     miroir : Ou bien c'est une enseigne déjà enregistrée
-  l. 134
+  l. 135
     défaut : C'est lui
     miroir : C'est elle
-  l. 147
+  l. 148
     défaut : ⟦?…|Créer le fournisseur⟧
     miroir : ⟦?…|Créer l'enseigne⟧
 
