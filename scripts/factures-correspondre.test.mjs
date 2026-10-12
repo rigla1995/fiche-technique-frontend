@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  articlesProbables, cleDeLigne, ecartArrondiStock, ecartDePrix, prixParUniteDeStock, probablesPour, proposer, proposerConversion,
+  articlesProbables, chercherArticles, cleDeLigne, ecartArrondiStock, ecartDePrix, prixParUniteDeStock, probablesPour, proposer, proposerConversion,
   ressemblanceArticle, totauxRecalcules,
 } from '../src/components/client/factures/lecture/correspondre.ts';
 
@@ -151,4 +151,30 @@ test('relecture : articles classés une fois par contexte, même résultat qu\'a
   const f = probablesPour(ctx);
   assert.deepEqual(f('Farine T45').map((a) => a.id), articlesProbables('Farine T45', ctx).map((a) => a.id));
   assert.equal(f('Farine T45'), f('Farine T45'), 'gardé en mémoire');
+});
+
+test('recherche d\'article : tous les mots tapés, sans accents ; ordre gardé, débuts de mot d\'abord ; plafond', () => {
+  const liste = [
+    { id: 1, nom: 'Farine pâtissière T45' }, { id: 2, nom: 'Farine complète T110' }, { id: 3, nom: 'Sucre glace' },
+    { id: 4, nom: 'Huile de tournesol' }, { id: 5, nom: 'Eau minérale 1,5 L' }, { id: 6, nom: 'Café en grains' },
+  ];
+  const ids = (r) => r.trouves.map((a) => a.id);
+  assert.deepEqual(ids(chercherArticles(liste, 'far t45')), [1]);
+  assert.deepEqual(ids(chercherArticles(liste, 'FARINE')), [1, 2], 'ordre de la liste gardé');
+  assert.deepEqual(ids(chercherArticles(liste, 'patissiere')), [1], 'sans accents');
+  assert.deepEqual(ids(chercherArticles(liste, 'cafe')), [6]);
+  assert.deepEqual(ids(chercherArticles(liste, '1.5')), [5], '1.5 = 1,5');
+  assert.deepEqual(ids(chercherArticles(liste, 'ine')), [1, 2, 5], 'au milieu d\'un mot aussi');
+  assert.deepEqual(ids(chercherArticles(liste, 'tour')), [4]);
+  assert.deepEqual(ids(chercherArticles([{ id: 7, nom: 'Petit sucre' }, { id: 8, nom: 'Sucre roux' }], 'sucre')), [7, 8]);
+  assert.deepEqual(ids(chercherArticles([{ id: 9, nom: 'Cassonade sucre' }, { id: 10, nom: 'Sucrette' }, { id: 11, nom: 'Sirop sucré' }], 'sucr')), [9, 10, 11]);
+  assert.deepEqual(ids(chercherArticles([{ id: 12, nom: 'Basucre' }, { id: 13, nom: 'Sucre' }], 'sucre')), [13, 12], 'début de mot d\'abord');
+  assert.deepEqual(chercherArticles(liste, 'chocolat'), { trouves: [], total: 0 });
+  // Sans recherche : les suggestions (les premiers de la liste), et le nombre d'articles.
+  assert.deepEqual(chercherArticles(liste, '  ', 30, 2), { trouves: liste.slice(0, 2), total: 6 });
+  // 1 500 articles : au plus 30 montrés, le total dit combien il y en a.
+  const grand = Array.from({ length: 1500 }, (_, i) => ({ id: i, nom: `Article ${i} farine` }));
+  const r = chercherArticles(grand, 'farine');
+  assert.deepEqual([r.trouves.length, r.total], [30, 1500]);
+  assert.deepEqual(ids(chercherArticles(grand, 'article 1499')), [1499]);
 });

@@ -15,6 +15,7 @@ import {
   NATURES, ecartArrondiStock, ecartDePrix, probablesPour, proposer, proposerConversion, totauxRecalcules,
   type ArticleConnu, type Contexte, type EtatLigne, type NatureHorsStock,
 } from './lecture/correspondre';
+import ChoixArticle from './ChoixArticle';
 import { messageErreur, validerAvecConfirmation, type FactureValidee, type FichierChoisi, type LectureEnvoyee, type LigneValidee } from './pieces';
 
 interface Props {
@@ -159,6 +160,14 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const achetes = useMemo(() => new Set((ctx?.achats ?? []).map((a) => a.articleId)), [ctx]);
   // Articles classés par ligne, calculés une fois par désignation (la fenêtre se redessine à chaque frappe).
   const probables = useMemo(() => (ctx ? probablesPour(ctx) : null), [ctx]);
+  // Libellés du choix d'article (champ de recherche : un compte peut avoir des milliers d'articles).
+  const libellesChoix = {
+    unArticle: voc.un('article'), aucunArticle: `${voc.Aucun('article')} ${voc.acc('article', 'trouvé', 'trouvée')}`,
+    horsStock: `Hors ${voc.nom('stock')}`, groupeHorsStock: `Hors ${voc.nom('stock')} (reste sur la facture)`, aChoisir: '— À choisir —',
+  };
+  const groupeAchetes = `Déjà ${voc.acc('article', 'achetés', 'achetées', 2)} chez ${voc.ce('fournisseur')}`;
+  const groupeAutres = `Autres ${voc.nom('article', true)}`;
+  const horsDuLieu = `hors de ${cible.type === 'activite' ? voc.ce('activite') : voc.ce('labo')}`;
 
   // Une ligne est désignée par son identifiant (pas par sa place : une ligne retirée pendant une création d'article
   // décalerait les suivantes).
@@ -431,8 +440,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                   const prixStock = v.article ? calcul.prixStock[i] : null;
                   const ecart = v.article ? ecartDePrix(prixStock, dernierPrix.get(v.article.id) ?? null) : null;
                   const classes = probables ? probables(l.designation) : [];
-                  const dejaAchetes = classes.filter((a) => achetes.has(a.id));
-                  const autres = classes.filter((a) => !achetes.has(a.id));
+                  const dejaAchetes = classes.some((a) => achetes.has(a.id));
                   return (
                     // Un clic, ou le focus clavier dans un de ses champs, choisit la ligne (encadrée sur la facture).
                     <div key={l.id} onClick={() => choisirLigne(i)} onFocusCapture={() => { if (choisie !== i) choisirLigne(i); }}
@@ -468,22 +476,12 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                           <input style={{ ...petit, width: '100%', fontWeight: 700 }} inputMode="decimal" value={l.montant} onChange={(ev) => modifier(i, { montant: ev.target.value }, false)} /></label>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }} onClick={(ev) => ev.stopPropagation()}>
-                        <label style={{ flex: '2 1 220px' }}><span style={etiquette}>{voc.Nom('article')} LabFlow</span>
-                          <select style={{ ...petit, width: '100%', borderColor: l.choix ? '#cbd5e1' : '#f87171' }} value={l.choix} onChange={(ev) => choisir(i, ev.target.value)}>
-                            <option value="">— À choisir —</option>
-                            {dejaAchetes.length > 0 && (
-                              <optgroup label={`Déjà ${voc.acc('article', 'achetés', 'achetées', 2)} chez ${voc.ce('fournisseur')}`}>
-                                {dejaAchetes.map((a) => <option key={a.id} value={`a:${a.id}`}>{a.nom} ({a.unite})</option>)}
-                              </optgroup>
-                            )}
-                            <optgroup label={dejaAchetes.length ? `Autres ${voc.nom('article', true)}` : voc.Titre('article', true)}>
-                              {autres.map((a) => <option key={a.id} value={`a:${a.id}`}>{a.nom} ({a.unite}){a.selectionne ? '' : ` — hors de ${cible.type === 'activite' ? voc.ce('activite') : voc.ce('labo')}`}</option>)}
-                            </optgroup>
-                            <optgroup label={`Hors ${voc.nom('stock')} (reste sur la facture)`}>
-                              {NATURES.map((x) => <option key={x.valeur} value={`h:${x.valeur}`}>{x.libelle}</option>)}
-                            </optgroup>
-                          </select>
-                        </label>
+                        <div style={{ flex: '2 1 220px' }}><span style={etiquette}>{voc.Nom('article')} LabFlow</span>
+                          <ChoixArticle valeur={l.choix} articles={classes} natures={NATURES} manquant={!l.choix}
+                            onChoix={(choix) => choisir(i, choix)} libelles={libellesChoix}
+                            groupeDe={(a) => (achetes.has(a.id) ? groupeAchetes : dejaAchetes ? groupeAutres : undefined)}
+                            noteDe={(a) => (a.selectionne ? undefined : horsDuLieu)} />
+                        </div>
                         {v.article && (
                           <label style={{ flex: '1 1 210px' }}><span style={etiquette}>Conversion {l.conversionSure ? '' : <span style={{ color: '#b45309', textTransform: 'none' }}>(à vérifier)</span>}</span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem' }}>
