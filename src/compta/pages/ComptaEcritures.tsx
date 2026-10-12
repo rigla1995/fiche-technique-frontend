@@ -10,8 +10,8 @@ import { FenetreImport } from '../FenetreImport';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import {
   LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, contrepasserEcriture, controlerDate, controlerMontant, fmtJour, fmtMontant, importerBalanceOuverture, importerEcritures, libellePeriode,
-  ligneEnvoyee, lireEcriture, lireEcritures, periodeDe, periodeOuverteSuivante, telechargerModeleBalanceOuverture, telechargerModeleEcritures, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
-  type AideReponse, type ContrepassationReponse, type Ecriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
+  ligneEnvoyee, lireEcriture, lireEcritures, ouvrirPieceEcriture, periodeDe, piecesEcriture, periodeOuverteSuivante, telechargerModeleBalanceOuverture, telechargerModeleEcritures, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
+  type AideReponse, type ContrepassationReponse, type Ecriture, type PieceEcriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
 } from '../ecritures';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
 
@@ -45,7 +45,7 @@ const refusPerime = (err: unknown) => {
   if (s === 404) return /Dossier introuvable|Écriture introuvable/.test(messageDe(err));
   return s === 409 && !CORRIGEABLES.includes(codeDe(err) || '');
 };
-const LIBELLES_ORIGINE: Record<Ecriture['origine'], string> = { saisie: 'saisie', import: 'import', contrepassation: 'contre-passation' };
+const LIBELLES_ORIGINE: Record<Ecriture['origine'], string> = { saisie: 'saisie', import: 'import', contrepassation: 'contre-passation', labflow: 'LabFlow (facture fournisseur)' };
 const NATURES_TVA = ['tva_deductible', 'tva_collectee', 'tva_a_payer'];
 const mono = 'ui-monospace, monospace';
 const pluriel = (n: number, un: string, des: string) => `${n} ${n > 1 ? des : un}`;
@@ -77,6 +77,8 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const [info, setInfo] = useState('');
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
+  // F4 : les pièces de la facture LabFlow d'une écriture (plusieurs : une liste sous l'écriture) ; lien si l'onglet est refusé.
+  const [pieces, setPieces] = useState<{ ecritureId: number; liste: PieceEcriture[]; lien: { url: string; nom: string } | null } | null>(null);
   const occupeRef = useRef(false);
   // Les écritures dépliées et leurs lignes (lues à la demande ; remplacées après une modification ; retirées du cache
   // quand une relecture montre qu'une autre personne les a changées — `modifieLe` diffère). Miroirs en ref pour les
@@ -204,6 +206,26 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     setErreur('');
     setInfo(`Écriture ${r.ecriture.numero} validée (définitif).`);
     if (etatFiltre) relireFenetre();
+  };
+  const ouvrirUnePiece = async (ecritureId: number, liste: PieceEcriture[], p: PieceEcriture) => {
+    if (!etat) return;
+    try {
+      const url = await ouvrirPieceEcriture(etat.dossier.id, ecritureId, p);
+      setPieces({ ecritureId, liste, lien: url ? { url, nom: p.nom } : null });
+    } catch (err) {
+      setErreur(messageDossier(err, 'Cette pièce ne s\'ouvre pas : réessayez.', role));
+    }
+  };
+  const voirPiece = async (e: Ecriture) => {
+    if (!etat) return;
+    try {
+      const liste = await piecesEcriture(etat.dossier.id, e.id);
+      if (!liste.length) { setErreur('La facture de cette écriture n\'a pas (ou plus) de pièce jointe dans LabFlow.'); return; }
+      if (liste.length === 1) await ouvrirUnePiece(e.id, liste, liste[0]);
+      else setPieces({ ecritureId: e.id, liste, lien: null });
+    } catch (err) {
+      setErreur(messageDossier(err, 'Pièces indisponibles : réessayez.', role));
+    }
   };
   const valider = async (e: Ecriture) => {
     if (!etat || occupeRef.current) return;
@@ -530,12 +552,24 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                                 {d.dateReelle ? ` · opération du ${fmtJour(d.dateReelle)}, enregistrée au ${fmtJour(d.date)} (période close)` : ''}
                                 {d.contrepasseePar ? ` · annulée par la contre-passation ${d.contrepasseePar.numero}` : ''}
                               </span>
+                              {d.factureId ? <button type="button" onClick={() => void voirPiece(d)} style={petit('#f0fdf4', '#166534', '#bbf7d0')} title="La facture du fournisseur, déposée dans LabFlow">📎 Voir la pièce</button> : null}
                               <span style={{ flex: 1 }} />
                               {peutValider && d.etat === 'brouillard' && <button type="button" onClick={() => valider(e)} disabled={occupe || lecture} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>🔏 Valider</button>}
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => modifier(e)} disabled={occupe || lecture} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>✏️ Modifier</button>}
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => supprimer(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>🗑 Supprimer</button>}
                               {peutValider && !!etat.exercice && d.etat === 'validee' && !d.contrepasseePar && <button type="button" onClick={() => contrepasser(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>↩ Contre-passer</button>}
                             </div>
+                            {pieces?.ecritureId === d.id && (pieces.liste.length > 1 || pieces.lien) && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: '0.74rem' }}>
+                                {pieces.liste.length > 1 && <span style={{ color: '#64748b' }}>Pièces de la facture :</span>}
+                                {pieces.liste.length > 1 && pieces.liste.map((p) => (
+                                  <button key={p.id} type="button" onClick={() => void ouvrirUnePiece(d.id, pieces.liste, p)} style={petit('#fff', '#166534', '#bbf7d0')}>📄 {p.nom}</button>
+                                ))}
+                                {pieces.lien && (
+                                  <span>Votre navigateur n'a pas ouvert de nouvel onglet : <a href={pieces.lien.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700 }}>afficher « {pieces.lien.nom} »</a></span>
+                                )}
+                              </div>
+                            )}
                           </>
                         )}
                       </div>

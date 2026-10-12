@@ -2,6 +2,7 @@
 // d'approvisionnement — fichiers choisis (contrôle du type sur le contenu, copie JPEG d'une photo HEIC), envois et
 // lecture. Le serveur refait tous les contrôles ; ceux d'ici évitent seulement un envoi inutile.
 import api from '../../../api/client';
+import type { EtatCompta, ResultatCompta } from './compta';
 
 export const PIECES_MAX = 5;
 export const OCTETS_MAX = 15 * 1024 * 1024;
@@ -139,6 +140,8 @@ export interface FactureAEnregistrer {
   confirmerDoublon?: boolean;
   /** Étape F2 : ce que la lecture de la facture a proposé (gardé sur la facture, pour comparer plus tard). */
   lecture?: LectureEnvoyee | null;
+  /** Étape F4 : « Envoyer à la comptabilité » (case cochée, module Compta actif). */
+  envoyerCompta?: boolean;
 }
 /** Résumé de la lecture envoyé au serveur (le serveur ne garde que ces champs). */
 export interface LectureEnvoyee {
@@ -156,7 +159,7 @@ export interface FactureSemblable { id: number | null; dateFacture: string; lieu
 /** POST /api/appros/facture : toutes les lignes et les pièces, ou rien. */
 export async function enregistrerFacture(f: FactureAEnregistrer, fichiers: FichierChoisi[]) {
   const { data } = await api.post('/api/appros/facture', formulaire({ ...f }, fichiers), MULTIPART);
-  return data as { factureId: number; ajoutee: boolean; nbLignes: number; nbPieces: number };
+  return data as { factureId: number; ajoutee: boolean; nbLignes: number; nbPieces: number } & ResultatCompta;
 }
 
 /** Étape F3 : une ligne de la facture telle que validée — un article (et sa conversion) ou une nature hors stock. */
@@ -182,7 +185,7 @@ export interface FactureAValider extends Omit<FactureAEnregistrer, 'lignes' | 'f
   remiseGlobale: number | null;
   lignes: LigneValidee[];
 }
-export interface FactureValidee { factureId: number; nbLignes: number; nbStock: number; nbPieces: number; appris: number; montantTTC: number }
+export interface FactureValidee extends ResultatCompta { factureId: number; nbLignes: number; nbStock: number; nbPieces: number; appris: number; montantTTC: number }
 
 /** POST /api/appros/facture/validee : la facture lue et vérifiée, ses pièces, ce qui est appris — tout ou rien. */
 export async function validerFacture(f: FactureAValider, fichiers: FichierChoisi[]) {
@@ -221,11 +224,12 @@ export async function validerAvecConfirmation(
 
 export async function listerPieces(factureId: number) {
   const { data } = await api.get(`/api/factures/${factureId}/pieces`);
-  return data as { factureId: number; modifiable: boolean; validee?: boolean; pieces: Piece[] };
+  return data as { factureId: number; modifiable: boolean; validee?: boolean; compta?: EtatCompta | null; pieces: Piece[] };
 }
-export async function joindrePieces(factureId: number, fichiers: FichierChoisi[]) {
-  const { data } = await api.post(`/api/factures/${factureId}/pieces`, formulaire({}, fichiers), MULTIPART);
-  return (data as { pieces: Piece[] }).pieces;
+/** Joindre des pièces ; `envoyerCompta` (étape F4) : envoyer ensuite la facture en comptabilité. */
+export async function joindrePieces(factureId: number, fichiers: FichierChoisi[], envoyerCompta = false) {
+  const { data } = await api.post(`/api/factures/${factureId}/pieces`, formulaire(envoyerCompta ? { envoyerCompta } : {}, fichiers), MULTIPART);
+  return data as { pieces: Piece[] } & ResultatCompta;
 }
 export async function remplacerPiece(factureId: number, pieceId: number, fichier: FichierChoisi) {
   const { data } = await api.put(`/api/factures/${factureId}/pieces/${pieceId}`, formulaire({}, [fichier]), MULTIPART);
@@ -295,10 +299,9 @@ export async function enregistrerAvecConfirmation(
   fichiers: FichierChoisi[],
   confirmer: (o: { title: string; message?: string; details?: string[]; confirmLabel?: string; tone?: 'danger' | 'primary' | 'info'; icon?: string }) => Promise<boolean>,
   ceFournisseur: string,
-): Promise<'enregistree' | 'annulee'> {
+): Promise<Awaited<ReturnType<typeof enregistrerFacture>> | 'annulee'> {
   try {
-    await enregistrerFacture(f, fichiers);
-    return 'enregistree';
+    return await enregistrerFacture(f, fichiers);
   } catch (e) {
     if (codeErreur(e) !== 'FACTURE_EXISTANTE') throw e;
     const existantes = (e as { response?: { data?: { factures?: FactureSemblable[] } } }).response?.data?.factures ?? [];
@@ -312,7 +315,6 @@ export async function enregistrerAvecConfirmation(
       icon: '⚠️',
     });
     if (!ok) return 'annulee';
-    await enregistrerFacture({ ...f, confirmerDoublon: true }, fichiers);
-    return 'enregistree';
+    return enregistrerFacture({ ...f, confirmerDoublon: true }, fichiers);
   }
 }

@@ -574,6 +574,8 @@ export interface HistoriqueApproEntry {
   prixUnitaireTva?: number | null;
   /** Étape F3 (factures fournisseur) : ligne d'une facture validée — ni modifiable ni supprimable seule. */
   factureValidee?: boolean;
+  /** Étape F4 : ligne d'une facture envoyée en comptabilité — verrouillée tant que son écriture existe. */
+  factureEnCompta?: boolean;
 }
 
 export interface FournisseurApproActivite {

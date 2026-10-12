@@ -8,6 +8,8 @@ import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
 import FenetrePieces from './factures/FenetrePieces';
 import DetailFactureValidee from './factures/DetailFactureValidee';
+import EtatComptaFacture from './factures/EtatComptaFacture';
+import { useComptaActif, type EtatCompta } from './factures/compta';
 import { useAuth } from '../../context/AuthContext';
 
 const currentYear = new Date().getFullYear();
@@ -41,6 +43,8 @@ interface FactureRow {
   nbPieces?: number;
   // Étape F3 : facture lue puis validée (plus modifiable, supprimable en entier).
   validee?: boolean;
+  // Étape F4 : l'écriture d'achat de la facture dans LabFlow Compta (brouillard ou validée), sinon null.
+  compta?: EtatCompta | null;
 }
 
 interface LigneFact {
@@ -172,6 +176,8 @@ export default function FacturesApproPage() {
   });
   const { canWrite } = useAuth();
   const majNombrePieces = (id: number, n: number) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, nbPieces: n } : x)));
+  const comptaActif = useComptaActif();
+  const majCompta = (id: number, c: EtatCompta) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, compta: c } : x)));
 
   // Facture PDF (charte des factures acheteurs : émetteur = fournisseur)
   const ouvrirPdf = async (id: number) => {
@@ -204,7 +210,8 @@ export default function FacturesApproPage() {
     <div className="page">
       {fenetrePieces && (
         <FenetrePieces factureId={fenetrePieces.id} titre={fenetrePieces.titre} accent="#1e40af"
-          onFermer={() => setFenetrePieces(null)} onNombre={(n) => majNombrePieces(fenetrePieces.id, n)} />
+          onFermer={() => setFenetrePieces(null)} onNombre={(n) => majNombrePieces(fenetrePieces.id, n)}
+          onCompta={(c) => majCompta(fenetrePieces.id, c)} />
       )}
       {/* Hero */}
       <div style={{
@@ -295,6 +302,8 @@ export default function FacturesApproPage() {
                         <span style={{ marginLeft: 8, background: '#0369a1', color: '#fff', borderRadius: 4, padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
                           {f.typeSource === 'transfert' ? `↗ ${voc.Court('transfert')}` : f.validee ? '🔒 Validée' : voc.acc('appro', 'Manuel', 'Manuelle')}
                         </span>
+                        <EtatComptaFacture factureId={f.id} compta={f.compta} comptaActif={comptaActif} peutEcrire={canWrite}
+                          envoyable={f.typeSource === 'manuel' && (Boolean(f.validee) || (f.nbPieces ?? 0) > 0)} onCompta={(c) => majCompta(f.id, c)} />
                       </div>
                     </div>
                   </div>
