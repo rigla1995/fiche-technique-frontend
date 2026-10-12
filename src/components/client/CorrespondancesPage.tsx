@@ -188,7 +188,7 @@ export default function CorrespondancesPage() {
                       )}
                     </td>
                     <td style={{ ...cellule, fontSize: '0.76rem', color: 'var(--text-muted)' }}>
-                      {c.emplois} facture{c.emplois > 1 ? 's' : ''}<div>dernière le {fDate(c.derniereFois)}{c.auteurNom ? ` · ${c.auteurNom}` : ''}</div>
+                      {c.emplois > 0 ? `${c.emplois} facture${c.emplois > 1 ? 's' : ''}` : 'corrigée à la main'}<div>{c.emplois > 0 ? 'dernière' : 'dernière facture'} le {fDate(c.derniereFois)}{c.auteurNom ? ` · ${c.auteurNom}` : ''}</div>
                     </td>
                     <td style={{ ...cellule, whiteSpace: 'nowrap', textAlign: 'right' }}>
                       {canWrite && (enEdition ? (

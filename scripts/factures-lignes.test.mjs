@@ -154,3 +154,67 @@ test('bandeDuTableau, lignesDouteuses : zone relue sur une image et quand la rel
   assert.equal(lignesDouteuses({ ...sur, totaux: { ht: 25, remise: null } }), true);
   assert.equal(lignesDouteuses({ ...sur, lignesFacture: [] }), true);
 });
+
+test('relecture : titre « Désignation » centré — la désignation garde ses premiers mots ; référence prise seulement si c\'est un code', () => {
+  const p = page([
+    [200, [[40, 'N°'], [140, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
+    [220, [[45, '1'], [65, 'Lait demi-écrémé 1 L'], [305, '5'], [360, '8,700'], [500, '43,500']]],
+    [240, [[45, '2'], [65, 'Farine T45 sac 25 kg'], [305, '1'], [360, '41,500'], [500, '41,500']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designation), ['Lait demi-écrémé 1 L', 'Farine T45 sac 25 kg']);
+  const r = page([
+    [200, [[40, 'Réf.'], [150, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
+    [220, [[40, 'B07'], [75, 'Lait entier 1 L'], [305, '5'], [360, '8,700'], [500, '43,500']]],
+    [240, [[75, 'Transport marchandise'], [305, '1'], [360, '10,000'], [500, '10,000']]],
+  ]);
+  assert.deepEqual(lireLignes([r], 'pdf').map((l) => [l.reference, l.designation]), [['B07', 'Lait entier 1 L'], [null, 'Transport marchandise']]);
+});
+
+test('relecture : « Base pizza » et « Yaourt nature … colis » restent des lignes (ni fin du tableau, ni nouveau titre)', () => {
+  const p = page([
+    [200, [[40, 'Désignation'], [250, 'Unité'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
+    [220, [[40, 'Base pizza tomate 5 kg'], [250, 'kg'], [305, '2'], [360, '12,000'], [500, '24,000']]],
+    [240, [[40, 'Yaourt nature 125 g'], [250, 'colis'], [305, '3'], [360, '9,000'], [500, '27,000']]],
+    [260, [[40, 'Riz long 5 kg'], [250, 'sac'], [305, '1'], [360, '17,250'], [500, '17,250']]],
+    [300, [[350, 'Total HT'], [500, '68,250']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => [l.designation, l.montant]), [['Base pizza tomate 5 kg', 24], ['Yaourt nature 125 g', 27], ['Riz long 5 kg', 17.25]]);
+});
+
+test('relecture : colonnes TTC seules ramenées en HT avec le taux de la ligne (à relire)', () => {
+  const p = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [350, 'P.U. TTC'], [430, 'TVA'], [500, 'Montant TTC']]],
+    [220, [[40, 'Fromage râpé'], [305, '2'], [350, '5,950'], [435, '19%'], [500, '11,900']]],
+  ]);
+  const [l] = lireLignes([p], 'pdf');
+  assert.deepEqual([l.montant, l.prixUnitaire, l.tauxTva, l.luEnTtc, l.aRelire], [10, 5, 19, true, true]);
+});
+
+test('relecture : un intertitre n\'est collé à aucune ligne ; une rangée de remise ou de TVA au pied n\'est pas une ligne', () => {
+  const p = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
+    [220, [[40, 'BOISSONS']]],
+    [240, [[40, 'Eau minérale 1,5 L'], [305, '6'], [360, '0,600'], [500, '3,600']]],
+    [260, [[40, 'Remise 5%'], [500, '0,180']]],
+    [280, [[40, 'Jus orange'], [305, '1'], [360, '2,000'], [500, '2,000']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'pdf').map((l) => l.designation), ['Eau minérale 1,5 L']);
+});
+
+test('relecture : sans titre (photo), une rangée qui commence par un n° est lue', () => {
+  const p = page([
+    [200, [[40, '3'], [70, 'Eau minérale 1,5 L'], [300, '5'], [360, '3,600'], [500, '18,000']]],
+    [280, [[350, 'Total HT'], [500, '18,000']]],
+  ]);
+  assert.deepEqual(lireLignes([p], 'ocr').map((l) => [l.designation, l.quantite, l.montant]), [['Eau minérale 1,5 L', 5, 18]]);
+});
+
+test('relecture : première rangée gardée pour la clé (n° de lot dessous)', () => {
+  const p = page([
+    [200, [[40, 'Désignation'], [300, 'Qté'], [360, 'Prix'], [500, 'Montant']]],
+    [220, [[40, 'Farine T45 sac 25 kg'], [305, '1'], [360, '41,500'], [500, '41,500']]],
+    [231, [[40, '(lot 2345 dlc 12/2026)']]],
+  ]);
+  const [l] = lireLignes([p], 'pdf');
+  assert.deepEqual([l.designation, l.designationPremiere], ['Farine T45 sac 25 kg (lot 2345 dlc 12/2026)', 'Farine T45 sac 25 kg']);
+});

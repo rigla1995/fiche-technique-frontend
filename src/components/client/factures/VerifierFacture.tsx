@@ -12,7 +12,7 @@ import { useConfirm } from '../../common/ConfirmDialog';
 import type { EnteteLu, LigneLue } from './lecture/types';
 import type { ApercuPage } from './lecture/lireFacture';
 import {
-  NATURES, articlesProbables, ecartDePrix, proposer, proposerConversion, totauxRecalcules,
+  NATURES, ecartArrondiStock, ecartDePrix, probablesPour, proposer, proposerConversion, totauxRecalcules,
   type ArticleConnu, type Contexte, type EtatLigne, type NatureHorsStock,
 } from './lecture/correspondre';
 import { messageErreur, validerAvecConfirmation, type FactureValidee, type FichierChoisi, type LectureEnvoyee, type LigneValidee } from './pieces';
@@ -54,9 +54,9 @@ interface LigneEdition {
 const TIMBRES = [0, 1, 1.5, 2];
 const f3 = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '' : n.toFixed(3).replace('.', ','));
 const fNb = (n: number | null | undefined) => (n == null || !Number.isFinite(n) ? '' : String(Math.round(n * 1e6) / 1e6).replace('.', ','));
-/** Nombre saisi (« 1 234,5 », « 12.5 ») ; null si vide ou illisible. */
+/** Nombre saisi (« 1 234,5 », « 12.5 », « 19 % ») ; null si vide ou illisible. */
 const nb = (s: string): number | null => {
-  const t = s.replace(/\s/g, '').replace(',', '.');
+  const t = s.replace(/[\s%]/g, '').replace(',', '.');
   if (!t || !/^-?\d*\.?\d+$/.test(t)) return null;
   const v = Number(t);
   return Number.isFinite(v) ? v : null;
@@ -101,15 +101,24 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   // TVA d'une ligne qui n'en imprime pas : le seul taux de la facture, ou 0 pour un document sans TVA ; sinon à choisir.
   const tvaParDefaut = lu.totaux.parTaux.length === 1 ? lu.totaux.parTaux[0].taux : lu.totaux.tva === 0 ? 0 : null;
 
-  // Lignes lues → lignes à vérifier, avec ce que LabFlow propose.
+  // Lignes lues → lignes à vérifier, avec ce que LabFlow propose. Une ligne lue en TTC (colonnes « Montant TTC ») est
+  // ramenée en HT avec son taux.
   const preparer = (c: Contexte): LigneEdition[] => lu.lignesFacture.map((l) => {
     const p = proposer(l, c);
     const tva = l.tauxTva ?? tvaParDefaut;
+    let montant = l.montant;
+    let prix = l.prixUnitaire;
+    let raison = p.raison;
+    if (montant === null && l.luEnTtc && l.montantTtc !== null && tva !== null) {
+      montant = Math.round((l.montantTtc / (1 + tva / 100)) * 1000) / 1000;
+      if (prix === null && l.prixTtc !== null) prix = Math.round((l.prixTtc / (1 + tva / 100)) * 1000) / 1000;
+    }
+    if (l.luEnTtc) raison = `lue en TTC, ramenée en HT${raison ? ` · ${raison}` : ''}`;
     return {
       id: nouvelId(), designation: l.designation, reference: l.reference ?? '', unite: l.unite ?? '',
-      quantite: fNb(l.quantite), prix: f3(l.prixUnitaire), remise: l.remise ? fNb(l.remise) : '', tva: tva === null ? '' : fNb(tva),
-      montant: f3(l.montant), choix: p.articleId ? `a:${p.articleId}` : p.horsStock ? `h:${p.horsStock}` : '',
-      conversion: fNb(p.conversion), etat: p.etat, raison: p.raison, conversionSure: p.conversionSure, lue: l, creation: null,
+      quantite: fNb(l.quantite), prix: f3(prix), remise: l.remise ? fNb(l.remise) : '', tva: tva === null ? '' : fNb(tva),
+      montant: f3(montant), choix: p.articleId ? `a:${p.articleId}` : p.horsStock ? `h:${p.horsStock}` : '',
+      conversion: fNb(p.conversion), etat: p.etat, raison, conversionSure: p.conversionSure, lue: l, creation: null,
     };
   });
   // Contexte : correspondances de ce fournisseur, articles déjà achetés chez lui, articles du compte ; les lignes sont
@@ -147,10 +156,18 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const articles = useMemo(() => new Map((ctx?.articles ?? []).map((a) => [a.id, a])), [ctx]);
   const dernierPrix = useMemo(() => new Map((ctx?.achats ?? []).map((a) => [a.articleId, a.dernierPrix])), [ctx]);
   const achetes = useMemo(() => new Set((ctx?.achats ?? []).map((a) => a.articleId)), [ctx]);
+  // Articles classés par ligne, calculés une fois par désignation (la fenêtre se redessine à chaque frappe).
+  const probables = useMemo(() => (ctx ? probablesPour(ctx) : null), [ctx]);
 
-  const modifier = (i: number, champs: Partial<LigneEdition>, confirmer = true) => {
+  // Une ligne est désignée par son identifiant (pas par sa place : une ligne retirée pendant une création d'article
+  // décalerait les suivantes).
+  const modifierId = (id: string, champs: Partial<LigneEdition>, confirmer = true) => {
     setModifiee(true);
-    setLignes((ls) => ls.map((l, k) => (k === i ? { ...l, ...champs, ...(confirmer && (l.etat === 'proposee' || l.etat === 'a_choisir') ? { etat: 'confirmee' } : {}) } : l)));
+    setLignes((ls) => ls.map((l) => (l.id === id ? { ...l, ...champs, ...(confirmer && (l.etat === 'proposee' || l.etat === 'a_choisir') ? { etat: 'confirmee' } : {}) } : l)));
+  };
+  const modifier = (i: number, champs: Partial<LigneEdition>, confirmer = true) => {
+    const id = lignes[i]?.id;
+    if (id) modifierId(id, champs, confirmer);
   };
   const choisir = (i: number, choix: string) => {
     const l = lignes[i];
@@ -158,7 +175,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
     const c = article ? proposerConversion(l.designation, l.unite || null, article.unite) : null;
     modifier(i, {
       choix, etat: choix ? 'confirmee' : 'a_choisir',
-      ...(c ? { conversion: fNb(c.n), conversionSure: c.sure, raison: c.sure ? `conversion : ${c.raison}` : '' } : {}),
+      ...(c ? { conversion: fNb(c.n), conversionSure: c.sure, raison: c.sure ? `conversion : ${c.raison}` : '' } : { raison: '' }),
     }, false);
   };
   const ajouterLigne = () => {
@@ -191,13 +208,27 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   if (aConfirmer) blocages.push(`${aConfirmer} proposition${aConfirmer > 1 ? 's' : ''} à confirmer`);
   const sansTva = compter((_, i) => valeurs[i].t === null || valeurs[i].t! < 0 || valeurs[i].t! > 100);
   if (sansTva) blocages.push(`TVA à choisir sur ${n(sansTva)}`);
-  const malLues = compter((l, i) => !l.designation.trim() || !(valeurs[i].q! > 0) || valeurs[i].m === null || valeurs[i].m! < 0
-    || (Boolean(valeurs[i].article) && !(valeurs[i].conv! > 0)));
-  if (malLues) blocages.push(`${n(malLues)} incomplète${malLues > 1 ? 's' : ''} (désignation, quantité, montant ou conversion)`);
+  // Mêmes contrôles que le serveur : une ligne refusée là-bas ne doit pas pouvoir partir d'ici.
+  const malLues = compter((l, i) => {
+    const v = valeurs[i];
+    return !l.designation.trim() || !(v.q! > 0) || v.m === null || (Boolean(v.article) && v.m < 0)
+      || (Boolean(l.prix.trim()) && v.p === null) || (Boolean(l.remise.trim()) && nb(l.remise) === null)
+      || v.r < 0 || v.r > 100
+      || (Boolean(v.article) && (!(v.conv! > 0) || Math.round((v.q ?? 0) * (v.conv ?? 0) * 1000) / 1000 <= 0));
+  });
+  if (malLues) blocages.push(`${n(malLues)} incomplète${malLues > 1 ? 's' : ''} ou illisible${malLues > 1 ? 's' : ''} (désignation, quantité, prix, remise de 0 à 100 %, montant ou conversion)`);
+  const conversionsDouteuses = compter((l, i) => Boolean(valeurs[i].article) && !l.conversionSure);
+  if (conversionsDouteuses) blocages.push(`conversion à vérifier sur ${n(conversionsDouteuses)} (✓ Conversion juste, ou corrigez-la)`);
+  const arrondis = valeurs.map((v, i) => (v.article && v.q && v.conv ? ecartArrondiStock(calcul.couts[i], v.q, v.conv, calcul.prixStock[i]) : null));
+  const tropPetits = arrondis.filter((x) => x !== null).length;
+  if (tropPetits) blocages.push(`${n(tropPetits)} au prix par unité trop petit pour le millime : choisissez ${voc.un('article')} à l'unité plus grande (kg plutôt que g)`);
+  if (lignes.length > 300) blocages.push('300 lignes au plus par facture');
   if (lignes.length && !valeurs.some((v) => v.article)) blocages.push(`aucune ligne n'entre en ${voc.nom('stock')} (choisissez au moins ${voc.un('article')})`);
   if (!ctx) blocages.push(`liste ${voc.du('article', true)} non chargée`);
   const remiseLue = nb(remiseGlobale);
+  const totalPositif = valeurs.reduce((s, v) => s + Math.max(0, v.m ?? 0), 0);
   if (remiseGlobale.trim() && (remiseLue === null || remiseLue < 0)) blocages.push('remise globale illisible');
+  else if ((remiseLue ?? 0) > totalPositif + 0.0005) blocages.push('remise globale plus grande que les lignes');
   if (fodec.trim() && (nb(fodec) === null || nb(fodec)! < 0)) blocages.push('FODEC illisible');
 
   const valider = async () => {
@@ -209,6 +240,8 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
         const v = valeurs[i];
         const base = {
           designation: l.designation.trim(), reference: l.reference.trim() || null, unite: l.unite.trim() || null,
+          // Texte LU : la clé apprise se calcule dessus (la facture suivante sera lue pareil, pas corrigée pareil).
+          ...(l.lue ? { designationLue: l.lue.designationPremiere || l.lue.designation, referenceLue: l.lue.reference ?? '' } : {}),
           quantite: v.q as number, prixUnitaire: v.p, remise: v.r, tauxTva: v.t as number, montant: v.m as number,
         };
         return v.article ? { ...base, articleId: v.article.id, conversion: v.conv as number } : { ...base, horsStock: v.horsStock as NatureHorsStock };
@@ -229,7 +262,8 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
     if (envoi) return;
     if (modifiee || lignes.length) {
       const ok = await confirm({
-        title: 'Abandonner la vérification ?', message: 'Rien n\'est enregistré : ni les lignes, ni la pièce, ni les choix faits ici. La facture reste déposée dans le bloc de saisie.',
+        title: 'Abandonner la vérification ?',
+        message: `Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf ${voc.le('article', true)} que vous avez ${voc.acc('article', 'créés', 'créées', 2)} depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.`,
         confirmLabel: 'Abandonner', tone: 'danger', icon: '✖️',
       });
       if (!ok) return;
@@ -239,31 +273,32 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
 
   // Création d'un article depuis une ligne (nom tiré de la désignation, unité et catégorie à choisir).
   const ouvrirCreation = async (i: number) => {
-    const nom = lignes[i].designation.replace(/\(.*?\)/g, ' ').replace(/\b\d+([.,]\d+)?\s*(kg|g|gr|l|lt|ml|cl)\b/gi, ' ').replace(/\s+/g, ' ').trim();
-    modifier(i, { creation: { nom: nom.slice(0, 100), uniteId: '', categorieId: '', enCours: false, erreur: null } }, false);
+    const { id, designation } = lignes[i];
+    const nom = designation.replace(/\(.*?\)/g, ' ').replace(/\b\d+([.,]\d+)?\s*(kg|g|gr|l|lt|ml|cl)\b/gi, ' ').replace(/\s+/g, ' ').trim();
+    modifierId(id, { creation: { nom: nom.slice(0, 100), uniteId: '', categorieId: '', enCours: false, erreur: null } }, false);
     if (!unites || !categories) {
       try {
         const [u, c] = await Promise.all([api.get('/api/unites'), api.get('/api/categories')]);
         setUnites(u.data as { id: number; name: string }[]);
         setCategories(c.data as { id: number; name: string; familleName?: string | null }[]);
       } catch (e) {
-        modifier(i, { creation: { nom, uniteId: '', categorieId: '', enCours: false, erreur: messageErreur(e, 'Unités et catégories non chargées : réessayez.') } }, false);
+        modifierId(id, { creation: { nom, uniteId: '', categorieId: '', enCours: false, erreur: messageErreur(e, 'Unités et catégories non chargées : réessayez.') } }, false);
       }
     }
   };
   const creerArticle = async (i: number) => {
-    const c = lignes[i].creation;
+    const { id, designation, unite, creation: c } = lignes[i];
     if (!c || !c.nom.trim() || !c.uniteId || c.enCours) return;
-    modifier(i, { creation: { ...c, enCours: true, erreur: null } }, false);
+    modifierId(id, { creation: { ...c, enCours: true, erreur: null } }, false);
     try {
       const { data } = await api.post('/api/articles', { name: c.nom.trim(), unitId: Number(c.uniteId), categorieId: c.categorieId ? Number(c.categorieId) : null });
       const a = data as { id: number; name: string; unitName?: string; categorieName?: string | null };
       const nouveau: ArticleConnu = { id: a.id, nom: a.name, unite: a.unitName ?? unites?.find((u) => String(u.id) === c.uniteId)?.name ?? '', categorie: a.categorieName ?? null, selectionne: false };
       setCtx((x) => (x ? { ...x, articles: [...x.articles, nouveau] } : x));
-      const conv = proposerConversion(lignes[i].designation, lignes[i].unite || null, nouveau.unite);
-      modifier(i, { creation: null, choix: `a:${nouveau.id}`, etat: 'confirmee', conversion: fNb(conv.n), conversionSure: conv.sure, raison: `${voc.nom('article')} ${voc.acc('article', 'créé', 'créée')}` }, false);
+      const conv = proposerConversion(designation, unite || null, nouveau.unite);
+      modifierId(id, { creation: null, choix: `a:${nouveau.id}`, etat: 'confirmee', conversion: fNb(conv.n), conversionSure: conv.sure, raison: `${voc.nom('article')} ${voc.acc('article', 'créé', 'créée')}` }, false);
     } catch (e) {
-      modifier(i, { creation: { ...c, enCours: false, erreur: messageErreur(e, `${voc.Nom('article')} non ${voc.acc('article', 'créé', 'créée')}.`) } }, false);
+      modifierId(id, { creation: { ...c, enCours: false, erreur: messageErreur(e, `${voc.Nom('article')} non ${voc.acc('article', 'créé', 'créée')}.`) } }, false);
     }
   };
 
@@ -287,15 +322,33 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
     : null;
 
   const t = lu.totaux;
-  const comparer = (luV: number | null, recalcule: number) => (luV === null ? null : Math.abs(luV - recalcule) <= tolerance);
-  const marque = (ok: boolean | null) => (ok === null ? <span style={{ color: '#94a3b8' }} title="non lu sur la facture">—</span>
-    : ok ? <span style={{ color: '#15803d' }} title="identique à la facture">✓</span> : <span style={{ color: '#b45309' }} title="différent de la facture">⚠</span>);
+  // Une facture arrondit souvent la TVA ligne par ligne : quelques millimes d'écart sont admis selon le nombre de lignes.
+  const toleranceTotaux = lu.source === 'pdf' ? Math.max(0.0015, 0.0005 * lignes.length) : Math.max(0.011, 0.0005 * lignes.length);
+  const comparer = (luV: number | null, recalcule: number) => (luV === null ? null : Math.abs(luV - recalcule) <= toleranceTotaux);
+  const marque = (ok: boolean | null) => (ok === null ? <span style={{ color: '#94a3b8' }} title="non lu sur la facture" aria-label="non lu">—</span>
+    : ok ? <span style={{ color: '#15803d' }} title="identique à la facture" aria-label="identique à la facture">✓</span> : <span style={{ color: '#b45309' }} title="différent de la facture" aria-label="différent de la facture">⚠</span>);
   const sommeLignes = valeurs.reduce((s, v) => s + (v.m ?? 0), 0);
+  // Lignes imprimées TTC (ticket de grande surface, colonne « Montant TTC ») : leur somme donne le TTC, pas le HT.
+  const lignesEnTtc = t.ttc !== null && lignes.length > 0 && valeurs.every((v) => v.t !== null)
+    && Math.abs(sommeLignes - (t.ttc - (t.timbre ?? 0))) <= toleranceTotaux
+    && (t.ht === null || Math.abs(sommeLignes - t.ht) > toleranceTotaux) && valeurs.some((v) => (v.t ?? 0) > 0);
+  const ramenerEnHt = () => {
+    setModifiee(true);
+    setLignes((ls) => ls.map((l) => {
+      const taux = nb(l.tva) ?? 0;
+      const m = nb(l.montant), p = nb(l.prix);
+      return { ...l, montant: m === null ? l.montant : f3(m / (1 + taux / 100)), prix: p === null ? l.prix : f3(p / (1 + taux / 100)) };
+    }));
+  };
+  // Échap ferme (avec confirmation), comme le bouton Fermer ; le titre reçoit le focus à l'ouverture.
+  const titre = useRef<HTMLHeadingElement>(null);
+  useEffect(() => { titre.current?.focus(); }, []);
   const nbStock = valeurs.filter((v) => v.article).length;
   const aConfirmerIdx = lignes.map((l, i) => (l.choix && l.etat === 'proposee' ? i : -1)).filter((i) => i >= 0);
 
   return (
-    <div className="modal-overlay" style={{ zIndex: 1150, padding: 0 }} role="dialog" aria-modal="true" aria-label="Vérifier la facture">
+    <div className="modal-overlay" style={{ zIndex: 1150, padding: 0 }} role="dialog" aria-modal="true" aria-label="Vérifier la facture"
+      onKeyDown={(ev) => { if (ev.key === 'Escape') { ev.stopPropagation(); void fermer(); } }}>
       <style>{`
         .vf-grille { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 0; height: 100%; min-height: 0; }
         .vf-page { border-right: 1px solid #e2e8f0; min-height: 0; display: flex; flex-direction: column; background: #f1f5f9; }
@@ -310,7 +363,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
       <div style={{ background: '#fff', width: '100%', height: '100%', maxWidth: 1500, maxHeight: '100vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
         {/* En-tête */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', borderBottom: '1px solid #e2e8f0', flexWrap: 'wrap', background: `${accent}0d` }}>
-          <h2 style={{ margin: 0, fontSize: '1.05rem', color: accent }}>🔎 Vérifier la facture</h2>
+          <h2 ref={titre} tabIndex={-1} style={{ margin: 0, fontSize: '1.05rem', color: accent, outline: 'none' }}>🔎 Vérifier la facture</h2>
           <span style={{ fontSize: '0.8rem', color: '#334155' }}>
             <strong>{fournisseurNom}</strong> · n° <strong>{refFacture}</strong> · {date.split('-').reverse().join('/')}
           </span>
@@ -368,14 +421,15 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                 {lignes.map((l, i) => {
                   const v = valeurs[i];
                   const e = ETATS[l.etat];
-                  const controle = v.q !== null && v.p !== null && v.m !== null ? Math.abs(v.q * v.p * (1 - v.r / 100) - v.m) <= Math.max(tolerance, v.m * 0.00002) : null;
+                  const controle = v.q !== null && v.p !== null && v.m !== null ? Math.abs(v.q * v.p * (1 - v.r / 100) - v.m) <= Math.max(tolerance, Math.abs(v.m) * 0.00002) : null;
                   const prixStock = v.article ? calcul.prixStock[i] : null;
                   const ecart = v.article ? ecartDePrix(prixStock, dernierPrix.get(v.article.id) ?? null) : null;
-                  const probables = articlesProbables(l.designation, ctx);
-                  const dejaAchetes = probables.filter((a) => achetes.has(a.id));
-                  const autres = probables.filter((a) => !achetes.has(a.id));
+                  const classes = probables ? probables(l.designation) : [];
+                  const dejaAchetes = classes.filter((a) => achetes.has(a.id));
+                  const autres = classes.filter((a) => !achetes.has(a.id));
                   return (
-                    <div key={l.id} onClick={() => choisirLigne(i)}
+                    // Un clic, ou le focus clavier dans un de ses champs, choisit la ligne (encadrée sur la facture).
+                    <div key={l.id} onClick={() => choisirLigne(i)} onFocusCapture={() => { if (choisie !== i) choisirLigne(i); }}
                       style={{ border: `1.5px solid ${choisie === i ? accent : '#e2e8f0'}`, borderRadius: 10, padding: '8px 10px', marginBottom: 8, background: choisie === i ? `${accent}08` : '#fff', cursor: 'pointer' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 6 }}>
                         <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748b' }}>{i + 1}</span>
@@ -389,7 +443,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                           <button type="button" style={{ ...bouton, color: '#166534', borderColor: '#86efac' }} onClick={(ev) => { ev.stopPropagation(); modifier(i, {}); }}>✓ Confirmer</button>
                         )}
                         <button type="button" style={{ ...bouton, color: '#991b1b' }} title="Retirer cette ligne (elle n'est pas enregistrée)"
-                          onClick={(ev) => { ev.stopPropagation(); setModifiee(true); setChoisie(null); setLignes((ls) => ls.filter((_, k) => k !== i)); }}>Retirer</button>
+                          onClick={(ev) => { ev.stopPropagation(); setModifiee(true); setChoisie(null); setLignes((ls) => ls.filter((x) => x.id !== l.id)); }}>Retirer</button>
                       </div>
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                         <label style={{ flex: '3 1 220px' }}><span style={etiquette}>Désignation lue</span>
@@ -404,7 +458,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                         <label><span style={etiquette}>Remise %</span><input style={{ ...petit, width: '100%' }} inputMode="decimal" value={l.remise} onChange={(ev) => modifier(i, { remise: ev.target.value }, false)} /></label>
                         <label><span style={etiquette}>TVA %</span>
                           <input style={{ ...petit, width: '100%', borderColor: v.t === null ? '#f87171' : '#cbd5e1' }} inputMode="decimal" value={l.tva} placeholder="?" onChange={(ev) => modifier(i, { tva: ev.target.value }, false)} /></label>
-                        <label><span style={etiquette}>Montant HT {controle === true ? <span style={{ color: '#15803d' }} title="quantité × prix − remise = montant">✓</span> : controle === false ? <span style={{ color: '#b45309' }} title="quantité × prix − remise ≠ montant : relisez">⚠</span> : null}</span>
+                        <label><span style={etiquette}>Montant HT {controle === true ? <span style={{ color: '#15803d' }} title="quantité × prix − remise = montant" aria-label="calcul juste">✓</span> : controle === false ? <span style={{ color: '#b45309' }} title="quantité × prix − remise ≠ montant : relisez" aria-label="calcul faux, à relire">⚠</span> : null}</span>
                           <input style={{ ...petit, width: '100%', fontWeight: 700 }} inputMode="decimal" value={l.montant} onChange={(ev) => modifier(i, { montant: ev.target.value }, false)} /></label>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flexWrap: 'wrap' }} onClick={(ev) => ev.stopPropagation()}>
@@ -428,8 +482,11 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                           <label style={{ flex: '1 1 210px' }}><span style={etiquette}>Conversion {l.conversionSure ? '' : <span style={{ color: '#b45309', textTransform: 'none' }}>(à vérifier)</span>}</span>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem' }}>
                               1 {l.unite || 'unité'} =
-                              <input style={{ ...petit, width: 70, borderColor: v.conv !== null && v.conv > 0 ? '#cbd5e1' : '#f87171' }} inputMode="decimal" value={l.conversion} onChange={(ev) => modifier(i, { conversion: ev.target.value, conversionSure: true })} />
+                              <input style={{ ...petit, width: 70, borderColor: v.conv !== null && v.conv > 0 && l.conversionSure ? '#cbd5e1' : '#f87171' }} inputMode="decimal" value={l.conversion} onChange={(ev) => modifier(i, { conversion: ev.target.value, conversionSure: true })} />
                               {v.article.unite}
+                              {!l.conversionSure && (
+                                <button type="button" style={{ ...bouton, color: '#166534', borderColor: '#86efac', marginLeft: 4 }} onClick={() => modifier(i, { conversionSure: true }, false)}>✓ Conversion juste</button>
+                              )}
                             </span>
                           </label>
                         )}
@@ -473,6 +530,12 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                 })}
                 <button type="button" style={{ ...bouton, marginBottom: 12 }} onClick={ajouterLigne}>+ Ajouter une ligne</button>
 
+                {lignesEnTtc && (
+                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#92400e', borderRadius: 8, padding: '8px 10px', fontSize: '0.78rem', marginBottom: 8, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    ⚠ La somme des lignes égale le TTC de la facture : ses prix sont sans doute <strong>TTC</strong> (ticket de grande surface).
+                    <button type="button" style={bouton} onClick={ramenerEnHt}>Ramener les lignes en HT</button>
+                  </div>
+                )}
                 {/* Pied : totaux lus et recalculés */}
                 <div style={{ border: '1px solid #e2e8f0', borderRadius: 10, padding: '10px 12px', background: '#f8fafc' }}>
                   <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 8 }}>

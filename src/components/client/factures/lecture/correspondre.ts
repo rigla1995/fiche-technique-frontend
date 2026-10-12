@@ -49,9 +49,12 @@ export const normaliserDesignation = (s: string | null | undefined): string => S
 export const normaliserReference = (s: string | null | undefined): string =>
   String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '').toUpperCase();
 
+/** Une référence d'un ou deux chiffres est un numéro de ligne, pas une référence produit : elle ne sert pas de clé. */
+export const referenceUtile = (ref: string): boolean => Boolean(ref) && !/^\d{1,2}$/.test(ref);
+
 export function cleDeLigne(l: { reference?: string | null; designation?: string | null }): string | null {
   const ref = normaliserReference(l.reference).slice(0, 60);
-  if (ref) return `ref:${ref}`;
+  if (referenceUtile(ref)) return `ref:${ref}`;
   const des = normaliserDesignation(l.designation).slice(0, 190);
   return des ? `des:${des}` : null;
 }
@@ -86,6 +89,9 @@ export function proposerConversion(designation: string, uniteFacture: string | n
   const texte = normaliserDesignation(`${designation} ${uniteFacture ?? ''}`);
   const stock = mesure(uniteStock);
   const facture = mesure(uniteFacture);
+  // Même unité écrite pareil sur la facture et en stock (« pièce », « bouteille ») : 1, sûr.
+  const pareil = (u: string | null | undefined) => normaliserDesignation(u).replace(/s$/, '');
+  if (uniteFacture && !facture && pareil(uniteFacture) === pareil(uniteStock)) return { n: 1, sure: true, raison: `même unité (${uniteStock})` };
   // Unité de la facture et du stock de même nature (kg et g, L et cl) : simple changement d'unité.
   if (stock && facture && stock.dim === facture.dim) {
     const n = facture.facteur / stock.facteur;
@@ -150,15 +156,33 @@ const HORS_STOCK: [RegExp, NatureHorsStock][] = [
 
 /** Articles à proposer pour une ligne, les plus probables d'abord : déjà achetés chez ce fournisseur, puis les autres. */
 export function articlesProbables(designation: string, ctx: Contexte): ArticleConnu[] {
-  const achetes = new Set(ctx.achats.map((a) => a.articleId));
-  return [...ctx.articles]
-    .map((a) => ({ a, s: ressemblanceArticle(designation, a.nom), achete: achetes.has(a.id) }))
-    .sort((x, y) => Number(y.achete) - Number(x.achete) || y.s - x.s || x.a.nom.localeCompare(y.a.nom))
-    .map((x) => x.a);
+  return probablesPour(ctx)(designation);
 }
 
-/** Ce que LabFlow propose pour une ligne lue. */
-export function proposer(l: { designation: string; reference?: string | null; unite?: string | null }, ctx: Contexte): Proposition {
+/**
+ * La même chose, préparée une fois pour un contexte : les mots de chaque article sont calculés une seule fois et le
+ * résultat est gardé par désignation (la fenêtre se redessine à chaque frappe, pour des centaines d'articles).
+ */
+export function probablesPour(ctx: Contexte): (designation: string) => ArticleConnu[] {
+  const achetes = new Set(ctx.achats.map((a) => a.articleId));
+  const prepares = ctx.articles.map((a) => ({ a, mots: motsUtiles(a.nom), achete: achetes.has(a.id) }));
+  const memo = new Map<string, ArticleConnu[]>();
+  return (designation) => {
+    const deja = memo.get(designation);
+    if (deja) return deja;
+    const d = motsUtiles(designation);
+    const score = (mots: string[]) => (mots.length && d.length ? mots.filter((m) => d.some((x) => memeMot(m, x))).length / mots.length : 0);
+    const res = prepares
+      .map((p) => ({ ...p, s: score(p.mots) }))
+      .sort((x, y) => Number(y.achete) - Number(x.achete) || y.s - x.s || x.a.nom.localeCompare(y.a.nom))
+      .map((x) => x.a);
+    memo.set(designation, res);
+    return res;
+  };
+}
+
+/** Ce que LabFlow propose pour une ligne lue. `designationPremiere` (première rangée lue) sert à la clé apprise. */
+export function proposer(l: { designation: string; designationPremiere?: string | null; reference?: string | null; unite?: string | null }, ctx: Contexte): Proposition {
   const articles = new Map(ctx.articles.map((a) => [a.id, a]));
   const avecConversion = (articleId: number, raison: string, etat: EtatLigne, conversionApprise?: number): Proposition => {
     if (conversionApprise !== undefined) return { etat, articleId, horsStock: null, conversion: conversionApprise, conversionSure: true, raison };
@@ -166,12 +190,15 @@ export function proposer(l: { designation: string; reference?: string | null; un
     return { etat, articleId, horsStock: null, conversion: c.n, conversionSure: c.sure, raison };
   };
   // 1. Même ligne déjà validée chez ce fournisseur.
-  const cle = cleDeLigne(l);
+  const cle = cleDeLigne({ reference: l.reference, designation: l.designationPremiere ?? l.designation });
   const exacte = cle ? ctx.correspondances.find((c) => c.cle === cle) : undefined;
   if (exacte && (exacte.horsStock || (exacte.articleId && articles.has(exacte.articleId)))) {
-    const fois = exacte.emplois > 1 ? `${exacte.emplois} factures` : 'une facture';
-    if (exacte.horsStock) return { etat: 'reconnue', articleId: null, horsStock: exacte.horsStock, conversion: 1, conversionSure: true, raison: `déjà validée sur ${fois}` };
-    return avecConversion(exacte.articleId as number, `déjà validée sur ${fois}`, 'reconnue', exacte.conversion);
+    const fois = exacte.emplois > 1 ? `déjà validée sur ${exacte.emplois} factures` : exacte.emplois === 1 ? 'déjà validée sur une facture' : 'corrigée dans Correspondances';
+    // Même référence mais désignation sans rapport (référence mal lue, ou réutilisée) : proposée, jamais reconnue.
+    const etat: EtatLigne = cle?.startsWith('ref:') && ressemblanceDesignations(l.designation, exacte.designation) < 0.5 ? 'proposee' : 'reconnue';
+    const raison = etat === 'proposee' ? `même réf. que « ${exacte.designation} », désignation différente` : fois;
+    if (exacte.horsStock) return { etat, articleId: null, horsStock: exacte.horsStock, conversion: 1, conversionSure: true, raison };
+    return avecConversion(exacte.articleId as number, raison, etat, exacte.conversion);
   }
   // 2. Ligne voisine déjà validée (désignation presque identique, autre conditionnement ou faute de lecture).
   const voisine = ctx.correspondances
@@ -213,19 +240,21 @@ export function ecartDePrix(prix: number | null, dernier: number | null): number
 /**
  * Totaux recalculés d'après les lignes vérifiées — MÊME CALCUL que le serveur (src/services/facturesValidees.js,
  * `repartir`) : remise globale répartie au prorata des montants, FODEC au prorata du net, TVA par taux sur (net + FODEC),
- * TTC = HT + FODEC + TVA + timbre. `prixStock` : prix par unité de stock des lignes d'article (coût net / quantité en stock).
+ * TTC = HT + FODEC + TVA + timbre ; une ligne négative (déconsigne) ne reçoit ni remise ni FODEC. `prixStock` : prix par
+ * unité de stock des lignes d'article (coût net / quantité en stock, au millime) ; `couts` : coût exact de chaque ligne.
  */
 export function totauxRecalcules(
   lignes: { quantite: number; montant: number; tauxTva: number; conversion: number | null }[],
   pied: { remiseGlobale?: number; fodec?: number; timbre?: number },
-): { ht: number; fodec: number; tva: number; ttc: number; parTaux: { taux: number; base: number; montant: number }[]; prixStock: (number | null)[] } {
+): { ht: number; fodec: number; tva: number; ttc: number; parTaux: { taux: number; base: number; montant: number }[]; prixStock: (number | null)[]; couts: number[] } {
   const m = (x: number) => Math.round(x * 1000) / 1000;
   const brut = lignes.reduce((s, l) => s + l.montant, 0);
-  const remise = Math.min(Math.max(0, pied.remiseGlobale ?? 0), brut);
-  const nets = lignes.map((l) => (brut > 0 ? l.montant - remise * (l.montant / brut) : 0));
-  const totalNet = nets.reduce((s, n) => s + n, 0);
+  const brutPositif = lignes.reduce((s, l) => s + Math.max(0, l.montant), 0);
+  const remise = Math.min(Math.max(0, pied.remiseGlobale ?? 0), brutPositif);
+  const nets = lignes.map((l) => (l.montant > 0 && brutPositif > 0 ? l.montant - remise * (l.montant / brutPositif) : l.montant));
+  const totalNet = lignes.reduce((s, l, i) => s + (l.montant > 0 ? nets[i] : 0), 0);
   const f = Math.max(0, pied.fodec ?? 0);
-  const couts = nets.map((n) => n + (totalNet > 0 ? f * (n / totalNet) : 0));
+  const couts = nets.map((n, i) => n + (lignes[i].montant > 0 && totalNet > 0 ? f * (n / totalNet) : 0));
   const taux = new Map<number, number>();
   lignes.forEach((l, i) => taux.set(l.tauxTva, (taux.get(l.tauxTva) ?? 0) + couts[i]));
   const parTaux = [...taux].sort((a, b) => a[0] - b[0]).map(([t, base]) => ({ taux: t, base: m(base), montant: m(base * t / 100) }));
@@ -234,5 +263,17 @@ export function totauxRecalcules(
   return {
     ht, fodec: m(f), tva, ttc: m(ht + m(f) + tva + (pied.timbre ?? 0)), parTaux,
     prixStock: lignes.map((l, i) => (l.conversion && l.quantite > 0 ? m(couts[i] / (l.quantite * l.conversion)) : null)),
+    couts,
   };
+}
+
+/**
+ * Le prix par unité de stock se garde au millime (comme le serveur) : pour une unité trop petite (g, ml), l'arrondi
+ * fausserait la valeur du stock. → écart en DT si au-delà de la tolérance du serveur (5 millimes ou 0,5 %), sinon null.
+ */
+export function ecartArrondiStock(cout: number, quantite: number, conversion: number, prixStock: number | null): number | null {
+  if (prixStock === null) return null;
+  const enStock = Math.round(quantite * conversion * 1000) / 1000;
+  const ecart = Math.abs(enStock * prixStock - cout);
+  return ecart > Math.max(0.005, 0.005 * Math.abs(cout)) ? Math.round(ecart * 1000) / 1000 : null;
 }

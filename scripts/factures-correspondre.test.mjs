@@ -4,7 +4,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  articlesProbables, cleDeLigne, ecartDePrix, prixParUniteDeStock, proposer, proposerConversion, ressemblanceArticle,
+  articlesProbables, cleDeLigne, ecartArrondiStock, ecartDePrix, prixParUniteDeStock, probablesPour, proposer, proposerConversion,
+  ressemblanceArticle, totauxRecalcules,
 } from '../src/components/client/factures/lecture/correspondre.ts';
 
 const VECTEURS = [
@@ -17,6 +18,8 @@ const VECTEURS = [
   ['Poulet, entier', 'ré-12', 'ref:RE12'],
   ['Eau minérale', 'EAU.15', 'ref:EAU15'],
   ['Tiret seul', ' - ', 'des:tiret seul'],
+  ['Numéro de ligne pris pour une réf.', '12', 'des:numero de ligne pris pour une ref'],
+  ['Code court', '160', 'ref:160'],
   ['', '', null],
 ];
 
@@ -40,7 +43,9 @@ test('proposerConversion : contenants, tailles, lots, changement d\'unité', () 
   assert.equal(n('Beurre doux plaque 1 kg', 'kg', 'kg'), 1);
   assert.equal(n('Sucre', 'kg', 'g'), 1000);
   assert.equal(n('Poulet entier', 'KG', 'kg'), 1);
-  const rien = proposerConversion('Persil', 'botte', 'botte');
+  const memeUnite = proposerConversion('Persil', 'botte', 'botte');
+  assert.deepEqual([memeUnite.n, memeUnite.sure], [1, true], 'même unité écrite pareil : sûr');
+  const rien = proposerConversion('Persil', null, 'botte');
   assert.deepEqual([rien.n, rien.sure], [1, false]);
 });
 
@@ -103,4 +108,41 @@ test('prixParUniteDeStock, ecartDePrix', () => {
   assert.equal(prixParUniteDeStock(null, 2, 1), null);
   assert.equal(ecartDePrix(1.9, 1.45), 31);
   assert.equal(ecartDePrix(1.5, null), null);
+});
+
+test('relecture : même réf. mais désignation sans rapport → proposée, jamais reconnue', () => {
+  const p = proposer({ designation: 'Huile de tournesol 5 L', reference: 'EAU-15', unite: 'bidon' }, ctx);
+  assert.equal(p.etat, 'proposee');
+  assert.match(p.raison, /même réf\./);
+});
+
+test('relecture : clé cherchée sur la première rangée lue (un n° de lot dessous ne change rien)', () => {
+  const p = proposer({ designation: 'POULET ENTIER Lot 2345 DLC 12/2026', designationPremiere: 'POULET ENTIER', unite: 'KG' }, ctx);
+  assert.deepEqual([p.etat, p.articleId], ['reconnue', 5]);
+});
+
+test('relecture : correction faite à la main (emplois 0) → « corrigée dans Correspondances »', () => {
+  const c2 = { ...ctx, correspondances: [{ ...ctx.correspondances[2], emplois: 0 }] };
+  assert.equal(proposer({ designation: 'POULET ENTIER', unite: 'KG' }, c2).raison, 'corrigée dans Correspondances');
+});
+
+test('relecture : totaux — déconsigne négative hors remise et FODEC (même calcul que le serveur)', () => {
+  const r = totauxRecalcules([
+    { quantite: 10, montant: 100, tauxTva: 0, conversion: 6 },
+    { quantite: 5, montant: 30, tauxTva: 0, conversion: null },
+    { quantite: 4, montant: -24, tauxTva: 0, conversion: null },
+  ], { remiseGlobale: 10 });
+  assert.deepEqual(r.couts.map((c) => Math.round(c * 1000) / 1000), [92.308, 27.692, -24]);
+  assert.equal(r.ht, 96);
+});
+
+test('relecture : prix par g trop petit pour le millime signalé ; au kg, rien', () => {
+  assert.ok(ecartArrondiStock(83, 2, 25000, 0.002) > 0);
+  assert.equal(ecartArrondiStock(83, 2, 25, 1.66), null);
+});
+
+test('relecture : articles classés une fois par contexte, même résultat qu\'articlesProbables', () => {
+  const f = probablesPour(ctx);
+  assert.deepEqual(f('Farine T45').map((a) => a.id), articlesProbables('Farine T45', ctx).map((a) => a.id));
+  assert.equal(f('Farine T45'), f('Farine T45'), 'gardé en mémoire');
 });

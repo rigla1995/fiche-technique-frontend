@@ -2,19 +2,22 @@
 // lecture »). Fonctions PURES, sur les rangées de la page (texte d'un PDF ou reconnaissance de caractères).
 //   1. le titre du tableau (« Désignation | Qté | P.U. HT | TVA | Montant ») donne les colonnes ;
 //   2. chaque rangée suivante est découpée en cellules (blancs larges), chaque cellule rangée sous sa colonne ;
-//   3. une rangée sans nombre prolonge la désignation de la précédente (désignation sur deux lignes) ;
-//   4. le tableau s'arrête aux totaux (« Total HT », « Net à payer », récapitulatif de TVA…) ;
+//   3. une rangée sans nombre prolonge la désignation de la précédente quand elle en est la suite (« (carton 48) ») ;
+//      un intertitre (« BOISSONS ») n'est collé à aucune ligne ;
+//   4. le tableau s'arrête aux totaux (« Total HT », « Net à payer », récapitulatif de TVA…) — jamais sur une rangée qui
+//      porte une quantité ou un prix (« Base pizza 5 kg » est une ligne) ;
 //   5. contrôle de chaque ligne : quantité × prix − remise = montant ; s'il est faux, les nombres de la rangée sont
-//      relus sans les colonnes (une cellule mal rangée sur une photo) ; une valeur manquante se déduit des deux autres.
+//      relus sans les colonnes (une cellule mal rangée sur une photo) ; une valeur manquante se déduit des deux autres ;
+//   6. colonnes TTC seules (« P.U. TTC », « Montant TTC ») : ramenées en HT avec le taux de la ligne, à relire.
 // Sans titre de colonnes (ticket de caisse : « LAIT 1L » puis « 2 x 1.350   2.700 »), la forme « quantité x prix »
 // suffit. Une ligne lue n'est qu'une proposition : la fenêtre « Vérifier la facture » la fait relire et valider.
 import { lireNombre, millime, nombresDeRangee } from './nombres.ts';
 import { rangee } from './rangees.ts';
 import type { LigneLue, Mot, PageLue, Rangee, SourceLue } from './types.ts';
 
-const plat = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+const plat = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-type Colonne = 'num' | 'ref' | 'des' | 'unite' | 'qte' | 'pu' | 'remise' | 'tva' | 'montant' | 'ttc';
+type Colonne = 'num' | 'ref' | 'des' | 'unite' | 'qte' | 'pu' | 'puttc' | 'remise' | 'tva' | 'montant' | 'ttc';
 interface Cellule { mots: Mot[]; texte: string; x0: number; x1: number }
 interface ColonneVue { genre: Colonne; x0: number; x1: number }
 
@@ -55,28 +58,38 @@ export function cellulesDeLigne(r: Rangee): Cellule[] {
 
 /**
  * Genre d'un titre de colonne, ou null. Tolère les titres collés et mal reconnus d'une image (« MontantHT », « Qté »
- * lu « Ote », « Tva) »). L'ordre compte : « Montant TTC » avant « Montant », « Code article » avant « Article ».
+ * lu « Ote », « Tva) »). L'ordre compte : « P.U. TTC » et « Montant TTC » avant « P.U. » et « Montant », « Code
+ * article » avant « Article ».
  */
 export function genreDeTitre(texte: string): Colonne | null {
   const t = plat(texte).replace(/[:()[\]|"“”'`’]/g, ' ').replace(/\s+/g, ' ').trim();
   if (!t) return null;
+  const pu = /(^|\s)p\.?\s?u(\b|h|t|\.)|prix\s*u|^prix\b|^pu/;
   if (/^(n\s?[°ºo]\.?|no\.?|#|n)$/.test(t)) return 'num';
-  if (/t\.?\s?t\.?\s?c/.test(t)) return 'ttc';
+  if (/t\.?\s?t\.?\s?c/.test(t)) return pu.test(t) ? 'puttc' : 'ttc';
   if (/^(code|ref|refe|reference)\b|^ref\.|\b(code|ref)\b/.test(t)) return 'ref';
   if (/(designat|libelle|descript|article|produit|intitule|nature)/.test(t)) return 'des';
   if (/(remise|escompte|ristourne|^rem\b|^%\s?r\b|^r\s?%)/.test(t)) return 'remise';
   if (/(t\.?\s?v\.?\s?a|taux|taxe)/.test(t)) return 'tva';
-  if (/(^|\s)p\.?\s?u(\b|h|\.)|prix\s*u|^prix$|^pu/.test(t)) return 'pu';
+  if (pu.test(t)) return 'pu';
   if (/(^|\s)(qte|qt|quantit|qty|nbre|nombre|colis)|^[qo0]t[e]s?\.?$/.test(t)) return 'qte';
   if (/(montant|total|^mt\b|valeur)/.test(t)) return 'montant';
   if (/^(u|um|u\.?\s?m|cond|conditionnement|uv)\.?$/.test(t) || (t.length <= 9 && /unit/.test(t))) return 'unite';
   return null;
 }
 
-/** Colonnes du tableau si `r` en est le titre : au moins la désignation et une colonne chiffrée. */
+/** Une cellule faite d'un nombre (pas un titre) : chiffres sans mot. */
+const estNombre = (c: Cellule) => !/\p{L}{2,}/u.test(c.texte) && /\d/.test(c.texte);
+
+/**
+ * Colonnes du tableau si `r` en est le titre : au moins la désignation et une colonne chiffrée, et aucun nombre (une
+ * ligne « Yaourt nature 125 g | colis | 3 | … » porte des mots de titre, mais aussi des nombres).
+ */
 export function colonnesDuTitre(r: Rangee): ColonneVue[] | null {
+  const cs = cellules(r);
+  if (cs.some(estNombre)) return null;
   const vues: ColonneVue[] = [];
-  for (const c of cellules(r)) {
+  for (const c of cs) {
     // « N° » collé au titre suivant (« N° Désignation ») : une colonne à part.
     if (c.mots.length > 1 && genreDeTitre(c.mots[0].t) === 'num') {
       const reste = c.mots.slice(1);
@@ -97,7 +110,7 @@ export function colonnesDuTitre(r: Rangee): ColonneVue[] | null {
   }
   const genres = new Set(vues.map((v) => v.genre));
   if (!genres.has('des')) return null;
-  if (!['qte', 'pu', 'montant', 'tva'].some((g) => genres.has(g as Colonne))) return null;
+  if (!['qte', 'pu', 'puttc', 'montant', 'ttc', 'tva'].some((g) => genres.has(g as Colonne))) return null;
   // Un même genre deux fois (« Prix » puis « Prix total ») : le second titre « pu » devient le montant.
   const vus = new Set<Colonne>();
   for (const v of vues) {
@@ -119,15 +132,21 @@ function colonneDe(c: Cellule, colonnes: ColonneVue[]): ColonneVue {
   return meilleure;
 }
 
-// Fin du tableau : une rangée de totaux, le récapitulatif de TVA, la somme « arrêtée », un report de page.
-const FIN = /^(total|totaux|sous[\s-]?total|net\s*a\s*pay|net\s*h\.?t|montant\s*(h\.?t|t\.?t\.?c|total|net|a\s*payer)|arrete|timbre|base\b|taux\b|tva\s*\d|t\.v\.a\b|remise\s*(globale|totale)|report|a\s*reporter|fodec|avance|retenue|solde|cachet|signature|merci|mode\s+de\s+r)/;
+// Fin du tableau : une rangée de totaux, le récapitulatif de TVA, la somme « arrêtée », un report de page — appliqué
+// aux seules rangées sans quantité ni prix.
+const FIN = /^(total|totaux|sous[\s-]?total|net\s*a\s*pay|net\s*h\.?t|montant\s*(h\.?t|t\.?t\.?c|total|net|a\s*payer)|arrete|timbre|base\b|taux\b|tva\b|t\.v\.a\b|remise\b|escompte|report|a\s*reporter|fodec|avance|retenue|solde|cachet|signature|merci|mode\s+de\s+r)/;
 const MOT_FIN = /\b(total\s*(h\.?t|t\.?t\.?c|net|brut)?|net\s*a\s*pay\w*|arrete\w*|timbre|a\s*reporter)\b/;
+// Une désignation qui n'en est pas une (un total rangé sous la colonne Désignation).
+const PAS_UNE_DESIGNATION = /^(total|totaux|sous[\s-]?total|net\s*a\s*pay|montant\s*(h\.?t|t\.?t\.?c|total|net|a\s*payer)|arrete)/;
 
 const UNITE_SEULE = /^(kg|g|gr|l|lt|ml|cl|u|pc|pcs|pi[eè]ce?s?|sac|sacs|carton|ctn|crt|pack|bidon|bouteille|btl|boite|bte|paquet|pqt|plateau|botte|rouleau|casier|caisse|colis|fardeau|douzaine|dz|unite|unit)\.?$/i;
 
-/** Nombre d'une cellule (« 1 234,567 », « 19 % », « 5% », « 8,700) » d'une image) ; null si ce n'en est pas un. */
+/** Nombre d'une cellule (« 1 234,567 », « 19 % », « 5% », « 8,700) » d'une image) ; null si ce n'en est pas un (une
+ * cellule qui porte un mot, « TVA 7% », n'est pas un nombre). */
 function nombreDe(texte: string): number | null {
-  const t = texte.replace(/\s*(%|dt|tnd|d)\s*$/i, '').replace(/^[^\d-]+|[^\d]+$/g, '').trim();
+  const sans = texte.replace(/\s*(%|dt|tnd|d)\s*$/i, '');
+  if (/\p{L}{2,}/u.test(sans)) return null;
+  const t = sans.replace(/^[^\d-]+|[^\d]+$/g, '').trim();
   if (!/^-?\d/.test(t)) return null;
   return lireNombre(t);
 }
@@ -137,10 +156,14 @@ const TAUX_TUNISIENS = [0, 6, 7, 12, 13, 19];
 
 interface Brute {
   des: string[];
+  /** Désignation de la première rangée seulement : la clé d'apprentissage (un n° de lot sur la rangée suivante change
+   * d'une facture à l'autre). */
+  desPremiere: string | null;
   ref: string[];
   unite: string[];
   qte: number | null;
   pu: number | null;
+  puTtc: number | null;
   remise: number | null;
   tva: number | null;
   montant: number | null;
@@ -149,15 +172,15 @@ interface Brute {
   rangees: Rangee[];
 }
 
-const vide = (): Brute => ({ des: [], ref: [], unite: [], qte: null, pu: null, remise: null, tva: null, montant: null, ttc: null, nombres: [], rangees: [] });
+const vide = (): Brute => ({ des: [], desPremiere: null, ref: [], unite: [], qte: null, pu: null, puTtc: null, remise: null, tva: null, montant: null, ttc: null, nombres: [], rangees: [] });
 
-/** Les nombres d'une rangée, hors désignation (une désignation porte souvent « 25 kg », « 1,5 L »). */
+/** Les nombres d'une rangée, hors désignation et hors colonnes TTC (une désignation porte souvent « 25 kg »). */
 function nombresHorsDesignation(r: Rangee, colonnes: ColonneVue[] | null): { valeur: number; pourcent: boolean }[] {
   if (!colonnes) return nombresDeRangee(r).map((n) => ({ valeur: n.valeur, pourcent: n.pourcent }));
   const res: { valeur: number; pourcent: boolean }[] = [];
   for (const c of cellulesDeLigne(r)) {
     const col = colonneDe(c, colonnes);
-    if (col.genre === 'des' || col.genre === 'ref' || col.genre === 'num') continue;
+    if (col.genre === 'des' || col.genre === 'ref' || col.genre === 'num' || col.genre === 'ttc' || col.genre === 'puttc') continue;
     const v = nombreDe(c.texte);
     if (v !== null) res.push({ valeur: v, pourcent: estPourcent(c.texte, col.genre) });
   }
@@ -204,36 +227,60 @@ const cadreDe = (rangees: Rangee[]) => ({
 function finaliser(b: Brute, source: SourceLue): LigneLue | null {
   const designation = b.des.join(' ').replace(/\s+/g, ' ').trim();
   if (!/\p{L}{2,}/u.test(designation)) return null;
-  if (FIN.test(plat(designation))) return null;
+  if (PAS_UNE_DESIGNATION.test(plat(designation))) return null;
   const tolerance = source === 'pdf' ? 0.0015 : 0.011;
   let { qte, pu, remise, tva, montant } = b;
   let aRelire = source === 'ocr';
   const juste = (q: number | null, p: number | null, r: number | null, m: number | null) =>
-    q !== null && p !== null && m !== null && Math.abs(q * p * (1 - (r ?? 0) / 100) - m) <= Math.max(tolerance, m * 0.00002);
+    q !== null && p !== null && m !== null && Math.abs(q * p * (1 - (r ?? 0) / 100) - m) <= Math.max(tolerance, Math.abs(m) * 0.00002);
   if (!juste(qte, pu, remise, montant)) {
     const d = deduire(b.nombres, tolerance);
     if (d) ({ qte, pu, remise, montant } = d);
     if (d && tva === null) tva = d.tva;
   }
+  if (tva !== null && !(tva >= 0 && tva <= 30)) tva = null;
+  // Colonnes TTC seules : ramenées en HT avec le taux de la ligne (sinon la fenêtre le fera avec le taux de la facture).
+  const luEnTtc = montant === null && b.ttc !== null;
+  if (luEnTtc) {
+    aRelire = true;
+    if (tva !== null) {
+      montant = millime((b.ttc as number) / (1 + tva / 100));
+      if (pu === null && b.puTtc !== null) pu = millime(b.puTtc / (1 + tva / 100));
+    }
+  } else if (pu === null && b.puTtc !== null && tva !== null) {
+    pu = millime(b.puTtc / (1 + tva / 100));
+    aRelire = true;
+  }
   // Une valeur manquante se déduit des deux autres (à relire).
-  if (montant === null && qte !== null && pu !== null) { montant = millime(qte * pu * (1 - (remise ?? 0) / 100)); aRelire = true; }
-  if (pu === null && qte !== null && qte > 0 && montant !== null) { pu = millime(montant / qte / (1 - (remise ?? 0) / 100)); aRelire = true; }
-  if (qte === null && pu !== null && pu > 0 && montant !== null) {
+  if (montant === null && qte !== null && pu !== null && !luEnTtc) { montant = millime(qte * pu * (1 - (remise ?? 0) / 100)); aRelire = true; }
+  if (pu === null && qte !== null && qte > 0 && montant !== null && (remise ?? 0) < 100) { pu = millime(montant / qte / (1 - (remise ?? 0) / 100)); aRelire = true; }
+  if (qte === null && pu !== null && pu > 0 && montant !== null && (remise ?? 0) < 100) {
     const q = millime(montant / pu / (1 - (remise ?? 0) / 100));
     if (q >= 0.001 && juste(q, pu, remise, montant)) { qte = q; aRelire = true; }
   }
-  if (montant === null && qte === null && pu === null) return null;
-  if (tva !== null && !(tva >= 0 && tva <= 30)) tva = null;
+  if (montant === null && qte === null && pu === null && b.ttc === null) return null;
   const controle = qte !== null && pu !== null && montant !== null ? juste(qte, pu, remise, montant) : null;
   if (controle === false) aRelire = true;
   const unite = b.unite.join(' ').trim() || null;
   const reference = b.ref.join(' ').trim() || null;
+  const premiere = (b.desPremiere ?? designation).replace(/\s+/g, ' ').trim();
   return {
-    designation: designation.slice(0, 300), reference: reference ? reference.slice(0, 60) : null, unite: unite ? unite.slice(0, 30) : null,
+    designation: designation.slice(0, 300), designationPremiere: premiere.slice(0, 300),
+    reference: reference ? reference.slice(0, 60) : null, unite: unite ? unite.slice(0, 30) : null,
     quantite: qte, prixUnitaire: pu, remise: remise && remise > 0 ? remise : null, tauxTva: tva, montant, controle, aRelire,
+    luEnTtc, montantTtc: luEnTtc ? b.ttc : null, prixTtc: luEnTtc ? b.puTtc : null,
     cadre: cadreDe(b.rangees),
   };
 }
+
+/** La rangée prolonge-t-elle la désignation d'avant ? (« (carton 48) », « demi-écrémé 1 L », « de tournesol »…) */
+const prolonge = (precedente: string, suite: string) => /^[\p{Ll}(\d-]/u.test(suite.trim())
+  || /\b(de|du|des|d|a|au|aux|en|et|pour|avec|sans)$|[,(-]$/.test(plat(precedente));
+
+/** Jeton d'une colonne N° ou Réf. collé à la désignation sur une image : un numéro, un code (chiffres et lettres). */
+const estCode = (t: string, genre: Colonne) => (genre === 'num'
+  ? /^[\p{L}\d]{1,3}\.?$/u.test(t) && (/\d/.test(t) || t === t.toUpperCase())
+  : /\d/.test(t) && /^[\p{L}\d.\-/]{1,14}$/u.test(t));
 
 /** Lignes d'un tableau à titres de colonnes, à partir de la rangée `debut` (le titre) d'une page. */
 function lignesSousTitre(page: PageLue, debut: number, colonnes: ColonneVue[], source: SourceLue): { lignes: LigneLue[]; fin: number } {
@@ -246,36 +293,38 @@ function lignesSousTitre(page: PageLue, debut: number, colonnes: ColonneVue[], s
   };
   const xFinTableau = Math.max(...colonnes.map((c) => c.x1));
   const xDebutTableau = Math.min(...colonnes.map((c) => c.x0));
+  const colDes = colonnes.find((c) => c.genre === 'des');
+  const colGauche = colDes ? colonnes.filter((c) => (c.genre === 'num' || c.genre === 'ref') && c.x1 <= colDes.x0).pop() : undefined;
   let i = debut + 1;
   for (; i < page.rangees.length; i++) {
     const r = page.rangees[i];
     const t = plat(r.texte);
     if (colonnesDuTitre(r)) break; // un autre tableau (ou le titre répété)
-    const cs = cellulesDeLigne(r);
-    const premier = plat(cs[0]?.texte ?? '');
-    if (FIN.test(premier) || cs.some((c) => colonneDe(c, colonnes).genre !== 'des' && FIN.test(plat(c.texte)))) break;
-    if (MOT_FIN.test(t) && !cs.some((c) => colonneDe(c, colonnes).genre === 'des' && !MOT_FIN.test(plat(c.texte)))) break;
     // Rangée hors du tableau (texte loin à gauche ou à droite des colonnes) : ignorée.
     if (r.mots.every((m) => m.x1 < xDebutTableau - 2 * r.hauteur || m.x0 > xFinTableau + 2 * r.hauteur)) continue;
-    const b = vide();
-    b.rangees.push(r);
-    // Numéro de ligne (ou référence) collé à la désignation sur une image : les mots qui finissent avant le titre
-    // « Désignation » vont à la colonne de gauche.
-    const colDes = colonnes.find((c) => c.genre === 'des');
-    const colGauche = colDes ? colonnes.filter((c) => (c.genre === 'num' || c.genre === 'ref') && c.x1 <= colDes.x0).pop() : undefined;
+    const cs = cellulesDeLigne(r);
+    // Numéro de ligne (ou référence) collé à la désignation : seulement des jetons de code qui COMMENCENT dans
+    // l'emprise de la colonne de gauche et finissent avant le milieu des deux titres ; la désignation garde ses lettres.
     if (colDes && colGauche) {
+      const limite = (colGauche.x1 + colDes.x0) / 2;
       for (let k = 0; k < cs.length; k++) {
         const c = cs[k];
         if (colonneDe(c, colonnes).genre !== 'des') continue;
-        const avant = c.mots.filter((m) => m.x1 < colDes.x0);
-        if (!avant.length || avant.length === c.mots.length) continue;
+        const avant: Mot[] = [];
+        for (const m of c.mots) {
+          if (avant.length < 2 && m.x0 < colGauche.x1 + 0.5 * r.hauteur && m.x1 <= limite + 0.2 * r.hauteur && estCode(m.t, colGauche.genre)) avant.push(m);
+          else break;
+        }
         const apres = c.mots.slice(avant.length);
+        if (!avant.length || !apres.length || !/\p{L}{2,}/u.test(apres.map((m) => m.t).join(' '))) continue;
         cs.splice(k, 1,
           { mots: avant, texte: avant.map((m) => m.t).join(' '), x0: colGauche.x0, x1: colGauche.x1 },
           { mots: apres, texte: apres.map((m) => m.t).join(' '), x0: apres[0].x0, x1: Math.max(...apres.map((m) => m.x1)) });
         k++;
       }
     }
+    const b = vide();
+    b.rangees.push(r);
     for (const c of cs) {
       const col = colonneDe(c, colonnes);
       const v = nombreDe(c.texte);
@@ -291,24 +340,37 @@ function lignesSousTitre(page: PageLue, debut: number, colonnes: ColonneVue[], s
           else { const m = c.texte.match(/^([\d.,]+)\s*(\p{L}+\.?)$/u); if (m) { b.qte = lireNombre(m[1]); b.unite.push(m[2]); } }
           break;
         case 'pu': if (v !== null) b.pu = v; break;
+        case 'puttc': if (v !== null) b.puTtc = v; break;
         case 'remise': if (v !== null && estPourcent(c.texte, 'remise')) b.remise = v; break;
         case 'tva': if (v !== null && estPourcent(c.texte, 'tva')) b.tva = v; break;
         case 'montant': if (v !== null) b.montant = v; break;
         case 'ttc': if (v !== null) b.ttc = v; break;
       }
     }
+    // Fin du tableau : une rangée de totaux SANS quantité ni prix (une désignation « Base pizza… » reste une ligne).
+    const chiffree = b.qte !== null || b.pu !== null || b.puTtc !== null;
+    const premier = plat(cs[0]?.texte ?? '');
+    const finLue = FIN.test(premier) || cs.some((c) => colonneDe(c, colonnes).genre !== 'des' && FIN.test(plat(c.texte)))
+      || (MOT_FIN.test(t) && !cs.some((c) => colonneDe(c, colonnes).genre === 'des' && !MOT_FIN.test(plat(c.texte))));
+    if (finLue && !chiffree) break;
     b.nombres = nombresHorsDesignation(r, colonnes);
-    const aDesNombres = [b.qte, b.pu, b.montant].some((x) => x !== null);
+    const aDesNombres = [b.qte, b.pu, b.montant, b.ttc, b.puTtc].some((x) => x !== null);
     const aUneDesignation = b.des.some((d) => /\p{L}/u.test(d));
+    if (aUneDesignation) b.desPremiere = b.des.join(' ');
     if (aUneDesignation && aDesNombres) {
       pousser();
-      if (enAttente) { b.des.unshift(...enAttente.des); b.ref.unshift(...enAttente.ref); b.rangees.unshift(...enAttente.rangees); enAttente = null; }
+      // Une désignation en attente n'est collée que si cette rangée en est la suite ; sinon c'était un intertitre.
+      if (enAttente && prolonge(enAttente.des.join(' '), b.des.join(' '))) {
+        b.des.unshift(...enAttente.des); b.ref.unshift(...enAttente.ref); b.rangees.unshift(...enAttente.rangees);
+        b.desPremiere = enAttente.desPremiere;
+      }
+      enAttente = null;
       courante = b;
     } else if (aUneDesignation) {
-      // Suite de la désignation précédente (rangée proche), sinon début d'une ligne dont les nombres suivent.
+      // Suite de la désignation précédente (rangée proche, qui la prolonge), sinon une ligne dont les nombres suivent.
       const prec = courante as Brute | null;
       const derniere = prec?.rangees[prec.rangees.length - 1];
-      if (prec && derniere && r.y0 - derniere.y1 < 0.9 * r.hauteur && !b.ref.length) {
+      if (prec && derniere && r.y0 - derniere.y1 < 0.9 * r.hauteur && !b.ref.length && prolonge(prec.des.join(' '), b.des.join(' '))) {
         prec.des.push(...b.des);
         prec.rangees.push(r);
       } else {
@@ -316,7 +378,7 @@ function lignesSousTitre(page: PageLue, debut: number, colonnes: ColonneVue[], s
         enAttente = b;
       }
     } else if (aDesNombres && enAttente) {
-      b.des = enAttente.des; b.ref = [...enAttente.ref, ...b.ref]; b.rangees.unshift(...enAttente.rangees);
+      b.des = enAttente.des; b.desPremiere = enAttente.desPremiere; b.ref = [...enAttente.ref, ...b.ref]; b.rangees.unshift(...enAttente.rangees);
       enAttente = null;
       pousser();
       courante = b;
@@ -342,6 +404,7 @@ function lignesDeTicket(page: PageLue, source: SourceLue): LigneLue[] {
     if (!avant || QTE_X_PRIX.test(plat(avant.texte))) return;
     const b = vide();
     b.des = [avant.texte];
+    b.desPremiere = avant.texte;
     b.qte = q; b.pu = pu; b.montant = montant;
     b.nombres = ns.map((n) => ({ valeur: n.valeur, pourcent: false }));
     b.rangees = [avant, r];
@@ -355,8 +418,9 @@ function lignesDeTicket(page: PageLue, source: SourceLue): LigneLue[] {
 const PAS_UNE_LIGNE = /\b(tel|fax|gsm|mob|e-?mail|m\.?\s?f\b|matricule|code\s+t\.?v\.?a|r\.?\s?c\b|rib|iban|capital|adresse|date|facture|client|page)\b|@/;
 
 /**
- * Sans titre de colonnes lisible (photo) : une rangée est une ligne si elle porte une désignation puis des nombres dont
- * deux, multipliés (moins une remise lue en %), donnent le dernier. Seules ces lignes vérifiées sont gardées.
+ * Sans titre de colonnes lisible (photo) : une rangée est une ligne si elle porte une désignation (après un éventuel n°
+ * ou code) puis des nombres dont deux, multipliés (moins une remise lue en %), donnent le dernier. Seules ces lignes
+ * vérifiées sont gardées.
  */
 function lignesSansTitre(page: PageLue, source: SourceLue): LigneLue[] {
   const lignes: LigneLue[] = [];
@@ -365,15 +429,20 @@ function lignesSansTitre(page: PageLue, source: SourceLue): LigneLue[] {
     const t = plat(r.texte);
     if (FIN.test(t) || MOT_FIN.test(t) || PAS_UNE_LIGNE.test(t)) continue;
     const cs = cellulesDeLigne(r);
-    const k = cs.findIndex((c) => !/\p{L}{2,}/u.test(c.texte));
-    const des = (k < 0 ? cs : cs.slice(0, k)).filter((c) => /\p{L}{2,}/u.test(c.texte));
-    if (!des.length || k < 0) continue;
+    const debut = cs.findIndex((c) => /\p{L}{2,}/u.test(c.texte));
+    if (debut < 0 || cs.slice(0, debut).some((c) => !/^[\p{L}\d.\-/]{1,14}$/u.test(c.texte))) continue;
+    let k = debut;
+    while (k < cs.length && /\p{L}{2,}/u.test(cs[k].texte)) k++;
+    const des = cs.slice(debut, k);
+    if (!des.length || k >= cs.length) continue;
     const nombres = cs.slice(k).map((c) => ({ v: nombreDe(c.texte), pourcent: /%/.test(c.texte) })).filter((x) => x.v !== null)
       .map((x) => ({ valeur: x.v as number, pourcent: x.pourcent }));
     const d = deduire(nombres, tolerance);
     if (!d) continue;
     const b = vide();
     b.des = des.map((c) => c.texte);
+    b.desPremiere = b.des.join(' ');
+    b.ref = cs.slice(0, debut).filter((c) => /\p{L}/u.test(c.texte) || c.texte.replace(/\D/g, '').length > 2).map((c) => c.texte);
     b.qte = d.qte; b.pu = d.pu; b.remise = d.remise; b.tva = d.tva; b.montant = d.montant;
     b.nombres = nombres;
     b.rangees = [r];

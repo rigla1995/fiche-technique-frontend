@@ -91,6 +91,9 @@ export interface PageVue { largeur: number; hauteur: number; fichier: number; pa
 /** Ligne du tableau d'une facture (étape F3). Montants HT ; `remise` et `tauxTva` en %. */
 export interface LigneLue {
   designation: string;
+  /** Désignation de la première rangée seulement : sert à la clé d'apprentissage (une rangée suivante — n° de lot,
+   * date limite — change d'une facture à l'autre). */
+  designationPremiere: string;
   /** Référence produit du fournisseur (colonne « Réf. », « Code »). */
   reference: string | null;
   unite: string | null;
@@ -103,6 +106,11 @@ export interface LigneLue {
   /** quantité × prix − remise = montant (au millime ; à 10 millimes près sur une image) ; null s'il manque une valeur. */
   controle: boolean | null;
   aRelire: boolean;
+  /** Montants lus dans des colonnes TTC (sans montant HT) : ramenés en HT avec le taux de la ligne quand il est connu,
+   * sinon gardés ici (`montantTtc`, `prixTtc`) pour que la fenêtre les ramène avec le taux de la facture. */
+  luEnTtc: boolean;
+  montantTtc: number | null;
+  prixTtc: number | null;
   /** Emplacement sur la page (unités de la page lue, y vers le bas). */
   cadre: { page: number; x0: number; y0: number; x1: number; y1: number };
 }

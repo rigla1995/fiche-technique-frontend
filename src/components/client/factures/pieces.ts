@@ -163,6 +163,9 @@ export async function enregistrerFacture(f: FactureAEnregistrer, fichiers: Fichi
 export interface LigneValidee {
   designation: string;
   reference: string | null;
+  /** Texte LU (première rangée de la désignation, référence) : la clé d'apprentissage se calcule dessus. */
+  designationLue?: string;
+  referenceLue?: string;
   unite: string | null;
   quantite: number;
   prixUnitaire: number | null;

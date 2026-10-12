@@ -268,7 +268,10 @@ export async function apercusDeFacture(fichiers: FichierALire[], signal?: AbortS
       if (f.type === 'application/pdf') {
         const octets = new Uint8Array(await f.fichier.arrayBuffer());
         await avecPdf(octets, async (pdf) => {
-          for (let n = 1; n <= Math.min(pdf.numPages, PAGES_TEXTE); n++) {
+          // Les 5 premières pages, et la dernière (celle que la lecture relit pour les totaux d'une facture longue).
+          const numeros = [...Array(Math.min(pdf.numPages, PAGES_TEXTE)).keys()].map((x) => x + 1);
+          if (pdf.numPages > PAGES_TEXTE) numeros.push(pdf.numPages);
+          for (const n of numeros) {
             if (signal?.aborted) break;
             const canvas = await rendrePage(pdf, n);
             const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, 'image/jpeg', 0.85));
