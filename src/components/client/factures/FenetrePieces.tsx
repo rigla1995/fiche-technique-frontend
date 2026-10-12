@@ -197,7 +197,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
               ))}
             </div>
           )}
-          {pieces !== null && peutEcrire && places > 0 && (
+          {pieces !== null && peutChanger && places > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <ZonePieces accent={accent} places={places} disabled={envoi} fichiers={nouveaux} onChange={setNouveaux} onPreparation={setPrepare} />
               {nouveaux.length > 0 && (
@@ -217,7 +217,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
             </div>
           )}
           {pieces !== null && compta && (
-            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>📒 En comptabilité ({texteEtatCompta(compta)}) : la pièce ne se change plus tant que son écriture existe.</p>
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>📒 En comptabilité ({texteEtatCompta(compta)}) : ses pièces ne changent plus (ni ajout, ni remplacement, ni suppression) tant que son écriture existe.</p>
           )}
           {pieces !== null && validee && (
             <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>🔒 Facture lue puis validée : sa pièce ne se change plus. Pour la refaire, supprimez la facture entière.</p>
