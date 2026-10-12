@@ -298,6 +298,7 @@ function ComptaTiers({ dossierId }: { dossierId?: string }) {
                   <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
                     <span style={pastille('#f1f5f9', '#64748b')}>{t.regimeTvaLibelle}</span>
                     {t.origine === 'import' && <span style={pastille('#eef2ff', '#3730a3')}>Importé</span>}
+                    {t.origine === 'labflow' && <span style={pastille('#ecfdf5', '#047857')} title="Créé par LabFlow à l'envoi d'une facture fournisseur">LabFlow</span>}
                     {!t.actif && <span style={pastille('#e2e8f0', '#475569')}>Désactivé</span>}
                   </span>
                   {/* S7a : le lettrage du tiers (lecture pour tout accès ; lettrer : titulaire, Complet, Saisie). */}

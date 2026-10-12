@@ -8,6 +8,7 @@ import { useVocabulaire } from '../../../hooks/useVocabulaire';
 import { useConfirm } from '../../common/ConfirmDialog';
 import { messageErreur } from './pieces';
 import { NATURES } from './lecture/correspondre';
+import type { EtatCompta } from './compta';
 
 interface LigneValideeVue {
   rang: number; designation: string; reference: string | null; quantite: number; unite: string | null;
@@ -23,6 +24,8 @@ interface Props {
   accent: string;
   /** Le compte peut écrire et la personne agit sur ce lieu (sinon : pas de bouton). */
   peutSupprimer: boolean;
+  /** Étape F4 : son écriture d'achat dans LabFlow Compta (un brouillard part avec la facture ; validée : pas de suppression). */
+  compta?: EtatCompta | null;
   onSupprimee: () => void;
 }
 
@@ -31,7 +34,7 @@ const f3 = (n: number | null) => (n == null ? '—' : n.toFixed(3));
 const fNb = (n: number | null) => (n == null ? '—' : String(Math.round(n * 1e6) / 1e6));
 const cellule: React.CSSProperties = { padding: '7px 10px', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' };
 
-export default function DetailFactureValidee({ factureId, refFacture, montantTTC, accent, peutSupprimer, onSupprimee }: Props) {
+export default function DetailFactureValidee({ factureId, refFacture, montantTTC, accent, peutSupprimer, onSupprimee, compta }: Props) {
   const voc = useVocabulaire();
   const { confirm, alerte } = useConfirm();
   const [lignes, setLignes] = useState<LigneValideeVue[] | null>(null);
@@ -49,7 +52,7 @@ export default function DetailFactureValidee({ factureId, refFacture, montantTTC
   const supprimer = async () => {
     const ok = await confirm({
       title: `Supprimer la facture ${refFacture ?? ''} ?`,
-      message: `Toute la facture part, définitivement : ses lignes, ce qu'elle a fait entrer en ${voc.nom('stock')}, et sa pièce jointe (${montantTTC.toFixed(3)} DT TTC). Ce que LabFlow a appris de ses lignes est gardé. Vous pourrez la déposer de nouveau.`,
+      message: `Toute la facture part, définitivement : ses lignes, ce qu'elle a fait entrer en ${voc.nom('stock')}, et sa pièce jointe (${montantTTC.toFixed(3)} DT TTC). Ce que LabFlow a appris de ses lignes est gardé. Vous pourrez la déposer de nouveau.${compta?.etat === 'brouillard' ? ` Son écriture d'achat en brouillard ${compta.numeroProvisoire} dans LabFlow Compta part aussi, avec ce que votre comptable y a changé.` : ''}`,
       confirmLabel: 'Supprimer la facture',
       tone: 'danger',
     });
@@ -73,7 +76,12 @@ export default function DetailFactureValidee({ factureId, refFacture, montantTTC
           🔒 Facture lue puis validée : ses lignes ne se modifient plus. Pour la corriger, supprimez-la en entier puis déposez-la de nouveau.
         </span>
         <div style={{ flex: 1 }} />
-        {peutSupprimer && (
+        {peutSupprimer && compta?.etat === 'validee' && (
+          <span style={{ fontSize: '0.76rem', color: '#166534' }}>
+            📒 Écriture validée {compta.numero} dans LabFlow Compta : la facture ne se supprime plus. Si elle est erronée, votre comptable contre-passe l'écriture dans LabFlow Compta, et {voc.le('stock')} se corrige par {voc.un('inventaire')}.
+          </span>
+        )}
+        {peutSupprimer && compta?.etat !== 'validee' && (
           <button type="button" className="btn btn-ghost btn-sm" disabled={envoi} onClick={() => void supprimer()} style={{ color: '#b91c1c', borderColor: '#fecaca' }}>
             {envoi ? '…' : '🗑️ Supprimer la facture'}
           </button>

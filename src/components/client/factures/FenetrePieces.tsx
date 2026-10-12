@@ -10,6 +10,7 @@ import {
   PIECES_MAX, joindrePieces, libererFichiers, listerPieces, messageErreur, ouvrirPiece, remplacerPiece, supprimerPiece, taille,
   type FichierChoisi, type Piece,
 } from './pieces';
+import { phraseEnvoi, texteEtatCompta, useComptaActif, type EtatCompta } from './compta';
 
 interface Props {
   factureId: number;
@@ -18,6 +19,10 @@ interface Props {
   onFermer: () => void;
   /** Nombre de pièces après une modification (pour la liste des factures). */
   onNombre: (n: number) => void;
+  /** Étape F4 : l'état de la facture en comptabilité, relu ou changé (pour la liste des factures) ; null : pas d'écriture. */
+  onCompta?: (c: EtatCompta | null) => void;
+  /** Facture sans fournisseur : elle ne part pas en comptabilité (pas de case). */
+  sansFournisseur?: boolean;
 }
 
 const fmtDateHeure = (iso: string) => {
@@ -26,7 +31,7 @@ const fmtDateHeure = (iso: string) => {
 };
 const icone = (t: Piece['type']) => (t === 'application/pdf' ? '📄' : '🖼️');
 
-export default function FenetrePieces({ factureId, titre, accent = '#1e40af', onFermer, onNombre }: Props) {
+export default function FenetrePieces({ factureId, titre, accent = '#1e40af', onFermer, onNombre, onCompta, sansFournisseur = false }: Props) {
   const voc = useVocabulaire();
   const { canWrite } = useAuth();
   const { confirm } = useConfirm();
@@ -34,6 +39,14 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const [modifiable, setModifiable] = useState(false);
   // Étape F3 : facture lue puis validée — sa pièce ne se change plus.
   const [validee, setValidee] = useState(false);
+  // Étape F4 : la facture en comptabilité (sa pièce ne se change plus) ; la case « Envoyer à la comptabilité ».
+  const comptaActif = useComptaActif();
+  const [compta, setCompta] = useState<EtatCompta | null>(null);
+  const [envoyerCompta, setEnvoyerCompta] = useState(true);
+  const [infoCompta, setInfoCompta] = useState<{ texte: string; ok: boolean } | null>(null);
+  // La carte suit l'état relu (le comptable a pu supprimer le brouillard, ou un autre onglet envoyer la facture).
+  const onComptaRef = useRef(onCompta);
+  useEffect(() => { onComptaRef.current = onCompta; });
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [nouveaux, setNouveaux] = useState<FichierChoisi[]>([]);
@@ -62,13 +75,15 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   useEffect(() => {
     let annule = false;
     listerPieces(factureId)
-      .then((r) => { if (!annule) { setPieces(r.pieces); setModifiable(r.modifiable); setValidee(Boolean(r.validee)); } })
+      .then((r) => { if (!annule) { setPieces(r.pieces); setModifiable(r.modifiable); setValidee(Boolean(r.validee)); setCompta(r.compta ?? null); onComptaRef.current?.(r.compta ?? null); } })
       .catch((e) => { if (!annule) { setPieces([]); setErreur(messageErreur(e, 'Pièces indisponibles : réessayez.')); } });
     return () => { annule = true; };
   }, [factureId]);
 
-  const apres = (liste: Piece[]) => { setPieces(liste); onNombre(liste.length); setErreur(''); };
+  const apres = (liste: Piece[]) => { setPieces(liste); onNombre(liste.length); setErreur(''); setInfoCompta(null); };
   const peutEcrire = modifiable && canWrite;
+  const peutChanger = peutEcrire && !compta;
+  const proposerCompta = comptaActif === true && !compta && !sansFournisseur;
   const places = Math.max(0, PIECES_MAX - (pieces?.length ?? 0));
 
   const ouvrir = async (p: Piece, telecharger = false) => {
@@ -77,7 +92,13 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const joindre = async () => {
     if (!nouveaux.length) return;
     setEnvoi(true);
-    try { apres(await joindrePieces(factureId, nouveaux)); libererFichiers(nouveaux); setNouveaux([]); } catch (e) { setErreur(messageErreur(e, 'Envoi impossible : réessayez.')); }
+    try {
+      const r = await joindrePieces(factureId, nouveaux, proposerCompta && envoyerCompta);
+      apres(r.pieces); libererFichiers(nouveaux); setNouveaux([]);
+      if (r.compta) { setCompta(r.compta); onCompta?.(r.compta); }
+      const phrase = phraseEnvoi(r);
+      setInfoCompta(phrase ? { texte: phrase, ok: Boolean(r.compta) } : null);
+    } catch (e) { setErreur(messageErreur(e, 'Envoi impossible : réessayez.')); }
     setEnvoi(false);
   };
   const remplacer = async () => {
@@ -114,6 +135,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
         </div>
         <div className="modal-body">
           {erreur && <div className="alert alert-error">{erreur}</div>}
+          {infoCompta && <div className={`alert ${infoCompta.ok ? 'alert-success' : 'alert-warning'}`}>{infoCompta.texte}</div>}
           {lien && (
             <div className="alert alert-warning" style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
               <span>Votre navigateur n'a pas ouvert de nouvel onglet.</span>
@@ -150,7 +172,7 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
                       {(p.type === 'image/heic' || p.type === 'image/heif') && p.avecApercu && (
                         <button className="btn btn-ghost btn-sm" onClick={() => ouvrir(p, true)} disabled={envoi} title="La photo d'origine, au format HEIC">Original</button>
                       )}
-                      {peutEcrire && (
+                      {peutChanger && (
                         <>
                           <button className="btn btn-ghost btn-sm" disabled={envoi}
                             onClick={() => { if (remplacement?.piece.id === p.id) fermerRemplacement(); else { fermerRemplacement(); setRemplacement({ piece: p, fichiers: [] }); } }}>Remplacer</button>
@@ -175,17 +197,27 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
               ))}
             </div>
           )}
-          {pieces !== null && peutEcrire && places > 0 && (
+          {pieces !== null && peutChanger && places > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <ZonePieces accent={accent} places={places} disabled={envoi} fichiers={nouveaux} onChange={setNouveaux} onPreparation={setPrepare} />
               {nouveaux.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                  {proposerCompta && (
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', cursor: 'pointer' }}
+                      title="LabFlow prépare l'écriture d'achat en brouillard dans LabFlow Compta ; votre comptable la vérifie et la valide.">
+                      <input type="checkbox" checked={envoyerCompta} onChange={(e) => setEnvoyerCompta(e.target.checked)} disabled={envoi} />
+                      Envoyer à la comptabilité
+                    </label>
+                  )}
                   <button className="btn btn-primary btn-sm" onClick={joindre} disabled={envoi || prepare} style={{ background: accent, border: 'none' }}>
                     {envoi ? 'Envoi…' : `Joindre ${nouveaux.length > 1 ? `les ${nouveaux.length} fichiers` : 'le fichier'}`}
                   </button>
                 </div>
               )}
             </div>
+          )}
+          {pieces !== null && compta && (
+            <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>📒 En comptabilité ({texteEtatCompta(compta)}) : ses pièces ne changent plus (ni ajout, ni remplacement, ni suppression) tant que son écriture existe.</p>
           )}
           {pieces !== null && validee && (
             <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '8px 0 0' }}>🔒 Facture lue puis validée : sa pièce ne se change plus. Pour la refaire, supprimez la facture entière.</p>

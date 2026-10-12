@@ -16,6 +16,7 @@ import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
 import LectureFacture, { PastilleLue, type ResultatLecture } from './factures/LectureFacture';
 import VerifierFacture from './factures/VerifierFacture';
+import { phraseEnvoi } from './factures/compta';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 
 const currentYear = new Date().getFullYear();
@@ -561,7 +562,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [invoiceModal, setInvoiceModal] = useState<{
     lines: InvoiceLineItem[];
     fournisseurNom: string | null;
-    onConfirm: (timbreFiscal: boolean, timbreMontant: number) => void;
+    onConfirm: (timbreFiscal: boolean, timbreMontant: number, envoyerCompta: boolean) => void;
   } | null>(null);
 
   const toggleCat = (cat: string) => setOpenCats((prev) => { const n = new Set(prev); if (n.has(cat)) n.delete(cat); else n.add(cat); return n; });
@@ -669,7 +670,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
     if (!isOpen) await fetchHistory(id);
   };
 
-  const doBulkSave = async (timbreFiscal = false, timbreMontant = 1) => {
+  const doBulkSave = async (timbreFiscal = false, timbreMontant = 1, envoyerCompta = false) => {
     setBulkSaving(true);
     setBulkError('');
     try {
@@ -692,6 +693,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           timbreFiscal,
           timbreMontant,
           lecture: resultatLecture?.lecture ?? null,
+          envoyerCompta,
           lignes: readyEntries.map(([idStr, row]) => ({
             articleId: Number(idStr),
             quantite: parseFloat(row.quantite),
@@ -700,6 +702,9 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           })),
         }, bulkPieces, confirm, voc.ce('fournisseur'));
         if (issue === 'annulee') { setBulkSaving(false); return; }
+        // Étape F4 : l'envoi en comptabilité demandé, réussi ou refusé (la facture reste « à envoyer »).
+        const phrase = phraseEnvoi(issue);
+        if (phrase) void alerte({ title: issue.compta ? 'Facture envoyée en comptabilité' : 'Facture enregistrée', message: phrase, tone: issue.compta ? 'primary' : 'info' });
         remettreAZero();
         setBulkSaving(false);
         onRefresh?.();
@@ -796,7 +801,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
       ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
       : null;
 
-    const doConflictCheckThenSave = async (timbreFiscal = false, timbreMontant = 1) => {
+    const doConflictCheckThenSave = async (timbreFiscal = false, timbreMontant = 1, envoyerCompta = false) => {
       // Bouton bloqué dès la confirmation (la lecture des historiques prend un instant : pas de second envoi).
       setBulkSaving(true);
       const histMap: Record<number, StockHistoryEntry[]> = {};
@@ -819,13 +824,13 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
       if (conflicts.length > 0) {
         setBulkSaving(false);
-        setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(timbreFiscal, timbreMontant); } });
+        setConflictModal({ date: bulkDate, conflicts, onConfirm: () => { setConflictModal(null); doBulkSave(timbreFiscal, timbreMontant, envoyerCompta); } });
         return;
       }
-      await doBulkSave(timbreFiscal, timbreMontant);
+      await doBulkSave(timbreFiscal, timbreMontant, envoyerCompta);
     };
 
-    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf, tm) => doConflictCheckThenSave(tf, tm) });
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf, tm, ec) => doConflictCheckThenSave(tf, tm, ec) });
   };
 
   let filtered = entries;
@@ -989,8 +994,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             onRefresh?.();
             void alerte({
               title: 'Facture validée',
-              message: `${r.nbStock} ligne${r.nbStock > 1 ? 's' : ''} en ${voc.nom('stock')}, ${r.appris} correspondance${r.appris > 1 ? 's' : ''} apprise${r.appris > 1 ? 's' : ''} : la prochaine facture de ${voc.ce('fournisseur')} se reconnaîtra seule. La facture est dans la page Factures, avec sa pièce.`,
-              tone: 'primary',
+              message: `${r.nbStock} ligne${r.nbStock > 1 ? 's' : ''} en ${voc.nom('stock')}, ${r.appris} correspondance${r.appris > 1 ? 's' : ''} apprise${r.appris > 1 ? 's' : ''} : la prochaine facture de ${voc.ce('fournisseur')} se reconnaîtra seule. La facture est dans la page Factures, avec sa pièce.${phraseEnvoi(r) ? ` ${phraseEnvoi(r)}` : ''}`,
+              tone: r.comptaRefus ? 'info' : 'primary',
             });
           }}
         />
@@ -1006,7 +1011,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           nbPieces={activiteId ? bulkPieces.length : undefined}
           timbreLu={resultatLecture?.timbre ?? null}
           totauxLus={resultatLecture?.totaux ?? null}
-          onConfirm={(tf, tm) => { setInvoiceModal(null); invoiceModal.onConfirm(tf, tm); }}
+          onConfirm={(tf, tm, ec) => { setInvoiceModal(null); invoiceModal.onConfirm(tf, tm, ec); }}
           onCancel={() => setInvoiceModal(null)}
         />
       )}

@@ -25,7 +25,9 @@ export interface LigneEcriture {
 }
 export interface Ecriture {
   id: number; numeroProvisoire: string; numero: string | null; date: string; dateReelle: string | null; journal: { id: number; code: string; libelle: string; type: TypeJournal };
-  reference: string; libelle: string; etat: EtatEcriture; etatLibelle: string; total: string; origine: 'saisie' | 'import' | 'contrepassation'; origineId: number | null;
+  reference: string; libelle: string; etat: EtatEcriture; etatLibelle: string; total: string; origine: 'saisie' | 'import' | 'contrepassation' | 'labflow'; origineId: number | null;
+  // F4 (factures fournisseur) : la facture LabFlow d'une écriture d'achat venue du pont (sa pièce se consulte d'ici).
+  factureId?: number | null;
   // S6b : le numéro de l'écriture d'origine (contre-passation), la contre-passation qui annule cette écriture, l'auteur de la validation.
   origineNumero: string | null; contrepasseePar: { id: number; numero: string } | null;
   nbLignes: number; creePar: string | null; creeLe: string; modifieLe: string; validePar: string | null; valideLe: string | null; lignes?: LigneEcriture[];
@@ -84,6 +86,49 @@ export const lireEcritures = async (dossierId: number | string, p: ParametresEcr
 export const lireEcriture = async (dossierId: number | string, ecritureId: number): Promise<Ecriture> => {
   const { data } = await api.get(chemin(dossierId, `/${ecritureId}`));
   return (data as { ecriture: Ecriture }).ecriture;
+};
+// F4 (factures fournisseur) : les pièces de la facture LabFlow d'une écriture, et l'ouverture de l'une d'elles.
+export interface PieceEcriture { id: number; ordre: number; type: string; nom: string; taille: number; avecApercu: boolean }
+export const piecesEcriture = async (dossierId: number, ecritureId: number): Promise<PieceEcriture[]> => {
+  const { data } = await api.get(chemin(dossierId, `/${ecritureId}/pieces`));
+  return (data as { pieces: PieceEcriture[] }).pieces;
+};
+/** Photo HEIC sans copie JPEG : Chrome et Firefox ne l'affichent pas, elle se télécharge. */
+export const pieceATelecharger = (p: PieceEcriture) => (p.type === 'image/heic' || p.type === 'image/heif') && !p.avecApercu;
+/**
+ * Ouvre la pièce dans `onglet`, ouvert par l'appelant AVANT toute attente (sinon le navigateur bloque la fenêtre surgie
+ * après une attente), ou la télécharge (photo HEIC sans copie). Onglet refusé (bloqueur, certains téléphones) →
+ * l'adresse locale du fichier, à montrer en lien (l'appelant la libère) ; sinon null.
+ */
+export const ouvrirPieceEcriture = async (dossierId: number, ecritureId: number, p: PieceEcriture, onglet: Window | null): Promise<string | null> => {
+  try {
+    const telecharger = pieceATelecharger(p);
+    const res = await api.get(chemin(dossierId, `/${ecritureId}/pieces/${p.id}/fichier${telecharger ? '?telecharger=1' : p.avecApercu ? '?apercu=1' : ''}`), { responseType: 'blob' });
+    const url = URL.createObjectURL(res.data as Blob);
+    if (telecharger) {
+      onglet?.close();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = p.nom;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return null;
+    }
+    if (onglet) {
+      onglet.location.href = url;
+      setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
+      return null;
+    }
+    return url;
+  } catch (e) {
+    onglet?.close();
+    // Lue en Blob, la réponse d'erreur cache son message : le relire pour l'afficher (404, 503…).
+    const reponse = (e as { response?: { data?: unknown } }).response;
+    if (reponse?.data instanceof Blob) {
+      try { reponse.data = JSON.parse(await reponse.data.text()); } catch { /* corps non JSON : message par défaut */ }
+    }
+    throw e;
+  }
 };
 export const aideTaxe = async (dossierId: number, corps: { journalId: number; ligne: LigneEnvoyee }): Promise<AideReponse> => {
   const { data } = await api.post(chemin(dossierId, '/aide/taxe'), corps);
