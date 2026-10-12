@@ -15,6 +15,7 @@ import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
 import LectureFacture, { PastilleLue, type ResultatLecture } from './factures/LectureFacture';
+import VerifierFacture from './factures/VerifierFacture';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 
 const currentYear = new Date().getFullYear();
@@ -536,6 +537,8 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const [resultatLecture, setResultatLecture] = useState<ResultatLecture | null>(null);
   // Lecture de la facture en cours : « Enregistrer » attend (le récapitulatif montrerait des valeurs qui vont changer).
   const [lectureEnCours, setLectureEnCours] = useState(false);
+  // Étape F3 : fenêtre « Vérifier la facture » ouverte (lignes lues, articles, validation).
+  const [verification, setVerification] = useState(false);
   const remettreAZero = () => {
     setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError('');
     setChampsLus({}); setDateChoisie(false); setResultatLecture(null); viderPieces();
@@ -543,7 +546,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
   const piecesCourantes = useRef<FichierChoisi[]>([]);
   useEffect(() => { piecesCourantes.current = bulkPieces; }, [bulkPieces]);
   useEffect(() => () => libererFichiers(piecesCourantes.current), []);
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string; error?: string } | null>(null);
 
   // ── Conflict confirmation modal
@@ -972,6 +975,27 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
         />
       )}
 
+      {verification && resultatLecture && activiteId && bulkFournisseurId && (
+        <VerifierFacture
+          fichiers={bulkPieces} lu={resultatLecture.entete} lecture={resultatLecture.lecture}
+          cible={{ type: 'activite', id: activiteId }}
+          fournisseurId={Number(bulkFournisseurId)}
+          fournisseurNom={nonLaboFournisseurs.find((f) => String(f.id) === bulkFournisseurId)?.nom ?? ''}
+          refFacture={bulkRefFacture} date={bulkDate} accent="#1e40af"
+          onFermer={() => setVerification(false)}
+          onValidee={(r) => {
+            setVerification(false);
+            remettreAZero();
+            onRefresh?.();
+            void alerte({
+              title: 'Facture validée',
+              message: `${r.nbStock} ligne${r.nbStock > 1 ? 's' : ''} en stock, ${r.appris} correspondance${r.appris > 1 ? 's' : ''} apprise${r.appris > 1 ? 's' : ''} : la prochaine facture de ${voc.ce('fournisseur')} se reconnaîtra seule. La facture est dans la page Factures, avec sa pièce.`,
+              tone: 'primary',
+            });
+          }}
+        />
+      )}
+
       {invoiceModal && (
         <InvoiceConfirmModal
           lines={invoiceModal.lines}
@@ -1147,6 +1171,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
               onFournisseursModifies={async () => { await onFournisseursModifies?.(); }}
               onResultat={setResultatLecture}
               onLecture={setLectureEnCours}
+              onVerifier={canWrite ? () => setVerification(true) : undefined}
               champsLus={champsLus}
             />
           </div>

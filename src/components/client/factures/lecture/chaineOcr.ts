@@ -11,9 +11,10 @@ import type { Source } from '../../../admin/patente/ocr/chaine.ts';
 import { etirer, gris } from '../../../admin/patente/ocr/pixels.ts';
 import type { Pixels } from '../../../admin/patente/ocr/pixels.ts';
 import { lireEntete } from './entete.ts';
+import { colonnesDuTitre, lireLignes } from './lignes.ts';
 import { construireRangees, motsDeTesseract } from './rangees.ts';
 import type { BlocsTesseract } from './rangees.ts';
-import type { Destinataire, EnteteLu, Mot, PageLue, SuiviLecture } from './types.ts';
+import type { Destinataire, EnteteLu, LigneLue, Mot, PageLue, SuiviLecture } from './types.ts';
 
 export type { Source };
 
@@ -80,6 +81,21 @@ export function completer(a: EnteteLu, b: EnteteLu): EnteteLu {
   return r;
 }
 
+/** Place les pages lues dans la facture déposée : rang du fichier, numéro de la première page dans ce fichier. */
+export function situer(e: EnteteLu, fichier: number, premierePage = 1): EnteteLu {
+  return { ...e, pages: e.pages.map((p, k) => ({ ...p, fichier, page: premierePage + k })) };
+}
+
+/** Ajoute les lignes et les pages d'une autre page lue (la dernière page d'une facture de plusieurs pages). */
+export function ajouterPages(a: EnteteLu, b: EnteteLu): EnteteLu {
+  const decalage = a.pages.length;
+  return {
+    ...a,
+    pages: [...a.pages, ...b.pages],
+    lignesFacture: [...a.lignesFacture, ...b.lignesFacture.map((l) => ({ ...l, cadre: { ...l.cadre, page: l.cadre.page + decalage } }))],
+  };
+}
+
 /** Une page d'image → ses rangées (coordonnées de la page lue, redressée), et l'image lue (pour la passe 2). */
 export async function lirePageImage(
   source: Source, moteur: MoteurFacture, numero = 1, suivi: SuiviLecture = () => {}, debut = 0, part = 1,
@@ -124,16 +140,62 @@ export async function lireZones(grise: Pixels, moteur: MoteurFacture, numero = 1
   return { largeur: grise.width, hauteur: grise.height, rangees: construireRangees(uniques, numero, lignesUniques) };
 }
 
+const plat = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
 /**
- * Lit l'en-tête d'une image de facture : passe 1, puis passe 2 par zones si quelque chose manque.
- * `suivi` reçoit un avancement de 0 à 1.
+ * Bande verticale du tableau des lignes sur une page lue (en pixels) : du titre des colonnes (ou de la première rangée
+ * chiffrée, ou d'un mot de titre isolé) jusqu'aux totaux ; à défaut, le milieu de la page.
+ */
+export function bandeDuTableau(page: PageLue): { y0: number; y1: number } {
+  const H = page.hauteur;
+  const rs = page.rangees;
+  const titre = rs.findIndex((r) => colonnesDuTitre(r) !== null);
+  const motTitre = rs.findIndex((r) => /(designat|libelle|article|produit|quantit|\bqte\b|p\.?\s?u\b|prix\s+unit)/.test(plat(r.texte)));
+  const chiffree = rs.findIndex((r) => r.mots.filter((m) => /\d[.,]\d{3}\)?$/.test(m.t)).length >= 2);
+  // Une désignation suivie d'un montant au millime (le titre des colonnes peut manquer sur une photo).
+  const article = rs.findIndex((r) => /\p{L}{3,}/u.test(r.texte) && /\d[.,]\d{3}\)?$/.test(r.mots[r.mots.length - 1]?.t ?? '')
+    && !/(total|net\s*a|tva|timbre|tel|m\.?\s?f\b|capital|rib)/.test(plat(r.texte)));
+  const debut = [titre, motTitre, chiffree, article].filter((i) => i >= 0).map((i) => rs[i].y0 - 3 * rs[i].hauteur);
+  const y0 = Math.max(0, debut.length ? Math.min(...debut) : 0.25 * H);
+  const fin = rs.find((r) => r.y0 > y0 + 4 * r.hauteur && /^(total|net\s*a\s*pay|sous[\s-]?total|arrete|montant\s*(ht|total))/.test(plat(r.texte).trim()));
+  const y1 = Math.min(H, fin ? fin.y0 + 0.5 * fin.hauteur : 0.9 * H);
+  return y1 - y0 > 0.05 * H ? { y0, y1 } : { y0: 0.25 * H, y1: 0.9 * H };
+}
+
+/** Passe « tableau » : la bande du tableau relue comme un seul bloc (les rangées n'y sont pas coupées en colonnes). */
+export async function lireTableau(grise: Pixels, moteur: MoteurFacture, page: PageLue, numero = 1): Promise<PageLue> {
+  const { y0, y1 } = bandeDuTableau(page);
+  const { mots, lignes } = motsDeTesseract(await moteur.bloc(decouper(grise, 0, y0, grise.width, y1 - y0)));
+  const places = mots.map((m) => ({ ...m, y0: m.y0 + y0, y1: m.y1 + y0 }));
+  return { largeur: grise.width, hauteur: grise.height, rangees: construireRangees(places, numero, lignes) };
+}
+
+/** Qualité d'une lecture des lignes : lignes dont le calcul se vérifie, puis lignes complètes. */
+const qualite = (ls: LigneLue[]) => ls.filter((l) => l.controle === true).length * 1000 + ls.filter((l) => l.montant !== null).length;
+
+/** Les lignes d'une lecture méritent-elles la passe « tableau » ? (aucune, un calcul faux, ou la somme ≠ HT lu) */
+export function lignesDouteuses(e: EnteteLu): boolean {
+  const ls = e.lignesFacture;
+  if (!ls.length || ls.some((l) => l.controle !== true)) return true;
+  const somme = ls.reduce((s, l) => s + (l.montant ?? 0), 0);
+  return e.totaux.ht !== null && Math.abs(somme - e.totaux.ht) > 0.011 && Math.abs(somme - (e.totaux.ht + (e.totaux.remise ?? 0))) > 0.011;
+}
+
+/**
+ * Lit une image de facture : passe 1 ; passe 2 par zones si l'en-tête est incomplet ; passe « tableau » si les lignes
+ * sont douteuses (étape F3) — la meilleure lecture des lignes est gardée. `suivi` reçoit un avancement de 0 à 1.
  */
 export async function lireImageFacture(source: Source, moteur: MoteurFacture, client: Destinataire = {}, suivi: SuiviLecture = () => {}): Promise<EnteteLu> {
-  const { page, grise } = await lirePageImage(source, moteur, 1, suivi, 0, 0.6);
+  const { page, grise } = await lirePageImage(source, moteur, 1, suivi, 0, 0.5);
   let entete = lireEntete([page], 'ocr', client);
   if (incomplete(entete)) {
-    const zones = await lireZones(grise, moteur, 1, suivi, 0.6, 0.4);
+    const zones = await lireZones(grise, moteur, 1, suivi, 0.5, 0.3);
     entete = completer(entete, lireEntete([zones], 'ocr', client));
+  }
+  if (lignesDouteuses(entete)) {
+    suivi(ETAPE_OCR, 0.85);
+    const tableau = lireLignes([await lireTableau(grise, moteur, page)], 'ocr');
+    if (qualite(tableau) > qualite(entete.lignesFacture)) entete = { ...entete, lignesFacture: tableau };
   }
   suivi(ETAPE_OCR, 1);
   return entete;

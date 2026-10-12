@@ -26,6 +26,8 @@ export interface ResultatLecture {
   timbre: number | null;
   totaux: EnteteLu['totaux'];
   lecture: LectureEnvoyee;
+  /** Étape F3 : tout ce qui a été lu (lignes comprises), pour la fenêtre « Vérifier la facture ». */
+  entete: EnteteLu & { duree: number };
 }
 
 /** Champs du bloc remplis par une lecture et pas encore retouchés (pastille « lu »). */
@@ -55,6 +57,8 @@ interface Props {
   onResultat: (r: ResultatLecture | null) => void;
   /** Début (true) et fin (false) d'une lecture : le parent garde « Enregistrer » fermé entre les deux. */
   onLecture?: (enCours: boolean) => void;
+  /** Étape F3 : ouvre la fenêtre « Vérifier la facture » (lignes, articles, validation). Absent : pas de bouton. */
+  onVerifier?: () => void;
 }
 
 const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toFixed(3).replace('.', ','));
@@ -86,7 +90,7 @@ export function PastilleLue({ visible }: { visible: boolean }) {
 
 export default function LectureFacture({
   fichiers, enPreparation, cible, fournisseursDuLieu, fournisseurId, refFacture, dateChoisie, champsLus, dateMin, dateMax, accent, disabled,
-  onRemplir, onFournisseursModifies, onResultat, onLecture,
+  onRemplir, onFournisseursModifies, onResultat, onLecture, onVerifier,
 }: Props) {
   const voc = useVocabulaire();
   const [etape, setEtape] = useState<string | null>(null);
@@ -127,6 +131,7 @@ export default function LectureFacture({
   const resumer = (e: EnteteLu & { duree: number }, r: Rapprochement | null, etat?: LectureEnvoyee['fournisseur']): ResultatLecture => ({
     timbre: e.totaux.timbre,
     totaux: e.totaux,
+    entete: e,
     lecture: {
       source: e.source, matricule: e.matricule?.valeur ?? null, nom: e.nom?.valeur ?? null, numero: e.numero?.valeur ?? null,
       date: e.date?.valeur ?? null, duree: e.duree, fournisseur: etat ?? r?.etat ?? null,
@@ -386,6 +391,21 @@ export default function LectureFacture({
               </div>
             )}
             {lu.avertissements.map((a) => <div key={a} style={encart('#fffbeb', '#fde68a', '#92400e')}>⚠️ {a}</div>)}
+            {onVerifier && (
+              // Étape F3 : les lignes lues se vérifient dans une fenêtre à part, qui enregistre la facture validée.
+              <div style={{ ...encart('#eef2ff', '#c7d2fe', '#3730a3'), display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span>
+                  📋 {lu.lignesFacture.length
+                    ? <><strong>{lu.lignesFacture.length} ligne{lu.lignesFacture.length > 1 ? 's' : ''} lue{lu.lignesFacture.length > 1 ? 's' : ''}</strong>{lu.lignesFacture.some((l) => l.controle === false || l.aRelire) ? ' — à relire' : ' — calculs vérifiés'}</>
+                    : 'Aucune ligne lue : vous pouvez les saisir en regardant la facture'}
+                  {(!fournisseurId || !refFacture.trim()) && <span style={{ color: '#92400e' }}> · choisissez {voc.le('fournisseur')} et le n° de facture pour vérifier</span>}
+                </span>
+                <button type="button" style={{ ...petitBouton, background: accent, color: '#fff', borderColor: accent }}
+                  disabled={disabled || !!action || !fournisseurId || !refFacture.trim()} onClick={onVerifier}>
+                  Vérifier la facture et enregistrer →
+                </button>
+              </div>
+            )}
             {lu.lignes.length > 0 && (
               <details>
                 <summary style={{ fontSize: '0.74rem', fontWeight: 700, color: '#334155', cursor: 'pointer' }}>Texte lu ({lu.lignes.length} lignes)</summary>

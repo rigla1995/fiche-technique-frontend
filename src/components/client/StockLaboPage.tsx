@@ -27,6 +27,7 @@ import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
 import LectureFacture, { PastilleLue, type ResultatLecture } from './factures/LectureFacture';
+import VerifierFacture from './factures/VerifierFacture';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
@@ -221,6 +222,8 @@ export default function StockLaboPage() {
   const [resultatLecture, setResultatLecture] = useState<ResultatLecture | null>(null);
   // Lecture de la facture en cours : « Enregistrer » attend (le récapitulatif montrerait des valeurs qui vont changer).
   const [lectureEnCours, setLectureEnCours] = useState(false);
+  // Étape F3 : fenêtre « Vérifier la facture » ouverte (lignes lues, articles, validation).
+  const [verification, setVerification] = useState(false);
   const remettreAZero = () => {
     setBulkDate(todayStr()); setBulkFournisseurId(''); setBulkRefFacture(''); setBulkError('');
     setChampsLus({}); setDateChoisie(false); setResultatLecture(null); viderPieces();
@@ -234,7 +237,7 @@ export default function StockLaboPage() {
   useEffect(() => { piecesCourantes.current = bulkPieces; }, [bulkPieces]);
   useEffect(() => () => libererFichiers(piecesCourantes.current), []);
   const [bulkError, setBulkError] = useState('');
-  const { confirm } = useConfirm();
+  const { confirm, alerte } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
   const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: (timbreFiscal: boolean, timbreMontant: number) => void } | null>(null);
 
@@ -911,7 +914,28 @@ export default function StockLaboPage() {
                   onFournisseursModifies={rechargerFournisseurs}
                   onResultat={setResultatLecture}
                   onLecture={setLectureEnCours}
+                  onVerifier={canWrite ? () => setVerification(true) : undefined}
                   champsLus={champsLus}
+                />
+              )}
+              {verification && resultatLecture && bulkFournisseurId && (
+                <VerifierFacture
+                  fichiers={bulkPieces} lu={resultatLecture.entete} lecture={resultatLecture.lecture}
+                  cible={{ type: 'labo', id: Number(laboId) }}
+                  fournisseurId={Number(bulkFournisseurId)}
+                  fournisseurNom={fournisseurs.find((f) => String(f.id) === bulkFournisseurId)?.nom ?? ''}
+                  refFacture={bulkRefFacture} date={bulkDate} accent="#7e22ce"
+                  onFermer={() => setVerification(false)}
+                  onValidee={(r) => {
+                    setVerification(false);
+                    remettreAZero();
+                    loadStock();
+                    void alerte({
+                      title: 'Facture validée',
+                      message: `${r.nbStock} ligne${r.nbStock > 1 ? 's' : ''} en stock, ${r.appris} correspondance${r.appris > 1 ? 's' : ''} apprise${r.appris > 1 ? 's' : ''} : la prochaine facture de ${voc.ce('fournisseur')} se reconnaîtra seule. La facture est dans la page Factures, avec sa pièce.`,
+                      tone: 'primary',
+                    });
+                  }}
                 />
               )}
             </div>
