@@ -110,10 +110,10 @@ test('prixParUniteDeStock, ecartDePrix', () => {
   assert.equal(ecartDePrix(1.5, null), null);
 });
 
-test('relecture : même réf. mais désignation sans rapport → proposée, jamais reconnue', () => {
+test('relecture : même code mais désignation sans rapport → proposée, jamais reconnue', () => {
   const p = proposer({ designation: 'Huile de tournesol 5 L', reference: 'EAU-15', unite: 'bidon' }, ctx);
   assert.equal(p.etat, 'proposee');
-  assert.match(p.raison, /même réf\./);
+  assert.match(p.raison, /même code que/);
 });
 
 test('relecture : clé cherchée sur la désignation lue sans le n° de lot', () => {

@@ -67,6 +67,14 @@ export default function CorrespondancesPage() {
 
   const enregistrer = async () => {
     if (!edition) return;
+    // Rappel avant d'enregistrer : la correction ne touche que les prochaines factures (demande du client, 12/10).
+    const c = (liste ?? []).find((x) => x.id === edition.id);
+    const ok = await confirm({
+      title: 'Corriger cette correspondance ?',
+      message: `La correction vaut pour les prochaines factures${c ? ` de ${c.fournisseurNom}` : ''}. Les factures déjà validées ne changent pas : ni leur ${voc.nom('stock')}, ni la facture, ni l'historique. Pour en refaire une, supprimez-la dans Factures, puis déposez-la de nouveau.`,
+      confirmLabel: 'Corriger', tone: 'info',
+    });
+    if (!ok) return;
     const corps = edition.choix.startsWith('a:')
       ? { articleId: Number(edition.choix.slice(2)), conversion: nombre(edition.conversion) }
       : { horsStock: edition.choix.slice(2) };
@@ -131,7 +139,7 @@ export default function CorrespondancesPage() {
           </FilterSelect>
         </FilterField>
         <FilterField label="Recherche">
-          <FilterInput value={recherche} placeholder={`Désignation, réf., ${voc.nom('article')}…`} onChange={(e) => { setRecherche(e.target.value); setPage(1); }} />
+          <FilterInput value={recherche} placeholder={`Désignation, code ${voc.nom('fournisseur')}, ${voc.nom('article')}…`} onChange={(e) => { setRecherche(e.target.value); setPage(1); }} />
         </FilterField>
       </HistoryFilterBar>
 
@@ -148,7 +156,7 @@ export default function CorrespondancesPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#fff7ed' }}>
-                {['Ligne de la facture', voc.Nom('fournisseur'), `→ ${voc.Nom('article')} LabFlow`, 'Confirmée', ''].map((h) => (
+                {['Ligne de la facture', `Code ${voc.nom('fournisseur')}`, voc.Nom('fournisseur'), `→ ${voc.Nom('article')} LabFlow`, 'Confirmée', ''].map((h) => (
                   <th key={h} style={{ ...cellule, textAlign: 'left', fontSize: '0.66rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: ACCENT, fontWeight: 800 }}>{h}</th>
                 ))}
               </tr>
@@ -160,9 +168,14 @@ export default function CorrespondancesPage() {
                   <tr key={c.id}>
                     <td style={cellule}>
                       <div style={{ fontWeight: 700 }}>{c.designation}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                        {c.reference ? `réf. ${c.reference}` : 'reconnue par sa désignation'}{c.uniteFacture ? ` · ${c.uniteFacture}` : ''}
-                      </div>
+                      {c.uniteFacture && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>unité : {c.uniteFacture}</div>}
+                    </td>
+                    {/* Code produit du fournisseur (colonne « Réf. » ou « Code » de sa facture) : il reconnaît la ligne ; sans code,
+                        la ligne est reconnue par sa désignation. */}
+                    <td style={cellule}>
+                      {c.reference
+                        ? <span style={{ fontFamily: 'monospace', fontWeight: 700, background: '#f1f5f9', borderRadius: 4, padding: '1px 6px' }}>{c.reference}</span>
+                        : <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>— reconnue par sa désignation</span>}
                     </td>
                     <td style={cellule}>{c.fournisseurNom}</td>
                     <td style={cellule}>

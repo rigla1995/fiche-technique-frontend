@@ -462,7 +462,8 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
                         <label style={{ flex: '3 1 220px' }}><span style={etiquette}>Désignation lue</span>
                           <input style={{ ...petit, width: '100%' }} value={l.designation} onChange={(ev) => modifier(i, { designation: ev.target.value }, false)} /></label>
-                        <label style={{ flex: '1 1 80px' }}><span style={etiquette}>Réf.</span>
+                        <label style={{ flex: '1 1 110px' }} title={`Colonne « Réf. » ou « Code » de la facture ${voc.du('fournisseur')} : ce code reconnaît la ligne la fois suivante`}>
+                          <span style={etiquette}>Code {voc.nom('fournisseur')}</span>
                           <input style={{ ...petit, width: '100%' }} value={l.reference} onChange={(ev) => modifier(i, { reference: ev.target.value }, false)} /></label>
                       </div>
                       <div className="vf-ligne-num" style={{ marginBottom: 6 }}>
