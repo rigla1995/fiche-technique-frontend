@@ -89,7 +89,8 @@ export default function NouveauFournisseurModal({ initiale, cible, fournisseursD
   const candidats = [...fournisseursDuCompte].sort((a, b) => Number(Boolean(a.matriculeFiscal)) - Number(Boolean(b.matriculeFiscal)) || a.nom.localeCompare(b.nom));
 
   return (
-    <div className="modal-overlay">
+    // Au-dessus du panneau flottant « Aperçu saisie » (z-index 1100), qui cachait sinon les boutons du bas.
+    <div className="modal-overlay" style={{ zIndex: 1150 }}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="titre-nouveau-fournisseur" style={{ maxWidth: 560, width: '96%' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: 'linear-gradient(135deg, #7c2d12, #ea580c)', borderRadius: '12px 12px 0 0', padding: '16px 20px' }}>
           <h2 id="titre-nouveau-fournisseur" style={{ color: '#fff', margin: 0, fontSize: '1rem', fontWeight: 800 }}>{voc.Nouveau('fournisseur')} — d'après la facture</h2>

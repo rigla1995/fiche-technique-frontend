@@ -104,6 +104,32 @@ export function rangee(mots: Mot[], page = 1): Rangee {
 }
 
 /**
+ * « Ligne » de tesseract qui porte en fait deux lignes du papier (lue comme un seul bloc, l'adresse et « Tél/Fax » d'un
+ * en-tête se mêlent) : ses mots se chevauchent de gauche à droite. Elle est recoupée là où les centres des mots
+ * s'écartent verticalement de plus de la moitié de la hauteur du texte. Une vraie ligne, même penchée, reste entière.
+ */
+export function separerLigne(l: Mot[]): Mot[][] {
+  if (l.length < 4) return [l];
+  const parX = [...l].sort((a, b) => a.x0 - b.x0);
+  let fin = -Infinity;
+  let chevauchements = 0;
+  for (const m of parX) {
+    if (m.x0 < fin - 0.3 * (m.x1 - m.x0)) chevauchements++;
+    fin = Math.max(fin, m.x1);
+  }
+  if (chevauchements < 2) return [l];
+  const h = mediane(l.map((m) => m.y1 - m.y0)) || 1;
+  const centre = (m: Mot) => (m.y0 + m.y1) / 2;
+  const parY = [...l].sort((a, b) => centre(a) - centre(b));
+  const parts: Mot[][] = [[parY[0]]];
+  for (let i = 1; i < parY.length; i++) {
+    if (centre(parY[i]) - centre(parY[i - 1]) > 0.5 * h) parts.push([]);
+    parts[parts.length - 1].push(parY[i]);
+  }
+  return parts;
+}
+
+/**
  * Mots → rangées, de haut en bas. Les mots d'une même ligne (numéro de tesseract, s'il est donné) restent ensemble ;
  * deux lignes qui se recouvrent verticalement à plus de 50 % sont fusionnées (libellé à gauche, montant à droite).
  */
@@ -115,7 +141,7 @@ export function construireRangees(mots: readonly Mot[], page = 1, lignes?: reado
     const l = parLigne.get(cle);
     if (l) l.push(m); else parLigne.set(cle, [m]);
   });
-  const bandes = [...parLigne.values()].map((l) => {
+  const bandes = [...parLigne.values()].flatMap(separerLigne).map((l) => {
     const y0 = mediane(l.map((m) => m.y0)), y1 = mediane(l.map((m) => m.y1));
     return { mots: l, y0, y1, cy: (y0 + y1) / 2 };
   }).sort((a, b) => a.cy - b.cy);
@@ -128,7 +154,10 @@ export function construireRangees(mots: readonly Mot[], page = 1, lignes?: reado
       const g = groupes[k];
       const recouvrement = Math.min(g.y1, b.y1) - Math.max(g.y0, b.y0);
       const ratio = recouvrement / Math.max(1e-6, Math.min(g.y1 - g.y0, b.y1 - b.y0));
-      if (ratio > 0.5 && ratio > part) { meilleur = g; part = ratio; }
+      // Un mot très haut (lettre d'un logo, cachet) n'absorbe pas les lignes de texte qu'il couvre : le recouvrement doit
+      // aussi compter pour le plus haut des deux (un montant en gros caractères reste sur la rangée de son libellé).
+      const part2 = recouvrement / Math.max(1e-6, Math.max(g.y1 - g.y0, b.y1 - b.y0));
+      if (ratio > 0.5 && part2 >= 0.25 && ratio > part) { meilleur = g; part = ratio; }
     }
     if (meilleur) meilleur.mots.push(...b.mots);
     else groupes.push({ y0: b.y0, y1: b.y1, cy: b.cy, mots: [...b.mots] });

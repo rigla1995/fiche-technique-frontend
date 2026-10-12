@@ -60,6 +60,8 @@ interface Props {
 const fmt = (n: number | null | undefined) => (n == null ? '—' : n.toFixed(3).replace('.', ','));
 const fmtDate = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`;
 const sansEspaces = (s: string) => s.toUpperCase().replace(/\s+/g, '');
+/** Numéro à recopier : tout numéro lu, sauf un numéro peut-être incomplet (« FV-2026- »), seulement montré. */
+const numeroSur = (n: EnteteLu['numero']): n is NonNullable<EnteteLu['numero']> => Boolean(n && !/incomplet/.test(n.note ?? ''));
 /** Durée maximale d'une lecture vue de l'écran (chargement, réseau, reconnaissance) : au-delà, « Enregistrer » se rouvre. */
 const DELAI_ECRAN = 150_000;
 const API_DELAI = { timeout: 15_000 };
@@ -204,7 +206,7 @@ export default function LectureFacture({
         }
         // Un numéro peut-être incomplet (« FV-2026- ») est montré, jamais recopié.
         if (refLibre) {
-          if (e.numero && !e.numero.note) champs.refFacture = e.numero.valeur.slice(0, 100);
+          if (numeroSur(e.numero)) champs.refFacture = e.numero.valeur.slice(0, 100);
           else if (c.champsLus.ref) champs.refFacture = '';
         }
         if (e.date && !c.dateChoisie && e.date.valeur >= dateMin && e.date.valeur <= dateMax) champs.date = e.date.valeur;
@@ -288,7 +290,7 @@ export default function LectureFacture({
   // Matricule lu ajouté à la fiche proposée seulement s'il est sûr : lettre-clé juste, seul lu, client connu (une forme
   // courte, « 1234567A », est sûre si sa clé l'est).
   const matriculeSur = lu?.matricule && !/lettre-clé|autre/.test(lu.matricule.note ?? '') && clientConnu ? lu.matricule.valeur : null;
-  const refDiffere = lu?.numero && !lu.numero.note && refFacture.trim() && sansEspaces(refFacture) !== sansEspaces(lu.numero.valeur);
+  const refDiffere = numeroSur(lu?.numero ?? null) && refFacture.trim() && sansEspaces(refFacture) !== sansEspaces(lu?.numero?.valeur ?? '');
 
   return (
     <>
@@ -373,7 +375,7 @@ export default function LectureFacture({
               {t && <span><strong>HT :</strong> {fmt(t.ht)}</span>}
               {t?.fodec != null && <span><strong>FODEC :</strong> {fmt(t.fodec)}</span>}
               {t && <span><strong>TVA :</strong> {fmt(t.tva)}{t.parTaux.length > 1 ? ` (${t.parTaux.map((x) => `${x.taux} %`).join(', ')})` : ''}</span>}
-              {t && <span><strong>Timbre :</strong> {fmt(t.timbre)}</span>}
+              {t && <span><strong>Timbre :</strong> {t.timbre === 0 ? 'aucun' : fmt(t.timbre)}</span>}
               {t && <span><strong>TTC :</strong> {fmt(t.ttc)} {t.coherents === true ? <span style={{ color: '#15803d' }} title="HT + TVA + timbre = TTC">✓</span> : t.coherents === false ? <span style={{ color: '#b45309' }}>⚠</span> : null}</span>}
             </div>
             {lu.date && dateChoisie && (
