@@ -11,7 +11,7 @@ export const NATURES: { valeur: NatureHorsStock; libelle: string }[] = [
   { valeur: 'transport', libelle: 'Transport' },
   { valeur: 'livraison', libelle: 'Frais de livraison' },
   { valeur: 'consigne', libelle: 'Consigne' },
-  { valeur: 'service', libelle: 'Service' },
+  { valeur: 'service', libelle: 'Prestation' },
   { valeur: 'autre', libelle: 'Autre frais' },
 ];
 

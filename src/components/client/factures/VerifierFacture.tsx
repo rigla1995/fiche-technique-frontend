@@ -360,7 +360,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                   {aConfirmerIdx.length > 0 && (
                     <button type="button" style={{ ...bouton, color: '#92400e', borderColor: '#fcd34d', background: '#fffbeb' }}
                       onClick={() => setLignes((ls) => ls.map((l) => (l.choix && l.etat === 'proposee' ? { ...l, etat: 'confirmee' } : l)))}>
-                      ✓ Confirmer les {aConfirmerIdx.length} proposition{aConfirmerIdx.length > 1 ? 's' : ''}
+                      {aConfirmerIdx.length > 1 ? `✓ Confirmer les ${aConfirmerIdx.length} propositions` : '✓ Confirmer la proposition'}
                     </button>
                   )}
                 </div>
@@ -417,7 +417,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
                               </optgroup>
                             )}
                             <optgroup label={dejaAchetes.length ? `Autres ${voc.nom('article', true)}` : voc.Titre('article', true)}>
-                              {autres.map((a) => <option key={a.id} value={`a:${a.id}`}>{a.nom} ({a.unite}){a.selectionne ? '' : ' — ajouté ici'}</option>)}
+                              {autres.map((a) => <option key={a.id} value={`a:${a.id}`}>{a.nom} ({a.unite}){a.selectionne ? '' : ` — hors de ${cible.type === 'activite' ? voc.ce('activite') : voc.ce('labo')}`}</option>)}
                             </optgroup>
                             <optgroup label={`Hors ${voc.nom('stock')} (reste sur la facture)`}>
                               {NATURES.map((x) => <option key={x.valeur} value={`h:${x.valeur}`}>{x.libelle}</option>)}

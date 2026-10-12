@@ -27,7 +27,8 @@ interface Props {
 }
 
 const f3 = (n: number | null) => (n == null ? '—' : n.toFixed(3));
-const fNb = (n: number | null) => (n == null ? '—' : String(Math.round(n * 1e6) / 1e6).replace('.', ','));
+// Points décimaux, comme les montants de la page Factures.
+const fNb = (n: number | null) => (n == null ? '—' : String(Math.round(n * 1e6) / 1e6));
 const cellule: React.CSSProperties = { padding: '7px 10px', borderBottom: '1px solid var(--border)', fontSize: '0.8rem' };
 
 export default function DetailFactureValidee({ factureId, refFacture, montantTTC, accent, peutSupprimer, onSupprimee }: Props) {
