@@ -608,7 +608,7 @@ export default function LaboHistoriqueApproPage() {
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right', padding: '8px 6px' }}>
                       {r.factureValidee && <span title="Ligne d'une facture lue puis validée : elle ne se modifie plus. Pour la refaire, supprimez la facture entière (page Factures)." style={{ fontSize: '0.8rem', padding: '2px 5px', cursor: 'help' }}>🔒</span>}
-                      {!r.factureValidee && r.factureEnCompta && <span title="Ligne d'une facture envoyée en comptabilité : elle ne se modifie plus. Pour la changer, supprimez d'abord son écriture en brouillard dans LabFlow Compta." style={{ fontSize: '0.8rem', padding: '2px 5px', cursor: 'help' }}>📒🔒</span>}
+                      {!r.factureValidee && r.factureEnCompta && <span title="Ligne d'une facture envoyée en comptabilité : elle ne se modifie plus tant que son écriture existe (brouillard : supprimez-la dans LabFlow Compta ; validée : votre comptable la contre-passe)." style={{ fontSize: '0.8rem', padding: '2px 5px', cursor: 'help' }}>📒🔒</span>}
                       {!r.factureValidee && !r.factureEnCompta && (!isGerant || r.createdBy === user?.id) && (<>
                         <button
                           className="btn btn-ghost btn-sm"

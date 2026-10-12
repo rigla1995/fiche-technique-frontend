@@ -10,7 +10,7 @@ import { FenetreImport } from '../FenetreImport';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import {
   LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, contrepasserEcriture, controlerDate, controlerMontant, fmtJour, fmtMontant, importerBalanceOuverture, importerEcritures, libellePeriode,
-  ligneEnvoyee, lireEcriture, lireEcritures, ouvrirPieceEcriture, periodeDe, piecesEcriture, periodeOuverteSuivante, telechargerModeleBalanceOuverture, telechargerModeleEcritures, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
+  ligneEnvoyee, lireEcriture, lireEcritures, ouvrirPieceEcriture, periodeDe, pieceATelecharger, piecesEcriture, periodeOuverteSuivante, telechargerModeleBalanceOuverture, telechargerModeleEcritures, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
   type AideReponse, type ContrepassationReponse, type Ecriture, type PieceEcriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
 } from '../ecritures';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
@@ -78,7 +78,12 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const [erreur, setErreur] = useState('');
   const [occupe, setOccupe] = useState(false);
   // F4 : les pièces de la facture LabFlow d'une écriture (plusieurs : une liste sous l'écriture) ; lien si l'onglet est refusé.
-  const [pieces, setPieces] = useState<{ ecritureId: number; liste: PieceEcriture[]; lien: { url: string; nom: string } | null } | null>(null);
+  const [pieces, setPieces] = useState<{ ecritureId: number; liste: PieceEcriture[]; lien: { url: string; nom: string } | null; erreur?: string } | null>(null);
+  const occupePiece = useRef(false);
+  // L'adresse locale d'un lien de secours est libérée quand un autre la remplace, et en quittant la page.
+  const lienPiece = useRef<string | null>(null);
+  useEffect(() => () => { if (lienPiece.current) URL.revokeObjectURL(lienPiece.current); }, []);
+  const garderLien = (url: string | null) => { if (lienPiece.current && lienPiece.current !== url) URL.revokeObjectURL(lienPiece.current); lienPiece.current = url; };
   const occupeRef = useRef(false);
   // Les écritures dépliées et leurs lignes (lues à la demande ; remplacées après une modification ; retirées du cache
   // quand une relecture montre qu'une autre personne les a changées — `modifieLe` diffère). Miroirs en ref pour les
@@ -207,24 +212,44 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     setInfo(`Écriture ${r.ecriture.numero} validée (définitif).`);
     if (etatFiltre) relireFenetre();
   };
-  const ouvrirUnePiece = async (ecritureId: number, liste: PieceEcriture[], p: PieceEcriture) => {
+  // Une pièce : l'onglet est ouvert tout de suite (avant toute attente : Safari bloque sinon), puis rempli ; les messages
+  // s'affichent sous l'écriture, pas dans le bandeau du haut de page.
+  const ouvrirUnePiece = async (ecritureId: number, liste: PieceEcriture[], p: PieceEcriture, onglet: Window | null) => {
     if (!etat) return;
     try {
-      const url = await ouvrirPieceEcriture(etat.dossier.id, ecritureId, p);
+      const url = await ouvrirPieceEcriture(etat.dossier.id, ecritureId, p, onglet);
+      garderLien(url);
       setPieces({ ecritureId, liste, lien: url ? { url, nom: p.nom } : null });
     } catch (err) {
-      setErreur(messageDossier(err, 'Cette pièce ne s\'ouvre pas : réessayez.', role));
+      setPieces({ ecritureId, liste, lien: null, erreur: messageDossier(err, 'Cette pièce ne s\'ouvre pas : réessayez.', role) });
     }
   };
+  const ouvrirDeLaListe = (ecritureId: number, liste: PieceEcriture[], p: PieceEcriture) => {
+    if (occupePiece.current) return;
+    occupePiece.current = true;
+    const onglet = pieceATelecharger(p) ? null : window.open('', '_blank');
+    void ouvrirUnePiece(ecritureId, liste, p, onglet).finally(() => { occupePiece.current = false; });
+  };
   const voirPiece = async (e: Ecriture) => {
-    if (!etat) return;
+    if (!etat || occupePiece.current) return;
+    occupePiece.current = true;
+    const onglet = window.open('', '_blank');
+    setPieces(null);
     try {
       const liste = await piecesEcriture(etat.dossier.id, e.id);
-      if (!liste.length) { setErreur('La facture de cette écriture n\'a pas (ou plus) de pièce jointe dans LabFlow.'); return; }
-      if (liste.length === 1) await ouvrirUnePiece(e.id, liste, liste[0]);
-      else setPieces({ ecritureId: e.id, liste, lien: null });
+      if (liste.length === 1 && !pieceATelecharger(liste[0])) {
+        await ouvrirUnePiece(e.id, liste, liste[0], onglet);
+      } else {
+        onglet?.close();
+        if (!liste.length) setPieces({ ecritureId: e.id, liste, lien: null, erreur: 'La facture de cette écriture n\'a pas (ou plus) de pièce jointe dans LabFlow.' });
+        else if (liste.length === 1) await ouvrirUnePiece(e.id, liste, liste[0], null);
+        else setPieces({ ecritureId: e.id, liste, lien: null });
+      }
     } catch (err) {
-      setErreur(messageDossier(err, 'Pièces indisponibles : réessayez.', role));
+      onglet?.close();
+      setPieces({ ecritureId: e.id, liste: [], lien: null, erreur: messageDossier(err, 'Pièces indisponibles : réessayez.', role) });
+    } finally {
+      occupePiece.current = false;
     }
   };
   const valider = async (e: Ecriture) => {
@@ -339,7 +364,10 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     const ok = await confirm({
       title: `Supprimer l'écriture ${e.numeroProvisoire} ?`,
       message: `« ${e.libelle} » du ${fmtJour(e.date)} (${e.journal.code}, pièce ${e.reference}, ${fmtMontant(e.total)} D) sera retirée du dossier avec ses lignes. Le journal de la comptabilité en garde tout le contenu.`,
-      details: ['Une écriture validée ne se supprime jamais : elle se contre-passe.'],
+      details: [
+        'Une écriture validée ne se supprime jamais : elle se contre-passe.',
+        ...(e.origine === 'labflow' ? ['Écriture venue de LabFlow : sa facture y redevient « à envoyer », et ses lignes se modifient de nouveau.'] : []),
+      ],
       tone: 'danger',
       confirmLabel: 'Supprimer',
     });
@@ -559,12 +587,13 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => supprimer(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>🗑 Supprimer</button>}
                               {peutValider && !!etat.exercice && d.etat === 'validee' && !d.contrepasseePar && <button type="button" onClick={() => contrepasser(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>↩ Contre-passer</button>}
                             </div>
-                            {pieces?.ecritureId === d.id && (pieces.liste.length > 1 || pieces.lien) && (
+                            {pieces?.ecritureId === d.id && (pieces.liste.length > 1 || pieces.lien || pieces.erreur) && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: '0.74rem' }}>
                                 {pieces.liste.length > 1 && <span style={{ color: '#64748b' }}>Pièces de la facture :</span>}
                                 {pieces.liste.length > 1 && pieces.liste.map((p) => (
-                                  <button key={p.id} type="button" onClick={() => void ouvrirUnePiece(d.id, pieces.liste, p)} style={petit('#fff', '#166534', '#bbf7d0')}>📄 {p.nom}</button>
+                                  <button key={p.id} type="button" onClick={() => ouvrirDeLaListe(d.id, pieces.liste, p)} style={petit('#fff', '#166534', '#bbf7d0')}>📄 {p.nom}</button>
                                 ))}
+                                {pieces.erreur && <span role="alert" style={{ color: '#b91c1c', fontWeight: 600 }}>{pieces.erreur}</span>}
                                 {pieces.lien && (
                                   <span>Votre navigateur n'a pas ouvert de nouvel onglet : <a href={pieces.lien.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700 }}>afficher « {pieces.lien.nom} »</a></span>
                                 )}

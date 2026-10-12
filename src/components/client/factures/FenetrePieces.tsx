@@ -19,8 +19,10 @@ interface Props {
   onFermer: () => void;
   /** Nombre de pièces après une modification (pour la liste des factures). */
   onNombre: (n: number) => void;
-  /** Étape F4 : la facture vient de partir en comptabilité (pour la liste des factures). */
-  onCompta?: (c: EtatCompta) => void;
+  /** Étape F4 : l'état de la facture en comptabilité, relu ou changé (pour la liste des factures) ; null : pas d'écriture. */
+  onCompta?: (c: EtatCompta | null) => void;
+  /** Facture sans fournisseur : elle ne part pas en comptabilité (pas de case). */
+  sansFournisseur?: boolean;
 }
 
 const fmtDateHeure = (iso: string) => {
@@ -29,7 +31,7 @@ const fmtDateHeure = (iso: string) => {
 };
 const icone = (t: Piece['type']) => (t === 'application/pdf' ? '📄' : '🖼️');
 
-export default function FenetrePieces({ factureId, titre, accent = '#1e40af', onFermer, onNombre, onCompta }: Props) {
+export default function FenetrePieces({ factureId, titre, accent = '#1e40af', onFermer, onNombre, onCompta, sansFournisseur = false }: Props) {
   const voc = useVocabulaire();
   const { canWrite } = useAuth();
   const { confirm } = useConfirm();
@@ -42,6 +44,9 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   const [compta, setCompta] = useState<EtatCompta | null>(null);
   const [envoyerCompta, setEnvoyerCompta] = useState(true);
   const [infoCompta, setInfoCompta] = useState<{ texte: string; ok: boolean } | null>(null);
+  // La carte suit l'état relu (le comptable a pu supprimer le brouillard, ou un autre onglet envoyer la facture).
+  const onComptaRef = useRef(onCompta);
+  useEffect(() => { onComptaRef.current = onCompta; });
   const [erreur, setErreur] = useState('');
   const [envoi, setEnvoi] = useState(false);
   const [nouveaux, setNouveaux] = useState<FichierChoisi[]>([]);
@@ -70,15 +75,15 @@ export default function FenetrePieces({ factureId, titre, accent = '#1e40af', on
   useEffect(() => {
     let annule = false;
     listerPieces(factureId)
-      .then((r) => { if (!annule) { setPieces(r.pieces); setModifiable(r.modifiable); setValidee(Boolean(r.validee)); setCompta(r.compta ?? null); } })
+      .then((r) => { if (!annule) { setPieces(r.pieces); setModifiable(r.modifiable); setValidee(Boolean(r.validee)); setCompta(r.compta ?? null); onComptaRef.current?.(r.compta ?? null); } })
       .catch((e) => { if (!annule) { setPieces([]); setErreur(messageErreur(e, 'Pièces indisponibles : réessayez.')); } });
     return () => { annule = true; };
   }, [factureId]);
 
-  const apres = (liste: Piece[]) => { setPieces(liste); onNombre(liste.length); setErreur(''); };
+  const apres = (liste: Piece[]) => { setPieces(liste); onNombre(liste.length); setErreur(''); setInfoCompta(null); };
   const peutEcrire = modifiable && canWrite;
   const peutChanger = peutEcrire && !compta;
-  const proposerCompta = comptaActif === true && !compta;
+  const proposerCompta = comptaActif === true && !compta && !sansFournisseur;
   const places = Math.max(0, PIECES_MAX - (pieces?.length ?? 0));
 
   const ouvrir = async (p: Piece, telecharger = false) => {

@@ -48,14 +48,17 @@ function ComptaComptesAchat({ dossierId }: { dossierId?: string }) {
   const modifiable = !!donnees && donnees.droits.configurer && donnees.dossier.etat === 'actif' && ouvert;
   const articlesPar = useMemo(() => {
     const m = new Map<number | 'sans', ComptesAchatReponse['articles']>();
+    const connues = new Set((donnees?.categories || []).map((c) => c.id));
     for (const a of donnees?.articles || []) {
-      const k = a.categorieId ?? 'sans';
+      // Une catégorie absente de la liste : l'article est rangé « sans catégorie » plutôt que perdu.
+      const k = a.categorieId != null && connues.has(a.categorieId) ? a.categorieId : 'sans';
       m.set(k, [...(m.get(k) || []), a]);
     }
     return m;
   }, [donnees]);
   const basculer = (k: number | 'sans') => setOuvertes((s) => { const n = new Set(s); if (n.has(k)) n.delete(k); else n.add(k); return n; });
   const texteDefaut = (d: CompteDefaut) => `${d.numero} — ${d.libelle}${d.imputable ? '' : ' (à régler : absent ou subdivisé)'}`;
+  const sansCategorie = donnees?.sansCategorie ? texteDefaut(donnees.sansCategorie.defaut) : '601';
 
   const retour = donnees ? { lien: `/dossiers/${donnees.dossier.id}`, libelle: donnees.dossier.nom } : null;
   const ligne = (cle: string, titre: React.ReactNode, compte: CompteCourt | null, parDefaut: string, edit: Edition | null, sousTitre?: React.ReactNode, retrait = 0) => (
@@ -66,7 +69,8 @@ function ComptaComptesAchat({ dossierId }: { dossierId?: string }) {
       </span>
       <span style={{ flex: '1 1 260px', minWidth: 0, fontSize: '0.8rem' }}>
         {compte
-          ? <><strong style={{ color: '#1e1b4b' }}>{texteCompte(compte)}</strong> <span style={pastille('#eef2ff', '#3730a3')}>Réglé</span></>
+          ? <><strong style={{ color: compte.imputable ? '#1e1b4b' : '#b91c1c' }}>{texteCompte(compte)}</strong> <span style={pastille('#eef2ff', '#3730a3')}>Réglé</span>
+            {!compte.imputable && <span style={{ ...pastille('#fee2e2', '#991b1b'), marginLeft: 6 }} title="Les factures envoyées depuis LabFlow sont refusées tant qu'un compte imputable n'est pas choisi">À régler : désactivé ou subdivisé</span>}</>
           : <span style={{ color: '#64748b' }}>{parDefaut}</span>}
       </span>
       {modifiable && edit && <button type="button" onClick={() => { setInfo(''); setEdition(edit); }} style={lien}>Choisir le compte</button>}
@@ -118,6 +122,11 @@ function ComptaComptesAchat({ dossierId }: { dossierId?: string }) {
               {texteEtatAbonnement(donnees.etatAbonnement, role)} : les comptes d'achat restent consultables mais ne se modifient plus.
             </div>
           )}
+          {donnees.dossier.etat === 'archive' && ouvert && (
+            <div role="status" style={{ ...alerte, background: '#f8fafc', borderColor: '#cbd5e1', color: '#475569', marginBottom: 16 }}>
+              Dossier archivé : ses comptes d'achat ne se règlent pas tant qu'il n'est pas désarchivé.
+            </div>
+          )}
           {ouvert && donnees.dossier.etat === 'actif' && !donnees.droits.configurer && (
             <div role="status" style={{ ...alerte, background: '#f8fafc', borderColor: '#cbd5e1', color: '#475569', marginBottom: 16 }}>
               Votre niveau d'accès permet de consulter les comptes d'achat ; le titulaire et les gérants de niveau Complet les règlent.
@@ -152,9 +161,9 @@ function ComptaComptesAchat({ dossierId }: { dossierId?: string }) {
             {(articlesPar.get('sans') || []).length > 0 && (
               <div>
                 {ligne('sans', <button type="button" onClick={() => basculer('sans')} style={{ ...lien, fontSize: '0.84rem', color: '#0f172a', padding: 0 }} aria-expanded={ouvertes.has('sans')}>{ouvertes.has('sans') ? '▼' : '▶'} Sans catégorie</button>,
-                  null, '601 (par défaut)', null, `${(articlesPar.get('sans') || []).length} article(s) : réglez-les un par un`)}
-                {ouvertes.has('sans') && (articlesPar.get('sans') || []).map((a) => ligne(`a${a.id}`, a.nom, a.compte, '601 (par défaut)',
-                  { cible: { type: 'article', id: a.id }, libelle: `l'article ${a.nom}`, compte: a.compte, defaut: '601 (par défaut)' }, undefined, 24))}
+                  null, `${sansCategorie} (par défaut)`, null, `${(articlesPar.get('sans') || []).length} article(s) : réglez-les un par un`)}
+                {ouvertes.has('sans') && (articlesPar.get('sans') || []).map((a) => ligne(`a${a.id}`, a.nom, a.compte, `${sansCategorie} (par défaut)`,
+                  { cible: { type: 'article', id: a.id }, libelle: `l'article ${a.nom}`, compte: a.compte, defaut: sansCategorie }, undefined, 24))}
               </div>
             )}
           </div>
@@ -185,6 +194,9 @@ function FenetreCompte({ edition, comptes, dossierId, role, onClose, onFait, onP
   onClose: () => void; onFait: (p: ComptesAchatReponse, message: string) => void; onPerime: () => void;
 }) {
   const [compteId, setCompteId] = useState<number | null>(edition.compte?.id ?? null);
+  // Un achat va en charges (classe 6) ; la consigne peut aussi aller au compte du fournisseur (4096) — même règle au serveur.
+  const consigne = edition.cible.type === 'nature' && edition.cible.valeur === 'consigne';
+  const proposes = comptes.filter((k) => k.numero.startsWith('6') || (consigne && k.nature === 'fournisseurs'));
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const envoyer = async (id: number | null) => {
@@ -204,8 +216,8 @@ function FenetreCompte({ edition, comptes, dossierId, role, onClose, onFait, onP
     <Modale titre={`Compte d'achat de ${edition.libelle}`} sousTitre={`Sans réglage : ${edition.defaut}`} onClose={onClose}
       onSubmit={() => { if (compteId) void envoyer(compteId); else setErreur('Choisissez un compte, ou revenez au compte par défaut.'); }}
       envoi={envoi} erreur={erreur} libelleEnvoi="✓ Enregistrer">
-      <ChoixCompte id="ca-compte" libelle="Compte imputé" comptes={comptes} valeur={compteId} onChange={(id) => { setCompteId(id); setErreur(null); }} disabled={envoi}
-        aide="Un compte de charges (classe 6) ; un compte collectif fournisseurs ne convient qu'à la consigne." />
+      <ChoixCompte id="ca-compte" libelle="Compte imputé" comptes={proposes} valeur={compteId} onChange={(id) => { setCompteId(id); setErreur(null); }} disabled={envoi}
+        aide={consigne ? 'Un compte de charges (classe 6) ou un compte fournisseurs (4096, emballages à rendre).' : 'Un compte de charges (classe 6).'} />
       {edition.compte && (
         <button type="button" onClick={() => void envoyer(null)} disabled={envoi} style={{ ...lien, marginTop: 10 }}>↺ Revenir au compte par défaut</button>
       )}

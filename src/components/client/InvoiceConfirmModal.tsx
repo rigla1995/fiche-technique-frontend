@@ -37,7 +37,8 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
   const [timbreFiscal, setTimbreFiscal] = useState(timbreLu !== 0);
   const comptaActif = useComptaActif();
   const [envoyerCompta, setEnvoyerCompta] = useState(true);
-  const proposerCompta = comptaActif === true && nbPieces !== undefined && nbPieces > 0;
+  // Une facture sans fournisseur ne part pas (la comptabilité en a besoin) : pas de case.
+  const proposerCompta = comptaActif === true && nbPieces !== undefined && nbPieces > 0 && fournisseurNom != null;
   const [timbre, setTimbre] = useState(timbreLu != null && TIMBRES.includes(timbreLu) ? timbreLu : 1);
   const voc = useVocabulaire();
 

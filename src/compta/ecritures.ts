@@ -93,15 +93,27 @@ export const piecesEcriture = async (dossierId: number, ecritureId: number): Pro
   const { data } = await api.get(chemin(dossierId, `/${ecritureId}/pieces`));
   return (data as { pieces: PieceEcriture[] }).pieces;
 };
+/** Photo HEIC sans copie JPEG : Chrome et Firefox ne l'affichent pas, elle se télécharge. */
+export const pieceATelecharger = (p: PieceEcriture) => (p.type === 'image/heic' || p.type === 'image/heif') && !p.avecApercu;
 /**
- * Ouvre la pièce dans un nouvel onglet, ouvert AVANT la lecture (sinon le navigateur bloque la fenêtre surgie après une
- * attente). Onglet refusé (bloqueur, certains téléphones) → l'adresse locale du fichier, à montrer en lien ; sinon null.
+ * Ouvre la pièce dans `onglet`, ouvert par l'appelant AVANT toute attente (sinon le navigateur bloque la fenêtre surgie
+ * après une attente), ou la télécharge (photo HEIC sans copie). Onglet refusé (bloqueur, certains téléphones) →
+ * l'adresse locale du fichier, à montrer en lien (l'appelant la libère) ; sinon null.
  */
-export const ouvrirPieceEcriture = async (dossierId: number, ecritureId: number, p: PieceEcriture): Promise<string | null> => {
-  const onglet = window.open('', '_blank');
+export const ouvrirPieceEcriture = async (dossierId: number, ecritureId: number, p: PieceEcriture, onglet: Window | null): Promise<string | null> => {
   try {
-    const res = await api.get(chemin(dossierId, `/${ecritureId}/pieces/${p.id}/fichier${p.avecApercu ? '?apercu=1' : ''}`), { responseType: 'blob' });
+    const telecharger = pieceATelecharger(p);
+    const res = await api.get(chemin(dossierId, `/${ecritureId}/pieces/${p.id}/fichier${telecharger ? '?telecharger=1' : p.avecApercu ? '?apercu=1' : ''}`), { responseType: 'blob' });
     const url = URL.createObjectURL(res.data as Blob);
+    if (telecharger) {
+      onglet?.close();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = p.nom;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      return null;
+    }
     if (onglet) {
       onglet.location.href = url;
       setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);

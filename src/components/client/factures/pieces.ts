@@ -292,7 +292,7 @@ const fmtJour = (iso: string) => {
  * Enregistre la facture ; si une facture du même fournisseur porte déjà ce numéro (409 FACTURE_EXISTANTE), demande
  * confirmation puis renvoie avec `confirmerDoublon` (saisie à la main : avertissement, pas un refus).
  * `confirmer` = la fonction `confirm` de useConfirm ; `ceFournisseur` = « ce fournisseur » dans le vocabulaire du compte.
- * → 'enregistree' | 'annulee'. Toute autre erreur est relancée.
+ * → la réponse de l'enregistrement (avec l'envoi en comptabilité demandé), ou 'annulee'. Toute autre erreur est relancée.
  */
 export async function enregistrerAvecConfirmation(
   f: FactureAEnregistrer,

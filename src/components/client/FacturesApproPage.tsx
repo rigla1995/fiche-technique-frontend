@@ -169,15 +169,16 @@ export default function FacturesApproPage() {
 
   // Factures fournisseur, étape F1 : la vraie facture (pièces jointes) d'une appro saisie ; le PDF fabriqué par
   // LabFlow ne reste que pour les factures de transfert.
-  const [fenetrePieces, setFenetrePieces] = useState<{ id: number; titre: string } | null>(null);
+  const [fenetrePieces, setFenetrePieces] = useState<{ id: number; titre: string; sansFournisseur: boolean } | null>(null);
   const ouvrirPieces = (f: FactureRow) => setFenetrePieces({
     id: f.id,
     titre: `Facture ${f.refFacture ?? ''}${f.fournisseurNom ? ` — ${f.fournisseurNom}` : ''}`,
+    sansFournisseur: f.fournisseurId == null,
   });
   const { canWrite } = useAuth();
   const majNombrePieces = (id: number, n: number) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, nbPieces: n } : x)));
   const comptaActif = useComptaActif();
-  const majCompta = (id: number, c: EtatCompta) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, compta: c } : x)));
+  const majCompta = (id: number, c: EtatCompta | null) => setFactures((prev) => prev.map((x) => (x.id === id ? { ...x, compta: c } : x)));
 
   // Facture PDF (charte des factures acheteurs : émetteur = fournisseur)
   const ouvrirPdf = async (id: number) => {
@@ -211,7 +212,7 @@ export default function FacturesApproPage() {
       {fenetrePieces && (
         <FenetrePieces factureId={fenetrePieces.id} titre={fenetrePieces.titre} accent="#1e40af"
           onFermer={() => setFenetrePieces(null)} onNombre={(n) => majNombrePieces(fenetrePieces.id, n)}
-          onCompta={(c) => majCompta(fenetrePieces.id, c)} />
+          onCompta={(c) => majCompta(fenetrePieces.id, c)} sansFournisseur={fenetrePieces.sansFournisseur} />
       )}
       {/* Hero */}
       <div style={{
@@ -303,7 +304,7 @@ export default function FacturesApproPage() {
                           {f.typeSource === 'transfert' ? `↗ ${voc.Court('transfert')}` : f.validee ? '🔒 Validée' : voc.acc('appro', 'Manuel', 'Manuelle')}
                         </span>
                         <EtatComptaFacture factureId={f.id} compta={f.compta} comptaActif={comptaActif} peutEcrire={canWrite}
-                          envoyable={f.typeSource === 'manuel' && (Boolean(f.validee) || (f.nbPieces ?? 0) > 0)} onCompta={(c) => majCompta(f.id, c)} />
+                          envoyable={f.typeSource === 'manuel' && f.fournisseurId != null && (Boolean(f.validee) || (f.nbPieces ?? 0) > 0)} onCompta={(c) => majCompta(f.id, c)} />
                       </div>
                     </div>
                   </div>
@@ -344,7 +345,7 @@ export default function FacturesApproPage() {
 
                 {isExpanded && f.validee && (
                   <DetailFactureValidee factureId={f.id} refFacture={f.refFacture} montantTTC={f.montantTTC} accent="#1e40af"
-                    peutSupprimer={canWrite}
+                    peutSupprimer={canWrite} compta={f.compta}
                     onSupprimee={() => { setFactures((prev) => prev.filter((x) => x.id !== f.id)); setExpandedIds((prev) => { const s = new Set(prev); s.delete(f.id); return s; }); }} />
                 )}
                 {isExpanded && !f.validee && (

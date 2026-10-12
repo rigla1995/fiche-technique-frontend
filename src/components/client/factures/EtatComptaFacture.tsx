@@ -41,7 +41,7 @@ export default function EtatComptaFacture({ factureId, compta, envoyable, compta
     try {
       const r = await envoyerEnCompta(factureId);
       onCompta(r.compta);
-      void alerte({ title: 'Facture envoyée en comptabilité', message: phraseEnvoi(r), tone: 'primary' });
+      void alerte({ title: r.deja ? 'Déjà en comptabilité' : 'Facture envoyée en comptabilité', message: phraseEnvoi(r), tone: 'primary' });
     } catch (err) {
       void alerte({ title: 'Pas envoyée en comptabilité', message: messageErreur(err, 'L\'envoi en comptabilité a échoué : réessayez.'), tone: 'danger' });
     } finally {

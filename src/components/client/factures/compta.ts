@@ -33,7 +33,11 @@ export const texteEtatCompta = (c: EtatCompta) => (c.etat === 'validee' ? `valid
 
 /** La phrase à ajouter au message de réussite d'un enregistrement qui demandait l'envoi ; vide sinon. */
 export const phraseEnvoi = (r: ResultatCompta | null | undefined) => {
-  if (r?.compta) return `Envoyée en comptabilité : écriture d'achat en ${texteEtatCompta(r.compta)}, à valider dans LabFlow Compta.`;
-  if (r?.comptaRefus) return `Pas envoyée en comptabilité : ${r.comptaRefus.message} Vous pourrez l'envoyer depuis la page Factures.`;
+  if (r?.compta) {
+    return r.compta.etat === 'validee'
+      ? `Déjà en comptabilité : écriture d'achat validée ${r.compta.numero ?? ''} dans LabFlow Compta.`
+      : `Envoyée en comptabilité : écriture d'achat en brouillard ${r.compta.numeroProvisoire}, à valider dans LabFlow Compta.`;
+  }
+  if (r?.comptaRefus) return `Pas envoyée en comptabilité : ${r.comptaRefus.message.trim().replace(/[.!]?$/, '.')} Vous pourrez l'envoyer depuis la page Factures.`;
   return '';
 };

@@ -995,7 +995,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
             void alerte({
               title: 'Facture validée',
               message: `${r.nbStock} ligne${r.nbStock > 1 ? 's' : ''} en ${voc.nom('stock')}, ${r.appris} correspondance${r.appris > 1 ? 's' : ''} apprise${r.appris > 1 ? 's' : ''} : la prochaine facture de ${voc.ce('fournisseur')} se reconnaîtra seule. La facture est dans la page Factures, avec sa pièce.${phraseEnvoi(r) ? ` ${phraseEnvoi(r)}` : ''}`,
-              tone: 'primary',
+              tone: r.comptaRefus ? 'info' : 'primary',
             });
           }}
         />

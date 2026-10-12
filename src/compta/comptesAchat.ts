@@ -16,6 +16,8 @@ export interface ComptesAchatReponse {
   categories: CategorieAchat[];
   articles: ArticleAchat[];
   natures: NatureAchat[];
+  /** Le compte par défaut d'un article sans catégorie (601). */
+  sansCategorie?: { defaut: CompteDefaut };
   comptes: CompteCourt[];
 }
 export type CibleAchat = { type: 'categorie' | 'article'; id: number } | { type: 'nature'; valeur: string };
