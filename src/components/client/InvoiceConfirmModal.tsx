@@ -54,7 +54,8 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
   const hasTva = lines.some((l) => l.tauxTva != null && l.tauxTva > 0);
 
   return (
-    <div className="modal-overlay">
+    // Au-dessus du panneau flottant « Aperçu saisie » (z-index 1100), qui pouvait cacher « Confirmer » sur un petit écran.
+    <div className="modal-overlay" style={{ zIndex: 1150 }}>
       <div className="modal" style={{ maxWidth: 620, width: '96%' }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-header" style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, borderBottom: 'none', padding: '16px 20px' }}>
           <div>

@@ -5,8 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { datesDuTexte, lireNombre, nombresDeRangee } from '../src/components/client/factures/lecture/nombres.ts';
-import { construireRangees, motsDePdf, motsDeTesseract, rangee, segments } from '../src/components/client/factures/lecture/rangees.ts';
-import { lireEntete, matriculesVus } from '../src/components/client/factures/lecture/entete.ts';
+import { construireRangees, motsDePdf, motsDeTesseract, rangee, segments, separerLigne } from '../src/components/client/factures/lecture/rangees.ts';
+import { lireEntete, matriculesVus, nomPropre } from '../src/components/client/factures/lecture/entete.ts';
 import { nomComparable, rapprocher, ressemblance } from '../src/components/client/factures/lecture/rapprocher.ts';
 import { completer, decouper, incomplete, zonesDePage } from '../src/components/client/factures/lecture/chaineOcr.ts';
 import { cleAttendue } from '../src/components/admin/patente/ocr/matricule.ts';
@@ -374,4 +374,236 @@ test('chaîne image : zones, découpe, complément d\'une lecture par une autre'
   assert.equal(c.numero?.valeur, 'FV-2026-00437');
   assert.equal(c.totaux.coherents, true);
   assert.ok(!c.avertissements.some((m) => /^Numéro/.test(m)));
+});
+
+// ── Premier essai du client sur un vrai document (12/10) : un BON DE LIVRAISON de volailles, recopié ici avec des
+// valeurs fictives (la pièce réelle reste hors des tests). Ancien matricule imprimé à 6 chiffres, « Caisses: » en gros
+// caractères, « HORS TAXE », « NET A PAYE » sans R, aucun timbre, matricule du client sans libellé « Client ».
+const ID6 = '273641'; // clé T (sur une image, T se confond avec un 7)
+const MF6 = `${ID6}${cleAttendue(`0${ID6}`)}/N/M/000`;
+const MF_CLIENT_COURT = mf('1658423', '');
+const blVolailles = () => page([
+  [30, [[300, 'té. Volailles du Cap Bon']], 16],
+  [60, [[300, 'Souk Municipal - Rue des Tanneurs Tunis']]],
+  [72, [[300, 'Tel/Fax : 71 222 333 /']]],
+  [84, [[300, 'Email :']]],
+  [96, [[300, `M.F : ${MF6}`]]],
+  [108, [[300, 'R.C. : B111222003']]],
+  [130, [[30, 'BON LIVRAISON N° : BL2600123'], [330, '502114']]],
+  [150, [[60, 'Date : 02/10/2026'], [330, 'RESTAURANT LE JASMIN']]],
+  [165, [[40, 'Commercial : HEDI'], [330, 'AVENUE DE LA REPUBLIQUE, ARIANA']]],
+  [180, [[50, 'Véhicule :'], [220, 'Caisses: 0']], 24],
+  [210, [[330, `Mat. Fisc : ${MF_CLIENT_COURT}`]]],
+  [235, [[20, 'Réf. Désignation Unité Qte P.U. Remise Montant']]],
+  [250, [[20, '166 POULET ENTIER KG 20,000 12,520 0% 250,400']]],
+  [700, [[20, 'Arrêté le présent BON LIVRAISON à la'], [280, 'Rubrique Base Taux Montant']]],
+  [714, [[20, 'somme de : Deux Cent Cinquante Dinars']]],
+  [728, [[20, '400 Millimes'], [280, 'HORS TAXE 250,400 250,400']]],
+  [745, [[280, 'NET A PAYE'], [480, '250,400']], 14],
+  [790, [[280, 'Solde Au 02/10/2026'], [480, '250,400']]],
+]);
+
+test('essai client : bon de livraison — matricule à 6 chiffres, n° du BL, nom sans étiquette, HT = TTC sans timbre', () => {
+  for (const source of ['pdf', 'ocr']) {
+    const e = lireEntete([blVolailles()], source, { matricule: MF_CLIENT_COURT, noms: ['RESTAURANT LE JASMIN'] });
+    assert.equal(e.matricule?.valeur, `0${MF6}`, source);
+    assert.match(e.matricule?.note ?? '', /zéro de tête/);
+    assert.doesNotMatch(e.matricule?.note ?? '', /lettre-clé|autre/);
+    assert.equal(e.nom?.valeur, 'Volailles du Cap Bon', source);
+    assert.equal(e.adresse?.valeur, 'Souk Municipal - Rue des Tanneurs Tunis');
+    assert.equal(e.telephone?.valeur, '71222333');
+    assert.equal(e.numero?.valeur, 'BL2600123');
+    assert.match(e.numero?.note ?? '', /bon de livraison/);
+    assert.equal(e.date?.valeur, '2026-10-02');
+    assert.deepEqual([e.totaux.ht, e.totaux.tva, e.totaux.timbre, e.totaux.ttc, e.totaux.coherents], [250.4, 0, 0, 250.4, true], source);
+    assert.deepEqual(e.avertissements, []);
+  }
+});
+
+test('essai client : matricule à 6 chiffres — forme courte près du libellé, lettre confondue avec un chiffre sur une image', () => {
+  const court = `${ID6}${cleAttendue(`0${ID6}`)}`;
+  for (const source of ['pdf', 'ocr']) {
+    const e = lireEntete([page([[40, [[40, 'PRIMEURS TRABELSI']], 16], [60, [[40, `M.F : ${court}`]]]])], source);
+    assert.equal(e.matricule?.valeur, `0${court}`, source);
+  }
+  // Une forme à 7 chiffres juste n'est jamais lue comme une forme à 6 (la clé départage).
+  const e7 = lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE']], 16], [60, [[40, `MF : ${MF_FOURNISSEUR}`]]]])], 'ocr');
+  assert.equal(e7.matricule?.valeur, MF_FOURNISSEUR);
+  assert.equal(e7.matricule?.note, undefined);
+  // « Mat. Fisc » est un libellé de matricule : la forme courte qui le suit est lue (ici, celle du client, écartée).
+  const vus = matriculesVus([page([[60, [[40, `Mat. Fisc : ${MF_CLIENT_COURT}`]]]])], 'pdf');
+  assert.deepEqual(vus.map((m) => m.valeur), [MF_CLIENT_COURT]);
+});
+
+test('essai client : « Hors taxe » seul cède devant « Total HT » ; un « Net à payer » plus élevé empêche de conclure « sans timbre »', () => {
+  const a = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE']], 16],
+    [600, [[300, 'Hors taxe'], [480, '80,000']]],
+    [614, [[300, 'Total HT'], [480, '100,000']]],
+    [628, [[300, 'TVA'], [480, '19,000']]],
+    [642, [[300, 'Total TTC'], [480, '119,000']]],
+  ])], 'pdf');
+  // (Facture AVEC TVA : on ne conclut jamais « aucun timbre », même quand les totaux se recoupent sans lui.)
+  assert.deepEqual([a.totaux.ht, a.totaux.ttc, a.totaux.coherents, a.totaux.timbre], [100, 119, true, null]);
+  // Timbre non lu, mais « Net à payer » = TTC + 1 : on ne dit pas « aucun timbre ».
+  const b = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE']], 16],
+    [614, [[300, 'Total HT'], [480, '100,000']]],
+    [628, [[300, 'TVA'], [480, '19,000']]],
+    [642, [[300, 'Total TTC'], [480, '119,000']]],
+    [656, [[300, 'Net à payer'], [480, '120,000']]],
+  ])], 'pdf');
+  assert.deepEqual([b.totaux.ttc, b.totaux.coherents, b.totaux.timbre], [119, true, null]);
+  // TVA imprimée mais non lue : HT ≠ TTC, rien n'est déduit.
+  const c = lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE']], 16], [614, [[300, 'Total HT'], [480, '100,000']]], [642, [[300, 'Net à payer'], [480, '120,000']]]])], 'pdf');
+  assert.deepEqual([c.totaux.tva, c.totaux.coherents, c.totaux.timbre], [null, null, null]);
+});
+
+test('essai client : n° de BL en dernier recours seulement ; date d\'un bon de livraison', () => {
+  const fac = lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE']], 16], [80, [[40, 'BL N° 4410']]], [95, [[40, 'Facture N° 2026-17 du 05/10/2026']]]])], 'pdf');
+  assert.equal(fac.numero?.valeur, '2026-17');
+  assert.equal(fac.numero?.note, undefined);
+  assert.equal(fac.date?.valeur, '2026-10-05');
+  const bl = lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE']], 16], [80, [[40, 'Bon de livraison N° 4410 du 02/10/2026']]]])], 'pdf');
+  assert.equal(bl.numero?.valeur, '4410');
+  assert.equal(bl.date?.valeur, '2026-10-02');
+  // Sur une facture, la date d'un BL cité n'est toujours pas celle de la facture.
+  const cite = lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE']], 16], [80, [[40, 'Facture N° 9']]], [95, [[40, 'Selon BL N° 4410 du 01/09/2026']]], [110, [[40, 'Tunis, le 05/10/2026']]]])], 'pdf');
+  assert.equal(cite.date?.valeur, '2026-10-05');
+});
+
+test('essai client : nom — étiquette de champ écartée, « Raison sociale : » gardée, reste de lecture retiré', () => {
+  assert.equal(nomPropre('té. Adli Volailles'), 'Adli Volailles');
+  assert.equal(nomPropre('© « Sté. Volailles du Sahel'), 'Sté. Volailles du Sahel');
+  assert.equal(nomPropre('SOCIETE EXEMPLE'), 'SOCIETE EXEMPLE');
+  assert.equal(nomPropre('ab. Xy'), 'ab. Xy'); // il ne resterait pas 3 lettres
+  const e = lireEntete([page([[40, [[40, 'Raison sociale : FROMAGERIE DU NORD']], 14], [60, [[40, 'Livreur : SAMI']], 20]])], 'pdf');
+  assert.equal(e.nom?.valeur, 'FROMAGERIE DU NORD');
+});
+
+test('essai client : un grand mot de logo ne passe pas devant le nom placé au-dessus du matricule et répété en pied de page', () => {
+  const p = page([
+    [30, [[40, 'Volcap']], 32],
+    [34, [[330, 'Sté. Volailles du Cap Bon']], 13],
+    [56, [[330, 'Souk municipal - Rue des Tanneurs Tunis']]],
+    [92, [[330, `M.F : ${MF6}`]]],
+    [235, [[20, 'Réf. Désignation Unité Qte P.U. Remise Montant']]],
+    [790, [[40, 'Société : Volailles du Cap Bon, Souk municipal - Rue des Tanneurs Tunis']]],
+  ]);
+  assert.equal(lireEntete([p], 'pdf').nom?.valeur, 'Sté. Volailles du Cap Bon');
+  // Sans ces indices (ni matricule dessous, ni répétition), le plus grand texte reste le nom : le logo.
+  const seul = page([[30, [[40, 'Volcap']], 32], [34, [[330, 'Volailles du Cap Bon']], 13]]);
+  assert.equal(lireEntete([seul], 'pdf').nom?.valeur, 'Volcap');
+});
+
+// ── Relecture contradictoire de la correction du 12/10 (cas confirmés par le relecteur, tous corrigés) ──
+
+test('relecture 12/10 : sur une FACTURE, le n° et la date d\'un BL cité ne sont jamais pris', () => {
+  const MF_F = mf('1384297');
+  const a = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL'], [400, 'FACTURE']], 16],
+    [60, [[40, `M.F : ${MF_F}`], [400, 'FV-2026-00437']]],
+    [90, [[40, 'Selon BL N° 4410 du 01/09/2026']]],
+    [105, [[40, 'Tunis, le 05/10/2026']]],
+  ])], 'pdf');
+  assert.equal(a.numero, null);
+  assert.equal(a.date?.valeur, '2026-10-05');
+  assert.match(a.avertissements.join(' '), /Numéro de facture non lu/);
+  // Photo : « Facture » mal lu, « Date BL » avant « Date » ; ligne du tableau « Transport selon BL N° 4410 ».
+  const b = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL']], 16],
+    [80, [[300, 'Factnre N° 2026-17']]],
+    [95, [[300, 'BL N° 4410 - Date BL : 01/09/2026']]],
+    [110, [[300, 'Date : 05/10/2026']]],
+  ])], 'ocr');
+  assert.equal(b.numero, null);
+  assert.equal(b.date?.valeur, '2026-10-05');
+  const c = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [80, [[300, 'Date : 05/10/2026']]],
+    [200, [[40, 'Désignation Qté P.U Montant']]], [217, [[40, 'Transport selon BL N° 4410 1 50,000 50,000']]],
+  ])], 'pdf');
+  assert.equal(c.numero, null);
+});
+
+test('relecture 12/10 : le plafond de taille ne fait perdre ni le vrai nom, ni ne donne celui du client', () => {
+  const MF_F = mf('1384297');
+  const lignes = (h) => Array.from({ length: 20 }, (_, k) => [260 + k * 12, [[40, `Article numero ${k + 1} 2 1,500 3,000`]], h]);
+  const a = lireEntete([page([
+    [40, [[40, 'PRIMEURS TRABELSI']], 18], [64, [[40, 'Import Export fruits et légumes']], 12],
+    [82, [[40, 'Bir El Kassaa Ben Arous']], 9], [94, [[40, `M.F : ${MF_F}`]], 9],
+    [240, [[40, 'Désignation Qté P.U Montant']], 9], ...lignes(8),
+  ])], 'pdf');
+  assert.equal(a.nom?.valeur, 'PRIMEURS TRABELSI');
+  const b = lireEntete([page([
+    [40, [[40, 'PRIMEURS TRABELSI']], 20], [70, [[40, 'Bir El Kassaa Ben Arous']], 9],
+    [120, [[330, 'STE JASMIN RESTAURATION SARL']], 14], [200, [[40, 'Désignation Qté P.U Montant']], 9], ...lignes(7),
+  ])], 'pdf');
+  assert.equal(b.nom?.valeur, 'PRIMEURS TRABELSI');
+});
+
+test('relecture 12/10 : une répétition ne compte que comme nom (ni localité d\'adresse, ni e-mail, ni client)', () => {
+  const MF_F = mf('1384297');
+  const MF_C = mf('1658423');
+  for (const h of [12, 14, 15]) {
+    const e = lireEntete([page([
+      [40, [[40, 'PRIMEURS TRABELSI']], h], [58, [[40, 'Bir El Kassaa']]], [70, [[40, 'Ben Arous']]], [82, [[40, `M.F : ${MF_F}`]]],
+      [200, [[40, 'Désignation Qté P.U Montant']]], [217, [[40, 'Tomates 10 1,200 12,000']]],
+      [800, [[40, 'Adresse : Bir El Kassaa 2059 Ben Arous - Tél : 71 222 333']]],
+    ])], 'pdf');
+    assert.equal(e.nom?.valeur, 'PRIMEURS TRABELSI', `h=${h}`);
+  }
+  for (const contact of ['Email : contact@volcap.tn', 'Site : www.volcap.com.tn']) {
+    const e = lireEntete([page([
+      [30, [[40, 'Volcap']], 32], [34, [[330, 'Sté. Volailles du Cap Bon']], 13],
+      [56, [[330, 'Souk municipal - Rue des Tanneurs Tunis']]], [68, [[330, contact]]], [92, [[330, `M.F : ${MF_F}`]]],
+      [235, [[20, 'Réf. Désignation Unité Qte P.U. Remise Montant']]],
+      [790, [[40, 'Société : Volailles du Cap Bon, Souk municipal - Rue des Tanneurs Tunis']]],
+    ])], 'pdf');
+    assert.equal(e.nom?.valeur, 'Sté. Volailles du Cap Bon', contact);
+  }
+  const client = lireEntete([page([
+    [40, [[40, 'PRIMEURS TRABELSI']], 16], [62, [[40, 'Bir El Kassaa Ben Arous']]],
+    [100, [[330, 'Client']]], [112, [[330, 'Code : 411002']]], [124, [[330, 'RESTAURANT LE JASMIN']], 12], [136, [[330, `M.F : ${MF_C}`]]],
+    [200, [[40, 'Désignation Qté P.U Montant']]], [217, [[40, 'Tomates 10 1,200 12,000']]],
+    [780, [[40, 'Livraison : RESTAURANT LE JASMIN - Ariana']]],
+  ])], 'pdf', { matricule: MF_C, noms: ['STE JASMIN DE RESTAURATION'] });
+  assert.equal(client.nom?.valeur, 'PRIMEURS TRABELSI');
+});
+
+test('relecture 12/10 : « aucun timbre » jamais conclu sur une facture avec TVA ; capital et « brut hors taxe » écartés', () => {
+  const MF_F = mf('1384297');
+  const base = [[40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [500, [[345, 'Total HT'], [500, '1000,000']]], [514, [[345, 'TVA 19%'], [500, '190,000']]], [528, [[345, 'Total TTC'], [500, '1190,000']]]];
+  for (const [libelle, montant, apayer, source] of [['Timb. fiscal', '1,000', 'Montant à payer', 'pdf'], ['Timbre fiscal', '1000', 'Reste à payer', 'ocr'], ['D.T.', '1,000', 'Net à régler', 'pdf']]) {
+    const e = lireEntete([page([...base, [542, [[345, libelle], [500, montant]]], [556, [[345, apayer], [500, '1191,000']]]])], source);
+    assert.equal(e.totaux.timbre, null, libelle);
+  }
+  // Capital de 6 chiffres suivi de « D », agrément sous le matricule : pas un « autre matricule ».
+  for (const ligne of [[800, [[40, `M.F : ${MF_F} - Capital : 150000 D`]]], [72, [[40, 'Agrément N° 245871 B']]]]) {
+    const e = lireEntete([page([[40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [60, [[40, `M.F : ${MF_F}`]]], ligne])], 'pdf');
+    assert.equal(e.matricule?.valeur, MF_F);
+    assert.doesNotMatch(e.matricule?.note ?? '', /autre/);
+  }
+  const brut = lireEntete([page([
+    [40, [[40, 'SOCIETE EXEMPLE SARL']], 16], [690, [[280, 'Rubrique Base Taux Montant']]],
+    [704, [[280, 'BRUT HORS TAXE 1000,000 1000,000']]], [718, [[280, 'REMISE 100,000']]], [732, [[280, 'Total HT 900,000']]],
+    [746, [[280, 'TVA 19% 900,000 171,000']]], [760, [[280, 'NET A PAYE'], [480, '1071,000']]],
+  ])], 'pdf');
+  assert.equal(brut.totaux.ht, 900);
+});
+
+test('essai client : rangées — un mot de logo très haut n\'absorbe pas les lignes ; une « ligne » de deux lignes est recoupée', () => {
+  const w = (t, x0, y0, x1, y1) => ({ t, x0, y0, x1, y1, c: 90 });
+  // Lettre du logo (lue seule, sur toute la hauteur de l'en-tête) à gauche ; adresse et téléphone à droite.
+  const r = construireRangees([
+    w('DOUeZ', 10, 0, 200, 100),
+    w('Souk', 300, 40, 340, 55), w('Municipal', 345, 40, 420, 55),
+    w('Tel/Fax', 300, 62, 350, 77), w('71', 355, 62, 370, 77),
+  ], 1, [1, 2, 2, 3, 3]);
+  assert.deepEqual(r.map((x) => x.texte).sort(), ['DOUeZ', 'Souk Municipal', 'Tel/Fax 71'].sort());
+  // Même texte, mais rendu comme UNE ligne par la lecture en bloc : les deux lignes du papier sont séparées.
+  const melee = [w('Souk', 300, 40, 340, 55), w('Tel/Fax', 300, 62, 350, 77), w('Municipal', 345, 40, 420, 55), w('71', 355, 62, 370, 77)];
+  assert.deepEqual(separerLigne(melee).map((l) => l.map((m) => m.t).sort()), [['Municipal', 'Souk'], ['71', 'Tel/Fax']]);
+  // Une vraie ligne, penchée, reste entière.
+  const penchee = [w('Total', 0, 100, 40, 112), w('HT', 45, 102, 60, 114), w(':', 62, 104, 64, 116), w('100,000', 70, 106, 120, 118)];
+  assert.equal(separerLigne(penchee).length, 1);
 });
