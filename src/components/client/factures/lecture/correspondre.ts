@@ -217,7 +217,7 @@ export function proposer(l: { designation: string; designationCle?: string | nul
     const fois = exacte.emplois > 1 ? `déjà validée sur ${exacte.emplois} factures` : exacte.emplois === 1 ? 'déjà validée sur une facture' : 'corrigée dans Correspondances';
     // Même référence mais désignation sans rapport (référence mal lue, ou réutilisée) : proposée, jamais reconnue.
     const etat: EtatLigne = cle?.startsWith('ref:') && ressemblanceDesignations(l.designation, exacte.designation) < 0.5 ? 'proposee' : 'reconnue';
-    const raison = etat === 'proposee' ? `même réf. que « ${exacte.designation} », désignation différente` : fois;
+    const raison = etat === 'proposee' ? `même code que « ${exacte.designation} », désignation différente` : fois;
     if (exacte.horsStock) return { etat, articleId: null, horsStock: exacte.horsStock, conversion: 1, conversionSure: true, raison };
     return avecConversion(exacte.articleId as number, raison, etat, exacte.conversion);
   }

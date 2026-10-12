@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1300 unité(s), 67 fichier(s).
+# 1305 unité(s), 67 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -1132,34 +1132,40 @@ src/components/client/CorrespondancesPage.tsx
   l. 65
     défaut : Hors stock
     miroir : Hors armoire
-  l. 88
+  l. 74
+    défaut : La correction vaut pour les prochaines factures⟦? de ⟦·⟧|⟧. Les factures déjà validées ne changent pas : ni leur stock, ni la facture, ni l'historique. Pour en refaire une, supprimez-la dans Factures, puis déposez-la de nouveau.
+    miroir : La correction vaut pour les prochaines factures⟦? de ⟦·⟧|⟧. Les factures déjà validées ne changent pas : ni leur armoire, ni la facture, ni l'historique. Pour en refaire une, supprimez-la dans Factures, puis déposez-la de nouveau.
+  l. 96
     défaut : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera l'article. Les factures déjà validées ne changent pas.
     miroir : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera la denrée. Les factures déjà validées ne changent pas.
-  l. 114
+  l. 122
     défaut : Ce que LabFlow a appris de vos factures validées : chaque ligne du fournisseur → votre article et sa conversion
     miroir : Ce que LabFlow a appris de vos factures validées : chaque ligne de l'enseigne → votre denrée et sa conversion
-  l. 119
+  l. 127
     défaut : ← Fournisseurs
     miroir : ← Enseignes
-  l. 127
+  l. 135
     défaut : Fournisseur
     miroir : Enseigne
-  l. 129
+  l. 137
     défaut : Tous les fournisseurs
     miroir : Toutes les enseignes
-  l. 134
-    défaut : Désignation, réf., article…
-    miroir : Désignation, réf., denrée…
-  l. 140
+  l. 142
+    défaut : Désignation, code fournisseur, article…
+    miroir : Désignation, code enseigne, denrée…
+  l. 148
     défaut : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant un appro, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture du fournisseur se reconnaîtra seule.
     miroir : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant une abr-rentrée, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture de l'enseigne se reconnaîtra seule.
-  l. 151
+  l. 159
+    défaut : Code fournisseur
+    miroir : Code enseigne
+  l. 159
     défaut : Fournisseur
     miroir : Enseigne
-  l. 151
+  l. 159
     défaut : → Article LabFlow
     miroir : → Denrée LabFlow
-  l. 183
+  l. 196
     défaut : ⟦?⟦·⟧|Hors stock⟧ <span>(hors stock)</span>
     miroir : ⟦?⟦·⟧|Hors armoire⟧ <span>(hors armoire)</span>
 
@@ -3559,6 +3565,9 @@ src/components/client/factures/DetailFactureValidee.tsx
   l. 89
     défaut : En stock
     miroir : En armoire
+  l. 99
+    défaut : ⟦?code fournisseur ⟦·⟧|⟧
+    miroir : ⟦?code enseigne ⟦·⟧|⟧
   l. 106
     défaut : (hors stock)
     miroir : (hors armoire)
@@ -3663,25 +3672,31 @@ src/components/client/factures/VerifierFacture.tsx
   l. 450
     défaut : ⟦?hors stock|⟦·⟧⟧
     miroir : ⟦?hors armoire|⟦·⟧⟧
-  l. 479
+  l. 465
+    défaut : Colonne « Réf. » ou « Code » de la facture du fournisseur : ce code reconnaît la ligne la fois suivante
+    miroir : Colonne « Réf. » ou « Code » de la facture de l'enseigne : ce code reconnaît la ligne la fois suivante
+  l. 466
+    défaut : Code fournisseur
+    miroir : Code enseigne
+  l. 480
     défaut : Article LabFlow
     miroir : Denrée LabFlow
-  l. 498
+  l. 499
     défaut : + Créer l'article
     miroir : + Créer la denrée
-  l. 502
+  l. 503
     défaut : → en stock : <strong>⟦·⟧ ⟦·⟧</strong>⟦·⟧⟦·⟧⟦·⟧
     miroir : → en armoire : <strong>⟦·⟧ ⟦·⟧</strong>⟦·⟧⟦·⟧⟦·⟧
-  l. 505
+  l. 506
     défaut :  · ajouté à ⟦?cette activité|ce labo⟧
     miroir :  · ajoutée à ⟦?ce local|cette usine⟧
-  l. 513
+  l. 514
     défaut : Nom de l'article
     miroir : Nom de la denrée
-  l. 515
+  l. 516
     défaut : Unité (stock)
     miroir : Unité (armoire)
-  l. 583
+  l. 584
     défaut : ⟦·⟧ ⟦ligne|lignes@>1⟧ en stock⟦?, ⟦·⟧ hors stock|⟧ · la pièce (⟦·⟧ ⟦fichier|fichiers@>1⟧) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
     miroir : ⟦·⟧ ⟦ligne|lignes@>1⟧ en armoire⟦?, ⟦·⟧ hors armoire|⟧ · la pièce (⟦·⟧ ⟦fichier|fichiers@>1⟧) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
 
