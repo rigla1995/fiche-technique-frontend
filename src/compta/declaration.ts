@@ -33,6 +33,8 @@ export interface DeclarationReponse {
   tva: {
     collectee: string; deductibleBs: string; deductibleImmo: string; deductible: string; retenuesSubies: string;
     creditReporte: string; resultat: string; aPayer: string; creditAReporter: string; compteCredit: string | null; codes: CodeTvaDeclaration[];
+    // X1 : crédit d'ouverture repris de l'exercice précédent non clos (provisoire).
+    creditProvisoire?: { millesime: number; fin: string } | null;
   };
   retenues: {
     natures: NatureRetenue[]; tva: { code: string; libelle: string; montant: string }[]; total: string;

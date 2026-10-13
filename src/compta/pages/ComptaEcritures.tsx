@@ -9,9 +9,9 @@ import { Modale } from '../DossierFormulaires';
 import { FenetreImport } from '../FenetreImport';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import {
-  LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, contrepasserEcriture, controlerDate, controlerMontant, fmtJour, fmtMontant, importerBalanceOuverture, importerEcritures, libellePeriode,
-  ligneEnvoyee, lireEcriture, lireEcritures, ouvrirPieceEcriture, periodeDe, pieceATelecharger, piecesEcriture, periodeOuverteSuivante, telechargerModeleBalanceOuverture, telechargerModeleEcritures, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
-  type AideReponse, type ContrepassationReponse, type Ecriture, type PieceEcriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
+  LIBELLES_ETAT, PAGE_ECRITURES, aideRetenue, aideTaxe, aideTaxePossible, ajouterJours, aujourdhui, bornesSaisie, calendrierDe, contrepasserEcriture, controlerDate, controlerMontant, exerciceDe, fmtJour, fmtMontant, importerBalanceOuverture, importerEcritures, libellePeriode,
+  ligneEnvoyee, lireEcriture, lireEcritures, ouvreLeSuivant, ouvrirPieceEcriture, periodeDe, pieceATelecharger, piecesEcriture, periodeOuverteSuivante, telechargerModeleBalanceOuverture, telechargerModeleEcritures, texteDate, texteTaxe, totaux, typeTiersDe, validerEcriture, validerPeriode, versMillimes,
+  type AideReponse, type CalendrierSaisie, type ContrepassationReponse, type Ecriture, type PieceEcriture, type EcritureReponse, type EcrituresReponse, type EtatEcriture, type LigneSaisie, type SuppressionReponse, type TiersCourt,
 } from '../ecritures';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
 
@@ -31,11 +31,15 @@ import { bouton, inp, lbl, pastille, petit } from '../styles';
 // S6c (PLAN-S6 §2 « S6c », §4 « Imports ») : « Importer (Excel) » (des écritures en brouillard, modèle de LabFlow Compta, tout ou
 // rien) et « Balance d'ouverture » (une écriture d'à-nouveaux AN au premier jour de l'exercice, en brouillard) — titulaire
 // et Complet ; la fenêtre d'import partagée (FenetreImport) montre le rapport rangée par rangée d'un fichier refusé.
+// X1 (PLAN-EXERCICES §2 ligne X1) : deux exercices peuvent être ouverts — le filtre « Exercice » (celui du jour par défaut)
+// limite la liste ; la saisie accepte une date de l'un ou de l'autre, et une date déjà passée de la nouvelle année ouvre
+// l'exercice suivant (la fenêtre le dit ; la liste passe ensuite sur cet exercice) ; la balance d'ouverture importée va
+// dans le premier exercice du dossier.
 type Fenetre = { type: 'creer' } | { type: 'modifier'; ecriture: Ecriture } | { type: 'contrepasser'; ecriture: Ecriture } | { type: 'importer' } | { type: 'importer-balance' } | null;
 type Role = 'titulaire' | 'gerant';
 type Refus = (err: unknown) => boolean;
 // Refus que la personne corrige dans la fenêtre (le serveur dit quoi) ; les autres 409 (écriture validée, dossier archivé…) ferment la fenêtre.
-const CORRIGEABLES = ['DESEQUILIBRE', 'COMPTES_IDENTIQUES', 'TOTAL_TROP_GRAND', 'TIERS_REQUIS', 'TIERS_INTERDIT', 'TIERS_TYPE', 'TIERS_DESACTIVE', 'COMPTE_NON_IMPUTABLE', 'TAXE_DESACTIVEE', 'JOURNAL_DESACTIVE', 'DATE_HORS_EXERCICE', 'PERIODE_CLOSE', 'PERIODE_ABSENTE', 'EXERCICE_CLOS', 'ASSIETTE_TTC', 'ASSIETTE_TVA', 'ASSIETTE_NULLE', 'MONTANT_NUL', 'LIGNE_SANS_CODE', 'CODE_NON_RETENUE', 'RETENUE_ABSENTE', 'JOURNAL_SANS_RETENUE', 'TAXE_SANS_COMPTE', 'AN_DATE'];
+const CORRIGEABLES = ['DESEQUILIBRE', 'COMPTES_IDENTIQUES', 'TOTAL_TROP_GRAND', 'TIERS_REQUIS', 'TIERS_INTERDIT', 'TIERS_TYPE', 'TIERS_DESACTIVE', 'COMPTE_NON_IMPUTABLE', 'TAXE_DESACTIVEE', 'JOURNAL_DESACTIVE', 'DATE_HORS_EXERCICE', 'PERIODE_CLOSE', 'PERIODE_ABSENTE', 'EXERCICE_CLOS', 'ASSIETTE_TTC', 'ASSIETTE_TVA', 'ASSIETTE_NULLE', 'MONTANT_NUL', 'LIGNE_SANS_CODE', 'CODE_NON_RETENUE', 'RETENUE_ABSENTE', 'JOURNAL_SANS_RETENUE', 'TAXE_SANS_COMPTE', 'AN_DATE', 'AN_EXERCICE_SUIVANT'];
 const codeDe = (err: unknown) => (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
 const messageDe = (err: unknown) => (err as { response?: { data?: { message?: string } } })?.response?.data?.message || '';
 // Un refus « périmé » ferme la fenêtre et relit (dossier ou écriture disparus, écriture validée, dossier archivé…) ; un
@@ -68,6 +72,8 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const [erreurLecture, setErreurLecture] = useState(false);
   const [journalId, setJournalId] = useState<number | null>(null);
   const [periodeId, setPeriodeId] = useState<number | null>(periodeInitiale);
+  // X1 : l'exercice choisi (null = celui du serveur : de la période demandée, sinon du jour).
+  const [exerciceId, setExerciceId] = useState<number | null>(null);
   const [etatFiltre, setEtatFiltre] = useState<EtatEcriture | ''>('');
   const [recherche, setRecherche] = useState('');
   const [q, setQ] = useState('');
@@ -100,7 +106,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   // fois à la première réponse, puis toutes les périodes (relecture de S6b).
   const periodeInitialeJugee = useRef(false);
   const tour = useRef(0);
-  const cle = `${journalId ?? ''}\u0000${periodeId ?? ''}\u0000${etatFiltre}\u0000${q}`;
+  const cle = `${exerciceId ?? ''}\u0000${journalId ?? ''}\u0000${periodeId ?? ''}\u0000${etatFiltre}\u0000${q}`;
 
   // Les lignes d'une écriture, lues à la demande (dépliage, relecture après une modification venue d'ailleurs).
   const lireDetail = useCallback((id: number) => {
@@ -113,7 +119,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   useEffect(() => { const t = setTimeout(() => setQ(recherche.trim()), 300); return () => clearTimeout(t); }, [recherche]);
   const charger = useCallback((page: number, limite: number = PAGE_ECRITURES) => {
     const moi = ++tour.current;
-    lireEcritures(dossierId || '', { journalId, periodeId, etat: etatFiltre, q, page, limite })
+    lireEcritures(dossierId || '', { exerciceId, journalId, periodeId, etat: etatFiltre, q, page, limite })
       .then((r) => {
         if (moi !== tour.current) return;
         if (!defautPose.current) {
@@ -125,7 +131,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
           periodeInitialeJugee.current = true;
           if (!r.exercice || !r.exercice.periodes.some((p) => p.id === periodeInitiale)) {
             setPeriodeId(null);
-            setInfo('La période demandée n\'est pas dans l\'exercice ouvert de ce dossier : toutes les périodes sont affichées.');
+            setInfo('La période demandée n\'est pas dans les exercices de ce dossier : toutes les périodes sont affichées.');
             return;
           }
         }
@@ -148,7 +154,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
         if (statutDe(err) === 404) setEtatPage('introuvable'); else setErreurLecture(true);
       })
       .finally(() => { if (moi === tour.current) { setPlus(false); setEnRelecture(false); } });
-  }, [dossierId, journalId, periodeId, etatFiltre, q, cle, lireDetail, periodeInitiale]);
+  }, [dossierId, exerciceId, journalId, periodeId, etatFiltre, q, cle, lireDetail, periodeInitiale]);
   useEffect(() => { charger(1); return () => { tour.current += 1; }; }, [charger]);
 
   const etat = lu?.etat ?? null;
@@ -177,14 +183,24 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     setErreur('');
     setFenetre(null);
     const ajustes: string[] = [];
+    let ouverture = '';
     if (ecriture) {
-      const p = periodeId && etat?.exercice ? periodeDe(etat.exercice.periodes, ecriture.date) : null;
+      // X1 : écriture d'un autre exercice (ou qui vient d'ouvrir l'exercice suivant) : la liste passe sur son exercice.
+      const autre = !!etat?.exercice && !!ecriture.exerciceId && ecriture.exerciceId !== etat.exercice.id;
+      const connu = (etat?.exercices ?? []).find((x) => x.id === ecriture.exerciceId);
+      if (ecriture.exerciceId && !connu && etat?.suivant) ouverture = ` L'exercice ${etat.suivant.millesime ?? ''} (du ${fmtJour(etat.suivant.debut)} au ${fmtJour(etat.suivant.fin)}) s'est ouvert de lui-même : première écriture de la nouvelle année.`;
+      if (autre && ecriture.exerciceId) {
+        setExerciceId(ecriture.exerciceId);
+        if (periodeId) setPeriodeId(null);
+        ajustes.push(`exercice ${connu ? connu.millesime : etat?.suivant?.millesime ?? 'suivant'}`);
+      }
+      const p = !autre && periodeId && etat?.exercice ? periodeDe(etat.exercice.periodes, ecriture.date) : null;
       if (periodeId && p && p.id !== periodeId) { setPeriodeId(p.id); ajustes.push(`période ${libellePeriode(p)}`); }
       if (journalId && journalId !== ecriture.journal.id) { setJournalId(null); ajustes.push('tous les journaux'); }
       if (etatFiltre && etatFiltre !== ecriture.etat) { setEtatFiltre(''); ajustes.push('tous les états'); }
       if (q) { setRecherche(''); setQ(''); ajustes.push('recherche effacée'); }
     }
-    setInfo(ajustes.length ? `${message} Filtres ajustés pour la montrer : ${ajustes.join(', ')}.` : message);
+    setInfo(`${ajustes.length ? `${message} Filtres ajustés pour la montrer : ${ajustes.join(', ')}.` : message}${ouverture}`);
     if (!ajustes.length) relireFenetre();
   };
   const refus: Refus = (err) => {
@@ -344,7 +360,8 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
     setErreur('');
     setFenetre(null);
     setInfo(message);
-    const memesFiltres = !periodeId && !journalId && !etatFiltre && !q;
+    const memesFiltres = !exerciceId && !periodeId && !journalId && !etatFiltre && !q;
+    setExerciceId(null);
     setPeriodeId(null);
     setJournalId(null);
     setEtatFiltre('');
@@ -405,6 +422,9 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
 
   const retour = etat ? { lien: `/dossiers/${etat.dossier.id}`, libelle: etat.dossier.nom } : null;
   const periodes = etat?.exercice?.periodes ?? [];
+  // X1 : les exercices ouverts (saisie, imports) ; le premier exercice du dossier (balance d'ouverture importée).
+  const ouverts = etat ? calendrierDe(etat).ouverts : [];
+  const premier = etat ? [...(etat.exercices ?? [])].sort((a, b) => (a.debut < b.debut ? -1 : 1))[0] || null : null;
   return (
     <div className="page">
       <div style={{
@@ -421,7 +441,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
             {etat
-              ? `${pluriel(etat.nb.brouillard, 'écriture en brouillard', 'écritures en brouillard')} · ${pluriel(etat.nb.validees, 'validée', 'validées')}${etat.exercice ? ` · exercice du ${fmtJour(etat.exercice.debut)} au ${fmtJour(etat.exercice.fin)}` : ' · aucun exercice ouvert'}`
+              ? `${pluriel(etat.nb.brouillard, 'écriture en brouillard', 'écritures en brouillard')} · ${pluriel(etat.nb.validees, 'validée', 'validées')}${etat.exercice ? ` · exercice ${etat.exercice.millesime} (du ${fmtJour(etat.exercice.debut)} au ${fmtJour(etat.exercice.fin)})` : ' · aucun exercice ouvert'}`
               : 'La saisie des écritures du dossier, en brouillard : partie double, pièce justificative, aide à la TVA et aux retenues'}
           </p>
         </div>
@@ -461,7 +481,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
               Votre niveau d'accès permet de consulter les écritures ; le titulaire et les gérants de niveau Complet ou Saisie les saisissent.
             </div>
           )}
-          {!etat.exercice && (
+          {!ouverts.length && (
             <div role="status" style={{ ...alerte, background: '#fef3c7', borderColor: '#fcd34d', color: '#92400e', marginBottom: 16 }}>
               Aucun exercice ouvert dans ce dossier : aucune écriture ne peut être datée.
             </div>
@@ -470,6 +490,14 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
           {erreur && <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', color: '#dc2626' }}>{erreur}</div>}
 
           <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 16 }}>
+            {(etat.exercices?.length ?? 0) > 1 && (
+              <div>
+                <label htmlFor="fe-exercice" style={lbl}>Exercice</label>
+                <select id="fe-exercice" value={etat.exercice?.id ?? ''} onChange={(e) => { setExerciceId(Number(e.target.value)); setPeriodeId(null); setInfo(''); }} style={{ ...inp, width: 'auto', minWidth: 120 }}>
+                  {(etat.exercices ?? []).map((x) => <option key={x.id} value={x.id}>{x.millesime} — du {fmtJour(x.debut)} au {fmtJour(x.fin)}{x.etat === 'clos' ? ' (clos)' : ''}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label htmlFor="fe-journal" style={lbl}>Journal</label>
               <select id="fe-journal" value={journalId ?? ''} onChange={(e) => { setJournalId(e.target.value ? Number(e.target.value) : null); setInfo(''); }} style={{ ...inp, width: 'auto', minWidth: 150 }}>
@@ -495,14 +523,14 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
               <label htmlFor="fe-q" style={lbl}>Recherche</label>
               <input id="fe-q" type="search" value={recherche} onChange={(e) => setRecherche(e.target.value)} placeholder="Libellé, pièce ou montant (ex. 1190,500)" aria-label="Rechercher une écriture" style={inp} autoComplete="off" />
             </div>
-            {peutSaisir && etat.exercice && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'creer' }); }} disabled={occupe || lecture} style={{ ...bouton('linear-gradient(135deg,#4338ca,#6366f1)', '#fff', 'transparent'), marginBottom: 1 }}>+ Écriture</button>}
+            {peutSaisir && ouverts.length > 0 && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'creer' }); }} disabled={occupe || lecture} style={{ ...bouton('linear-gradient(135deg,#4338ca,#6366f1)', '#fff', 'transparent'), marginBottom: 1 }}>+ Écriture</button>}
             {peutValider && etat.periode && etat.periode.etat === 'ouverte' && etat.periode.nbBrouillard > 0 && (
               <button type="button" onClick={validerLaPeriode} disabled={occupe || lecture} title={`${pluriel(etat.periode.nbBrouillard, 'écriture en brouillard', 'écritures en brouillard')} dans ${libellePeriode(etat.periode)}`} style={{ ...bouton('#eef2ff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>
                 🔏 Valider la période ({etat.periode.nbBrouillard})
               </button>
             )}
-            {peutValider && etat.exercice && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'importer' }); }} disabled={occupe || lecture} title="Importer des écritures préparées dans le modèle Excel (en brouillard, tout ou rien)" style={{ ...bouton('#eef2ff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>📤 Importer (Excel)</button>}
-            {peutValider && etat.exercice && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'importer-balance' }); }} disabled={occupe || lecture} title="Importer la balance d'ouverture d'un dossier repris d'un autre logiciel (une écriture d'à-nouveaux, en brouillard)" style={{ ...bouton('#fff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>📤 Balance d'ouverture</button>}
+            {peutValider && ouverts.length > 0 && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'importer' }); }} disabled={occupe || lecture} title="Importer des écritures préparées dans le modèle Excel (en brouillard, tout ou rien)" style={{ ...bouton('#eef2ff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>📤 Importer (Excel)</button>}
+            {peutValider && premier?.etat === 'ouvert' && <button type="button" onClick={() => { setInfo(''); setFenetre({ type: 'importer-balance' }); }} disabled={occupe || lecture} title="Importer la balance d'ouverture d'un dossier repris d'un autre logiciel (une écriture d'à-nouveaux dans le premier exercice, en brouillard)" style={{ ...bouton('#fff', '#4338ca', '#c7d2fe'), marginBottom: 1 }}>📤 Balance d'ouverture</button>}
           </div>
 
           <div style={cadre}>
@@ -585,7 +613,7 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
                               {peutValider && d.etat === 'brouillard' && <button type="button" onClick={() => valider(e)} disabled={occupe || lecture} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>🔏 Valider</button>}
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => modifier(e)} disabled={occupe || lecture} style={petit('#f0f9ff', '#0369a1', '#bae6fd')}>✏️ Modifier</button>}
                               {peutSaisir && d.etat === 'brouillard' && <button type="button" onClick={() => supprimer(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>🗑 Supprimer</button>}
-                              {peutValider && !!etat.exercice && d.etat === 'validee' && !d.contrepasseePar && <button type="button" onClick={() => contrepasser(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>↩ Contre-passer</button>}
+                              {peutValider && ouverts.length > 0 && d.etat === 'validee' && !d.contrepasseePar && <button type="button" onClick={() => contrepasser(e)} disabled={occupe || lecture} style={petit('#fff', '#be123c', '#fecdd3')}>↩ Contre-passer</button>}
                             </div>
                             {pieces?.ecritureId === d.id && (pieces.liste.length > 1 || pieces.lien || pieces.erreur) && (
                               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginTop: 6, fontSize: '0.74rem' }}>
@@ -636,11 +664,11 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
               }} />
           )}
           {fenetre?.type === 'importer-balance' && (
-            <FenetreImport titre="Importer une balance d'ouverture (Excel)" sousTitre={`${etat.dossier.nom} · une écriture d'à-nouveaux au ${fmtJour(etat.exercice?.debut)}, en brouillard`} role={role} onClose={() => setFenetre(null)} onRefus={refus}
+            <FenetreImport titre="Importer une balance d'ouverture (Excel)" sousTitre={`${etat.dossier.nom} · une écriture d'à-nouveaux au ${fmtJour(premier?.debut)}, en brouillard`} role={role} onClose={() => setFenetre(null)} onRefus={refus}
               aide={(
                 <ul style={listeAide}>
                   <li>Pour un dossier repris d'un autre logiciel : une rangée par compte (et par tiers sur un compte collectif : fournisseurs, clients), solde au débit OU au crédit, en dinars.</li>
-                  <li>L'import crée UNE écriture d'à-nouveaux dans le journal AN, datée du {fmtJour(etat.exercice?.debut)}, pièce AN-{(etat.exercice?.debut || '').slice(0, 4)}, en brouillard : relisez-la, puis validez-la.</li>
+                  <li>L'import crée UNE écriture d'à-nouveaux dans le journal AN, datée du {fmtJour(premier?.debut)} (premier jour du premier exercice du dossier), pièce AN-{(premier?.debut || '').slice(0, 4)}, en brouillard : relisez-la, puis validez-la.</li>
                   <li>Le total des débits doit égaler le total des crédits ; un exercice qui a déjà des à-nouveaux refuse l'import.</li>
                 </ul>
               )}
@@ -660,30 +688,35 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
 // S6b : contre-passer une écriture validée — l'écriture inverse (mêmes comptes, tiers et codes, débits et crédits échangés)
 // naît validée dans le même journal, à la date choisie (du jour par défaut, dans une période ouverte, jamais avant
 // l'origine), avec son libellé et sa pièce (ceux de l'origine par défaut). Le serveur décide ; l'aperçu montre l'inverse.
-// Date proposée : le jour (borné par la fin de l'exercice), jamais avant l'origine ; si elle tombe dans une période close,
-// le premier jour de la période ouverte suivante (relecture de S6b).
-const dateContrepassation = (ecriture: Ecriture, exercice: EcrituresReponse['exercice']) => {
+// Date proposée : le jour (borné par la fin du dernier exercice ouvert, sauf quand il ouvre l'exercice suivant), jamais
+// avant l'origine ; si elle tombe dans une période close, le premier jour de la période ouverte suivante DE SON EXERCICE
+// (relecture de S6b ; X1 : jamais une opération reportée dans l'exercice suivant).
+const dateContrepassation = (ecriture: Ecriture, cal: CalendrierSaisie) => {
   const jour = aujourdhui();
-  let d = exercice && jour > exercice.fin ? exercice.fin : jour;
+  const { max } = bornesSaisie(cal);
+  let d = max && jour > max ? max : jour;
   if (d < ecriture.date) d = ecriture.date;
-  const p = exercice ? periodeDe(exercice.periodes, d) : null;
-  if (exercice && p && p.etat === 'close') {
-    const s = periodeOuverteSuivante(exercice.periodes, p);
+  const x = exerciceDe(cal, d);
+  const p = x ? periodeDe(x.periodes, d) : null;
+  if (x && p && p.etat === 'close') {
+    const s = periodeOuverteSuivante(x.periodes, p);
     if (s) d = s.debut;
   }
   return d;
 };
+// La ligne d'état sous un champ date (période, exercice qu'elle ouvrira, hors des exercices).
+const CouleursDate = { ok: '#166534', refus: '#b91c1c', ouverture: '#4338ca', hors: '#b45309' } as const;
 function FenetreContrepassation({ etat, ecriture, role, onClose, onEnregistre, onRefus }: { etat: EcrituresReponse; ecriture: Ecriture; role: Role; onClose: () => void; onEnregistre: (r: ContrepassationReponse) => void; onRefus: Refus }) {
-  const exercice = etat.exercice;
-  const [date, setDate] = useState(() => dateContrepassation(ecriture, exercice));
+  const cal = useMemo(() => calendrierDe(etat), [etat]);
+  const [date, setDate] = useState(() => dateContrepassation(ecriture, cal));
   const [libelle, setLibelle] = useState(`Contre-passation de ${ecriture.numero} : ${ecriture.libelle}`.slice(0, etat.bornes.libelleMax));
   const [reference, setReference] = useState(ecriture.reference);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
-  const periode = exercice && /^\d{4}-\d{2}-\d{2}$/.test(date) ? periodeDe(exercice.periodes, date) : null;
+  const etatDate = /^\d{4}-\d{2}-\d{2}$/.test(date) ? texteDate(cal, date) : null;
   const enregistrer = async () => {
     if (envoi) return;
-    const ed = controlerDate(date, exercice);
+    const ed = controlerDate(date, cal);
     if (ed) { setErreur(ed); return; }
     if (date < ecriture.date) { setErreur(`La contre-passation ne peut pas précéder l'écriture d'origine (${fmtJour(ecriture.date)}).`); return; }
     if (!libelle.trim()) { setErreur('Indiquez le libellé de la contre-passation.'); return; }
@@ -704,10 +737,12 @@ function FenetreContrepassation({ etat, ecriture, role, onClose, onEnregistre, o
       <div style={grille}>
         <div>
           <label htmlFor="fc-date" style={lbl}>Date de la contre-passation</label>
-          <input id="fc-date" type="date" value={date} min={ecriture.date} max={exercice?.fin} onChange={(e) => { setDate(e.target.value); setErreur(null); }} disabled={envoi} style={inp} />
-          <div style={{ fontSize: '0.72rem', color: periode ? (periode.etat === 'ouverte' ? '#166534' : '#b91c1c') : '#b45309', marginTop: 4 }}>
-            {periode ? `Période : ${libellePeriode(periode)}${periode.etat === 'ouverte' ? '' : ' (close : choisissez une date dans une période ouverte)'}` : exercice ? `Hors de l'exercice (${fmtJour(exercice.debut)} → ${fmtJour(exercice.fin)})` : 'Aucun exercice ouvert'}
-          </div>
+          <input id="fc-date" type="date" value={date} min={ecriture.date} max={bornesSaisie(cal).max} onChange={(e) => { setDate(e.target.value); setErreur(null); }} disabled={envoi} style={inp} />
+          {etatDate && (
+            <div style={{ fontSize: '0.72rem', color: CouleursDate[etatDate.ton], marginTop: 4 }}>
+              {etatDate.texte}{etatDate.ton === 'refus' ? ' : choisissez une date dans une période ouverte' : ''}
+            </div>
+          )}
         </div>
         <div>
           <label htmlFor="fc-ref" style={lbl}>Référence de la pièce</label>
@@ -759,7 +794,9 @@ const depuisLigne = (l: NonNullable<Ecriture['lignes']>[number]): LigneSaisie =>
 // revérifie tout ; les aides (TVA, retenue) lui demandent la ligne calculée au millime, insérée dans la grille, modifiable.
 function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus }: PropsFenetre) {
   const creation = !ecriture;
-  const exercice = etat.exercice;
+  // X1 : l'exercice affiché (date proposée) et le calendrier de la saisie (exercices ouverts, ouverture automatique).
+  const exercice = etat.exercice && etat.exercice.etat === 'ouvert' ? etat.exercice : null;
+  const cal = useMemo(() => calendrierDe(etat), [etat]);
   const journaux = useMemo(() => etat.journaux.filter((j) => j.actif || j.id === ecriture?.journal.id), [etat.journaux, ecriture]);
   // Les choix de la grille : les comptes imputables et les tiers actifs du dossier, plus ceux que l'écriture modifiée
   // porte déjà et qui n'y sont plus (compte devenu non imputable, tiers désactivé) : montrés, marqués, à remplacer.
@@ -781,7 +818,9 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
   // Codes que « Ajouter la retenue » calcule sur l'écriture entière : retenues à la source, retenues de TVA, avances.
   const retenues = useMemo(() => etat.taxes.filter((x) => x.type === 'retenue' || x.type === 'retenue_tva' || x.type === 'avance'), [etat.taxes]);
   const jour = aujourdhui();
-  const dateDefaut = exercice ? (periodeDe(exercice.periodes, jour) ? jour : exercice.periodes.filter((p) => p.etat === 'ouverte').pop()?.debut || exercice.fin) : jour;
+  // Le jour s'il est dans un exercice ouvert (ou s'il ouvre l'exercice suivant), sinon la dernière période ouverte de
+  // l'exercice affiché.
+  const dateDefaut = exerciceDe(cal, jour) || ouvreLeSuivant(cal, jour) ? jour : exercice ? (exercice.periodes.filter((p) => p.etat === 'ouverte').pop()?.debut || exercice.fin) : jour;
   const [journalId, setJournalId] = useState<number | null>(ecriture?.journal.id ?? journaux[0]?.id ?? null);
   const [date, setDate] = useState(ecriture?.date || dateDefaut);
   // S6b (NC 01 §61) : la vraie date d'une opération d'une période close, enregistrée au premier jour de la période
@@ -912,7 +951,7 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
   const enregistrer = async () => {
     if (envoi || aide) return;
     if (!journalId) { setErreur('Choisissez le journal.'); return; }
-    const ed = controlerDate(date, exercice);
+    const ed = controlerDate(date, cal);
     if (ed) { setErreur(ed); return; }
     if (dateReelle && (!/^\d{4}-\d{2}-\d{2}$/.test(dateReelle) || dateReelle >= date)) { setErreur('La vraie date de l\'opération doit précéder la date d\'enregistrement ; sinon, retirez-la.'); return; }
     if (!reference.trim()) { setErreur('Indiquez la référence de la pièce justificative (numéro de facture, de relevé…).'); return; }
@@ -945,8 +984,13 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
       setEnvoi(false);
     }
   };
-  const periode = exercice && /^\d{4}-\d{2}-\d{2}$/.test(date) ? periodeDe(exercice.periodes, date) : null;
-  const suivante = exercice && periode && periode.etat === 'close' ? periodeOuverteSuivante(exercice.periodes, periode) : null;
+  // La période de la date dans son exercice ; une période close propose la période ouverte suivante DE CET EXERCICE.
+  const dateLisible = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const exerciceDate = dateLisible ? exerciceDe(cal, date) : null;
+  const periode = exerciceDate ? periodeDe(exerciceDate.periodes, date) : null;
+  const suivante = exerciceDate && periode && periode.etat === 'close' ? periodeOuverteSuivante(exerciceDate.periodes, periode) : null;
+  const etatDate = dateLisible ? texteDate(cal, date) : null;
+  const bornes = bornesSaisie(cal);
   return (
     <Modale titre={creation ? 'Saisir une écriture' : `Modifier l'écriture ${ecriture.numeroProvisoire}`} sousTitre={creation ? 'En brouillard : modifiable et supprimable jusqu\'à sa validation' : `${ecriture.libelle} · ${fmtMontant(ecriture.total)} D`}
       onClose={onClose} onSubmit={enregistrer} envoi={envoi} erreur={erreur} libelleEnvoi={creation ? '✓ Enregistrer en brouillard' : '✓ Enregistrer'} largeur={980}>
@@ -960,10 +1004,12 @@ function FenetreEcriture({ etat, ecriture, role, onClose, onEnregistre, onRefus 
         </div>
         <div>
           <label htmlFor="fe-f-date" style={lbl}>{dateReelle ? 'Date d\'enregistrement' : 'Date'}</label>
-          <input id="fe-f-date" type="date" value={date} min={exercice?.debut} max={exercice?.fin} onChange={(e) => changerDate(e.target.value)} disabled={fige} style={inp} />
-          <div style={{ fontSize: '0.72rem', color: periode ? (periode.etat === 'ouverte' ? '#166534' : '#b91c1c') : '#b45309', marginTop: 4 }}>
-            {periode ? `Période : ${libellePeriode(periode)}${periode.etat === 'ouverte' ? '' : ' (close)'}` : exercice ? `Hors de l'exercice (${fmtJour(exercice.debut)} → ${fmtJour(exercice.fin)})` : 'Aucun exercice ouvert'}
-          </div>
+          <input id="fe-f-date" type="date" value={date} min={bornes.min} max={bornes.max} onChange={(e) => changerDate(e.target.value)} disabled={fige} style={inp} />
+          {etatDate && (
+            <div style={{ fontSize: '0.72rem', color: CouleursDate[etatDate.ton], fontWeight: etatDate.ton === 'ouverture' ? 700 : 400, marginTop: 4 }}>
+              {etatDate.texte}
+            </div>
+          )}
           {periode && periode.etat === 'close' && (
             <div style={{ fontSize: '0.74rem', color: '#92400e', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, padding: '6px 10px', marginTop: 6, lineHeight: 1.5 }}>
               {suivante

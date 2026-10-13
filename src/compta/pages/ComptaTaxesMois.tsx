@@ -329,7 +329,7 @@ function ComptaTaxesMois({ dossierId }: { dossierId?: string }) {
                   <Rangee libelle="− TVA déductible sur biens et services" valeur={montant(tva.deductibleBs)} />
                   <Rangee libelle="− TVA déductible sur immobilisations" valeur={montant(tva.deductibleImmo)} />
                   {nonNul(tva.retenuesSubies) && <Rangee libelle="− Retenues de TVA subies (secteur public)" valeur={montant(tva.retenuesSubies)} />}
-                  <Rangee libelle={`− Crédit reporté${premiere ? " (à-nouveaux de l'exercice)" : ' du mois précédent'}`} valeur={montant(tva.creditReporte)} />
+                  <Rangee libelle={`− Crédit reporté${premiere ? (tva.creditProvisoire ? ` (provisoire : fin de l'exercice ${tva.creditProvisoire.millesime}, non clos)` : " (à-nouveaux de l'exercice)") : ' du mois précédent'}`} valeur={montant(tva.creditReporte)} />
                   <Rangee fort libelle={resultat > 0n ? 'TVA à payer' : resultat < 0n ? 'Crédit à reporter (mois suivant)' : 'Résultat'} valeur={montant(resultat > 0n ? tva.aPayer : tva.creditAReporter)} couleur={resultat > 0n ? '#b45309' : '#166534'} />
                   {nonNul(tva.nonRecuperable) && <span style={{ fontSize: '0.74rem', color: '#64748b' }}>TVA non récupérable passée en charge : {montant(tva.nonRecuperable)} (pour mémoire).</span>}
                 </div>

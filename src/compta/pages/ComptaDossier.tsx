@@ -9,12 +9,12 @@ import BoutonAide from '../BoutonAide';
 import { FormulaireExercice, FormulaireRegime, Modale } from '../DossierFormulaires';
 import { libelleNiveau } from '../comptables';
 import {
-  controlerExercice, fmtDate, fmtMoisAnnee, libelleImpot, libellePersonne, libelleTva, messageDossier, ouiNon, statutDe, texteEtatAbonnement,
+  controlerExercice, fmtDate, fmtMoisAnnee, libelleImpot, libellePersonne, libelleTva, messageDossier, nbPeriodes, ouiNon, statutDe, texteEtatAbonnement,
   type Exercice, type FicheDossier, type Regime, type ResumeFiscalite, type ResumeTenue,
 } from '../dossiers';
 import { signe } from '../echeancier';
 import { aujourdhui, fmtMontant } from '../ecritures';
-import { bouton, pastille, petit } from '../styles';
+import { bouton, inp, lbl, pastille, petit } from '../styles';
 import { Carte, Ligne } from '../ui';
 
 // « Fiche du dossier » (LabFlow Compta, étape S4a ; labflow-reprise/achats-compta/PLAN-S4.md §2) : identité (modifiable,
@@ -23,7 +23,7 @@ import { Carte, Ligne } from '../ui';
 // Saisie et Consultation lisent ; archiver, désarchiver, supprimer = titulaire). Un dossier archivé ne se modifie pas ;
 // une comptabilité dont l'abonnement n'est pas actif reste consultable. Un refus du serveur sur un état périmé (404,
 // 409) ferme la fenêtre et relit la fiche (convention de S3c).
-type Fenetre = 'identite' | 'regime' | 'exercice' | null;
+type Fenetre = 'identite' | 'regime' | 'exercice' | 'suivant' | null;
 type Role = 'titulaire' | 'gerant';
 // Rendu par une fenêtre quand le serveur refuse : vrai si la page a pris la main (fenêtre fermée, fiche relue).
 type Refus = (err: unknown) => boolean;
@@ -296,22 +296,56 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
               </Carte>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-              <Carte titre="📅 Exercice en cours" sousTitre={fiche.exercice ? `Du ${fmtDate(fiche.exercice.debut)} au ${fmtDate(fiche.exercice.fin)}` : 'Aucun exercice ouvert'}>
-                {fiche.exercice && (
-                  <>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {fiche.exercice.periodes.map((p) => (
-                        <span key={p.debut} title={`Du ${fmtDate(p.debut)} au ${fmtDate(p.fin)}`} style={pastille(p.etat === 'ouverte' ? '#eef2ff' : '#e2e8f0', p.etat === 'ouverte' ? '#3730a3' : '#475569')}>
-                          {fmtMoisAnnee(p.debut)}{p.etat === 'close' ? ' · close' : ''}
-                        </span>
-                      ))}
+              {/* X1 : l'exercice en cours et, quand il est ouvert, l'exercice suivant (deux au plus) ; l'ouverture de l'exercice
+                  suivant à la main (titulaire, Complet), sinon d'elle-même à la première écriture de la nouvelle année. */}
+              <Carte titre="📅 Exercices" sousTitre={fiche.exercice ? `En cours : ${fiche.exercice.millesime} (du ${fmtDate(fiche.exercice.debut)} au ${fmtDate(fiche.exercice.fin)})` : 'Aucun exercice ouvert'}>
+                {(fiche.exercicesOuverts ?? (fiche.exercice ? [fiche.exercice] : [])).map((x) => {
+                  const closes = x.periodes.filter((p) => p.etat === 'close').length;
+                  const ouvertes = x.periodes.length - closes;
+                  return (
+                    <div key={x.id} style={{ marginBottom: 12 }}>
+                      {(fiche.exercicesOuverts?.length ?? 0) > 1 && (
+                        <div style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.84rem', marginBottom: 6 }}>
+                          Exercice {x.millesime} · du {fmtDate(x.debut)} au {fmtDate(x.fin)}{x.id === fiche.exercice?.id ? ' · en cours' : ''}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                        {x.periodes.map((p) => (
+                          <span key={p.debut} title={`Du ${fmtDate(p.debut)} au ${fmtDate(p.fin)}`} style={pastille(p.etat === 'ouverte' ? '#eef2ff' : '#e2e8f0', p.etat === 'ouverte' ? '#3730a3' : '#475569')}>
+                            {fmtMoisAnnee(p.debut)}{p.etat === 'close' ? ' · close' : ''}
+                          </span>
+                        ))}
+                      </div>
+                      <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
+                        {x.periodes.length} période{x.periodes.length > 1 ? 's' : ''} mensuelle{x.periodes.length > 1 ? 's' : ''} : {ouvertes} ouverte{ouvertes > 1 ? 's' : ''}, {closes} close{closes > 1 ? 's' : ''} (page Périodes : valider, clore, rouvrir, journal général).
+                      </p>
                     </div>
-                    <p style={{ margin: '10px 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
-                      {fiche.exercice.periodes.length} période{fiche.exercice.periodes.length > 1 ? 's' : ''} mensuelle{fiche.exercice.periodes.length > 1 ? 's' : ''} : {nbOuvertes} ouverte{nbOuvertes > 1 ? 's' : ''}, {nbCloses} close{nbCloses > 1 ? 's' : ''} (page Périodes : valider, clore, rouvrir, journal général).
-                      {fiche.mouvemente ? ' Le dossier a des écritures : les dates de l\'exercice ne changent plus.' : ''}
-                    </p>
-                    {modifiable && !fiche.mouvemente && <button type="button" onClick={() => { setInfo(''); setFenetre('exercice'); }} style={{ ...petit('#f0f9ff', '#0369a1', '#bae6fd'), marginTop: 12 }}>✏️ Modifier les dates</button>}
-                  </>
+                  );
+                })}
+                {fiche.exercice && (fiche.mouvemente || fiche.exercices.length > 1) && (
+                  <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
+                    {fiche.exercices.length > 1 ? 'L\'exercice suivant est ouvert : les dates des exercices ne changent plus.' : 'Le dossier a des écritures : les dates de l\'exercice ne changent plus.'}
+                  </p>
+                )}
+                {modifiable && !fiche.mouvemente && fiche.exercices.length === 1 && <button type="button" onClick={() => { setInfo(''); setFenetre('exercice'); }} style={{ ...petit('#f0f9ff', '#0369a1', '#bae6fd'), marginBottom: 8 }}>✏️ Modifier les dates</button>}
+                {fiche.suivant && (
+                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: 10, fontSize: '0.8rem', color: '#475569', lineHeight: 1.55 }}>
+                    {fiche.suivant.possible ? (
+                      <>
+                        <strong style={{ color: '#1e1b4b' }}>Exercice suivant : {fiche.suivant.millesime}</strong> (du {fmtDate(fiche.suivant.debut)} au {fmtDate(fiche.suivant.fin)}).{' '}
+                        {fiche.suivant.auto
+                          ? 'Il s\'ouvrira de lui-même à la prochaine écriture datée de cette période (saisie, import, facture envoyée depuis LabFlow).'
+                          : `Il s'ouvrira de lui-même à la première écriture datée du ${fmtDate(fiche.suivant.debut)} ou après, une fois cette date passée.`}
+                        {modifiable && fiche.droits.configurer && (
+                          <div style={{ marginTop: 8 }}>
+                            <button type="button" onClick={() => { setInfo(''); setFenetre('suivant'); }} disabled={occupe} style={petit('#eef2ff', '#4338ca', '#c7d2fe')}>📅 Ouvrir l'exercice {fiche.suivant.millesime}</button>
+                          </div>
+                        )}
+                      </>
+                    ) : fiche.suivant.bloquant ? (
+                      <>Exercice suivant (du {fmtDate(fiche.suivant.debut)} au {fmtDate(fiche.suivant.fin)}) : il s'ouvrira une fois l'exercice {fiche.suivant.bloquant.millesime} clos — deux exercices ouverts au plus.</>
+                    ) : null}
+                  </div>
                 )}
               </Carte>
               {/* S5a : la configuration du dossier — le plan de comptes (copié du paquet pays) ; S5b : ses journaux et ses
@@ -389,6 +423,14 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
           {fenetre === 'identite' && <FenetreIdentite fiche={fiche} role={role} onClose={() => setFenetre(null)} onEnregistre={(f) => appliquer(f, 'Identité enregistrée.')} onRefus={refus} />}
           {fenetre === 'regime' && <FenetreRegime fiche={fiche} role={role} onClose={() => setFenetre(null)} onEnregistre={(f) => appliquer(f, 'Régime fiscal enregistré.')} onRefus={refus} />}
           {fenetre === 'exercice' && fiche.exercice && <FenetreExercice fiche={fiche} role={role} onClose={() => setFenetre(null)} onEnregistre={(f) => appliquer(f, 'Dates de l\'exercice enregistrées, périodes refaites.')} onRefus={refus} />}
+          {fenetre === 'suivant' && fiche.suivant && (
+            <FenetreSuivant fiche={fiche} role={role} onClose={() => setFenetre(null)} onRefus={refus}
+              onEnregistre={(f) => {
+                const liste = f.exercicesOuverts ?? [];
+                const x = liste[liste.length - 1];
+                appliquer(f, x ? `Exercice ${x.millesime} ouvert (du ${fmtDate(x.debut)} au ${fmtDate(x.fin)}) : ${x.periodes.length} période${x.periodes.length > 1 ? 's' : ''} mensuelle${x.periodes.length > 1 ? 's' : ''} ouverte${x.periodes.length > 1 ? 's' : ''}.` : 'Exercice suivant ouvert.');
+              }} />
+          )}
         </>
       )}
     </div>
@@ -476,6 +518,49 @@ function FenetreExercice({ fiche, role, onClose, onEnregistre, onRefus }: PropsF
   return (
     <Modale titre="Dates de l'exercice" sousTitre="Les périodes mensuelles sont refaites" onClose={onClose} onSubmit={enregistrer} envoi={envoi} erreur={erreur}>
       <FormulaireExercice valeur={valeur} onChange={(e) => { setValeur(e); setErreur(null); }} disabled={envoi} prefixe="fd-exercice" premier={false} />
+    </Modale>
+  );
+}
+
+// X1 : ouvrir l'exercice suivant à la main — il commence le lendemain du dernier ; 12 mois proposés, une fin plus proche
+// permise (changement de date de clôture). Le serveur décide (deux exercices ouverts au plus, millésime).
+function FenetreSuivant({ fiche, role, onClose, onEnregistre, onRefus }: PropsFenetre) {
+  const s = fiche.suivant;
+  const [fin, setFin] = useState(s?.fin || '');
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const ex: Exercice = { debut: s?.debut || '', fin };
+  const nb = nbPeriodes(ex);
+  const enregistrer = async () => {
+    if (envoi || !s) return;
+    const e = controlerExercice(ex);
+    if (e) { setErreur(e); return; }
+    setEnvoi(true);
+    setErreur(null);
+    try {
+      const { data } = await api.post(`/api/compta/dossiers/${fiche.id}/exercices/suivant`, fin === s.fin ? {} : { fin });
+      onEnregistre(data as FicheDossier);
+    } catch (err) {
+      if (onRefus(err)) return;
+      setErreur(messageDossier(err, 'L\'exercice n\'a pas pu être ouvert — réessayez.', role));
+      setEnvoi(false);
+    }
+  };
+  return (
+    <Modale titre={`Ouvrir l'exercice ${s?.millesime ?? ''}`} sousTitre="Ses périodes mensuelles s'ouvrent avec lui" onClose={onClose} onSubmit={enregistrer} envoi={envoi} erreur={erreur} libelleEnvoi="📅 Ouvrir l'exercice">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 12 }}>
+        <div>
+          <span style={lbl}>Début</span>
+          <div style={{ ...inp, background: '#f8fafc', color: '#475569' }}>{fmtDate(s?.debut)}</div>
+        </div>
+        <div>
+          <label htmlFor="fd-suivant-fin" style={lbl}>Fin</label>
+          <input id="fd-suivant-fin" type="date" value={fin} min={s?.debut} max={s?.fin} onChange={(e) => { setFin(e.target.value); setErreur(null); }} disabled={envoi} style={inp} />
+        </div>
+      </div>
+      <p style={{ margin: '10px 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.55 }}>
+        {nb ? `${nb} période${nb > 1 ? 's' : ''} mensuelle${nb > 1 ? 's' : ''}. ` : ''}L'exercice commence le lendemain du dernier ; 12 mois au plus, fin le dernier jour d'un mois (une fin plus proche sert à changer de date de clôture). Les deux exercices restent ouverts : la saisie accepte une date de l'un ou de l'autre. Sans rien faire, il s'ouvre de lui-même à la première écriture datée du {fmtDate(s?.debut)} ou après.
+      </p>
     </Modale>
   );
 }

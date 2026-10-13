@@ -7,7 +7,7 @@ import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import { LIBELLES_ETAT, fmtJour, fmtMontant, libellePeriode, periodeDe, versMillimes, type Ecriture, type PeriodeExercice } from '../ecritures';
 import {
   LIBELLES_TYPE_BALANCE, VUES, estControleGenerale, estVue, lireBalance, lireGrandLivre, lireJournal, lireLivres, telechargerBalance, telechargerGrandLivre, telechargerJournal, texteSolde,
-  type BalanceReponse, type GrandLivreReponse, type JournalReponse, type LivresReponse, type ParametresLivres, type TypeBalance, type Vue,
+  type BalanceReponse, type GrandLivreReponse, type JournalReponse, type LivresReponse, type ParametresLivres, type ReportProvisoire, type TypeBalance, type Vue,
 } from '../livres';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
 
@@ -237,7 +237,7 @@ function ComptaLivres({ dossierId }: { dossierId?: string }) {
               <label htmlFor="fl-exercice" style={lbl}>Exercice</label>
               <select id="fl-exercice" value={exerciceId ?? ''} onChange={(e) => { setExerciceId(e.target.value ? Number(e.target.value) : null); setPeriodeId(null); setInfo(''); }} style={{ ...inp, width: 'auto', minWidth: 190 }}>
                 {!etatPx.exercices.length && <option value="">Aucun exercice</option>}
-                {etatPx.exercices.map((x) => <option key={x.id} value={x.id}>{fmtJour(x.debut)} → {fmtJour(x.fin)}{x.etat === 'clos' ? ' (clos)' : ''}</option>)}
+                {etatPx.exercices.map((x) => <option key={x.id} value={x.id}>{x.millesime ? `${x.millesime} — ` : ''}{fmtJour(x.debut)} → {fmtJour(x.fin)}{x.etat === 'clos' ? ' (clos)' : ''}</option>)}
               </select>
             </div>
             <div>
@@ -313,6 +313,19 @@ const Attente = ({ lecture, texte }: { lecture: boolean; texte: string }) => (
   <p style={{ margin: 0, padding: '16px 18px', fontSize: '0.84rem', color: '#64748b', lineHeight: 1.6 }}>{lecture ? 'Lecture…' : texte}</p>
 );
 
+// X1 : les soldes d'ouverture provisoires — l'exercice précédent n'est pas clos ; ses soldes de fin sont repris, calculés à
+// la lecture, rien n'est écrit (la clôture passera les vrais à-nouveaux).
+function BandeauProvisoire({ p }: { p: ReportProvisoire }) {
+  const resultat = p.resultat ? versMillimes(p.resultat.replace('-', '')) : null;
+  const perte = !!p.resultat && p.resultat.startsWith('-');
+  return (
+    <div role="note" style={{ padding: '10px 18px', background: '#fffbeb', borderTop: '1px solid #fde68a', borderBottom: '1px solid #fde68a', fontSize: '0.8rem', color: '#92400e', lineHeight: 1.5 }}>
+      <strong>Soldes d'ouverture provisoires</strong> : l'exercice {p.precedent.millesime} (du {fmtJour(p.precedent.debut)} au {fmtJour(p.precedent.fin)}) n'est pas clos ; ses soldes de fin sont repris
+      {resultat ? <>, son résultat ({perte ? 'perte' : 'bénéfice'} de {fmtMontant(resultat)}) porté au compte {p.compteResultat}</> : null} — calculés à la lecture, rien n'est écrit. La clôture de l'exercice passera les vrais à-nouveaux.
+    </div>
+  );
+}
+
 // ── Balance ─────────────────────────────────────────────────────────────────────────────────────────────────────────
 function Balance({ b, lecture, vide }: { b: BalanceReponse | null; lecture: boolean; vide: string }) {
   const generale = !b || b.type === 'generale';
@@ -324,6 +337,7 @@ function Balance({ b, lecture, vide }: { b: BalanceReponse | null; lecture: bool
         </span>
         <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Ouverture = à-nouveaux et mouvements d'avant la période · mouvements de la période · solde</span>
       </div>
+      {b?.provisoire && <BandeauProvisoire p={b.provisoire} />}
       {b && b.rangees.length === 0 && <Attente lecture={false} texte="Aucune ligne dans cette sélection." />}
       {!b && <Attente lecture={lecture} texte={vide} />}
       {b && b.rangees.length > 0 && (
@@ -409,7 +423,9 @@ function GrandLivre({ g, lecture, vide, choisi, plus, afficherPlus, dossierId, p
               </thead>
               <tbody>
                 <tr style={{ borderTop: '1px solid #f1f5f9', background: '#f8faff', fontWeight: 700 }}>
-                  <td style={cellule} colSpan={6}>Solde d'ouverture <span style={{ fontWeight: 400, color: '#64748b' }}>(à-nouveaux et mouvements antérieurs)</span></td>
+                  <td style={cellule} colSpan={6}>Solde d'ouverture {g.provisoire
+                    ? <span style={pastille('#fef3c7', '#92400e')} title={`Repris des soldes de fin de l'exercice ${g.provisoire.precedent.millesime} : calculé, rien n'est écrit ; la clôture passera les vrais à-nouveaux`}>provisoire : exercice {g.provisoire.precedent.millesime} non clos</span>
+                    : <span style={{ fontWeight: 400, color: '#64748b' }}>(à-nouveaux et mouvements antérieurs)</span>}</td>
                   <td style={nombre}>{montant(g.ouverture.debit)}</td><td style={nombre}>{montant(g.ouverture.credit)}</td>
                   <td style={{ ...nombre, fontWeight: 800 }}>{texteSolde(g.ouverture, fmtMontant)}</td><td style={cellule} /><td style={cellule}><Brouillard n={g.ouverture.nbBrouillard ?? 0} /></td>
                 </tr>
