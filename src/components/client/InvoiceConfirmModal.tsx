@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { useComptaActif } from './factures/compta';
 
 export interface InvoiceLineItem {
   ingredientId: number;
@@ -16,7 +17,8 @@ interface Props {
   fournisseurNom: string | null;
   refFacture: string | null;
   theme: 'activite' | 'labo';
-  onConfirm: (timbreFiscal: boolean, timbreMontant: number) => void;
+  /** Étape F4 : `envoyerCompta` — la facture jointe part ensuite en comptabilité (module Compta actif). */
+  onConfirm: (timbreFiscal: boolean, timbreMontant: number, envoyerCompta: boolean) => void;
   onCancel: () => void;
   /** Factures fournisseur, étape F1 : nombre de fichiers joints (undefined : la saisie n'en propose pas). */
   nbPieces?: number;
@@ -33,6 +35,10 @@ const enDinars = (n: number) => n.toFixed(3);
 export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFacture, theme, onConfirm, onCancel, nbPieces, timbreLu, totauxLus }: Props) {
   // Le timbre lu sur la facture règle la case et le montant ; sans lecture, 1 D coché comme avant.
   const [timbreFiscal, setTimbreFiscal] = useState(timbreLu !== 0);
+  const comptaActif = useComptaActif();
+  const [envoyerCompta, setEnvoyerCompta] = useState(true);
+  // Une facture sans fournisseur ne part pas (la comptabilité en a besoin) : pas de case.
+  const proposerCompta = comptaActif === true && nbPieces !== undefined && nbPieces > 0 && fournisseurNom != null;
   const [timbre, setTimbre] = useState(timbreLu != null && TIMBRES.includes(timbreLu) ? timbreLu : 1);
   const voc = useVocabulaire();
 
@@ -112,6 +118,13 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
                 : '📎 Sans pièce jointe : vous pourrez joindre la facture plus tard, depuis la page Factures.'}
             </div>
           )}
+          {proposerCompta && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', cursor: 'pointer' }}
+              title="LabFlow prépare l'écriture d'achat en brouillard dans LabFlow Compta ; votre comptable la vérifie et la valide.">
+              <input type="checkbox" checked={envoyerCompta} onChange={(e) => setEnvoyerCompta(e.target.checked)} />
+              Envoyer à la comptabilité
+            </label>
+          )}
           {/* Timbre fiscal : case et montant (étape F2 : 1, 1,5 ou 2 D, réglés d'après la facture lue) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.84rem', fontWeight: 600, color: '#374151', userSelect: 'none' }}>
@@ -152,7 +165,7 @@ export default function InvoiceConfirmModal({ lines, date, fournisseurNom, refFa
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-ghost btn-sm" onClick={onCancel}>Annuler</button>
               <button
-                onClick={() => onConfirm(timbreFiscal, timbre)}
+                onClick={() => onConfirm(timbreFiscal, timbre, proposerCompta && envoyerCompta)}
                 style={{ background: `linear-gradient(135deg, ${accent}, ${accent}cc)`, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, cursor: 'pointer', fontSize: '0.88rem' }}
               >
                 Confirmer {voc.le('appro', false, 'court')}

@@ -28,6 +28,7 @@ import { useConfirm } from '../common/ConfirmDialog';
 import ZonePieces from './factures/ZonePieces';
 import LectureFacture, { PastilleLue, type ResultatLecture } from './factures/LectureFacture';
 import VerifierFacture from './factures/VerifierFacture';
+import { phraseEnvoi } from './factures/compta';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 
@@ -239,7 +240,7 @@ export default function StockLaboPage() {
   const [bulkError, setBulkError] = useState('');
   const { confirm, alerte } = useConfirm();
   const [seuilModal, setSeuilModal] = useState<{ ingredientId: number; nom: string } | null>(null);
-  const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: (timbreFiscal: boolean, timbreMontant: number) => void } | null>(null);
+  const [invoiceModal, setInvoiceModal] = useState<{ lines: InvoiceLineItem[]; fournisseurNom: string | null; onConfirm: (timbreFiscal: boolean, timbreMontant: number, envoyerCompta: boolean) => void } | null>(null);
 
   const today = todayStr();
 
@@ -472,7 +473,7 @@ export default function StockLaboPage() {
     } catch { /* ignore */ }
   };
 
-  const doBulkSave = async (timbreFiscal = false, timbreMontant = 1) => {
+  const doBulkSave = async (timbreFiscal = false, timbreMontant = 1, envoyerCompta = false) => {
     setBulkSaving(true);
     setBulkError('');
     let factureEnregistree = false;
@@ -496,6 +497,7 @@ export default function StockLaboPage() {
           timbreFiscal,
           timbreMontant,
           lecture: resultatLecture?.lecture ?? null,
+          envoyerCompta,
           lignes: readyEntries.map(([idStr, rs]) => ({
             articleId: Number(idStr),
             quantite: parseFloat(rs.quantite),
@@ -504,6 +506,9 @@ export default function StockLaboPage() {
           })),
         }, bulkPieces, confirm, voc.ce('fournisseur'));
         if (issue === 'annulee') { setBulkSaving(false); return; }
+        // Étape F4 : l'envoi en comptabilité demandé, réussi ou refusé (la facture reste « à envoyer »).
+        const phrase = phraseEnvoi(issue);
+        if (phrase) void alerte({ title: issue.compta ? 'Facture envoyée en comptabilité' : 'Facture enregistrée', message: phrase, tone: issue.compta ? 'primary' : 'info' });
         factureEnregistree = true;
       }
       const ptReadyEntries = Object.entries(rowState).filter(([idStr, rs]) => {
@@ -570,7 +575,7 @@ export default function StockLaboPage() {
       ? (fournisseurs.find((f) => f.id === Number(bulkFournisseurId))?.nom ?? null)
       : null;
 
-    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf, tm) => doBulkSave(tf, tm) });
+    setInvoiceModal({ lines: invoiceLines, fournisseurNom, onConfirm: (tf, tm, ec) => doBulkSave(tf, tm, ec) });
   };
 
 
@@ -932,8 +937,8 @@ export default function StockLaboPage() {
                     loadStock();
                     void alerte({
                       title: 'Facture validée',
-                      message: `${r.nbStock} ligne${r.nbStock > 1 ? 's' : ''} en ${voc.nom('stock')}, ${r.appris} correspondance${r.appris > 1 ? 's' : ''} apprise${r.appris > 1 ? 's' : ''} : la prochaine facture de ${voc.ce('fournisseur')} se reconnaîtra seule. La facture est dans la page Factures, avec sa pièce.`,
-                      tone: 'primary',
+                      message: `${r.nbStock} ligne${r.nbStock > 1 ? 's' : ''} en ${voc.nom('stock')}, ${r.appris} correspondance${r.appris > 1 ? 's' : ''} apprise${r.appris > 1 ? 's' : ''} : la prochaine facture de ${voc.ce('fournisseur')} se reconnaîtra seule. La facture est dans la page Factures, avec sa pièce.${phraseEnvoi(r) ? ` ${phraseEnvoi(r)}` : ''}`,
+                      tone: r.comptaRefus ? 'info' : 'primary',
                     });
                   }}
                 />
@@ -1432,7 +1437,7 @@ export default function StockLaboPage() {
           nbPieces={bulkPieces.length}
           timbreLu={resultatLecture?.timbre ?? null}
           totauxLus={resultatLecture?.totaux ?? null}
-          onConfirm={(tf, tm) => { setInvoiceModal(null); invoiceModal.onConfirm(tf, tm); }}
+          onConfirm={(tf, tm, ec) => { setInvoiceModal(null); invoiceModal.onConfirm(tf, tm, ec); }}
           onCancel={() => setInvoiceModal(null)}
         />
       )}

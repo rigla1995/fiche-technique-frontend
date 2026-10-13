@@ -48,6 +48,8 @@ const ComptaEcheancier = lazy(() => import('./pages/ComptaEcheancier'));
 // S7b : les taxes du mois (état de TVA, retenues, certificats de la plateforme TEJ).
 const ComptaTaxesMois = lazy(() => import('./pages/ComptaTaxesMois'));
 const ComptaDeclaration = lazy(() => import('./pages/ComptaDeclaration'));
+// F4 (factures fournisseur → Compta) : les comptes d'achat du dossier « Mon entreprise ».
+const ComptaComptesAchat = lazy(() => import('./pages/ComptaComptesAchat'));
 // Étape S4a : les dossiers du cabinet (liste du titulaire ; la fiche d'un dossier pour toute personne à qui il est ouvert,
 // vérifié par le serveur)
 const ComptaDossiers = lazy(() => import('./pages/ComptaDossiers'));
@@ -117,6 +119,7 @@ export default function ComptaApp() {
               <Route path="/dossiers/:dossierId/echeancier" element={<ComptaEcheancier />} />
               <Route path="/dossiers/:dossierId/taxes-mois" element={<ComptaTaxesMois />} />
               <Route path="/dossiers/:dossierId/declaration" element={<ComptaDeclaration />} />
+              <Route path="/dossiers/:dossierId/comptes-achat" element={<ComptaComptesAchat />} />
               <Route path="/cabinets/:espaceId" element={<ComptaCabinetMembre />} />
               <Route path="/ma-comptabilite" element={<ReserveClient><ComptaMaComptabilite /></ReserveClient>} />
               <Route path="/confiee/:espaceId" element={<ComptaConfiee />} />

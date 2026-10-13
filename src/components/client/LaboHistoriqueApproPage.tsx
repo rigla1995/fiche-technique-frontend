@@ -47,6 +47,8 @@ interface HistEntry {
   activiteNom?: string | null;
   /** Étape F3 (factures fournisseur) : ligne d'une facture validée — ni modifiable ni supprimable seule. */
   factureValidee?: boolean;
+  /** Étape F4 : ligne d'une facture envoyée en comptabilité — verrouillée tant que son écriture existe. */
+  factureEnCompta?: boolean;
 }
 
 // Puces du filtre « Type d'appro » côté labo : les transferts sont distingués émis / reçus.
@@ -606,7 +608,8 @@ export default function LaboHistoriqueApproPage() {
                     </td>
                     <td style={{ whiteSpace: 'nowrap', textAlign: 'right', padding: '8px 6px' }}>
                       {r.factureValidee && <span title="Ligne d'une facture lue puis validée : elle ne se modifie plus. Pour la refaire, supprimez la facture entière (page Factures)." style={{ fontSize: '0.8rem', padding: '2px 5px', cursor: 'help' }}>🔒</span>}
-                      {!r.factureValidee && (!isGerant || r.createdBy === user?.id) && (<>
+                      {!r.factureValidee && r.factureEnCompta && <span title="Ligne d'une facture envoyée en comptabilité : elle ne se modifie plus tant que son écriture existe (brouillard : supprimez-la dans LabFlow Compta ; validée : votre comptable la contre-passe)." style={{ fontSize: '0.8rem', padding: '2px 5px', cursor: 'help' }}>📒🔒</span>}
+                      {!r.factureValidee && !r.factureEnCompta && (!isGerant || r.createdBy === user?.id) && (<>
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => setEditEntry(r)}

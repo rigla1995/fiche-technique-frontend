@@ -16,6 +16,7 @@ import {
   type ArticleConnu, type Contexte, type EtatLigne, type NatureHorsStock,
 } from './lecture/correspondre';
 import ChoixArticle from './ChoixArticle';
+import { useComptaActif } from './compta';
 import { messageErreur, validerAvecConfirmation, type FactureValidee, type FichierChoisi, type LectureEnvoyee, type LigneValidee } from './pieces';
 
 interface Props {
@@ -95,6 +96,9 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const [unites, setUnites] = useState<{ id: number; name: string }[] | null>(null);
   const [categories, setCategories] = useState<{ id: number; name: string; familleName?: string | null }[] | null>(null);
   const [envoi, setEnvoi] = useState(false);
+  // Étape F4 : « Envoyer à la comptabilité », cochée, si le module Compta est actif.
+  const comptaActif = useComptaActif();
+  const [envoyerCompta, setEnvoyerCompta] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);
   const [modifiee, setModifiee] = useState(false);
   const compteur = useRef(0);
@@ -264,6 +268,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
       const r = await validerAvecConfirmation({
         cible, dateAppro: date, fournisseurId, refFacture: refFacture.trim(), timbreFiscal: timbre > 0, timbreMontant: timbre > 0 ? timbre : undefined,
         lecture, fodec: pied.fodec || null, remiseGlobale: pied.remiseGlobale || null, lignes: lignesValidees,
+        envoyerCompta: comptaActif === true && envoyerCompta,
       }, fichiers, confirm, voc.ce('fournisseur'));
       if (r) onValidee(r);
       else setEnvoi(false);
@@ -586,6 +591,13 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
               </div>
             )}
           </div>
+          {comptaActif === true && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+              title="LabFlow prépare l'écriture d'achat en brouillard dans LabFlow Compta ; votre comptable la vérifie et la valide.">
+              <input type="checkbox" checked={envoyerCompta} onChange={(e) => setEnvoyerCompta(e.target.checked)} disabled={envoi} />
+              Envoyer à la comptabilité
+            </label>
+          )}
           <button type="button" style={bouton} onClick={() => void fermer()} disabled={envoi}>Abandonner</button>
           <button type="button" onClick={() => void valider()} disabled={blocages.length > 0 || envoi}
             style={{ ...bouton, padding: '8px 16px', fontSize: '0.84rem', color: '#fff', border: 'none', background: blocages.length || envoi ? '#94a3b8' : `linear-gradient(135deg, ${accent}, #2563eb)`, cursor: blocages.length || envoi ? 'not-allowed' : 'pointer' }}>

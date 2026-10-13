@@ -22,7 +22,7 @@ export interface Tiers {
   id: number; type: TypeTiers; typeLibelle: string; code: string; nom: string; matriculeFiscal: string | null;
   adresse: string | null; ville: string | null; telephone: string | null; email: string | null;
   compte: CompteCourt | null; regimeTva: RegimeTvaTiers; regimeTvaLibelle: string; retenue: RetenueCourte | null;
-  delaiPaiement: number; origine: 'saisi' | 'import'; actif: boolean; creeLe: string; modifieLe: string;
+  delaiPaiement: number; origine: 'saisi' | 'import' | 'labflow'; actif: boolean; creeLe: string; modifieLe: string;
   regimeFiscal: string | null; regimeFiscalLibelle: string | null; personne: 'morale' | 'physique' | null; resident: boolean; identifiant: IdentifiantSecours | null;
 }
 // Le modèle des codes du dossier (préfixe par type + nombre de chiffres) et le prochain code libre de chaque type

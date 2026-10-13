@@ -325,6 +325,10 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                   valeur={`${fiche.taxes.nbActifs} code${fiche.taxes.nbActifs > 1 ? 's' : ''} actif${fiche.taxes.nbActifs > 1 ? 's' : ''}${fiche.taxes.nbTotal > fiche.taxes.nbActifs ? ` · ${fiche.taxes.nbTotal - fiche.taxes.nbActifs} désactivé${fiche.taxes.nbTotal - fiche.taxes.nbActifs > 1 ? 's' : ''}` : ''}`} />
                 <LigneConfiguration libelle="Tiers" lien={`/dossiers/${fiche.id}/tiers`} icone="📇"
                   valeur={`${fiche.tiers.fournisseurs.nbActifs} fournisseur${fiche.tiers.fournisseurs.nbActifs > 1 ? 's' : ''} · ${fiche.tiers.clients.nbActifs} client${fiche.tiers.clients.nbActifs > 1 ? 's' : ''}${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal > fiche.tiers.fournisseurs.nbActifs + fiche.tiers.clients.nbActifs ? ` · ${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs} désactivé${fiche.tiers.fournisseurs.nbTotal + fiche.tiers.clients.nbTotal - fiche.tiers.fournisseurs.nbActifs - fiche.tiers.clients.nbActifs > 1 ? 's' : ''}` : ''}`} />
+                {/* F4 : les comptes où LabFlow impute les factures fournisseur envoyées depuis LabFlow. */}
+                {fiche.source === 'labflow' && (
+                  <LigneConfiguration libelle="Comptes d'achat" lien={`/dossiers/${fiche.id}/comptes-achat`} icone="🛒" valeur="Factures envoyées depuis LabFlow : catégories, articles, frais" />
+                )}
               </Carte>
               {/* S6a : la tenue du dossier — les écritures (PLAN-S6 §2) ; S6b : validation et périodes ; S6c : les livres
                   (grand livre, balance, journaux) sur la page Livres, chacun par son onglet ; S7a : lettrage et échéancier. */}
