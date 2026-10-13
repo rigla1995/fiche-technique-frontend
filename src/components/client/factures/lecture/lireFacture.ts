@@ -18,7 +18,7 @@ import type { MoteurFacture } from './chaineOcr';
 import { lireEntete } from './entete';
 import { construireRangees, motsDePdf } from './rangees';
 import type { BlocsTesseract, MorceauPdf } from './rangees';
-import type { Destinataire, EnteteLu, PageLue, SuiviLecture } from './types';
+import type { Destinataire, EnteteLu, MiseEnPage, PageLue, PreparationPage, SuiviLecture } from './types';
 
 /** Refus expliqué (format, fichier illisible) : son message s'affiche tel quel. */
 export class LectureImpossible extends Error {
@@ -159,8 +159,20 @@ export class LectureArretee extends Error {
   name = 'LectureArretee';
 }
 
+/** Étape F5 : ce que la personne a choisi pour chaque page d'image (« Recadrer », « Pivoter »), et la mise en page connue. */
+export interface OptionsLecture {
+  /** Par page : clé `cleDePage(fichier, page)`. */
+  preparations?: Record<string, PreparationPage>;
+  /** Mise en page apprise d'un fournisseur, d'après son matricule (GET /api/factures/mise-en-page). */
+  modele?: (matricule: string) => Promise<MiseEnPage | null>;
+}
+/** Clé d'une page de la facture déposée : rang du fichier (à partir de 0), numéro de page dans ce fichier. */
+export const cleDePage = (fichier: number, page: number) => `${fichier}:${page}`;
+/** Pages d'images lues au plus (une facture plus longue : les 4 premières et la dernière, qui porte les totaux). */
+const PAGES_IMAGES = 5;
+
 export async function lireFacture(
-  fichiers: FichierALire[], client: Destinataire, suivi: SuiviLecture = () => {}, signal?: AbortSignal,
+  fichiers: FichierALire[], client: Destinataire, suivi: SuiviLecture = () => {}, signal?: AbortSignal, opts: OptionsLecture = {},
 ): Promise<EnteteLu & { duree: number }> {
   const verifier = () => { if (signal?.aborted) throw new LectureArretee('Lecture arrêtée.'); };
   const debut = performance.now();
@@ -176,42 +188,43 @@ export async function lireFacture(
   const fin = (e: EnteteLu) => ({ ...e, duree: Math.round((performance.now() - debut) / 100) / 10 });
 
   // PDF avec texte : aucune reconnaissance de caractères.
-  let canvas: HTMLCanvasElement | null = null;
-  let derniere: (() => Promise<HTMLCanvasElement>) | null = null;
-  let place = { fichier: 0, page: 1 }; // place de la dernière page lue, si elle l'est
   if (premier.type === 'application/pdf') {
     suivi('Lecture du PDF…');
     const octets = new Uint8Array(await premier.fichier.arrayBuffer());
-    type LuPdf = { entete: EnteteLu; p1: null; pN: null; n: number } | { entete: null; p1: HTMLCanvasElement; pN: HTMLCanvasElement | null; n: number };
-    const lu = await avecPdf<LuPdf>(octets, async (pdf) => {
+    const entete = await avecPdf<EnteteLu | null>(octets, async (pdf) => {
       const { pages, caracteres } = await textePdf(pdf);
-      if (caracteres >= CARACTERES_MIN) {
-        const entete = situer(lireEntete(pages, 'pdf', client), rangFichier(premier));
-        // Texte présent mais muet (polices sans table de caractères) : la page se lit alors comme une image.
-        if (!muet(entete)) return { entete, p1: null, pN: null, n: pdf.numPages };
-      }
-      verifier();
-      // PDF numérisé : la page 1 en image (et la dernière, rendue tout de suite : le PDF se ferme après).
-      const p1 = await rendrePage(pdf, 1);
-      const pN = pdf.numPages > 1 ? await rendrePage(pdf, pdf.numPages) : null;
-      return { entete: null, p1, pN, n: pdf.numPages };
+      if (caracteres < CARACTERES_MIN) return null;
+      const e = situer(lireEntete(pages, 'pdf', client), rangFichier(premier));
+      // Texte présent mais muet (polices sans table de caractères) : la page se lit alors comme une image.
+      return muet(e) ? null : e;
     });
-    if (lu.entete) return fin(lu.entete);
-    canvas = lu.p1;
-    if (lu.pN) { const pN = lu.pN; derniere = async () => pN; place = { fichier: rangFichier(premier), page: lu.n }; }
-  } else {
-    suivi('Préparation de l\'image…');
-    canvas = await dessinerImage(lisibleEnImage(premier) as Blob);
+    if (entete) return fin(entete);
   }
-  const autre = lisibles.length > 1 ? lisibles[lisibles.length - 1] : null;
-  if (!derniere && autre && autre.type !== 'application/pdf') {
-    derniere = () => dessinerImage(lisibleEnImage(autre) as Blob);
-    place = { fichier: rangFichier(autre), page: 1 };
+
+  // Étape F5 : TOUTES les pages d'images de la facture déposée (photos, pages d'un PDF numérisé), dans l'ordre — 5 au
+  // plus. Les pages d'un PDF sont rendues tout de suite (le PDF se ferme après).
+  suivi('Préparation de l\'image…');
+  const pagesImages: { fichier: number; page: number; dessiner: () => Promise<HTMLCanvasElement> }[] = [];
+  for (const f of lisibles) {
+    verifier();
+    if (f.type === 'application/pdf') {
+      const octets = new Uint8Array(await f.fichier.arrayBuffer());
+      await avecPdf(octets, async (pdf) => {
+        const numeros = [...Array(Math.min(pdf.numPages, PAGES_IMAGES)).keys()].map((x) => x + 1);
+        if (pdf.numPages > PAGES_IMAGES) numeros.splice(PAGES_IMAGES - 1, 1, pdf.numPages);
+        for (const n of numeros) {
+          const c = await rendrePage(pdf, n);
+          pagesImages.push({ fichier: rangFichier(f), page: n, dessiner: async () => c });
+        }
+      });
+    } else {
+      pagesImages.push({ fichier: rangFichier(f), page: 1, dessiner: () => dessinerImage(lisibleEnImage(f) as Blob) });
+    }
   }
+  const aLire = pagesImages.length > PAGES_IMAGES ? [...pagesImages.slice(0, PAGES_IMAGES - 1), pagesImages[pagesImages.length - 1]] : pagesImages;
 
   // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné, et sur arrêt demandé).
   verifier();
-  const page1 = canvas;
   // Arrêt demandé : la lecture rend la main tout de suite (le worker arrêté laisse sa reconnaissance en suspens).
   const arretee = new Promise<never>((_, rejeter) => {
     if (!signal) return;
@@ -227,19 +240,28 @@ export async function lireFacture(
       if (signal?.aborted) stop(); // arrêt demandé pendant le chargement du lecteur
       try {
         const m = moteur(travailleur);
-        let e = situer(await lireImageFacture(sourceCanvas(page1), m, client, (etape, a) => suivi(etape, derniere ? (a ?? 0) * 0.7 : a)), rangFichier(premier));
-        verifier();
-        // Totaux absents de la première page (facture de plusieurs pages ou photos) : la dernière les porte. Si elle ne
-        // se lit pas, la lecture de la première page est gardée.
-        if (derniere && e.totaux.coherents !== true) {
+        const n = aLire.length;
+        let e: EnteteLu | null = null;
+        for (const [k, p] of aLire.entries()) {
+          verifier();
+          const suiviPage: SuiviLecture = (etape, a) => suivi(n > 1 ? `${etape.replace(/…$/, '')} (page ${k + 1} / ${n})…` : etape, (k + (a ?? 0)) / n);
+          const options = {
+            preparation: opts.preparations?.[cleDePage(p.fichier, p.page)],
+            modele: opts.modele,
+            // L'en-tête et les totaux se cherchent sur la première et la dernière page.
+            entete: k === 0 || k === n - 1,
+          };
           try {
-            const d = await lireImageFacture(sourceCanvas(await derniere()), m, client, (etape, a) => suivi(etape, 0.7 + 0.3 * (a ?? 0)));
-            e = ajouterPages(completer(e, d), situer(d, place.fichier, place.page));
+            const d = situer(await lireImageFacture(sourceCanvas(await p.dessiner()), m, client, suiviPage, options), p.fichier, p.page);
+            e = e ? ajouterPages(completer(e, d), d) : d;
           } catch (err) {
+            // Une page qui ne se lit pas n'arrête la lecture que si c'est la première.
             verifier();
-            console.warn('[facture] dernière page illisible', err instanceof Error ? err.name : '');
+            if (!e) throw err;
+            console.warn('[facture] page illisible', err instanceof Error ? err.name : '');
           }
         }
+        if (!e) throw new LectureImpossible("Aucune page lisible : la facture sera jointe, saisissez l'en-tête à la main.");
         return e;
       } finally {
         signal?.removeEventListener('abort', stop);

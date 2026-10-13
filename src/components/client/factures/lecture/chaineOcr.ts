@@ -11,10 +11,12 @@ import type { Source } from '../../../admin/patente/ocr/chaine.ts';
 import { etirer, gris } from '../../../admin/patente/ocr/pixels.ts';
 import type { Pixels } from '../../../admin/patente/ocr/pixels.ts';
 import { lireEntete } from './entete.ts';
-import { colonnesDuTitre, lireLignes } from './lignes.ts';
+import { colonnesDuTitre, lireTableaux } from './lignes.ts';
 import { construireRangees, motsDeTesseract } from './rangees.ts';
 import type { BlocsTesseract } from './rangees.ts';
-import type { Destinataire, EnteteLu, LigneLue, Mot, PageLue, SuiviLecture } from './types.ts';
+import { accentuer, eclaircirZonesFoncees, effacerTraits, egaliserFond, redresserFeuille, tournerPixels, tournerQuart, trouverFeuille } from './image.ts';
+import type { Coins } from './image.ts';
+import type { Destinataire, EnteteLu, LigneLue, MiseEnPage, Mot, PageLue, PreparationPage, SuiviLecture, Trajet } from './types.ts';
 
 export type { Source };
 
@@ -29,18 +31,33 @@ export interface MoteurFacture {
 }
 
 export const ETAPE_OCR = 'Reconnaissance des caractères…';
+/** Préparation de l'image (étape F5, lecture/image.ts) ; l'outil d'essai coupe chaque traitement pour mesurer son effet. */
+export const PREPARATION = { feuille: true, zonesFoncees: true, fond: true, traits: true, nettete: true };
 /** Plus grand côté de la page lue : une facture A4 photographiée à 4000 px est réduite, un scan de 1000 px agrandi. */
 export const COTE_LU = 2400;
 const ANGLE_MIN = 0.004; // en radians (~0,2°) : en dessous, on ne tourne pas
 
-async function normaliser(source: Source): Promise<Pixels> {
+/** L'image en gris normalisé, à la taille de lecture (`COTE_LU`), et son échelle. */
+async function normaliser(source: Source): Promise<{ grise: Pixels; echelle: number }> {
   const echelle = Math.min(3, Math.max(0.3, COTE_LU / Math.max(source.largeur, source.hauteur)));
   const rgba = await source.extraire(
     { left: 0, top: 0, width: source.largeur, height: source.hauteur },
     Math.round(source.largeur * echelle), Math.round(source.hauteur * echelle),
   );
-  return etirer(gris(rgba));
+  return { grise: etirer(gris(rgba)), echelle };
 }
+
+/** Mots lisibles d'une passe (trois lettres au moins, reconnus avec assurance) : jugent une orientation de la page. */
+export const motsLisibles = (mots: readonly Mot[]): number => mots.filter((m) => (m.c ?? 100) >= 70 && /\p{L}{3,}/u.test(m.t)).length;
+/**
+ * Page sans doute couchée ou à l'envers (les trois autres orientations sont alors essayées) : peu de mots lisibles, et
+ * peu au regard des mots reconnus. Mesuré sur le jeu fictif (ESSAI-FACTURES.md §8) : une photo couchée donne 3 à 13 mots
+ * lisibles (moins de 10 % des mots), une photo droite 34 à 77 (plus de 35 %), même floue.
+ */
+export const pageCouchee = (mots: readonly Mot[]): boolean => {
+  const n = motsLisibles(mots);
+  return n < 6 || (n < 20 && n < 0.2 * mots.length);
+};
 
 /** Découpe d'une image en niveaux de gris (coordonnées en pixels, bornées à l'image). */
 export function decouper(image: Pixels, x: number, y: number, l: number, h: number): Pixels {
@@ -74,6 +91,8 @@ export function completer(a: EnteteLu, b: EnteteLu): EnteteLu {
     numero: a.numero ?? b.numero,
     date: a.date ?? b.date,
     totaux: totauxB ? b.totaux : a.totaux,
+    miseEnPage: a.miseEnPage ?? b.miseEnPage ?? null,
+    miseEnPageConnue: Boolean(a.miseEnPageConnue || b.miseEnPageConnue),
   };
   // Les avertissements de la première lecture qui ne valent plus (numéro, date, totaux retrouvés) sont retirés.
   r.avertissements = a.avertissements.filter((m) => !((/^Numéro/.test(m) && r.numero) || (/^Date/.test(m) && r.date)
@@ -93,21 +112,70 @@ export function ajouterPages(a: EnteteLu, b: EnteteLu): EnteteLu {
     ...a,
     pages: [...a.pages, ...b.pages],
     lignesFacture: [...a.lignesFacture, ...b.lignesFacture.map((l) => ({ ...l, cadre: { ...l.cadre, page: l.cadre.page + decalage } }))],
+    miseEnPage: a.miseEnPage ?? b.miseEnPage ?? null,
+    miseEnPageConnue: Boolean(a.miseEnPageConnue || b.miseEnPageConnue),
   };
 }
 
-/** Une page d'image → ses rangées (coordonnées de la page lue, redressée), et l'image lue (pour la passe 2). */
+/**
+ * Une page d'image → ses rangées (coordonnées de la page lue, redressée), l'image lue (pour les passes suivantes) et son
+ * trajet depuis l'image d'origine. Étape F5 : la feuille d'une photo est recadrée (coins choisis — « Recadrer » — ou
+ * trouvés seuls), tournée d'un quart de tour si demandé (« Pivoter ») ou si la page est illisible telle quelle, puis
+ * redressée ; les zones foncées sont éclaircies et l'ombre égalisée.
+ */
 export async function lirePageImage(
-  source: Source, moteur: MoteurFacture, numero = 1, suivi: SuiviLecture = () => {}, debut = 0, part = 1,
-): Promise<{ page: PageLue; grise: Pixels; angle: number }> {
+  source: Source, moteur: MoteurFacture, numero = 1, suivi: SuiviLecture = () => {}, debut = 0, part = 1, preparation: PreparationPage = {},
+): Promise<{ page: PageLue; grise: Pixels; angle: number; trajet: Trajet }> {
   suivi(ETAPE_OCR, debut + part * 0.05);
-  let grise = await normaliser(source);
-  const angle = await moteur.angle(grise);
-  if (Math.abs(angle) >= ANGLE_MIN) grise = await normaliser(await source.tourner(angle));
-  suivi(ETAPE_OCR, debut + part * 0.25);
-  const { mots, lignes } = motsDeTesseract(await moteur.page(grise));
+  const { grise: reduite, echelle } = await normaliser(source);
+  let coins: Coins | null = null;
+  let coinsAuto = false;
+  if (preparation.coins !== undefined) {
+    coins = preparation.coins && preparation.coins.length === 4
+      ? preparation.coins.map(([fx, fy]) => ({ x: fx * reduite.width, y: fy * reduite.height })) as Coins : null;
+  } else if (PREPARATION.feuille) {
+    coins = trouverFeuille(reduite);
+    coinsAuto = Boolean(coins);
+  }
+  const feuille = coins ? redresserFeuille(reduite, coins) : reduite;
+  const essayer = async (quarts: number) => {
+    const tournee = tournerQuart(feuille, quarts);
+    const angle = await moteur.angle(tournee);
+    const base = { largeur: source.largeur, hauteur: source.hauteur, coins: coins ? coins.map((p) => [p.x, p.y] as [number, number]) : null, coinsAuto, quarts, angle: 0 };
+    let grise = tournee;
+    let trajet: Trajet = { ...base, rotation: 'pixels', echelle, tailles: { reduite: [reduite.width, reduite.height], feuille: [feuille.width, feuille.height], quarts: [tournee.width, tournee.height], lue: [tournee.width, tournee.height] } };
+    if (Math.abs(angle) >= ANGLE_MIN) {
+      if (coins || quarts) {
+        grise = tournerPixels(tournee, angle);
+        trajet = { ...trajet, angle, tailles: { ...trajet.tailles, lue: [grise.width, grise.height] } };
+      } else {
+        // Page entière dans son sens : tournée depuis l'image d'origine (meilleure qualité).
+        const tourneeSource = await source.tourner(angle);
+        const n = await normaliser(tourneeSource);
+        grise = n.grise;
+        trajet = { ...base, angle, rotation: 'source', echelle: n.echelle, tailles: { reduite: [reduite.width, reduite.height], feuille: [reduite.width, reduite.height], quarts: [tourneeSource.largeur, tourneeSource.hauteur], lue: [grise.width, grise.height] } };
+      }
+    }
+    if (PREPARATION.zonesFoncees) grise = eclaircirZonesFoncees(grise);
+    if (PREPARATION.fond) grise = etirer(egaliserFond(grise));
+    // Netteté : pour une photo (feuille recadrée) ou une petite image agrandie — un scan propre n'en a pas besoin (le
+    // bruit du papier renforcé gênait la lecture des noms).
+    if (PREPARATION.nettete && (coins || echelle > 1.6)) grise = accentuer(grise);
+    suivi(ETAPE_OCR, debut + part * 0.25);
+    const { mots, lignes } = motsDeTesseract(await moteur.page(grise));
+    return { grise, angle, trajet, mots, lignes };
+  };
+  let lu = await essayer(preparation.quarts ?? 0);
+  // Page illisible telle quelle (photo couchée ou à l'envers) : les autres orientations, la plus lisible gardée.
+  if (preparation.quarts === undefined && pageCouchee(lu.mots)) {
+    for (const q of [1, 3, 2]) {
+      const autre = await essayer(q);
+      if (motsLisibles(autre.mots) > motsLisibles(lu.mots)) lu = autre;
+      if (!pageCouchee(lu.mots)) break;
+    }
+  }
   suivi(ETAPE_OCR, debut + part);
-  return { page: { largeur: grise.width, hauteur: grise.height, rangees: construireRangees(mots, numero, lignes) }, grise, angle };
+  return { page: { largeur: lu.grise.width, hauteur: lu.grise.height, rangees: construireRangees(lu.mots, numero, lu.lignes) }, grise: lu.grise, angle: lu.angle, trajet: lu.trajet };
 }
 
 /** Passe 2 : les zones de la page, chacune lue comme un bloc ; les mots sont remis dans les coordonnées de la page. */
@@ -181,22 +249,44 @@ export function lignesDouteuses(e: EnteteLu): boolean {
   return e.totaux.ht !== null && Math.abs(somme - e.totaux.ht) > 0.011 && Math.abs(somme - (e.totaux.ht + (e.totaux.remise ?? 0))) > 0.011;
 }
 
+/** Étape F5 : options de lecture d'une page d'image. */
+export interface OptionsImage {
+  /** « Recadrer », « Pivoter » ; absent : la feuille et l'orientation se cherchent seules. */
+  preparation?: PreparationPage;
+  /** Mise en page apprise du fournisseur, d'après son matricule lu (null : aucune). */
+  modele?: (matricule: string) => Promise<MiseEnPage | null>;
+  /** Passe par zones de l'en-tête et des totaux (false : page du milieu d'une facture longue). */
+  entete?: boolean;
+}
+
 /**
- * Lit une image de facture : passe 1 ; passe 2 par zones si l'en-tête est incomplet ; passe « tableau » si les lignes
- * sont douteuses (étape F3) — la meilleure lecture des lignes est gardée. `suivi` reçoit un avancement de 0 à 1.
+ * Lit une image de facture : passe 1 ; passe 2 par zones si l'en-tête est incomplet ; si les lignes sont douteuses, la
+ * mise en page connue du fournisseur (étape F5), puis la passe « tableau » (étape F3) — la meilleure lecture des lignes
+ * est gardée. `suivi` reçoit un avancement de 0 à 1.
  */
-export async function lireImageFacture(source: Source, moteur: MoteurFacture, client: Destinataire = {}, suivi: SuiviLecture = () => {}): Promise<EnteteLu> {
-  const { page, grise } = await lirePageImage(source, moteur, 1, suivi, 0, 0.5);
+export async function lireImageFacture(source: Source, moteur: MoteurFacture, client: Destinataire = {}, suivi: SuiviLecture = () => {}, options: OptionsImage = {}): Promise<EnteteLu> {
+  const { page, grise, trajet } = await lirePageImage(source, moteur, 1, suivi, 0, 0.5, options.preparation);
   let entete = lireEntete([page], 'ocr', client);
-  if (incomplete(entete)) {
+  if (options.entete !== false && incomplete(entete)) {
     const zones = await lireZones(grise, moteur, 1, suivi, 0.5, 0.3);
     entete = completer(entete, lireEntete([zones], 'ocr', client));
   }
+  // Étape F5 : la mise en page apprise du fournisseur (par son matricule lu) relit les rangées de la page.
+  const modele = entete.matricule && options.modele && lignesDouteuses(entete)
+    ? await options.modele(entete.matricule.valeur).catch(() => null) : null;
+  if (modele) {
+    const t = lireTableaux([page], 'ocr', modele);
+    if (qualite(t.lignes) > qualite(entete.lignesFacture)) entete = { ...entete, lignesFacture: t.lignes, miseEnPageConnue: t.modeleEmploye };
+  }
   if (lignesDouteuses(entete)) {
     suivi(ETAPE_OCR, 0.85);
-    const tableau = lireLignes([await lireTableau(grise, moteur, page)], 'ocr');
-    if (qualite(tableau) > qualite(entete.lignesFacture)) entete = { ...entete, lignesFacture: tableau };
+    // Le tableau relu d'un bloc, sans son quadrillage : la passe « page entière » garde les traits (sans eux, son
+    // analyse de mise en page perdait les colonnes étroites d'un tableau — quantité, TVA).
+    const t = lireTableaux([await lireTableau(PREPARATION.traits ? effacerTraits(grise) : grise, moteur, page)], 'ocr', modele);
+    if (qualite(t.lignes) > qualite(entete.lignesFacture)) {
+      entete = { ...entete, lignesFacture: t.lignes, miseEnPageConnue: t.modeleEmploye, miseEnPage: entete.miseEnPage ?? t.miseEnPage };
+    }
   }
   suivi(ETAPE_OCR, 1);
-  return entete;
+  return { ...entete, pages: entete.pages.map((p) => ({ ...p, trajet })) };
 }

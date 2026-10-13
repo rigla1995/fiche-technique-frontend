@@ -84,9 +84,57 @@ export interface EnteteLu {
    * et place dans la facture déposée (rang du fichier à partir de 0, numéro de page dans ce fichier). */
   pages: PageVue[];
   avertissements: string[];
+  /** Étape F5 : mise en page du tableau vue par cette lecture (titre des colonnes lu), à apprendre à la validation. */
+  miseEnPage?: MiseEnPage | null;
+  /** Étape F5 : la mise en page apprise du fournisseur a servi à lire les lignes. */
+  miseEnPageConnue?: boolean;
 }
 
-export interface PageVue { largeur: number; hauteur: number; fichier: number; page: number }
+/** Genre d'une colonne du tableau d'une facture (lecture/lignes.ts). */
+export type GenreColonne = 'num' | 'ref' | 'des' | 'unite' | 'qte' | 'pu' | 'puttc' | 'remise' | 'tva' | 'montant' | 'ttc';
+
+/**
+ * Étape F5 : mise en page du tableau d'un fournisseur — ses colonnes (genre, début et fin du TITRE) en fractions de la
+ * largeur de la page. Apprise à la validation d'une facture lue (partagée entre les comptes, par matricule fiscal :
+ * réponse 12 du client), elle sert à lire une photo dont le titre des colonnes est mal reconnu.
+ */
+export interface MiseEnPage { colonnes: { genre: GenreColonne; x0: number; x1: number }[] }
+
+export interface PageVue {
+  largeur: number; hauteur: number; fichier: number; page: number;
+  /** Étape F5 : page lue sur une IMAGE — le chemin de l'image d'origine à la page lue (feuille recadrée, quarts de tour,
+   * redressement), pour replacer une ligne sur l'image affichée. Absent pour le texte d'un PDF. */
+  trajet?: Trajet;
+}
+
+/**
+ * Étape F5 (lecture/image.ts) : de l'image d'origine (`largeur` × `hauteur`, en pixels de l'image donnée à la lecture) à
+ * la page lue. Deux chemins : `rotation: 'source'` — l'image d'origine tournée de `angle`, puis réduite à `echelle` ;
+ * `'pixels'` — réduite à `echelle`, feuille `coins` ramenée à son rectangle, `quarts` quarts de tour, puis tournée de
+ * `angle`. Les tailles intermédiaires sont gardées (pas de calcul d'arrondi à refaire).
+ */
+export interface Trajet {
+  largeur: number;
+  hauteur: number;
+  rotation: 'source' | 'pixels';
+  echelle: number;
+  /** Coins de la feuille dans l'image réduite (haut gauche, haut droit, bas droit, bas gauche), ou null. */
+  coins: [number, number][] | null;
+  /** La feuille a-t-elle été trouvée seule (sinon, coins choisis : « Recadrer ») ? */
+  coinsAuto: boolean;
+  quarts: number;
+  angle: number;
+  /** Tailles : image réduite, feuille redressée, après les quarts de tour, page lue. */
+  tailles: { reduite: [number, number]; feuille: [number, number]; quarts: [number, number]; lue: [number, number] };
+}
+
+/** Étape F5 : ce que l'on choisit pour une page d'image (« Recadrer », « Pivoter ») avant de la relire. */
+export interface PreparationPage {
+  /** Coins de la feuille en FRACTIONS de l'image d'origine (0 à 1) ; null : pas de recadrage ; absent : recherche seule. */
+  coins?: [number, number][] | null;
+  /** Quarts de tour dans le sens des aiguilles d'une montre ; absent : orientation cherchée seule si la page est illisible. */
+  quarts?: number;
+}
 
 /** Ligne du tableau d'une facture (étape F3). Montants HT ; `remise` et `tauxTva` en %. */
 export interface LigneLue {
