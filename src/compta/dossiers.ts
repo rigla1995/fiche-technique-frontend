@@ -18,6 +18,13 @@ export interface Regime {
 }
 export interface Exercice { debut: string; fin: string }
 export interface Periode { debut: string; fin: string; etat: 'ouverte' | 'close' }
+// X1 : l'exercice suivant d'un dossier — ses dates, son millésime, s'il peut s'ouvrir (`bloquant` : l'exercice ouvert qui
+// l'empêche : deux au plus) et la fenêtre de son ouverture automatique (`auto` : une écriture datée de `debut` à `jusqua`
+// l'ouvre à l'enregistrement).
+export interface ExerciceSuivant {
+  debut: string; fin: string; millesime: number | null; possible: boolean;
+  bloquant: { id: number; debut: string; fin: string; millesime: number } | null; auto: boolean; jusqua: string | null;
+}
 export type EtatDossier = 'actif' | 'archive';
 export type EtatAbonnement = 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
 // S5a : `configurer` (plan de comptes) = titulaire ou gérant de niveau Complet (réponse 6 du client du 07/10) ; S5c :
@@ -66,8 +73,13 @@ export interface ResumeFiscalite {
 export interface FicheDossier {
   id: number; espace: EspaceDossiers; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow';
   identite: IdentiteLegale; identiteComplete: boolean; regime: Regime; pays: string; devise: string; decimales: number;
-  exercice: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; periodes: Periode[] } | null;
-  exercices: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos' }[];
+  // X1 : l'exercice en cours (celui du jour, sinon le plus récent des ouverts), tous les exercices, les exercices ouverts
+  // (deux au plus) avec leurs périodes, et l'exercice suivant (bouton « Ouvrir », ouverture automatique).
+  exercice: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number; periodes: Periode[] } | null;
+  exercices: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number }[];
+  // Facultatifs : un serveur d'avant X1 (déploiement en cours) ne les envoie pas.
+  exercicesOuverts?: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number; periodes: Periode[] }[];
+  suivant?: ExerciceSuivant | null;
   acces: { role: 'titulaire' | 'gerant'; niveau: string; nom: string | null; email: string | null }[];
   droits: Droits; mouvemente: boolean; creeLe: string; modifieLe: string; etatAbonnement: EtatAbonnement;
   // S5a : résumé de la configuration (carte « Configuration ») — plan de comptes copié du paquet pays.

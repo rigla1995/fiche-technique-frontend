@@ -16,8 +16,9 @@ export interface Periode {
 export interface PeriodesReponse {
   dossier: { id: number; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow'; espace: EspaceDossiers };
   droits: Droits;
-  exercice: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; periodes: Periode[] } | null;
-  exercices: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos' }[];
+  // X1 : l'exercice affiché (celui demandé, sinon celui du jour) et tous les exercices du dossier, avec leur millésime.
+  exercice: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number; periodes: Periode[] } | null;
+  exercices: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number }[];
   nb: NbEcritures;
   etatAbonnement: EtatAbonnement;
 }
@@ -30,8 +31,9 @@ export interface CentralisationReponse {
 }
 
 const chemin = (dossierId: number | string, suite = '') => `/api/compta/dossiers/${encodeURIComponent(String(dossierId))}/periodes${suite}`;
-export const lirePeriodes = async (dossierId: number | string): Promise<PeriodesReponse> => {
-  const { data } = await api.get(chemin(dossierId));
+// X1 : `exerciceId` — l'exercice choisi (vide : celui du jour).
+export const lirePeriodes = async (dossierId: number | string, exerciceId: number | null = null): Promise<PeriodesReponse> => {
+  const { data } = await api.get(chemin(dossierId), { params: exerciceId ? { exercice: String(exerciceId) } : {} });
   return data as PeriodesReponse;
 };
 export const lireCentralisation = async (dossierId: number, periodeId: number): Promise<CentralisationReponse> => {

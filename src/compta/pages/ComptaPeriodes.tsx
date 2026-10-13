@@ -5,7 +5,7 @@ import BoutonAide from '../BoutonAide';
 import { fmtMoisAnnee, messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import { fmtJour, fmtMontant, validerPeriode } from '../ecritures';
 import { LIBELLES_ETAT_PERIODE, clorePeriode, lireCentralisation, lirePeriodes, rouvrirPeriode, telechargerJournalGeneral, type CentralisationReponse, type Periode, type PeriodesReponse } from '../periodes';
-import { bouton, pastille, petit } from '../styles';
+import { bouton, inp, lbl, pastille, petit } from '../styles';
 
 // « Périodes » (LabFlow Compta, étape S6b ; labflow-reprise/achats-compta/PLAN-S6.md §2, §4 ; réponse 5 du client du
 // 08/10 : clôture par le titulaire ou Complet quand tout est validé, réouverture par le titulaire seul) : les mois de
@@ -14,7 +14,8 @@ import { bouton, pastille, petit } from '../styles';
 // « Rouvrir » (titulaire), « Journal général (PDF) » (pages numérotées, centralisation, écritures validées) ; une
 // période dépliée montre sa centralisation (totaux par journal). Les droits viennent du serveur ; un dossier archivé ou
 // une comptabilité non active se consultent sans rien changer. Chaque écriture rend la page entière, que l'écran
-// remplace ; un refus sur un état périmé (404, 409) relit la page (convention de S3c).
+// remplace ; un refus sur un état périmé (404, 409) relit la page (convention de S3c). X1 : deux exercices peuvent être
+// ouverts — « Exercice » choisit lequel (celui du jour par défaut) ; une action rend la page de l'exercice de sa période.
 type Role = 'titulaire' | 'gerant';
 const mono = 'ui-monospace, monospace';
 const pluriel = (n: number, un: string, des: string) => `${n} ${n > 1 ? des : un}`;
@@ -37,14 +38,16 @@ function ComptaPeriodes({ dossierId }: { dossierId?: string }) {
   // Les périodes dépliées et leur centralisation (lue à la demande ; relue après une action qui la change).
   const [depliees, setDepliees] = useState<Set<number>>(() => new Set());
   const [details, setDetails] = useState<Map<number, CentralisationReponse | 'lecture' | 'erreur'>>(() => new Map());
+  // X1 : l'exercice choisi (null : celui du jour, choisi par le serveur).
+  const [exerciceId, setExerciceId] = useState<number | null>(null);
   const tour = useRef(0);
 
   const charger = useCallback(() => {
     const moi = ++tour.current;
-    lirePeriodes(dossierId || '')
+    lirePeriodes(dossierId || '', exerciceId)
       .then((r) => { if (moi === tour.current) { setEtatPx(r); setEtat('pret'); } })
       .catch((err) => { if (moi === tour.current) setEtat(statutDe(err) === 404 ? 'introuvable' : 'erreur'); });
-  }, [dossierId]);
+  }, [dossierId, exerciceId]);
   useEffect(() => { charger(); return () => { tour.current += 1; }; }, [charger]);
 
   const lireDetail = useCallback((id: number) => {
@@ -103,7 +106,7 @@ function ComptaPeriodes({ dossierId }: { dossierId?: string }) {
     if (!ok) return;
     await agir(async () => {
       const r = await validerPeriode(etatPx.dossier.id, p.id);
-      const page = await lirePeriodes(etatPx.dossier.id);
+      const page = await lirePeriodes(etatPx.dossier.id, etatPx.exercice?.id ?? null);
       appliquer(page, `${pluriel(r.validees, 'écriture validée', 'écritures validées')} pour ${fmtMoisAnnee(p.debut)} (définitif).`, [p.id]);
       if (depliees.has(p.id)) setTimeout(() => lireDetail(p.id), 0);
     }, 'Validation impossible, réessayez.');
@@ -164,7 +167,7 @@ function ComptaPeriodes({ dossierId }: { dossierId?: string }) {
           </div>
           <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.85rem', margin: 0 }}>
             {etatPx
-              ? `${pluriel(etatPx.nb.brouillard, 'écriture en brouillard', 'écritures en brouillard')} · ${pluriel(etatPx.nb.validees, 'validée', 'validées')}${etatPx.exercice ? ` · exercice du ${fmtJour(etatPx.exercice.debut)} au ${fmtJour(etatPx.exercice.fin)} · ${pluriel(nbCloses, 'période close', 'périodes closes')} sur ${periodes.length}` : ' · aucun exercice'}`
+              ? `${pluriel(etatPx.nb.brouillard, 'écriture en brouillard', 'écritures en brouillard')} · ${pluriel(etatPx.nb.validees, 'validée', 'validées')}${etatPx.exercice ? ` · exercice ${etatPx.exercice.millesime} (du ${fmtJour(etatPx.exercice.debut)} au ${fmtJour(etatPx.exercice.fin)}) · ${pluriel(nbCloses, 'période close', 'périodes closes')} sur ${periodes.length}` : ' · aucun exercice'}`
               : 'Validation, clôture et réouverture des périodes mensuelles ; journal général imprimable'}
           </p>
         </div>
@@ -217,10 +220,18 @@ function ComptaPeriodes({ dossierId }: { dossierId?: string }) {
           {info && <div role="status" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', color: '#166534', fontWeight: 600 }}>{info}</div>}
           {erreur && <div role="alert" style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', color: '#dc2626' }}>{erreur}</div>}
 
+          {etatPx.exercices.length > 1 && (
+            <div style={{ marginBottom: 14 }}>
+              <label htmlFor="fp-exercice" style={lbl}>Exercice</label>
+              <select id="fp-exercice" value={etatPx.exercice?.id ?? ''} onChange={(e) => { setExerciceId(Number(e.target.value)); setInfo(''); setErreur(''); setDepliees(new Set()); }} style={{ ...inp, width: 'auto', minWidth: 120 }}>
+                {etatPx.exercices.map((x) => <option key={x.id} value={x.id}>{x.millesime} — du {fmtJour(x.debut)} au {fmtJour(x.fin)}{x.etat === 'clos' ? ' (clos)' : ''}</option>)}
+              </select>
+            </div>
+          )}
           {etatPx.exercice && (
             <div style={cadre}>
               <div style={enTeteCadre}>
-                <span style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.92rem' }}>Exercice du {fmtJour(etatPx.exercice.debut)} au {fmtJour(etatPx.exercice.fin)} · {pluriel(periodes.length, 'période mensuelle', 'périodes mensuelles')}</span>
+                <span style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.92rem' }}>Exercice {etatPx.exercice.millesime} · du {fmtJour(etatPx.exercice.debut)} au {fmtJour(etatPx.exercice.fin)} · {pluriel(periodes.length, 'période mensuelle', 'périodes mensuelles')}</span>
                 <span style={{ fontSize: '0.76rem', color: '#64748b' }}>Valider = définitif · une période se clôt quand tout est validé · le journal général se lit sur les écritures validées</span>
               </div>
               {periodes.map((p) => {
