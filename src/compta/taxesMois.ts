@@ -20,6 +20,8 @@ export interface EtatTva {
   creditReporte: string; resultat: string; aPayer: string; creditAReporter: string; nbBrouillard: number;
   sansCode: { nb: number; collectee: string; deductible: string };
   compteCredit: string | null; creditOuverture: string;
+  // X1 : le crédit d'ouverture vient de l'exercice précédent non clos (solde de fin du compte de crédit, provisoire).
+  creditProvisoire?: { millesime: number; fin: string } | null;
 }
 export interface Probleme { code: string; message: string }
 export interface Operation {

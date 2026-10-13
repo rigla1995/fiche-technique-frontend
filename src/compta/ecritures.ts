@@ -1,6 +1,6 @@
 import api from '../api/client';
 import { telechargerClasseur, televerserClasseur } from './classeurs';
-import type { Droits, EspaceDossiers, EtatAbonnement, EtatDossier } from './dossiers';
+import type { Droits, EspaceDossiers, EtatAbonnement, EtatDossier, ExerciceSuivant } from './dossiers';
 import type { CompteCourt, TypeJournal } from './journaux';
 import type { Assiette, TypeTaxe } from './taxes';
 import type { TypeTiers } from './tiers';
@@ -16,7 +16,9 @@ export interface JournalCourt { id: number; code: string; libelle: string; type:
 export interface TaxeCourte { id: number; code: string; libelle: string; type: TypeTaxe; typeLibelle: string; taux: string | null; montant: string | null; assiette: Assiette; assietteLibelle: string; actif: boolean }
 export interface TiersCourt { id: number; type: TypeTiers; typeLibelle: string; code: string; nom: string; compteId: number; delaiPaiement: number; retenue: { id: number; code: string; taux: string | null; actif: boolean; selonRegime?: boolean } | null }
 export interface PeriodeExercice { id: number; debut: string; fin: string; etat: 'ouverte' | 'close' }
-export interface ExerciceOuvert { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; periodes: PeriodeExercice[] }
+// X1 : `millesime` — l'année des numéros définitifs de l'exercice (AC-2027-000001), unique dans le dossier.
+export interface ExerciceOuvert { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number; periodes: PeriodeExercice[] }
+export type { ExerciceSuivant };
 export interface LigneEcriture {
   id: number; rang: number; compte: { id: number; numero: string; libelle: string; nature: string }; tiers: { id: number; type: TypeTiers; code: string; nom: string } | null;
   libelle: string | null; debit: string; credit: string; taxe: { id: number; code: string; libelle: string; type: TypeTaxe } | null; echeance: string | null;
@@ -25,6 +27,8 @@ export interface LigneEcriture {
 }
 export interface Ecriture {
   id: number; numeroProvisoire: string; numero: string | null; date: string; dateReelle: string | null; journal: { id: number; code: string; libelle: string; type: TypeJournal };
+  // X1 : l'exercice de l'écriture (la liste suit l'exercice d'une écriture enregistrée ailleurs, ou qui vient de l'ouvrir).
+  exerciceId?: number;
   reference: string; libelle: string; etat: EtatEcriture; etatLibelle: string; total: string; origine: 'saisie' | 'import' | 'contrepassation' | 'labflow'; origineId: number | null;
   // F4 (factures fournisseur) : la facture LabFlow d'une écriture d'achat venue du pont (sa pièce se consulte d'ici).
   factureId?: number | null;
@@ -40,10 +44,15 @@ export interface PeriodeFiltree { id: number; debut: string; fin: string; etat: 
 export interface EcrituresReponse {
   dossier: { id: number; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow'; espace: EspaceDossiers };
   droits: Droits;
+  // X1 : l'exercice affiché (celui demandé, sinon celui du jour) ; tous les exercices du dossier avec leurs périodes ;
+  // l'exercice suivant.
   exercice: ExerciceOuvert | null;
+  // Facultatifs : un serveur d'avant X1 (déploiement en cours) ne les envoie pas.
+  exercices?: ExerciceOuvert[];
+  suivant?: ExerciceSuivant | null;
   nb: NbEcritures;
   periode: PeriodeFiltree | null;
-  filtres: { journalId: number | null; periodeId: number | null; etat: EtatEcriture | ''; q: string };
+  filtres: { journalId: number | null; periodeId: number | null; exerciceId: number | null; etat: EtatEcriture | ''; q: string };
   ecritures: Ecriture[]; total: number; page: number; limite: number;
   journaux: JournalCourt[];
   comptes: CompteCourt[];
@@ -70,12 +79,13 @@ export interface AideReponse { ligne: LigneEnvoyee; compte: CompteCourt; taxe: T
 
 // 25 par page (comme les tiers), « Afficher plus » pour les suivantes.
 export const PAGE_ECRITURES = 25;
-export interface ParametresEcritures { journalId?: number | null; periodeId?: number | null; etat?: EtatEcriture | ''; q?: string; page?: number; limite?: number }
+export interface ParametresEcritures { journalId?: number | null; periodeId?: number | null; exerciceId?: number | null; etat?: EtatEcriture | ''; q?: string; page?: number; limite?: number }
 const chemin = (dossierId: number | string, suite = '') => `/api/compta/dossiers/${encodeURIComponent(String(dossierId))}/ecritures${suite}`;
 export const lireEcritures = async (dossierId: number | string, p: ParametresEcritures = {}): Promise<EcrituresReponse> => {
   const params: Record<string, string> = {};
   if (p.journalId) params.journal = String(p.journalId);
   if (p.periodeId) params.periode = String(p.periodeId);
+  if (p.exerciceId) params.exercice = String(p.exerciceId);
   if (p.etat) params.etat = p.etat;
   if (p.q) params.q = p.q;
   if (p.page) params.page = String(p.page);
@@ -215,12 +225,52 @@ export const periodeDe = (periodes: PeriodeExercice[], date: string) => periodes
 export const periodeOuverteSuivante = (periodes: PeriodeExercice[], close: PeriodeExercice) => periodes.find((p) => p.debut > close.fin && p.etat === 'ouverte') || null;
 // Libellé d'une période : « mars 2026 » (une période partielle garde son mois).
 export const libellePeriode = (p: PeriodeExercice) => new Date(`${p.debut}T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-// Message d'erreur d'une date d'écriture, ou null : dans une période ouverte de l'exercice ouvert (le serveur revérifie).
-export const controlerDate = (date: string, exercice: ExerciceOuvert | null): string | null => {
+// X1 : le CALENDRIER de la saisie — les exercices ouverts (deux au plus, du plus ancien au plus récent) et l'exercice
+// suivant. Une écriture se date dans une période ouverte de l'un d'eux, ou, dans la fenêtre de l'ouverture automatique,
+// à une date déjà passée de l'exercice suivant (il s'ouvre à l'enregistrement). Le serveur décide.
+export interface CalendrierSaisie { ouverts: ExerciceOuvert[]; suivant: ExerciceSuivant | null }
+export const calendrierDe = (etat: { exercice: ExerciceOuvert | null; exercices?: ExerciceOuvert[]; suivant?: ExerciceSuivant | null }): CalendrierSaisie => ({
+  ouverts: (etat.exercices ?? (etat.exercice ? [etat.exercice] : [])).filter((x) => x.etat === 'ouvert').sort((a, b) => (a.debut < b.debut ? -1 : 1)),
+  suivant: etat.suivant ?? null,
+});
+// L'exercice ouvert qui contient une date, ou null.
+export const exerciceDe = (cal: CalendrierSaisie, date: string) => cal.ouverts.find((x) => date >= x.debut && date <= x.fin) || null;
+// La date ouvre-t-elle l'exercice suivant (hors des exercices ouverts, dans la fenêtre de l'ouverture automatique) ?
+export const ouvreLeSuivant = (cal: CalendrierSaisie, date: string) => {
+  const s = cal.suivant;
+  return !exerciceDe(cal, date) && !!s && s.auto && !!s.jusqua && date >= s.debut && date <= s.jusqua;
+};
+// Les bornes du champ date : du début du plus ancien exercice ouvert à la fin du plus récent (ou au jour, quand l'exercice
+// suivant peut s'ouvrir).
+export const bornesSaisie = (cal: CalendrierSaisie): { min?: string; max?: string } => {
+  const dernier = cal.ouverts[cal.ouverts.length - 1];
+  return { min: cal.ouverts[0]?.debut, max: cal.suivant?.auto && cal.suivant.jusqua ? cal.suivant.jusqua : dernier?.fin };
+};
+const texteExercices = (cal: CalendrierSaisie) => cal.ouverts.map((x) => `du ${fmtJour(x.debut)} au ${fmtJour(x.fin)}`).join(' ou ');
+// Ce que la fenêtre dit d'une date : sa période, sinon l'exercice qu'elle ouvrira, sinon pourquoi elle est hors des exercices.
+export const texteDate = (cal: CalendrierSaisie, date: string) => {
+  const x = exerciceDe(cal, date);
+  const p = x ? periodeDe(x.periodes, date) : null;
+  if (p) return { ton: p.etat === 'ouverte' ? 'ok' as const : 'refus' as const, texte: `Période : ${libellePeriode(p)}${p.etat === 'ouverte' ? '' : ' (close)'}${cal.ouverts.length > 1 && x ? ` · exercice ${x.millesime}` : ''}` };
+  if (ouvreLeSuivant(cal, date) && cal.suivant) return { ton: 'ouverture' as const, texte: `Cette date ouvrira l'exercice ${cal.suivant.millesime ?? ''} (du ${fmtJour(cal.suivant.debut)} au ${fmtJour(cal.suivant.fin)}) à l'enregistrement.` };
+  return { ton: 'hors' as const, texte: cal.ouverts.length ? `Hors des exercices ouverts (${texteExercices(cal)})` : 'Aucun exercice ouvert' };
+};
+// Message d'erreur d'une date d'écriture, ou null : dans une période ouverte d'un exercice ouvert, ou une date qui ouvre
+// l'exercice suivant (le serveur revérifie).
+export const controlerDate = (date: string, cal: CalendrierSaisie): string | null => {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return 'Indiquez la date de l\'écriture.';
-  if (!exercice) return 'Aucun exercice ouvert dans ce dossier.';
-  const p = periodeDe(exercice.periodes, date);
-  if (!p) return `La date doit être dans l'exercice ouvert (du ${fmtJour(exercice.debut)} au ${fmtJour(exercice.fin)}).`;
+  if (!cal.ouverts.length) return 'Aucun exercice ouvert dans ce dossier.';
+  const x = exerciceDe(cal, date);
+  if (!x) {
+    if (ouvreLeSuivant(cal, date)) return null;
+    const s = cal.suivant;
+    const plus = s && s.possible && date >= s.debut && date <= s.fin
+      ? ` L'exercice suivant (du ${fmtJour(s.debut)} au ${fmtJour(s.fin)}) s'ouvrira de lui-même une fois cette date passée, ou depuis la fiche du dossier.`
+      : '';
+    return `La date doit être dans ${cal.ouverts.length > 1 ? 'un exercice ouvert' : 'l\'exercice ouvert'} (${texteExercices(cal)}).${plus}`;
+  }
+  const p = periodeDe(x.periodes, date);
+  if (!p) return `Aucune période mensuelle pour le ${fmtJour(date)} : vérifiez l'exercice (fiche du dossier).`;
   if (p.etat !== 'ouverte') return `La période ${libellePeriode(p)} est close.`;
   return null;
 };

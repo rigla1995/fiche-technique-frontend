@@ -450,7 +450,7 @@ function ComptaDeclaration({ dossierId }: { dossierId?: string }) {
                   <Rangee libelle="− TVA déductible sur biens et services" valeur={montant(e.tva.deductibleBs)} />
                   <Rangee libelle="− TVA déductible sur immobilisations" valeur={montant(e.tva.deductibleImmo)} />
                   {nonNul(e.tva.retenuesSubies) && <Rangee libelle="− Retenues de TVA subies" valeur={montant(e.tva.retenuesSubies)} />}
-                  <Rangee libelle="− Crédit reporté" valeur={montant(e.tva.creditReporte)} />
+                  <Rangee libelle={`− Crédit reporté${e.tva.creditProvisoire && e.exercices.find((x) => x.id === e.exercice.id)?.periodes[0]?.id === e.periode.id ? ` (provisoire : fin de l'exercice ${e.tva.creditProvisoire.millesime}, non clos)` : ''}`} valeur={montant(e.tva.creditReporte)} />
                   <Rangee fort libelle={signe(e.tva.resultat) > 0n ? 'TVA à payer' : signe(e.tva.resultat) < 0n ? 'Crédit à reporter' : 'TVA nulle'} valeur={montant(signe(e.tva.resultat) > 0n ? e.tva.aPayer : e.tva.creditAReporter)} couleur={signe(e.tva.resultat) > 0n ? '#b45309' : '#166534'} />
                 </div>
               </section>

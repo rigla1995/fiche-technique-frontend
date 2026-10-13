@@ -14,7 +14,11 @@ import type { CompteCourt, TypeJournal } from './journaux';
 export type Vue = 'grand-livre' | 'balance' | 'journaux';
 export type TypeBalance = 'generale' | 'fournisseurs' | 'clients';
 export interface PeriodeLivres { id: number; debut: string; fin: string; etat: 'ouverte' | 'close' }
-export interface ExerciceLivres { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; periodes: PeriodeLivres[] }
+// X1 : `millesime` — l'année des numéros définitifs de l'exercice.
+export interface ExerciceLivres { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime?: number; periodes: PeriodeLivres[] }
+// X1 : le report PROVISOIRE de l'exercice précédent non clos (soldes de fin repris, calculés, rien d'écrit) : l'exercice
+// d'où il vient, son résultat (positif = bénéfice) et le compte qui le porte (131, 135).
+export interface ReportProvisoire { precedent: { id: number; debut: string; fin: string; millesime: number }; resultat: string | null; compteResultat: string | null }
 export interface JournalLivres { id: number; code: string; libelle: string; type: TypeJournal; typeLibelle: string; actif: boolean }
 export interface LivresReponse {
   dossier: { id: number; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow'; espace: EspaceDossiers };
@@ -32,8 +36,9 @@ export interface LivresReponse {
 export interface Selection { exercice: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos' }; periode: PeriodeLivres | null; de: string; a: string; brouillard: boolean }
 // Un solde signé posé de son côté.
 export interface Cotes { solde: string; soldeDebit: string; soldeCredit: string }
-// `nbBrouillard` de l'ouverture : grand livre seulement (lignes d'à-nouveaux ou antérieures en brouillard).
-export interface Ouverture extends Cotes { debit: string; credit: string; nbBrouillard?: number }
+// `nbBrouillard` de l'ouverture : grand livre seulement (lignes d'à-nouveaux ou antérieures en brouillard) ; X1 :
+// `provisoire` — la part reportée de l'exercice précédent non clos (signée), quand il y en a une.
+export interface Ouverture extends Cotes { debit: string; credit: string; nbBrouillard?: number; provisoire?: string }
 export interface Mouvements { debit: string; credit: string; nbLignes: number; nbBrouillard: number }
 export interface RangeeBalance extends Cotes {
   compte?: { id: number; numero: string; libelle: string; nature: string };
@@ -52,7 +57,7 @@ export interface ControlesGenerale {
   coherent: boolean;
 }
 export interface ControlesAuxiliaire { collectifs: RangeeBalance; nature: string; coherent: boolean }
-export interface BalanceReponse { type: TypeBalance; selection: Selection; rangees: RangeeBalance[]; totaux: TotauxBalance; controles: ControlesGenerale | ControlesAuxiliaire }
+export interface BalanceReponse { type: TypeBalance; selection: Selection; rangees: RangeeBalance[]; totaux: TotauxBalance; controles: ControlesGenerale | ControlesAuxiliaire; provisoire?: ReportProvisoire | null }
 export const estControleGenerale = (c: BalanceReponse['controles']): c is ControlesGenerale => 'journaux' in c;
 export interface LigneLivre extends Cotes {
   id: number; date: string; rang: number; libelle: string; debit: string; credit: string; echeance: string | null; taxe: string | null;
@@ -66,6 +71,7 @@ export interface GrandLivreReponse {
   compte: CompteCourt | null; tiers: (TiersCourt & { actif: boolean }) | null; selection: Selection;
   ouverture: Ouverture; lignes: LigneLivre[]; total: number; page: number; limite: number;
   totaux: Cotes & { debit: string; credit: string; nbLignes: number; nbBrouillard: number };
+  provisoire?: ReportProvisoire | null;
 }
 export interface JournalReponse {
   journal: JournalLivres; selection: Selection; ecritures: Ecriture[]; total: number; page: number; limite: number;
