@@ -925,7 +925,7 @@ export default function StockLaboPage() {
               )}
               {verification && resultatLecture && bulkFournisseurId && (
                 <VerifierFacture
-                  fichiers={bulkPieces} lu={resultatLecture.entete} lecture={resultatLecture.lecture}
+                  fichiers={bulkPieces} lu={resultatLecture.entete} lecture={resultatLecture.lecture} relire={resultatLecture.relire}
                   cible={{ type: 'labo', id: Number(laboId) }}
                   fournisseurId={Number(bulkFournisseurId)}
                   fournisseurNom={fournisseurs.find((f) => String(f.id) === bulkFournisseurId)?.nom ?? ''}

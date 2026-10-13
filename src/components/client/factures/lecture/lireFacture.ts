@@ -18,7 +18,7 @@ import type { MoteurFacture } from './chaineOcr';
 import { lireEntete } from './entete';
 import { construireRangees, motsDePdf } from './rangees';
 import type { BlocsTesseract, MorceauPdf } from './rangees';
-import type { Destinataire, EnteteLu, PageLue, SuiviLecture } from './types';
+import type { Destinataire, EnteteLu, MiseEnPage, PageLue, PreparationPage, SuiviLecture } from './types';
 
 /** Refus expliqué (format, fichier illisible) : son message s'affiche tel quel. */
 export class LectureImpossible extends Error {
@@ -159,8 +159,26 @@ export class LectureArretee extends Error {
   name = 'LectureArretee';
 }
 
+/** Étape F5 : ce que la personne a choisi pour chaque page d'image (« Recadrer », « Pivoter »), et la mise en page connue. */
+export interface OptionsLecture {
+  /** Par page : clé `cleDePage(fichier, page)`. */
+  preparations?: Record<string, PreparationPage>;
+  /** Mise en page apprise d'un fournisseur, d'après son matricule (GET /api/factures/mise-en-page). */
+  modele?: (matricule: string) => Promise<MiseEnPage | null>;
+  /** Pages déjà lues, reprises sans être relues (une relecture ne relit que la page recadrée ou tournée). */
+  reutiliser?: ReadonlyMap<string, EnteteLu>;
+  /** Chaque page lue, à garder pour une relecture. */
+  surPage?: (cle: string, e: EnteteLu) => void;
+}
+/** Au-delà de ce temps de lecture, plus de nouvelle page : la lecture rend ce qu'elle a lu (avant le délai global). */
+const BUDGET_PAGES = 80_000;
+/** Clé d'une page de la facture déposée : rang du fichier (à partir de 0), numéro de page dans ce fichier. */
+export const cleDePage = (fichier: number, page: number) => `${fichier}:${page}`;
+/** Pages d'images lues au plus (une facture plus longue : les 4 premières et la dernière, qui porte les totaux). */
+const PAGES_IMAGES = 5;
+
 export async function lireFacture(
-  fichiers: FichierALire[], client: Destinataire, suivi: SuiviLecture = () => {}, signal?: AbortSignal,
+  fichiers: FichierALire[], client: Destinataire, suivi: SuiviLecture = () => {}, signal?: AbortSignal, opts: OptionsLecture = {},
 ): Promise<EnteteLu & { duree: number }> {
   const verifier = () => { if (signal?.aborted) throw new LectureArretee('Lecture arrêtée.'); };
   const debut = performance.now();
@@ -176,42 +194,61 @@ export async function lireFacture(
   const fin = (e: EnteteLu) => ({ ...e, duree: Math.round((performance.now() - debut) / 100) / 10 });
 
   // PDF avec texte : aucune reconnaissance de caractères.
-  let canvas: HTMLCanvasElement | null = null;
-  let derniere: (() => Promise<HTMLCanvasElement>) | null = null;
-  let place = { fichier: 0, page: 1 }; // place de la dernière page lue, si elle l'est
   if (premier.type === 'application/pdf') {
     suivi('Lecture du PDF…');
     const octets = new Uint8Array(await premier.fichier.arrayBuffer());
-    type LuPdf = { entete: EnteteLu; p1: null; pN: null; n: number } | { entete: null; p1: HTMLCanvasElement; pN: HTMLCanvasElement | null; n: number };
-    const lu = await avecPdf<LuPdf>(octets, async (pdf) => {
+    const entete = await avecPdf<EnteteLu | null>(octets, async (pdf) => {
       const { pages, caracteres } = await textePdf(pdf);
-      if (caracteres >= CARACTERES_MIN) {
-        const entete = situer(lireEntete(pages, 'pdf', client), rangFichier(premier));
-        // Texte présent mais muet (polices sans table de caractères) : la page se lit alors comme une image.
-        if (!muet(entete)) return { entete, p1: null, pN: null, n: pdf.numPages };
-      }
-      verifier();
-      // PDF numérisé : la page 1 en image (et la dernière, rendue tout de suite : le PDF se ferme après).
-      const p1 = await rendrePage(pdf, 1);
-      const pN = pdf.numPages > 1 ? await rendrePage(pdf, pdf.numPages) : null;
-      return { entete: null, p1, pN, n: pdf.numPages };
+      if (caracteres < CARACTERES_MIN) return null;
+      const e = situer(lireEntete(pages, 'pdf', client), rangFichier(premier));
+      // Texte présent mais muet (polices sans table de caractères) : la page se lit alors comme une image.
+      return muet(e) ? null : e;
     });
-    if (lu.entete) return fin(lu.entete);
-    canvas = lu.p1;
-    if (lu.pN) { const pN = lu.pN; derniere = async () => pN; place = { fichier: rangFichier(premier), page: lu.n }; }
-  } else {
-    suivi('Préparation de l\'image…');
-    canvas = await dessinerImage(lisibleEnImage(premier) as Blob);
+    if (entete) return fin(entete);
   }
-  const autre = lisibles.length > 1 ? lisibles[lisibles.length - 1] : null;
-  if (!derniere && autre && autre.type !== 'application/pdf') {
-    derniere = () => dessinerImage(lisibleEnImage(autre) as Blob);
-    place = { fichier: rangFichier(autre), page: 1 };
+
+  // Étape F5 : les pages d'images de la facture déposée (photos, pages d'un PDF numérisé), dans l'ordre — 5 au plus : les
+  // 4 premières et la dernière (les totaux). Les pages d'un PDF ne sont rendues que si elles sont lues, et gardées en
+  // JPEG (une page rendue pèse ~16 Mo ; relecture des écrans : la mémoire d'un téléphone).
+  suivi('Préparation de l\'image…');
+  type PageImage = { fichier: number; page: number; source: FichierALire };
+  const toutes: PageImage[] = [];
+  for (const f of lisibles) {
+    verifier();
+    if (f.type === 'application/pdf') {
+      const n = await avecPdf(new Uint8Array(await f.fichier.arrayBuffer()), async (pdf) => pdf.numPages);
+      for (let p = 1; p <= n; p++) toutes.push({ fichier: rangFichier(f), page: p, source: f });
+    } else {
+      toutes.push({ fichier: rangFichier(f), page: 1, source: f });
+    }
   }
+  const aLire = toutes.length > PAGES_IMAGES ? [...toutes.slice(0, PAGES_IMAGES - 1), toutes[toutes.length - 1]] : toutes;
+  const sautees = toutes.filter((p) => !aLire.includes(p));
+  // Copie JPEG impossible (mémoire d'un téléphone) : la page rendue est gardée telle quelle (contre-relecture).
+  const rendues = new Map<string, Blob | HTMLCanvasElement>();
+  for (const f of lisibles.filter((x) => x.type === 'application/pdf')) {
+    const numeros = aLire.filter((p) => p.source === f && !opts.reutiliser?.has(cleDePage(p.fichier, p.page))).map((p) => p.page);
+    if (!numeros.length) continue;
+    verifier();
+    await avecPdf(new Uint8Array(await f.fichier.arrayBuffer()), async (pdf) => {
+      for (const n of numeros) {
+        verifier();
+        const c = await rendrePage(pdf, n);
+        const b = await new Promise<Blob | null>((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+        if (b) { c.width = 0; c.height = 0; }
+        rendues.set(cleDePage(rangFichier(f), n), b ?? c);
+      }
+    });
+  }
+  const dessiner = (p: PageImage): Promise<HTMLCanvasElement> => {
+    if (p.source.type !== 'application/pdf') return dessinerImage(lisibleEnImage(p.source) as Blob);
+    const b = rendues.get(cleDePage(p.fichier, p.page));
+    if (!b) return Promise.reject(new LectureImpossible('Page du PDF illisible.'));
+    return b instanceof Blob ? dessinerImage(b) : Promise.resolve(b);
+  };
 
   // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné, et sur arrêt demandé).
   verifier();
-  const page1 = canvas;
   // Arrêt demandé : la lecture rend la main tout de suite (le worker arrêté laisse sa reconnaissance en suspens).
   const arretee = new Promise<never>((_, rejeter) => {
     if (!signal) return;
@@ -227,20 +264,62 @@ export async function lireFacture(
       if (signal?.aborted) stop(); // arrêt demandé pendant le chargement du lecteur
       try {
         const m = moteur(travailleur);
-        let e = situer(await lireImageFacture(sourceCanvas(page1), m, client, (etape, a) => suivi(etape, derniere ? (a ?? 0) * 0.7 : a)), rangFichier(premier));
-        verifier();
-        // Totaux absents de la première page (facture de plusieurs pages ou photos) : la dernière les porte. Si elle ne
-        // se lit pas, la lecture de la première page est gardée.
-        if (derniere && e.totaux.coherents !== true) {
-          try {
-            const d = await lireImageFacture(sourceCanvas(await derniere()), m, client, (etape, a) => suivi(etape, 0.7 + 0.3 * (a ?? 0)));
-            e = ajouterPages(completer(e, d), situer(d, place.fichier, place.page));
-          } catch (err) {
-            verifier();
-            console.warn('[facture] dernière page illisible', err instanceof Error ? err.name : '');
+        const n = aLire.length;
+        let e: EnteteLu | null = null;
+        // Signature des lignes de chaque page lue (vide pour une page en échec : les numéros restent alignés).
+        const signatures: string[] = [];
+        const signature = (ls: EnteteLu['lignesFacture']) => ls.map((l) => `${l.designation.toLowerCase().replace(/\s+/g, ' ')}|${l.montant ?? ''}`).sort().join('§');
+        let nonLues = 0;
+        // Durée de la page la plus longue lue jusqu'ici (orientations essayées comprises).
+        let pirePage = 0;
+        for (const [k, p] of aLire.entries()) {
+          verifier();
+          const cle = cleDePage(p.fichier, p.page);
+          // Relecture d'une page recadrée ou tournée : les autres pages sont reprises telles quelles.
+          let d = opts.reutiliser?.get(cle) ?? null;
+          // Budget : passé BUDGET_PAGES, ou s'il ne reste pas le temps d'une page aussi longue que la plus longue lue
+          // (avec une marge), plus de nouvelle page — la lecture rend ce qu'elle a lu (le délai global, lui, ferait tout
+          // perdre ; contre-relecture : une page commencée à 79 s pouvait le dépasser).
+          const ecoule = performance.now() - debut;
+          if (e && !d && (ecoule > BUDGET_PAGES || ecoule + 1.5 * pirePage > DELAI_LECTURE - 5_000)) { nonLues++; signatures.push(''); continue; }
+          if (!d) {
+            const debutPage = performance.now();
+            const suiviPage: SuiviLecture = (etape, a) => suivi(n > 1 ? `${etape.replace(/…$/, '')} (page ${k + 1} / ${n})…` : etape, (k + (a ?? 0)) / n);
+            const options = {
+              preparation: opts.preparations?.[cle],
+              modele: opts.modele,
+              // L'en-tête et les totaux se cherchent sur la première et la dernière page.
+              entete: k === 0 || k === n - 1,
+            };
+            try {
+              d = situer(await lireImageFacture(sourceCanvas(await dessiner(p)), m, client, suiviPage, options), p.fichier, p.page);
+              pirePage = Math.max(pirePage, performance.now() - debutPage);
+              opts.surPage?.(cle, d);
+            } catch (err) {
+              // Une page qui ne se lit pas n'arrête la lecture que si c'est la première.
+              verifier();
+              pirePage = Math.max(pirePage, performance.now() - debutPage);
+              if (!e) throw err;
+              signatures.push('');
+              console.warn('[facture] page illisible', err instanceof Error ? err.name : '');
+              continue;
+            }
+          }
+          // La même page déposée deux fois (deux photos de la même feuille) : ses lignes répètent celles d'une page
+          // précédente — signalé, jamais retiré en silence (la personne retire le fichier en double).
+          const sig = signature(d.lignesFacture);
+          const repetee: number = d.lignesFacture.length >= 2 ? signatures.indexOf(sig) : -1;
+          signatures.push(sig);
+          e = e ? ajouterPages(completer(e, d), d) : d;
+          if (repetee >= 0) {
+            e = { ...e, avertissements: [...e.avertissements, `Les lignes de la page ${k + 1} répètent celles de la page ${repetee + 1} : la même page a-t-elle été déposée deux fois ? Retirez le fichier en double.`] };
           }
         }
-        return e;
+        if (!e) throw new LectureImpossible("Aucune page lisible : la facture sera jointe, saisissez l'en-tête à la main.");
+        const avertissements = [...e.avertissements];
+        if (sautees.length) avertissements.push(`Facture de ${toutes.length} pages : ${sautees.length} page${sautees.length > 1 ? 's' : ''} du milieu n'${sautees.length > 1 ? 'ont' : 'a'} pas été lue${sautees.length > 1 ? 's' : ''} (5 au plus) — saisissez leurs lignes.`);
+        if (nonLues) avertissements.push(`Lecture arrêtée faute de temps : ${nonLues} page${nonLues > 1 ? 's' : ''} non lue${nonLues > 1 ? 's' : ''} — saisissez leurs lignes, ou déposez moins de pages à la fois.`);
+        return { ...e, avertissements };
       } finally {
         signal?.removeEventListener('abort', stop);
       }

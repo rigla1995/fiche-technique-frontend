@@ -9,8 +9,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../../api/client';
 import { useVocabulaire } from '../../../hooks/useVocabulaire';
 import { useConfirm } from '../../common/ConfirmDialog';
-import type { EnteteLu, LigneLue } from './lecture/types';
+import type { EnteteLu, LigneLue, PageVue, PreparationPage } from './lecture/types';
 import type { ApercuPage } from './lecture/lireFacture';
+import { cadreSurOriginal, ordonnerCoins } from './lecture/image';
+import type { ResultatLecture } from './LectureFacture';
 import {
   NATURES, ecartArrondiStock, ecartDePrix, probablesPour, proposer, proposerConversion, totauxRecalcules,
   type ArticleConnu, type Contexte, type EtatLigne, type NatureHorsStock,
@@ -31,7 +33,23 @@ interface Props {
   accent: string;
   onFermer: () => void;
   onValidee: (r: FactureValidee) => void;
+  /** Étape F5 : relire la facture avec une page recadrée ou pivotée (absent : pas de bouton). */
+  relire?: ResultatLecture['relire'];
 }
+
+/** Timbre lu (1, 1,5 ou 2 DT ; aucun), sinon 1 DT. */
+const timbreDe = (e: EnteteLu) => (e.totaux.timbre != null && TIMBRES.includes(e.totaux.timbre) ? e.totaux.timbre : 1);
+/** Remise imprimée au pied qui ne figure pas déjà dans les montants des lignes : Σ lignes − HT. */
+const remiseDe = (e: EnteteLu) => {
+  const somme = e.lignesFacture.reduce((s, l) => s + (l.montant ?? 0), 0);
+  const ecart = e.totaux.ht !== null ? somme - e.totaux.ht : 0;
+  return e.totaux.remise !== null && ecart > 0.0005 && Math.abs(ecart - e.totaux.remise) <= 0.011 ? f3(ecart) : '';
+};
+
+/** Étape F5 : clé d'une page (comme lecture/lireFacture.ts, cleDePage). */
+const clePage = (fichier: number, page: number) => `${fichier}:${page}`;
+/** Cadre par défaut de « Recadrer » : la page entière, une marge de 3 %. */
+const COINS_PAGE: [number, number][] = [[0.03, 0.03], [0.97, 0.03], [0.97, 0.97], [0.03, 0.97]];
 
 interface LigneEdition {
   id: string;
@@ -74,9 +92,16 @@ const petit: React.CSSProperties = { padding: '3px 6px', borderRadius: 6, border
 const bouton: React.CSSProperties = { padding: '4px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' };
 const etiquette: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' };
 
-export default function VerifierFacture({ fichiers, lu, lecture, cible, fournisseurId, fournisseurNom, refFacture, date, accent, onFermer, onValidee }: Props) {
+export default function VerifierFacture({ fichiers, lu: luInitial, lecture, cible, fournisseurId, fournisseurNom, refFacture, date, accent, onFermer, onValidee, relire }: Props) {
   const voc = useVocabulaire();
   const { confirm } = useConfirm();
+  // Étape F5 : la lecture affichée — celle du bloc de saisie, ou une relecture (page recadrée ou pivotée).
+  const [lu, setLu] = useState(luInitial);
+  const luRef = useRef(lu);
+  useEffect(() => { luRef.current = lu; }, [lu]);
+  const [preparations, setPreparations] = useState<Record<string, PreparationPage>>({});
+  const [relecture, setRelecture] = useState<string | null>(null);
+  const [recadrage, setRecadrage] = useState<{ cle: string; coins: [number, number][] } | null>(null);
   const [ctx, setCtx] = useState<Contexte | null>(null);
   const [ctxErreur, setCtxErreur] = useState<string | null>(null);
   const [lignes, setLignes] = useState<LigneEdition[]>([]);
@@ -85,14 +110,9 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const [apercuErreur, setApercuErreur] = useState<string | null>(null);
   const [pageVue, setPageVue] = useState(0);
   const [zoom, setZoom] = useState(1);
-  const [timbre, setTimbre] = useState(() => (lu.totaux.timbre != null && TIMBRES.includes(lu.totaux.timbre) ? lu.totaux.timbre : 1));
+  const [timbre, setTimbre] = useState(() => timbreDe(lu));
   const [fodec, setFodec] = useState(() => f3(lu.totaux.fodec));
-  const [remiseGlobale, setRemiseGlobale] = useState(() => {
-    // Remise imprimée au pied qui ne figure pas déjà dans les montants des lignes : Σ lignes − HT.
-    const somme = lu.lignesFacture.reduce((s, l) => s + (l.montant ?? 0), 0);
-    const ecart = lu.totaux.ht !== null ? somme - lu.totaux.ht : 0;
-    return lu.totaux.remise !== null && ecart > 0.0005 && Math.abs(ecart - lu.totaux.remise) <= 0.011 ? f3(ecart) : '';
-  });
+  const [remiseGlobale, setRemiseGlobale] = useState(() => remiseDe(lu));
   const [unites, setUnites] = useState<{ id: number; name: string }[] | null>(null);
   const [categories, setCategories] = useState<{ id: number; name: string; familleName?: string | null }[] | null>(null);
   const [envoi, setEnvoi] = useState(false);
@@ -105,13 +125,14 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const nouvelId = () => `l${++compteur.current}`;
   const tolerance = lu.source === 'pdf' ? 0.0015 : 0.011;
   // TVA d'une ligne qui n'en imprime pas : le seul taux de la facture, ou 0 pour un document sans TVA ; sinon à choisir.
-  const tvaParDefaut = lu.totaux.parTaux.length === 1 ? lu.totaux.parTaux[0].taux : lu.totaux.tva === 0 ? 0 : null;
+  const tvaParDefautDe = (e: EnteteLu) => (e.totaux.parTaux.length === 1 ? e.totaux.parTaux[0].taux : e.totaux.tva === 0 ? 0 : null);
+  const tvaParDefaut = tvaParDefautDe(lu);
 
   // Lignes lues → lignes à vérifier, avec ce que LabFlow propose. Une ligne lue en TTC (colonnes « Montant TTC ») est
-  // ramenée en HT avec son taux.
-  const preparer = (c: Contexte): LigneEdition[] => lu.lignesFacture.map((l) => {
+  // ramenée en HT avec son taux. `e` : la lecture (étape F5 : une relecture remplace les lignes).
+  const preparer = (c: Contexte, e: EnteteLu = luRef.current): LigneEdition[] => e.lignesFacture.map((l) => {
     const p = proposer(l, c);
-    const tva = l.tauxTva ?? tvaParDefaut;
+    const tva = l.tauxTva ?? tvaParDefautDe(e);
     let montant = l.montant;
     let prix = l.prixUnitaire;
     let raison = p.raison;
@@ -251,7 +272,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   if (fodec.trim() && (nb(fodec) === null || nb(fodec)! < 0)) blocages.push('FODEC illisible');
 
   const valider = async () => {
-    if (blocages.length || envoi) return;
+    if (blocages.length || envoi || relecture) return;
     setEnvoi(true);
     setErreur(null);
     try {
@@ -265,9 +286,29 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
         };
         return v.article ? { ...base, articleId: v.article.id, conversion: v.conv as number } : { ...base, horsStock: v.horsStock as NatureHorsStock };
       });
+      // Étape F5 : la mise en page vue n'est apprise (et partagée) que si la lecture a vu le titre des colonnes et que ses
+      // lignes ont été gardées (montant inchangé pour 60 % des lignes au moins) — une lecture corrigée de partout ne
+      // devient jamais le modèle d'un fournisseur.
+      // Une ligne lue en TTC (sans montant HT) est gardée si son TTC recalculé est celui lu.
+      const gardee = (l: LigneEdition, i: number) => {
+        const m = valeurs[i].m, t = valeurs[i].t;
+        if (!l.lue || m === null) return false;
+        if (l.lue.montant !== null) return Math.abs(m - l.lue.montant) < 0.0015;
+        return l.lue.luEnTtc && l.lue.montantTtc !== null && t !== null && Math.abs(m * (1 + t / 100) - l.lue.montantTtc) < 0.011;
+      };
+      const gardees = lignes.filter(gardee).length;
+      const fiable = lignes.length > 0 && gardees >= Math.max(1, 0.6 * lignes.length);
+      // Ce qui a été lu : la dernière lecture (une relecture remplace la première).
+      const t = lu.totaux;
       const r = await validerAvecConfirmation({
         cible, dateAppro: date, fournisseurId, refFacture: refFacture.trim(), timbreFiscal: timbre > 0, timbreMontant: timbre > 0 ? timbre : undefined,
-        lecture, fodec: pied.fodec || null, remiseGlobale: pied.remiseGlobale || null, lignes: lignesValidees,
+        lecture: {
+          ...lecture, source: lu.source, matricule: lu.matricule?.valeur ?? lecture.matricule, nom: lu.nom?.valeur ?? lecture.nom,
+          numero: lu.numero?.valeur ?? lecture.numero, date: lu.date?.valeur ?? lecture.date,
+          totaux: { ht: t.ht, tva: t.tva, timbre: t.timbre, ttc: t.ttc, fodec: t.fodec, remise: t.remise },
+          miseEnPage: fiable ? lu.miseEnPage ?? null : null,
+        },
+        fodec: pied.fodec || null, remiseGlobale: pied.remiseGlobale || null, lignes: lignesValidees,
         envoyerCompta: comptaActif === true && envoyerCompta,
       }, fichiers, confirm, voc.ce('fournisseur'));
       if (r) onValidee(r);
@@ -289,6 +330,50 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
       if (!ok) return;
     }
     onFermer();
+  };
+
+  // Étape F5 : relire la facture avec une page recadrée (« Recadrer ») ou tournée (« Pivoter ») — les lignes sont
+  // remplacées par la nouvelle lecture (les choix faits sur les lignes sont perdus : confirmé avant).
+  // La relecture en cours s'arrête si la fenêtre se ferme ; la liste des articles est lue au moment où elle se termine
+  // (relecture des écrans : arrivée pendant la relecture, elle était perdue et les lignes restaient vides).
+  const arretRelecture = useRef<AbortController | null>(null);
+  useEffect(() => () => arretRelecture.current?.abort(), []);
+  const ctxRef = useRef(ctx);
+  useEffect(() => { ctxRef.current = ctx; }, [ctx]);
+  const relireAvec = async (prep: Record<string, PreparationPage>) => {
+    if (!relire || relecture || envoi) return;
+    if (modifiee) {
+      const ok = await confirm({
+        title: 'Relire la facture ?',
+        message: `Les lignes et le bas de la facture (remise, FODEC, timbre) seront relus sur la page recadrée ou tournée : les choix déjà faits (${voc.nom('article', true)}, conversions, corrections, montants du bas) seront perdus.`,
+        confirmLabel: 'Relire', tone: 'primary', icon: '🔁',
+      });
+      if (!ok) return;
+    }
+    setRecadrage(null);
+    setRelecture('Relecture…');
+    setErreur(null);
+    const controle = new AbortController();
+    arretRelecture.current = controle;
+    try {
+      const e = await relire(prep, (etape, a) => setRelecture(a === undefined ? etape : `${etape} ${Math.round(a * 100)} %`), controle.signal);
+      if (controle.signal.aborted) return;
+      setPreparations(prep);
+      setLu(e);
+      luRef.current = e;
+      setChoisie(null);
+      setModifiee(false);
+      // Le pied aussi vient de la nouvelle lecture (la relecture sert quand la première était mauvaise).
+      setTimbre(timbreDe(e));
+      setFodec(f3(e.totaux.fodec));
+      setRemiseGlobale(remiseDe(e));
+      setLignes(ctxRef.current ? preparer(ctxRef.current, e) : []);
+    } catch {
+      if (!controle.signal.aborted) setErreur('La relecture n\'a pas abouti : les lignes d\'avant sont gardées. Vous pouvez les corriger à la main.');
+    } finally {
+      if (arretRelecture.current === controle) arretRelecture.current = null;
+      setRelecture(null);
+    }
   };
 
   // Création d'un article depuis une ligne (nom tiré de la désignation, unité et catégorie à choisir).
@@ -334,12 +419,52 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
     if (k >= 0) setPageVue(k);
   };
   const apercu = apercus?.[pageVue] ?? null;
-  const encadre = cadreChoisi && pageDuCadre && apercu && apercu.fichier === pageDuCadre.fichier && apercu.page === pageDuCadre.page
+  // Étape F5 : sur une image (photo, PDF numérisé), le cadre est replacé sur l'image d'origine (feuille recadrée, page
+  // tournée) ; sur le texte d'un PDF, la page lue est l'image affichée.
+  const fractions = (c: { x0: number; y0: number; x1: number; y1: number }, p: PageVue) => (p.trajet
+    ? cadreSurOriginal(p.trajet, c)
+    : { x0: c.x0 / p.largeur, y0: c.y0 / p.hauteur, x1: c.x1 / p.largeur, y1: c.y1 / p.hauteur });
+  const cadreVu = cadreChoisi && pageDuCadre && apercu && apercu.fichier === pageDuCadre.fichier && apercu.page === pageDuCadre.page
+    ? fractions(cadreChoisi, pageDuCadre) : null;
+  const encadre = cadreVu
     ? {
-      left: `${(cadreChoisi.x0 / pageDuCadre.largeur) * 100 - 0.6}%`, top: `${(cadreChoisi.y0 / pageDuCadre.hauteur) * 100 - 0.4}%`,
-      width: `${((cadreChoisi.x1 - cadreChoisi.x0) / pageDuCadre.largeur) * 100 + 1.2}%`, height: `${((cadreChoisi.y1 - cadreChoisi.y0) / pageDuCadre.hauteur) * 100 + 0.8}%`,
+      left: `${cadreVu.x0 * 100 - 0.6}%`, top: `${cadreVu.y0 * 100 - 0.4}%`,
+      width: `${(cadreVu.x1 - cadreVu.x0) * 100 + 1.2}%`, height: `${(cadreVu.y1 - cadreVu.y0) * 100 + 0.8}%`,
     }
     : null;
+  // Étape F5 : la page d'image affichée (lue par reconnaissance de caractères) — « Recadrer », « Pivoter ».
+  const pageImage = apercu ? lu.pages.find((p) => p.trajet && p.fichier === apercu.fichier && p.page === apercu.page) ?? null : null;
+  const cleAffichee = apercu ? clePage(apercu.fichier, apercu.page) : null;
+  const ouvrirRecadrage = () => {
+    if (!pageImage?.trajet || !cleAffichee) return;
+    const t = pageImage.trajet;
+    const choisis = preparations[cleAffichee]?.coins;
+    const trouves = t.coins ? t.coins.map(([x, y]) => [x / t.tailles.reduite[0], y / t.tailles.reduite[1]] as [number, number]) : null;
+    setRecadrage({ cle: cleAffichee, coins: choisis ?? trouves ?? COINS_PAGE });
+  };
+  const pivoter = () => {
+    if (!pageImage?.trajet || !cleAffichee) return;
+    const actuel = preparations[cleAffichee]?.quarts ?? pageImage.trajet.quarts;
+    void relireAvec({ ...preparations, [cleAffichee]: { ...preparations[cleAffichee], quarts: (actuel + 1) % 4 } });
+  };
+  // Relire le cadre choisi : les coins remis dans l'ordre ; un cadre qui se croise est refusé.
+  const relireCadre = () => {
+    if (!recadrage) return;
+    const coins = ordonnerCoins(recadrage.coins);
+    if (!coins) { setErreur('Le cadre se croise ou est trop petit : placez un coin à chaque angle de la facture.'); return; }
+    void relireAvec({ ...preparations, [recadrage.cle]: { ...preparations[recadrage.cle], coins } });
+  };
+  // Déplacer un coin du cadre (pointeur : souris, doigt).
+  const zoneRecadrage = useRef<HTMLDivElement>(null);
+  const coinTenu = useRef<number | null>(null);
+  const deplacerCoin = (ev: React.PointerEvent) => {
+    const k = coinTenu.current;
+    const zone = zoneRecadrage.current;
+    if (k === null || !zone || !recadrage) return;
+    const r = zone.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+    setRecadrage((c) => (c ? { ...c, coins: c.coins.map((p, i) => (i === k ? [x, y] : p)) as [number, number][] } : c));
+  };
 
   const t = lu.totaux;
   // Une facture arrondit souvent la TVA ligne par ligne : quelques millimes d'écart sont admis selon le nombre de lignes.
@@ -388,6 +513,10 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
             <strong>{fournisseurNom}</strong> · n° <strong>{refFacture}</strong> · {date.split('-').reverse().join('/')}
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>lu sur cet appareil ({lu.source === 'pdf' ? 'texte du PDF' : 'reconnaissance des caractères'}) — rien n'est enregistré avant la validation</span>
+          {lu.miseEnPageConnue && (
+            <span title={`Les colonnes des factures de ${voc.ce('fournisseur')} sont connues (apprises sur une facture déjà validée) et ont servi à lire les lignes.`}
+              style={{ fontSize: '0.68rem', fontWeight: 700, color: '#065f46', background: '#d1fae5', borderRadius: 4, padding: '1px 6px' }}>📐 mise en page connue</span>
+          )}
           <div style={{ flex: 1 }} />
           <button type="button" style={bouton} onClick={() => void fermer()} disabled={envoi}>Fermer</button>
         </div>
@@ -400,6 +529,25 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
               <span style={{ fontSize: '0.74rem', color: '#475569' }}>{apercus ? `page ${pageVue + 1} / ${apercus.length}` : 'préparation de l\'aperçu…'}</span>
               <button type="button" style={bouton} disabled={!apercus || pageVue >= apercus.length - 1} onClick={() => setPageVue((p) => p + 1)} aria-label="Page suivante">›</button>
               <div style={{ flex: 1 }} />
+              {/* Étape F5 : une page lue sur une image se recadre ou se tourne, puis se relit. */}
+              {relire && pageImage && !recadrage && (
+                <>
+                  <button type="button" style={bouton} disabled={Boolean(relecture) || envoi} onClick={ouvrirRecadrage}
+                    title="Placer les quatre coins de la facture sur la photo, puis la relire">✂️ Recadrer</button>
+                  <button type="button" style={bouton} disabled={Boolean(relecture) || envoi} onClick={pivoter}
+                    title="Tourner la page d'un quart de tour, puis la relire (photo couchée ou à l'envers)">↻ Pivoter</button>
+                </>
+              )}
+              {recadrage && recadrage.cle === cleAffichee && (
+                <>
+                  <button type="button" style={{ ...bouton, color: '#fff', border: 'none', background: accent }}
+                    onClick={relireCadre}>✓ Relire ce cadre</button>
+                  <button type="button" style={bouton} onClick={() => void relireAvec({ ...preparations, [recadrage.cle]: { ...preparations[recadrage.cle], coins: null } })}
+                    title="Lire la photo entière, sans recadrage">Toute la photo</button>
+                  <button type="button" style={bouton} onClick={() => setRecadrage(null)}>Annuler</button>
+                </>
+              )}
+              <span role="status" style={{ fontSize: '0.74rem', color: accent, fontWeight: 700 }}>{relecture ?? ''}</span>
               <button type="button" style={bouton} disabled={zoom <= 1} onClick={() => setZoom((z) => Math.max(1, z - 0.5))} aria-label="Réduire">−</button>
               <span style={{ fontSize: '0.74rem', color: '#475569', minWidth: 36, textAlign: 'center' }}>{Math.round(zoom * 100)} %</span>
               <button type="button" style={bouton} disabled={zoom >= 3} onClick={() => setZoom((z) => Math.min(3, z + 0.5))} aria-label="Agrandir">+</button>
@@ -409,7 +557,31 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
               {apercu && (
                 <div style={{ position: 'relative', width: `${zoom * 100}%`, margin: '0 auto', boxShadow: '0 2px 10px rgba(0,0,0,0.12)', background: '#fff' }}>
                   <img src={apercu.url} alt={`Facture, page ${pageVue + 1}`} style={{ display: 'block', width: '100%', height: 'auto' }} />
-                  {encadre && <div aria-hidden="true" style={{ position: 'absolute', ...encadre, border: `2px solid ${accent}`, background: `${accent}1f`, borderRadius: 3, pointerEvents: 'none' }} />}
+                  {encadre && !recadrage && <div aria-hidden="true" style={{ position: 'absolute', ...encadre, border: `2px solid ${accent}`, background: `${accent}1f`, borderRadius: 3, pointerEvents: 'none' }} />}
+                  {recadrage && recadrage.cle === cleAffichee && (
+                    <div ref={zoneRecadrage} style={{ position: 'absolute', inset: 0 }}>
+                      <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                        <polygon points={recadrage.coins.map(([x, y]) => `${x * 1000},${y * 1000}`).join(' ')} fill={`${accent}22`} stroke={accent} strokeWidth={4} vectorEffect="non-scaling-stroke" />
+                      </svg>
+                      {recadrage.coins.map(([x, y], k) => (
+                        <div key={k} role="button" tabIndex={0}
+                          aria-label={`${['Coin haut gauche', 'Coin haut droit', 'Coin bas droit', 'Coin bas gauche'][k]} (${Math.round(x * 100)} %, ${Math.round(y * 100)} %) : flèches pour le déplacer, Entrée pour relire, Échap pour annuler`}
+                          onPointerDown={(ev) => { coinTenu.current = k; ev.currentTarget.setPointerCapture(ev.pointerId); ev.preventDefault(); }}
+                          onPointerMove={deplacerCoin}
+                          onPointerUp={() => { coinTenu.current = null; }} onPointerCancel={() => { coinTenu.current = null; }}
+                          onKeyDown={(ev) => {
+                            if (ev.key === 'Enter') { ev.preventDefault(); relireCadre(); return; }
+                            if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); setRecadrage(null); return; }
+                            const pas = ev.shiftKey ? 0.02 : 0.005;
+                            const d: Record<string, [number, number]> = { ArrowLeft: [-pas, 0], ArrowRight: [pas, 0], ArrowUp: [0, -pas], ArrowDown: [0, pas] };
+                            if (!d[ev.key]) return;
+                            ev.preventDefault();
+                            setRecadrage((c) => (c ? { ...c, coins: c.coins.map((q, i) => (i === k ? [Math.min(1, Math.max(0, q[0] + d[ev.key][0])), Math.min(1, Math.max(0, q[1] + d[ev.key][1]))] : q)) as [number, number][] } : c));
+                          }}
+                          style={{ position: 'absolute', left: `${x * 100}%`, top: `${y * 100}%`, width: 26, height: 26, marginLeft: -13, marginTop: -13, borderRadius: '50%', background: '#fff', border: `3px solid ${accent}`, boxShadow: '0 1px 4px rgba(0,0,0,0.35)', cursor: 'grab', touchAction: 'none' }} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -599,7 +771,7 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
             </label>
           )}
           <button type="button" style={bouton} onClick={() => void fermer()} disabled={envoi}>Abandonner</button>
-          <button type="button" onClick={() => void valider()} disabled={blocages.length > 0 || envoi}
+          <button type="button" onClick={() => void valider()} disabled={blocages.length > 0 || envoi || Boolean(relecture)}
             style={{ ...bouton, padding: '8px 16px', fontSize: '0.84rem', color: '#fff', border: 'none', background: blocages.length || envoi ? '#94a3b8' : `linear-gradient(135deg, ${accent}, #2563eb)`, cursor: blocages.length || envoi ? 'not-allowed' : 'pointer' }}>
             {envoi ? 'Enregistrement…' : `Valider et enregistrer (${calcul.ttc.toFixed(3).replace('.', ',')} DT TTC)`}
           </button>
