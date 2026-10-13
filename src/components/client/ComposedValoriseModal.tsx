@@ -29,7 +29,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
   const [selectedLabos, setSelectedLabos] = useState<number[]>([]);
   const [checkedActivites, setCheckedActivites] = useState<number[]>([]);
   const [articles, setArticles] = useState<ActiviteIngredient[]>([]);
-  const [utilisables, setUtilisables] = useState<{ id: number; name: string }[]>([]);
+  const [utilisables, setUtilisables] = useState<{ id: number; name: string; unite?: string }[]>([]);
   const [ingLines, setIngLines] = useState<Line[]>([]);
   const [subLines, setSubLines] = useState<Line[]>([]);
   const [search, setSearch] = useState('');
@@ -49,7 +49,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
     if (selectedLabos.length === 0) { setArticles([]); setUtilisables([]); return; }
     const ids = selectedLabos.join(',');
     api.get(`/api/labo/articles-consommables?laboIds=${ids}`).then(({ data }) => setArticles(data as ActiviteIngredient[])).catch(() => setArticles([]));
-    api.get(`/api/produits/utilisables-perimetre?origine=labo&ids=${ids}`).then(({ data }) => setUtilisables(data as { id: number; name: string }[])).catch(() => setUtilisables([]));
+    api.get(`/api/produits/utilisables-perimetre?origine=labo&ids=${ids}`).then(({ data }) => setUtilisables(data as { id: number; name: string; unite?: string }[])).catch(() => setUtilisables([]));
   }, [selectedLabos]);
 
   // Mode édition : pré-remplit tout.
@@ -237,7 +237,7 @@ export default function ComposedValoriseModal({ categories, editProductId, onClo
                       {sel && <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} onClick={(e) => e.stopPropagation()}>
                         <input type="number" step="0.001" min="0" placeholder={voc.nom('portion')} value={line?.portion || ''} onChange={(e) => setSubPortion(sid, e.target.value)}
                           style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${valid ? '#c4b5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>unité</span></div>}
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{u.unite ?? 'unité'}</span></div>}
                     </div>
                   ); })}
                 </div>
