@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1306 unité(s), 67 fichier(s).
+# 1308 unité(s), 67 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -3584,22 +3584,22 @@ src/components/client/factures/FenetrePieces.tsx
     miroir : Aucune pièce : joignez la facture reçue de l'enseigne (PDF, scan ou photo).
 
 src/components/client/factures/LectureFacture.tsx
-  l. 321
+  l. 345
     défaut : Fournisseur :
     miroir : Enseigne :
-  l. 340
+  l. 364
     défaut : Oui, c'est lui⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
     miroir : Oui, c'est elle⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
-  l. 355
+  l. 379
     défaut : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucun fournisseur connu ne correspond</span>
     miroir : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucune enseigne connue ne correspond</span>
-  l. 360
+  l. 384
     défaut : Créer le fournisseur…
     miroir : Créer l'enseigne…
-  l. 401
+  l. 425
     défaut :  · choisissez le fournisseur et le n° de facture pour vérifier
     miroir :  · choisissez l'enseigne et le n° de facture pour vérifier
-  l. 437
+  l. 461
     défaut : Fournisseur créé, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
     miroir : Enseigne créée, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
 
@@ -3621,85 +3621,91 @@ src/components/client/factures/NouveauFournisseurModal.tsx
     miroir : ⟦?…|Créer l'enseigne⟧
 
 src/components/client/factures/VerifierFacture.tsx
-  l. 138
+  l. 155
     défaut : La liste des articles n'a pas pu être chargée.
     miroir : La liste des denrées n'a pas pu être chargée.
-  l. 169
+  l. 186
     défaut : un article
     miroir : une denrée
-  l. 169
+  l. 186
     défaut : Aucun article trouvé
     miroir : Aucune denrée trouvée
-  l. 170
+  l. 187
     défaut : Hors stock
     miroir : Hors armoire
-  l. 170
+  l. 187
     défaut : Hors stock (reste sur la facture)
     miroir : Hors armoire (reste sur la facture)
-  l. 172
+  l. 189
     défaut : Déjà achetés chez ce fournisseur
     miroir : Déjà achetées chez cette enseigne
-  l. 173
+  l. 190
     défaut : Autres articles
     miroir : Autres denrées
-  l. 174
+  l. 191
     défaut : hors de ⟦?cette activité|ce labo⟧
     miroir : hors de ⟦?ce local|cette usine⟧
-  l. 223
+  l. 240
     défaut : ⟦·⟧ à choisir (article ou hors stock)
     miroir : ⟦·⟧ à choisir (denrée ou hors armoire)
-  l. 243
+  l. 260
     défaut : ⟦·⟧ au prix par unité trop petit pour le millime : choisissez un article à l'unité plus grande (kg plutôt que g, paquet ou carton plutôt que pièce)
     miroir : ⟦·⟧ au prix par unité trop petit pour le millime : choisissez une denrée à l'unité plus grande (kg plutôt que g, paquet ou carton plutôt que pièce)
-  l. 245
+  l. 262
     défaut : aucune ligne n'entre en stock (choisissez au moins un article)
     miroir : aucune ligne n'entre en armoire (choisissez au moins une denrée)
-  l. 246
+  l. 263
     défaut : liste des articles non chargée
     miroir : liste des denrées non chargée
-  l. 272
+  l. 295
     défaut : ce fournisseur
     miroir : cette enseigne
-  l. 286
+  l. 309
     défaut : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les articles que vous avez créés depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
     miroir : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les denrées que vous avez créées depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
-  l. 319
+  l. 324
+    défaut : Les lignes seront relues sur la page recadrée ou tournée : les choix déjà faits sur les lignes (articles, conversions, corrections) seront perdus.
+    miroir : Les lignes seront relues sur la page recadrée ou tournée : les choix déjà faits sur les lignes (denrées, conversions, corrections) seront perdus.
+  l. 372
     défaut : article créé
     miroir : denrée créée
-  l. 321
+  l. 374
     défaut : Article non créé.
     miroir : Denrée non créée.
-  l. 425
+  l. 478
+    défaut : Les colonnes des factures de ce fournisseur sont connues (apprises sur une facture déjà validée) et ont servi à lire les lignes.
+    miroir : Les colonnes des factures de cette enseigne sont connues (apprises sur une facture déjà validée) et ont servi à lire les lignes.
+  l. 555
     défaut : Chargement des articles…
     miroir : Chargement des denrées…
-  l. 455
+  l. 585
     défaut : ⟦?hors stock|⟦·⟧⟧
     miroir : ⟦?hors armoire|⟦·⟧⟧
-  l. 470
+  l. 600
     défaut : Colonne « Réf. » ou « Code » de la facture du fournisseur : ce code reconnaît la ligne la fois suivante
     miroir : Colonne « Réf. » ou « Code » de la facture de l'enseigne : ce code reconnaît la ligne la fois suivante
-  l. 471
+  l. 601
     défaut : Code fournisseur
     miroir : Code enseigne
-  l. 485
+  l. 615
     défaut : Article LabFlow
     miroir : Denrée LabFlow
-  l. 504
+  l. 634
     défaut : + Créer l'article
     miroir : + Créer la denrée
-  l. 508
+  l. 638
     défaut : → en stock : <strong>⟦·⟧ ⟦·⟧</strong>⟦·⟧⟦·⟧⟦·⟧
     miroir : → en armoire : <strong>⟦·⟧ ⟦·⟧</strong>⟦·⟧⟦·⟧⟦·⟧
-  l. 511
+  l. 641
     défaut :  · ajouté à ⟦?cette activité|ce labo⟧
     miroir :  · ajoutée à ⟦?ce local|cette usine⟧
-  l. 519
+  l. 649
     défaut : Nom de l'article
     miroir : Nom de la denrée
-  l. 521
+  l. 651
     défaut : Unité (stock)
     miroir : Unité (armoire)
-  l. 589
+  l. 719
     défaut : ⟦·⟧ ⟦ligne|lignes@>1⟧ en stock⟦?, ⟦·⟧ hors stock|⟧ · la pièce (⟦·⟧ ⟦fichier|fichiers@>1⟧) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
     miroir : ⟦·⟧ ⟦ligne|lignes@>1⟧ en armoire⟦?, ⟦·⟧ hors armoire|⟧ · la pièce (⟦·⟧ ⟦fichier|fichiers@>1⟧) est jointe · la facture ne sera plus modifiable, seulement supprimable en entier.
 

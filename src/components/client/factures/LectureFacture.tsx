@@ -12,7 +12,7 @@ import { useVocabulaire } from '../../../hooks/useVocabulaire';
 import { estErreurDeChunk } from '../../../utils/chunkReload';
 import { messageErreur, codeErreur, type FichierChoisi, type LectureEnvoyee } from './pieces';
 import { rapprocher, type FournisseurConnu, type Rapprochement } from './lecture/rapprocher';
-import type { Destinataire, EnteteLu } from './lecture/types';
+import type { Destinataire, EnteteLu, MiseEnPage, PreparationPage, SuiviLecture } from './lecture/types';
 import NouveauFournisseurModal, { type FicheProposee } from './NouveauFournisseurModal';
 
 interface FournisseurDuCompte extends FournisseurConnu {
@@ -28,6 +28,8 @@ export interface ResultatLecture {
   lecture: LectureEnvoyee;
   /** Étape F3 : tout ce qui a été lu (lignes comprises), pour la fenêtre « Vérifier la facture ». */
   entete: EnteteLu & { duree: number };
+  /** Étape F5 : relit la facture déposée avec des pages recadrées ou pivotées (fenêtre « Vérifier la facture »). */
+  relire?: (preparations: Record<string, PreparationPage>, suivi?: SuiviLecture, signal?: AbortSignal) => Promise<EnteteLu & { duree: number }>;
 }
 
 /** Champs du bloc remplis par une lecture et pas encore retouchés (pastille « lu »). */
@@ -125,7 +127,25 @@ export default function LectureFacture({
     };
   }, []);
 
-  const premier = fichiers[0]?.cle ?? null;
+  // Étape F5 : toutes les pages se lisent — la lecture suit la liste des fichiers déposés (une photo ajoutée, retirée ou
+  // remplacée la relance), et non plus le seul premier fichier.
+  const premier = fichiers.length ? fichiers.map((f) => f.cle).join('|') : null;
+  // Étape F5 : la mise en page apprise d'un fournisseur (par son matricule lu), demandée une fois par lecture.
+  const modeles = useRef(new Map<string, Promise<MiseEnPage | null>>());
+  const modele = (matricule: string): Promise<MiseEnPage | null> => {
+    const cle = matricule.replace(/\D/g, '').slice(0, 7);
+    if (cle.length < 7) return Promise.resolve(null);
+    let p = modeles.current.get(cle);
+    if (!p) {
+      p = api.get('/api/factures/mise-en-page', { params: { matricule }, ...API_DELAI })
+        .then(({ data }) => ((data as { miseEnPage?: MiseEnPage | null })?.miseEnPage ?? null))
+        .catch(() => { modeles.current.delete(cle); return null; });
+      modeles.current.set(cle, p);
+    }
+    return p;
+  };
+  // Étape F5 : relire la facture (« Recadrer », « Pivoter » dans la fenêtre « Vérifier la facture »), mêmes fichiers.
+  const relireRef = useRef<ResultatLecture['relire']>(undefined);
   const dansLeLieu = (f: FournisseurDuCompte) => (cible.type === 'activite' ? (f.activiteIds ?? []).includes(cible.id) : (f.laboIds ?? []).includes(cible.id));
 
   const resumer = (e: EnteteLu & { duree: number }, r: Rapprochement | null, etat?: LectureEnvoyee['fournisseur']): ResultatLecture => ({
@@ -136,7 +156,9 @@ export default function LectureFacture({
       source: e.source, matricule: e.matricule?.valeur ?? null, nom: e.nom?.valeur ?? null, numero: e.numero?.valeur ?? null,
       date: e.date?.valeur ?? null, duree: e.duree, fournisseur: etat ?? r?.etat ?? null,
       totaux: { ht: e.totaux.ht, tva: e.totaux.tva, timbre: e.totaux.timbre, ttc: e.totaux.ttc, fodec: e.totaux.fodec, remise: e.totaux.remise },
+      miseEnPage: e.miseEnPage ?? null,
     },
+    relire: relireRef.current,
   });
 
   // Une lecture par premier fichier déposé. Tout changement du premier fichier (retiré, remplacé, même pendant la copie
@@ -189,9 +211,11 @@ export default function LectureFacture({
         const destinataire = client.current ?? {};
         if (vivant()) setClientConnu(Boolean(destinataire.matricule));
         const { lireFacture } = await import('./lecture/lireFacture');
-        const e = await lireFacture(fichiers.map((f) => ({ fichier: f.fichier, type: f.type, apercu: f.apercu })), destinataire, (etapeLue, a) => {
+        const aLire = fichiers.map((f) => ({ fichier: f.fichier, type: f.type, apercu: f.apercu }));
+        const e = await lireFacture(aLire, destinataire, (etapeLue, a) => {
           if (vivant()) setEtape(a === undefined ? etapeLue : `${etapeLue} ${Math.round(a * 100)} %`);
-        }, controle.signal);
+        }, controle.signal, { modele });
+        relireRef.current = (preparations, suivi, signal) => lireFacture(aLire, destinataire, suivi, signal, { preparations, modele });
         if (!vivant()) return;
         const liste = ((await api.get('/api/entreprise/fournisseurs', API_DELAI).catch(() => ({ data: [] }))).data as FournisseurDuCompte[]).filter((f) => !f.isLabo);
         if (!vivant()) return;

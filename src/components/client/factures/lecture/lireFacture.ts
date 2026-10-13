@@ -242,6 +242,7 @@ export async function lireFacture(
         const m = moteur(travailleur);
         const n = aLire.length;
         let e: EnteteLu | null = null;
+        const signatures: string[] = [];
         for (const [k, p] of aLire.entries()) {
           verifier();
           const suiviPage: SuiviLecture = (etape, a) => suivi(n > 1 ? `${etape.replace(/…$/, '')} (page ${k + 1} / ${n})…` : etape, (k + (a ?? 0)) / n);
@@ -253,7 +254,16 @@ export async function lireFacture(
           };
           try {
             const d = situer(await lireImageFacture(sourceCanvas(await p.dessiner()), m, client, suiviPage, options), p.fichier, p.page);
+            // La même page déposée deux fois (deux photos de la même feuille) : ses lignes répètent celles d'une page
+            // précédente — signalé, jamais retiré en silence (la personne retire le fichier en double).
+            const signature = (ls: EnteteLu['lignesFacture']) => ls.map((l) => `${l.designation.toLowerCase().replace(/\s+/g, ' ')}|${l.montant ?? ''}`).sort().join('§');
+            const sig = signature(d.lignesFacture);
+            const repetee: number = d.lignesFacture.length >= 2 ? signatures.indexOf(sig) : -1;
+            signatures.push(sig);
             e = e ? ajouterPages(completer(e, d), d) : d;
+            if (repetee >= 0) {
+              e = { ...e, avertissements: [...e.avertissements, `Les lignes de la page ${k + 1} répètent celles de la page ${repetee + 1} : la même page a-t-elle été déposée deux fois ? Retirez le fichier en double.`] };
+            }
           } catch (err) {
             // Une page qui ne se lit pas n'arrête la lecture que si c'est la première.
             verifier();

@@ -9,8 +9,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../../api/client';
 import { useVocabulaire } from '../../../hooks/useVocabulaire';
 import { useConfirm } from '../../common/ConfirmDialog';
-import type { EnteteLu, LigneLue } from './lecture/types';
+import type { EnteteLu, LigneLue, PageVue, PreparationPage } from './lecture/types';
 import type { ApercuPage } from './lecture/lireFacture';
+import { cadreSurOriginal } from './lecture/image';
+import type { ResultatLecture } from './LectureFacture';
 import {
   NATURES, ecartArrondiStock, ecartDePrix, probablesPour, proposer, proposerConversion, totauxRecalcules,
   type ArticleConnu, type Contexte, type EtatLigne, type NatureHorsStock,
@@ -31,7 +33,14 @@ interface Props {
   accent: string;
   onFermer: () => void;
   onValidee: (r: FactureValidee) => void;
+  /** Étape F5 : relire la facture avec une page recadrée ou pivotée (absent : pas de bouton). */
+  relire?: ResultatLecture['relire'];
 }
+
+/** Étape F5 : clé d'une page (comme lecture/lireFacture.ts, cleDePage). */
+const clePage = (fichier: number, page: number) => `${fichier}:${page}`;
+/** Cadre par défaut de « Recadrer » : la page entière, une marge de 3 %. */
+const COINS_PAGE: [number, number][] = [[0.03, 0.03], [0.97, 0.03], [0.97, 0.97], [0.03, 0.97]];
 
 interface LigneEdition {
   id: string;
@@ -74,9 +83,16 @@ const petit: React.CSSProperties = { padding: '3px 6px', borderRadius: 6, border
 const bouton: React.CSSProperties = { padding: '4px 10px', borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer' };
 const etiquette: React.CSSProperties = { fontSize: '0.6rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block' };
 
-export default function VerifierFacture({ fichiers, lu, lecture, cible, fournisseurId, fournisseurNom, refFacture, date, accent, onFermer, onValidee }: Props) {
+export default function VerifierFacture({ fichiers, lu: luInitial, lecture, cible, fournisseurId, fournisseurNom, refFacture, date, accent, onFermer, onValidee, relire }: Props) {
   const voc = useVocabulaire();
   const { confirm } = useConfirm();
+  // Étape F5 : la lecture affichée — celle du bloc de saisie, ou une relecture (page recadrée ou pivotée).
+  const [lu, setLu] = useState(luInitial);
+  const luRef = useRef(lu);
+  useEffect(() => { luRef.current = lu; }, [lu]);
+  const [preparations, setPreparations] = useState<Record<string, PreparationPage>>({});
+  const [relecture, setRelecture] = useState<string | null>(null);
+  const [recadrage, setRecadrage] = useState<{ cle: string; coins: [number, number][] } | null>(null);
   const [ctx, setCtx] = useState<Contexte | null>(null);
   const [ctxErreur, setCtxErreur] = useState<string | null>(null);
   const [lignes, setLignes] = useState<LigneEdition[]>([]);
@@ -105,13 +121,14 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
   const nouvelId = () => `l${++compteur.current}`;
   const tolerance = lu.source === 'pdf' ? 0.0015 : 0.011;
   // TVA d'une ligne qui n'en imprime pas : le seul taux de la facture, ou 0 pour un document sans TVA ; sinon à choisir.
-  const tvaParDefaut = lu.totaux.parTaux.length === 1 ? lu.totaux.parTaux[0].taux : lu.totaux.tva === 0 ? 0 : null;
+  const tvaParDefautDe = (e: EnteteLu) => (e.totaux.parTaux.length === 1 ? e.totaux.parTaux[0].taux : e.totaux.tva === 0 ? 0 : null);
+  const tvaParDefaut = tvaParDefautDe(lu);
 
   // Lignes lues → lignes à vérifier, avec ce que LabFlow propose. Une ligne lue en TTC (colonnes « Montant TTC ») est
-  // ramenée en HT avec son taux.
-  const preparer = (c: Contexte): LigneEdition[] => lu.lignesFacture.map((l) => {
+  // ramenée en HT avec son taux. `e` : la lecture (étape F5 : une relecture remplace les lignes).
+  const preparer = (c: Contexte, e: EnteteLu = luRef.current): LigneEdition[] => e.lignesFacture.map((l) => {
     const p = proposer(l, c);
-    const tva = l.tauxTva ?? tvaParDefaut;
+    const tva = l.tauxTva ?? tvaParDefautDe(e);
     let montant = l.montant;
     let prix = l.prixUnitaire;
     let raison = p.raison;
@@ -265,9 +282,15 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
         };
         return v.article ? { ...base, articleId: v.article.id, conversion: v.conv as number } : { ...base, horsStock: v.horsStock as NatureHorsStock };
       });
+      // Étape F5 : la mise en page vue n'est apprise (et partagée) que si la lecture a vu le titre des colonnes et que ses
+      // lignes ont été gardées (montant inchangé pour 60 % des lignes au moins) — une lecture corrigée de partout ne
+      // devient jamais le modèle d'un fournisseur.
+      const gardees = lignes.filter((l, i) => l.lue && l.lue.montant !== null && valeurs[i].m !== null && Math.abs((valeurs[i].m as number) - l.lue.montant) < 0.0015).length;
+      const fiable = lignes.length > 0 && gardees >= Math.max(1, 0.6 * lignes.length);
       const r = await validerAvecConfirmation({
         cible, dateAppro: date, fournisseurId, refFacture: refFacture.trim(), timbreFiscal: timbre > 0, timbreMontant: timbre > 0 ? timbre : undefined,
-        lecture, fodec: pied.fodec || null, remiseGlobale: pied.remiseGlobale || null, lignes: lignesValidees,
+        lecture: { ...lecture, source: lu.source, miseEnPage: fiable ? lu.miseEnPage ?? null : null },
+        fodec: pied.fodec || null, remiseGlobale: pied.remiseGlobale || null, lignes: lignesValidees,
         envoyerCompta: comptaActif === true && envoyerCompta,
       }, fichiers, confirm, voc.ce('fournisseur'));
       if (r) onValidee(r);
@@ -289,6 +312,36 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
       if (!ok) return;
     }
     onFermer();
+  };
+
+  // Étape F5 : relire la facture avec une page recadrée (« Recadrer ») ou tournée (« Pivoter ») — les lignes sont
+  // remplacées par la nouvelle lecture (les choix faits sur les lignes sont perdus : confirmé avant).
+  const relireAvec = async (prep: Record<string, PreparationPage>) => {
+    if (!relire || relecture || envoi) return;
+    if (modifiee) {
+      const ok = await confirm({
+        title: 'Relire la facture ?',
+        message: `Les lignes seront relues sur la page recadrée ou tournée : les choix déjà faits sur les lignes (${voc.nom('article', true)}, conversions, corrections) seront perdus.`,
+        confirmLabel: 'Relire', tone: 'primary', icon: '🔁',
+      });
+      if (!ok) return;
+    }
+    setRecadrage(null);
+    setRelecture('Relecture…');
+    setErreur(null);
+    try {
+      const e = await relire(prep, (etape, a) => setRelecture(a === undefined ? etape : `${etape} ${Math.round(a * 100)} %`));
+      setPreparations(prep);
+      setLu(e);
+      luRef.current = e;
+      setChoisie(null);
+      setModifiee(false);
+      setLignes(ctx ? preparer(ctx, e) : []);
+    } catch {
+      setErreur('La relecture n\'a pas abouti : les lignes d\'avant sont gardées. Vous pouvez les corriger à la main.');
+    } finally {
+      setRelecture(null);
+    }
   };
 
   // Création d'un article depuis une ligne (nom tiré de la désignation, unité et catégorie à choisir).
@@ -334,12 +387,45 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
     if (k >= 0) setPageVue(k);
   };
   const apercu = apercus?.[pageVue] ?? null;
-  const encadre = cadreChoisi && pageDuCadre && apercu && apercu.fichier === pageDuCadre.fichier && apercu.page === pageDuCadre.page
+  // Étape F5 : sur une image (photo, PDF numérisé), le cadre est replacé sur l'image d'origine (feuille recadrée, page
+  // tournée) ; sur le texte d'un PDF, la page lue est l'image affichée.
+  const fractions = (c: { x0: number; y0: number; x1: number; y1: number }, p: PageVue) => (p.trajet
+    ? cadreSurOriginal(p.trajet, c)
+    : { x0: c.x0 / p.largeur, y0: c.y0 / p.hauteur, x1: c.x1 / p.largeur, y1: c.y1 / p.hauteur });
+  const cadreVu = cadreChoisi && pageDuCadre && apercu && apercu.fichier === pageDuCadre.fichier && apercu.page === pageDuCadre.page
+    ? fractions(cadreChoisi, pageDuCadre) : null;
+  const encadre = cadreVu
     ? {
-      left: `${(cadreChoisi.x0 / pageDuCadre.largeur) * 100 - 0.6}%`, top: `${(cadreChoisi.y0 / pageDuCadre.hauteur) * 100 - 0.4}%`,
-      width: `${((cadreChoisi.x1 - cadreChoisi.x0) / pageDuCadre.largeur) * 100 + 1.2}%`, height: `${((cadreChoisi.y1 - cadreChoisi.y0) / pageDuCadre.hauteur) * 100 + 0.8}%`,
+      left: `${cadreVu.x0 * 100 - 0.6}%`, top: `${cadreVu.y0 * 100 - 0.4}%`,
+      width: `${(cadreVu.x1 - cadreVu.x0) * 100 + 1.2}%`, height: `${(cadreVu.y1 - cadreVu.y0) * 100 + 0.8}%`,
     }
     : null;
+  // Étape F5 : la page d'image affichée (lue par reconnaissance de caractères) — « Recadrer », « Pivoter ».
+  const pageImage = apercu ? lu.pages.find((p) => p.trajet && p.fichier === apercu.fichier && p.page === apercu.page) ?? null : null;
+  const cleAffichee = apercu ? clePage(apercu.fichier, apercu.page) : null;
+  const ouvrirRecadrage = () => {
+    if (!pageImage?.trajet || !cleAffichee) return;
+    const t = pageImage.trajet;
+    const choisis = preparations[cleAffichee]?.coins;
+    const trouves = t.coins ? t.coins.map(([x, y]) => [x / t.tailles.reduite[0], y / t.tailles.reduite[1]] as [number, number]) : null;
+    setRecadrage({ cle: cleAffichee, coins: choisis ?? trouves ?? COINS_PAGE });
+  };
+  const pivoter = () => {
+    if (!pageImage?.trajet || !cleAffichee) return;
+    const actuel = preparations[cleAffichee]?.quarts ?? pageImage.trajet.quarts;
+    void relireAvec({ ...preparations, [cleAffichee]: { ...preparations[cleAffichee], quarts: (actuel + 1) % 4 } });
+  };
+  // Déplacer un coin du cadre (pointeur : souris, doigt).
+  const zoneRecadrage = useRef<HTMLDivElement>(null);
+  const coinTenu = useRef<number | null>(null);
+  const deplacerCoin = (ev: React.PointerEvent) => {
+    const k = coinTenu.current;
+    const zone = zoneRecadrage.current;
+    if (k === null || !zone || !recadrage) return;
+    const r = zone.getBoundingClientRect();
+    const x = Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)), y = Math.min(1, Math.max(0, (ev.clientY - r.top) / r.height));
+    setRecadrage((c) => (c ? { ...c, coins: c.coins.map((p, i) => (i === k ? [x, y] : p)) as [number, number][] } : c));
+  };
 
   const t = lu.totaux;
   // Une facture arrondit souvent la TVA ligne par ligne : quelques millimes d'écart sont admis selon le nombre de lignes.
@@ -388,6 +474,10 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
             <strong>{fournisseurNom}</strong> · n° <strong>{refFacture}</strong> · {date.split('-').reverse().join('/')}
           </span>
           <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>lu sur cet appareil ({lu.source === 'pdf' ? 'texte du PDF' : 'reconnaissance des caractères'}) — rien n'est enregistré avant la validation</span>
+          {lu.miseEnPageConnue && (
+            <span title={`Les colonnes des factures de ${voc.ce('fournisseur')} sont connues (apprises sur une facture déjà validée) et ont servi à lire les lignes.`}
+              style={{ fontSize: '0.68rem', fontWeight: 700, color: '#065f46', background: '#d1fae5', borderRadius: 4, padding: '1px 6px' }}>📐 mise en page connue</span>
+          )}
           <div style={{ flex: 1 }} />
           <button type="button" style={bouton} onClick={() => void fermer()} disabled={envoi}>Fermer</button>
         </div>
@@ -400,6 +490,25 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
               <span style={{ fontSize: '0.74rem', color: '#475569' }}>{apercus ? `page ${pageVue + 1} / ${apercus.length}` : 'préparation de l\'aperçu…'}</span>
               <button type="button" style={bouton} disabled={!apercus || pageVue >= apercus.length - 1} onClick={() => setPageVue((p) => p + 1)} aria-label="Page suivante">›</button>
               <div style={{ flex: 1 }} />
+              {/* Étape F5 : une page lue sur une image se recadre ou se tourne, puis se relit. */}
+              {relire && pageImage && !recadrage && (
+                <>
+                  <button type="button" style={bouton} disabled={Boolean(relecture) || envoi} onClick={ouvrirRecadrage}
+                    title="Placer les quatre coins de la facture sur la photo, puis la relire">✂️ Recadrer</button>
+                  <button type="button" style={bouton} disabled={Boolean(relecture) || envoi} onClick={pivoter}
+                    title="Tourner la page d'un quart de tour, puis la relire (photo couchée ou à l'envers)">↻ Pivoter</button>
+                </>
+              )}
+              {recadrage && recadrage.cle === cleAffichee && (
+                <>
+                  <button type="button" style={{ ...bouton, color: '#fff', border: 'none', background: accent }}
+                    onClick={() => void relireAvec({ ...preparations, [recadrage.cle]: { ...preparations[recadrage.cle], coins: recadrage.coins } })}>✓ Relire ce cadre</button>
+                  <button type="button" style={bouton} onClick={() => void relireAvec({ ...preparations, [recadrage.cle]: { ...preparations[recadrage.cle], coins: null } })}
+                    title="Lire la photo entière, sans recadrage">Toute la photo</button>
+                  <button type="button" style={bouton} onClick={() => setRecadrage(null)}>Annuler</button>
+                </>
+              )}
+              {relecture && <span role="status" style={{ fontSize: '0.74rem', color: accent, fontWeight: 700 }}>{relecture}</span>}
               <button type="button" style={bouton} disabled={zoom <= 1} onClick={() => setZoom((z) => Math.max(1, z - 0.5))} aria-label="Réduire">−</button>
               <span style={{ fontSize: '0.74rem', color: '#475569', minWidth: 36, textAlign: 'center' }}>{Math.round(zoom * 100)} %</span>
               <button type="button" style={bouton} disabled={zoom >= 3} onClick={() => setZoom((z) => Math.min(3, z + 0.5))} aria-label="Agrandir">+</button>
@@ -409,7 +518,28 @@ export default function VerifierFacture({ fichiers, lu, lecture, cible, fourniss
               {apercu && (
                 <div style={{ position: 'relative', width: `${zoom * 100}%`, margin: '0 auto', boxShadow: '0 2px 10px rgba(0,0,0,0.12)', background: '#fff' }}>
                   <img src={apercu.url} alt={`Facture, page ${pageVue + 1}`} style={{ display: 'block', width: '100%', height: 'auto' }} />
-                  {encadre && <div aria-hidden="true" style={{ position: 'absolute', ...encadre, border: `2px solid ${accent}`, background: `${accent}1f`, borderRadius: 3, pointerEvents: 'none' }} />}
+                  {encadre && !recadrage && <div aria-hidden="true" style={{ position: 'absolute', ...encadre, border: `2px solid ${accent}`, background: `${accent}1f`, borderRadius: 3, pointerEvents: 'none' }} />}
+                  {recadrage && recadrage.cle === cleAffichee && (
+                    <div ref={zoneRecadrage} style={{ position: 'absolute', inset: 0, touchAction: 'none' }}
+                      onPointerMove={deplacerCoin} onPointerUp={() => { coinTenu.current = null; }} onPointerCancel={() => { coinTenu.current = null; }}>
+                      <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" aria-hidden="true" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+                        <polygon points={recadrage.coins.map(([x, y]) => `${x * 1000},${y * 1000}`).join(' ')} fill={`${accent}22`} stroke={accent} strokeWidth={4} vectorEffect="non-scaling-stroke" />
+                      </svg>
+                      {recadrage.coins.map(([x, y], k) => (
+                        <div key={k} role="slider" aria-label={['Coin haut gauche', 'Coin haut droit', 'Coin bas droit', 'Coin bas gauche'][k]}
+                          aria-valuetext={`${Math.round(x * 100)} %, ${Math.round(y * 100)} %`} tabIndex={0}
+                          onPointerDown={(ev) => { coinTenu.current = k; (ev.currentTarget.parentElement as HTMLElement).setPointerCapture(ev.pointerId); ev.preventDefault(); }}
+                          onKeyDown={(ev) => {
+                            const pas = ev.shiftKey ? 0.02 : 0.005;
+                            const d: Record<string, [number, number]> = { ArrowLeft: [-pas, 0], ArrowRight: [pas, 0], ArrowUp: [0, -pas], ArrowDown: [0, pas] };
+                            if (!d[ev.key]) return;
+                            ev.preventDefault();
+                            setRecadrage((c) => (c ? { ...c, coins: c.coins.map((p, i) => (i === k ? [Math.min(1, Math.max(0, p[0] + d[ev.key][0])), Math.min(1, Math.max(0, p[1] + d[ev.key][1]))] : p)) as [number, number][] } : c));
+                          }}
+                          style={{ position: 'absolute', left: `${x * 100}%`, top: `${y * 100}%`, width: 22, height: 22, marginLeft: -11, marginTop: -11, borderRadius: '50%', background: '#fff', border: `3px solid ${accent}`, boxShadow: '0 1px 4px rgba(0,0,0,0.35)', cursor: 'grab', touchAction: 'none' }} />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
