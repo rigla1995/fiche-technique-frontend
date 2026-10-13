@@ -251,13 +251,18 @@ export function garderGlyphes(bin: Pixels, filetBas: number | null = null, toler
   return { image: { data: sortie, width: w, height: h }, glyphes, hauteurGlyphe };
 }
 
-/** Bande du matricule en gris (canal max) → glyphes des valeurs : noir et blanc, filets retirés, glyphes à cheval sur le filet. */
+/**
+ * Bande du matricule en gris (canal max) → glyphes des valeurs : noir et blanc, filets retirés, glyphes à cheval sur le
+ * filet. Carte imprimée nette (scan d'une carte récente) : les valeurs sont AU MILIEU de la case, rien ne chevauche le
+ * filet du bas — on garde alors les glyphes de la rangée (sans cela, tout était effacé et le matricule « illisible »).
+ */
 export function nettoyerBande(bande: Pixels, binarisation: 'otsu' | 'sauvola'): Glyphes {
   const bin = binarisation === 'sauvola'
     ? sauvola(bande, Math.max(15, Math.round(bande.height * 0.35)) | 1, 0.25)
     : binariser(bande, seuilOtsu(bande));
   const sansFilets = retirerFilets(bin);
-  return garderGlyphes(sansFilets.image, sansFilets.filetBas, sansFilets.epaisseur + 2);
+  const aCheval = garderGlyphes(sansFilets.image, sansFilets.filetBas, sansFilets.epaisseur + 2);
+  return aCheval.glyphes.length >= 4 ? aCheval : garderGlyphes(sansFilets.image, null);
 }
 
 /** Glyphes rangés de gauche à droite, coupés aux plus grands espaces : `nombre` jetons (les valeurs d'une rangée). */

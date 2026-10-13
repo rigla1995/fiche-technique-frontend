@@ -921,3 +921,19 @@ test('worker : délai dépassé → la lecture échoue proprement, le worker est
   await attendre(80);
   assert.deepEqual([tardif.arrets, lectures], [1, 0]);
 });
+
+// Correction du 13/10/2026 : carte imprimée nette, valeurs AU MILIEU de la case (rien ne chevauche le filet du bas) —
+// la bande n'était plus vide de glyphes seulement sur les cartes où les valeurs mordent le filet.
+test('bande du matricule : valeurs au milieu de la case (scan net), les glyphes de la rangée sont gardés', () => {
+  const img = image(1100, 120, 255);
+  peindre(img, 0, 8, 1099, 9, 0); // filet du haut
+  peindre(img, 0, 104, 1099, 105, 0); // filet du bas, loin des valeurs
+  for (const x of [300, 560, 800]) peindre(img, x, 0, x + 1, 119, 0); // séparations des cases
+  const departs = [80, 92, 104, 400, 640, ...Array.from({ length: 8 }, (_, i) => 850 + 12 * i)];
+  for (const x of departs) peindre(img, x, 48, x + 7, 63, 0);
+  for (const binarisation of ['otsu', 'sauvola']) {
+    const bande = nettoyerBande(img, binarisation);
+    assert.equal(bande.glyphes.length, 13, binarisation);
+    assert.deepEqual(couperEnJetons(bande.glyphes, 4).map((j) => j.length), [3, 1, 1, 8], binarisation);
+  }
+});
