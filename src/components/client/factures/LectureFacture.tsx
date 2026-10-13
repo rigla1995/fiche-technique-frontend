@@ -190,6 +190,9 @@ export default function LectureFacture({
       setCleLue(premier);
       setLu(null); setRapp(null); setErreur(null); setRefuse(false); setActionErreur(null);
       setEtape('Chargement du lecteur…');
+      // Mises en page demandées une fois par lecture (une nouvelle lecture les redemande).
+      modeles.current = new Map();
+      relireRef.current = undefined;
       // Garde de l'écran : une lecture bloquée (réseau, rendu d'un PDF) ne garde pas « Enregistrer » fermé.
       const delai = setTimeout(() => {
         if (!vivant()) return;
@@ -212,10 +215,21 @@ export default function LectureFacture({
         if (vivant()) setClientConnu(Boolean(destinataire.matricule));
         const { lireFacture } = await import('./lecture/lireFacture');
         const aLire = fichiers.map((f) => ({ fichier: f.fichier, type: f.type, apercu: f.apercu }));
+        // Chaque page lue est gardée : une relecture (« Recadrer », « Pivoter ») ne relit que la page changée.
+        const parPage = new Map<string, EnteteLu>();
+        const garder = (cle: string, d: EnteteLu) => { parPage.set(cle, d); };
         const e = await lireFacture(aLire, destinataire, (etapeLue, a) => {
           if (vivant()) setEtape(a === undefined ? etapeLue : `${etapeLue} ${Math.round(a * 100)} %`);
-        }, controle.signal, { modele });
-        relireRef.current = (preparations, suivi, signal) => lireFacture(aLire, destinataire, suivi, signal, { preparations, modele });
+        }, controle.signal, { modele, surPage: garder });
+        let prepsLues: Record<string, PreparationPage> = {};
+        relireRef.current = async (preparations, suivi, signal) => {
+          const cles = new Set([...Object.keys(preparations), ...Object.keys(prepsLues)]);
+          const changees = [...cles].filter((k) => JSON.stringify(preparations[k] ?? null) !== JSON.stringify(prepsLues[k] ?? null));
+          const reutiliser = new Map([...parPage].filter(([k]) => !changees.includes(k)));
+          const relue = await lireFacture(aLire, destinataire, suivi, signal, { preparations, modele, reutiliser, surPage: garder });
+          prepsLues = preparations;
+          return relue;
+        };
         if (!vivant()) return;
         const liste = ((await api.get('/api/entreprise/fournisseurs', API_DELAI).catch(() => ({ data: [] }))).data as FournisseurDuCompte[]).filter((f) => !f.isLabo);
         if (!vivant()) return;

@@ -33,6 +33,9 @@ export interface PageLue {
   largeur: number;
   hauteur: number;
   rangees: Rangee[];
+  /** Étape F5 (page d'image) : passage de la page lue au cadre de la page droite, où s'exprime une mise en page ;
+   * `apprendre` : la mise en page vue ici peut s'apprendre (feuille recadrée). Absent : page d'un PDF (cadre = page). */
+  cadre?: { versFraction: (x: number, y: number) => { x: number; y: number }; depuisFraction: (fx: number, fy: number) => { x: number; y: number }; apprendre: boolean };
 }
 
 export type SourceLue = 'pdf' | 'ocr';

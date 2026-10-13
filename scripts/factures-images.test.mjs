@@ -5,8 +5,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  accentuer, cadreSurOriginal, eclaircirZonesFoncees, effacerTraits, egaliserFond, redresserFeuille, tailleFeuille,
-  tournerPixels, tournerQuart, trouverFeuille, versOriginal,
+  accentuer, cadreSurOriginal, depuisCadrePage, eclaircirZonesFoncees, effacerTraits, egaliserFond, ordonnerCoins, redresserFeuille,
+  tailleFeuille, tournerPixels, tournerQuart, trouverFeuille, versCadrePage, versOriginal,
 } from '../src/components/client/factures/lecture/image.ts';
 import { construireRangees } from '../src/components/client/factures/lecture/rangees.ts';
 import { lireTableaux } from '../src/components/client/factures/lecture/lignes.ts';
@@ -194,4 +194,61 @@ test('orientation : peu de mots lisibles, et peu au regard des mots reconnus →
   assert.equal(pageCouchee(droite), false);
   assert.equal(pageCouchee(couchee), true);
   assert.equal(pageCouchee([...Array(12)].map(() => m('Total', 95))), false, 'page courte mais lisible (totaux seuls)');
+});
+
+// ── Relecture des écrans (13/10) ──
+test('relecture : une ombre forte (texte noir sur papier gris foncé) n\'est pas inversée ; un bandeau à texte clair l\'est', () => {
+  const ombre = vierge(400, 300, 85);
+  rect(ombre, 100, 120, 104, 140, 25); // lettre noire dans l'ombre
+  rect(ombre, 200, 120, 204, 140, 25);
+  const r = eclaircirZonesFoncees(ombre);
+  assert.equal(px(r, 102, 130), 25, 'texte noir de l\'ombre inchangé');
+  assert.equal(px(r, 50, 50), 85, 'ombre inchangée');
+  // Bandeau foncé sur une page blanche, avec une ligne de texte clair (lettres de 4 × 20 px tous les 12 px).
+  const bandeau = vierge(400, 300, 250);
+  rect(bandeau, 40, 80, 360, 200, 40);
+  for (let x = 80; x < 320; x += 12) rect(bandeau, x, 120, x + 4, 140, 240);
+  const rb = eclaircirZonesFoncees(bandeau);
+  assert.ok(px(rb, 82, 130) < 60, 'texte clair du bandeau devenu foncé');
+  assert.ok(px(rb, 60, 100) > 200, 'fond du bandeau devenu clair');
+  assert.equal(px(rb, 10, 10), 250, 'page autour inchangée');
+});
+
+test('relecture : un scan à bandeaux foncés en haut et en bas n\'est pas une feuille posée (pas de recadrage)', () => {
+  const g = vierge(300, 400, 245);
+  rect(g, 0, 0, 300, 60, 40);
+  rect(g, 0, 340, 300, 400, 40);
+  assert.equal(trouverFeuille(g), null);
+});
+
+test('relecture : coins posés dans le désordre remis dans l\'ordre ; cadre croisé ou minuscule refusé', () => {
+  const o = ordonnerCoins([[0.9, 0.9], [0.1, 0.1], [0.1, 0.9], [0.9, 0.1]]);
+  assert.deepEqual(o, [[0.1, 0.1], [0.9, 0.1], [0.9, 0.9], [0.1, 0.9]]);
+  assert.deepEqual(ordonnerCoins([[0.1, 0.1], [0.1, 0.9], [0.9, 0.9], [0.9, 0.1]]), o, 'sens inverse : remis dans l\'ordre (pas de miroir)');
+  assert.equal(ordonnerCoins([[0.1, 0.1], [0.12, 0.1], [0.12, 0.12], [0.1, 0.12]]), null, 'trop petit');
+  assert.equal(ordonnerCoins([[0.1, 0.1], [0.9, 0.1]]), null);
+});
+
+test('relecture : cadre de la page droite — aller-retour exact (feuille, quart de tour, angle ; chemin « source »)', () => {
+  const pixels = {
+    largeur: 1600, hauteur: 2000, rotation: 'pixels', echelle: 0.5, coins: [[100, 50], [700, 50], [700, 950], [100, 950]], coinsAuto: true, quarts: 1, angle: 0.03,
+    tailles: { reduite: [800, 1000], feuille: [600, 900], quarts: [900, 600], lue: [917, 626] },
+  };
+  const source = {
+    largeur: 1000, hauteur: 1400, rotation: 'source', echelle: 1.6, coins: null, coinsAuto: false, quarts: 0, angle: -0.02,
+    tailles: { reduite: [1714, 2400], feuille: [1714, 2400], quarts: [1028, 1419], lue: [1645, 2270] },
+  };
+  for (const t of [pixels, source]) {
+    for (const [fx, fy] of [[0, 0], [0.25, 0.5], [0.9, 0.1], [1, 1]]) {
+      const p = depuisCadrePage(t, fx, fy);
+      const f = versCadrePage(t, p.x, p.y);
+      assert.ok(Math.abs(f.x - fx) < 1e-9 && Math.abs(f.y - fy) < 1e-9, `${t.rotation} ${fx},${fy} → ${JSON.stringify(f)}`);
+    }
+  }
+});
+
+test('relecture : une page presque vide n\'est jamais « couchée » (pas trois lectures pour rien)', () => {
+  const m = (t, c) => ({ t, c, x0: 0, x1: 1, y0: 0, y1: 1 });
+  assert.equal(pageCouchee([m('Total', 95), m('500,000', 90), m('TVA', 60)]), false);
+  assert.equal(pageCouchee([...Array(25)].map(() => m('|l', 20))), false, 'moins de 30 mots');
 });

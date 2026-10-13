@@ -14,7 +14,10 @@ import { lireEntete } from './entete.ts';
 import { colonnesDuTitre, lireTableaux } from './lignes.ts';
 import { construireRangees, motsDeTesseract } from './rangees.ts';
 import type { BlocsTesseract } from './rangees.ts';
-import { accentuer, eclaircirZonesFoncees, effacerTraits, egaliserFond, redresserFeuille, tournerPixels, tournerQuart, trouverFeuille } from './image.ts';
+import {
+  accentuer, depuisCadrePage, eclaircirZonesFoncees, effacerTraits, egaliserFond, ordonnerCoins, redresserFeuille, tournerPixels, tournerQuart,
+  trouverFeuille, versCadrePage,
+} from './image.ts';
 import type { Coins } from './image.ts';
 import type { Destinataire, EnteteLu, LigneLue, MiseEnPage, Mot, PageLue, PreparationPage, SuiviLecture, Trajet } from './types.ts';
 
@@ -55,6 +58,10 @@ export const motsLisibles = (mots: readonly Mot[]): number => mots.filter((m) =>
  * lisibles (moins de 10 % des mots), une photo droite 34 à 77 (plus de 35 %), même floue.
  */
 export const pageCouchee = (mots: readonly Mot[]): boolean => {
+  // Une page presque vide (dernière page avec les seuls totaux, ticket court) n'est jamais « couchée » : essayer les
+  // trois autres orientations y coûterait trois lectures pour rien (relecture des écrans). Couchée, une facture donne au
+  // contraire beaucoup de « mots » mal reconnus (74 à 167 sur le jeu fictif).
+  if (mots.length < 30) return false;
   const n = motsLisibles(mots);
   return n < 6 || (n < 20 && n < 0.2 * mots.length);
 };
@@ -131,8 +138,9 @@ export async function lirePageImage(
   let coins: Coins | null = null;
   let coinsAuto = false;
   if (preparation.coins !== undefined) {
-    coins = preparation.coins && preparation.coins.length === 4
-      ? preparation.coins.map(([fx, fy]) => ({ x: fx * reduite.width, y: fy * reduite.height })) as Coins : null;
+    // Coins posés à la main : remis dans l'ordre ; un cadre qui se croise n'est pas employé.
+    const ordonnes = preparation.coins ? ordonnerCoins(preparation.coins) : null;
+    coins = ordonnes ? ordonnes.map(([fx, fy]) => ({ x: fx * reduite.width, y: fy * reduite.height })) as Coins : null;
   } else if (PREPARATION.feuille) {
     coins = trouverFeuille(reduite);
     coinsAuto = Boolean(coins);
@@ -175,11 +183,15 @@ export async function lirePageImage(
     }
   }
   suivi(ETAPE_OCR, debut + part);
-  return { page: { largeur: lu.grise.width, hauteur: lu.grise.height, rangees: construireRangees(lu.mots, numero, lu.lignes) }, grise: lu.grise, angle: lu.angle, trajet: lu.trajet };
+  const t = lu.trajet;
+  // Le cadre de la page droite, où s'exprime une mise en page ; elle ne s'apprend que sur une feuille recadrée (une photo
+  // non recadrée contient la table autour).
+  const cadre = { versFraction: (x: number, y: number) => versCadrePage(t, x, y), depuisFraction: (fx: number, fy: number) => depuisCadrePage(t, fx, fy), apprendre: Boolean(t.coins) };
+  return { page: { largeur: lu.grise.width, hauteur: lu.grise.height, rangees: construireRangees(lu.mots, numero, lu.lignes), cadre }, grise: lu.grise, angle: lu.angle, trajet: t };
 }
 
 /** Passe 2 : les zones de la page, chacune lue comme un bloc ; les mots sont remis dans les coordonnées de la page. */
-export async function lireZones(grise: Pixels, moteur: MoteurFacture, numero = 1, suivi: SuiviLecture = () => {}, debut = 0, part = 1): Promise<PageLue> {
+export async function lireZones(grise: Pixels, moteur: MoteurFacture, numero = 1, suivi: SuiviLecture = () => {}, debut = 0, part = 1, cadre?: PageLue['cadre']): Promise<PageLue> {
   const tous: Mot[] = [];
   const lignes: number[] = [];
   const zones = zonesDePage(grise.width, grise.height);
@@ -205,7 +217,7 @@ export async function lireZones(grise: Pixels, moteur: MoteurFacture, numero = 1
     lignesUniques.push(lignes[i]);
   });
   // Les lignes de deux zones voisines à la même hauteur se rejoignent en une rangée, comme sur la page.
-  return { largeur: grise.width, hauteur: grise.height, rangees: construireRangees(uniques, numero, lignesUniques) };
+  return { largeur: grise.width, hauteur: grise.height, rangees: construireRangees(uniques, numero, lignesUniques), ...(cadre ? { cadre } : {}) };
 }
 
 const plat = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -235,7 +247,7 @@ export async function lireTableau(grise: Pixels, moteur: MoteurFacture, page: Pa
   const { y0, y1 } = bandeDuTableau(page);
   const { mots, lignes } = motsDeTesseract(await moteur.bloc(decouper(grise, 0, y0, grise.width, y1 - y0)));
   const places = mots.map((m) => ({ ...m, y0: m.y0 + y0, y1: m.y1 + y0 }));
-  return { largeur: grise.width, hauteur: grise.height, rangees: construireRangees(places, numero, lignes) };
+  return { largeur: grise.width, hauteur: grise.height, rangees: construireRangees(places, numero, lignes), ...(page.cadre ? { cadre: page.cadre } : {}) };
 }
 
 /** Qualité d'une lecture des lignes : lignes dont le calcul se vérifie, puis lignes complètes. */
@@ -268,7 +280,7 @@ export async function lireImageFacture(source: Source, moteur: MoteurFacture, cl
   const { page, grise, trajet } = await lirePageImage(source, moteur, 1, suivi, 0, 0.5, options.preparation);
   let entete = lireEntete([page], 'ocr', client);
   if (options.entete !== false && incomplete(entete)) {
-    const zones = await lireZones(grise, moteur, 1, suivi, 0.5, 0.3);
+    const zones = await lireZones(grise, moteur, 1, suivi, 0.5, 0.3, page.cadre);
     entete = completer(entete, lireEntete([zones], 'ocr', client));
   }
   // Étape F5 : la mise en page apprise du fournisseur (par son matricule lu) relit les rangées de la page.

@@ -488,9 +488,13 @@ function lignesSansTitre(page: PageLue, source: SourceLue): LigneLue[] {
 /** Genres de colonnes admis dans une mise en page (le serveur contrôle la même liste). */
 export const GENRES_COLONNES: readonly Colonne[] = ['num', 'ref', 'des', 'unite', 'qte', 'pu', 'puttc', 'remise', 'tva', 'montant', 'ttc'];
 
-/** Colonnes connues ramenées à la page (unités de la page). */
-const colonnesConnues = (m: MiseEnPage, page: PageLue): ColonneVue[] =>
-  m.colonnes.map((c) => ({ genre: c.genre, x0: c.x0 * page.largeur, x1: c.x1 * page.largeur })).sort((a, b) => a.x0 - b.x0);
+/** Colonnes connues ramenées à la page lue (unités de la page) — par le cadre de la page droite pour une image, au milieu
+ * de sa hauteur. */
+const colonnesConnues = (m: MiseEnPage, page: PageLue): ColonneVue[] => m.colonnes.map((c) => {
+  const x0 = page.cadre ? page.cadre.depuisFraction(c.x0, 0.5).x : c.x0 * page.largeur;
+  const x1 = page.cadre ? page.cadre.depuisFraction(c.x1, 0.5).x : c.x1 * page.largeur;
+  return { genre: c.genre, x0: Math.min(x0, x1), x1: Math.max(x0, x1) };
+}).sort((a, b) => a.x0 - b.x0);
 
 /** Colonnes d'un titre lu, complétées par les colonnes connues : un genre absent du titre (mal reconnu) est ajouté s'il ne
  * recouvre aucune colonne lue. */
@@ -510,10 +514,12 @@ function debutDesLignes(page: PageLue): number {
   });
 }
 
-/** Mise en page lue : les colonnes du premier tableau dont des lignes ont été lues, en fractions de la page. */
-function miseEnPageVue(page: PageLue, colonnes: ColonneVue[]): MiseEnPage | null {
-  if (!page.largeur || colonnes.length < 2) return null;
-  return { colonnes: colonnes.map((c) => ({ genre: c.genre, x0: Math.max(0, c.x0 / page.largeur), x1: Math.min(1, c.x1 / page.largeur) })) };
+/** Mise en page lue : les colonnes du premier tableau dont des lignes ont été lues, en fractions du cadre de la page (à la
+ * hauteur `y` du titre) — seulement là où elle peut s'apprendre (texte d'un PDF, feuille recadrée d'une photo). */
+function miseEnPageVue(page: PageLue, colonnes: ColonneVue[], y: number): MiseEnPage | null {
+  if (!page.largeur || colonnes.length < 2 || (page.cadre && !page.cadre.apprendre)) return null;
+  const fraction = (x: number) => (page.cadre ? page.cadre.versFraction(x, y).x : x / page.largeur);
+  return { colonnes: colonnes.map((c) => ({ genre: c.genre, x0: Math.max(0, fraction(c.x0)), x1: Math.min(1, fraction(c.x1)) })) };
 }
 
 /**
@@ -536,7 +542,7 @@ export function lireTableaux(pages: readonly PageLue[], source: SourceLue, model
       if (lignes.length) {
         res.push(...lignes);
         trouve = true;
-        if (!vue) vue = miseEnPageVue(page, titre);
+        if (!vue) vue = miseEnPageVue(page, titre, (page.rangees[i].y0 + page.rangees[i].y1) / 2);
       }
       i = fin - 1;
     }

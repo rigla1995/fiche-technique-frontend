@@ -165,7 +165,13 @@ export interface OptionsLecture {
   preparations?: Record<string, PreparationPage>;
   /** Mise en page apprise d'un fournisseur, d'après son matricule (GET /api/factures/mise-en-page). */
   modele?: (matricule: string) => Promise<MiseEnPage | null>;
+  /** Pages déjà lues, reprises sans être relues (une relecture ne relit que la page recadrée ou tournée). */
+  reutiliser?: ReadonlyMap<string, EnteteLu>;
+  /** Chaque page lue, à garder pour une relecture. */
+  surPage?: (cle: string, e: EnteteLu) => void;
 }
+/** Au-delà de ce temps de lecture, plus de nouvelle page : la lecture rend ce qu'elle a lu (avant le délai global). */
+const BUDGET_PAGES = 80_000;
 /** Clé d'une page de la facture déposée : rang du fichier (à partir de 0), numéro de page dans ce fichier. */
 export const cleDePage = (fichier: number, page: number) => `${fichier}:${page}`;
 /** Pages d'images lues au plus (une facture plus longue : les 4 premières et la dernière, qui porte les totaux). */
@@ -201,27 +207,43 @@ export async function lireFacture(
     if (entete) return fin(entete);
   }
 
-  // Étape F5 : TOUTES les pages d'images de la facture déposée (photos, pages d'un PDF numérisé), dans l'ordre — 5 au
-  // plus. Les pages d'un PDF sont rendues tout de suite (le PDF se ferme après).
+  // Étape F5 : les pages d'images de la facture déposée (photos, pages d'un PDF numérisé), dans l'ordre — 5 au plus : les
+  // 4 premières et la dernière (les totaux). Les pages d'un PDF ne sont rendues que si elles sont lues, et gardées en
+  // JPEG (une page rendue pèse ~16 Mo ; relecture des écrans : la mémoire d'un téléphone).
   suivi('Préparation de l\'image…');
-  const pagesImages: { fichier: number; page: number; dessiner: () => Promise<HTMLCanvasElement> }[] = [];
+  type PageImage = { fichier: number; page: number; source: FichierALire };
+  const toutes: PageImage[] = [];
   for (const f of lisibles) {
     verifier();
     if (f.type === 'application/pdf') {
-      const octets = new Uint8Array(await f.fichier.arrayBuffer());
-      await avecPdf(octets, async (pdf) => {
-        const numeros = [...Array(Math.min(pdf.numPages, PAGES_IMAGES)).keys()].map((x) => x + 1);
-        if (pdf.numPages > PAGES_IMAGES) numeros.splice(PAGES_IMAGES - 1, 1, pdf.numPages);
-        for (const n of numeros) {
-          const c = await rendrePage(pdf, n);
-          pagesImages.push({ fichier: rangFichier(f), page: n, dessiner: async () => c });
-        }
-      });
+      const n = await avecPdf(new Uint8Array(await f.fichier.arrayBuffer()), async (pdf) => pdf.numPages);
+      for (let p = 1; p <= n; p++) toutes.push({ fichier: rangFichier(f), page: p, source: f });
     } else {
-      pagesImages.push({ fichier: rangFichier(f), page: 1, dessiner: () => dessinerImage(lisibleEnImage(f) as Blob) });
+      toutes.push({ fichier: rangFichier(f), page: 1, source: f });
     }
   }
-  const aLire = pagesImages.length > PAGES_IMAGES ? [...pagesImages.slice(0, PAGES_IMAGES - 1), pagesImages[pagesImages.length - 1]] : pagesImages;
+  const aLire = toutes.length > PAGES_IMAGES ? [...toutes.slice(0, PAGES_IMAGES - 1), toutes[toutes.length - 1]] : toutes;
+  const sautees = toutes.filter((p) => !aLire.includes(p));
+  const rendues = new Map<string, Blob>();
+  for (const f of lisibles.filter((x) => x.type === 'application/pdf')) {
+    const numeros = aLire.filter((p) => p.source === f && !opts.reutiliser?.has(cleDePage(p.fichier, p.page))).map((p) => p.page);
+    if (!numeros.length) continue;
+    verifier();
+    await avecPdf(new Uint8Array(await f.fichier.arrayBuffer()), async (pdf) => {
+      for (const n of numeros) {
+        verifier();
+        const c = await rendrePage(pdf, n);
+        const b = await new Promise<Blob | null>((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
+        c.width = 0; c.height = 0;
+        if (b) rendues.set(cleDePage(rangFichier(f), n), b);
+      }
+    });
+  }
+  const dessiner = (p: PageImage): Promise<HTMLCanvasElement> => {
+    if (p.source.type !== 'application/pdf') return dessinerImage(lisibleEnImage(p.source) as Blob);
+    const b = rendues.get(cleDePage(p.fichier, p.page));
+    return b ? dessinerImage(b) : Promise.reject(new LectureImpossible('Page du PDF illisible.'));
+  };
 
   // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné, et sur arrêt demandé).
   verifier();
@@ -242,37 +264,53 @@ export async function lireFacture(
         const m = moteur(travailleur);
         const n = aLire.length;
         let e: EnteteLu | null = null;
+        // Signature des lignes de chaque page lue (vide pour une page en échec : les numéros restent alignés).
         const signatures: string[] = [];
+        const signature = (ls: EnteteLu['lignesFacture']) => ls.map((l) => `${l.designation.toLowerCase().replace(/\s+/g, ' ')}|${l.montant ?? ''}`).sort().join('§');
+        let nonLues = 0;
         for (const [k, p] of aLire.entries()) {
           verifier();
-          const suiviPage: SuiviLecture = (etape, a) => suivi(n > 1 ? `${etape.replace(/…$/, '')} (page ${k + 1} / ${n})…` : etape, (k + (a ?? 0)) / n);
-          const options = {
-            preparation: opts.preparations?.[cleDePage(p.fichier, p.page)],
-            modele: opts.modele,
-            // L'en-tête et les totaux se cherchent sur la première et la dernière page.
-            entete: k === 0 || k === n - 1,
-          };
-          try {
-            const d = situer(await lireImageFacture(sourceCanvas(await p.dessiner()), m, client, suiviPage, options), p.fichier, p.page);
-            // La même page déposée deux fois (deux photos de la même feuille) : ses lignes répètent celles d'une page
-            // précédente — signalé, jamais retiré en silence (la personne retire le fichier en double).
-            const signature = (ls: EnteteLu['lignesFacture']) => ls.map((l) => `${l.designation.toLowerCase().replace(/\s+/g, ' ')}|${l.montant ?? ''}`).sort().join('§');
-            const sig = signature(d.lignesFacture);
-            const repetee: number = d.lignesFacture.length >= 2 ? signatures.indexOf(sig) : -1;
-            signatures.push(sig);
-            e = e ? ajouterPages(completer(e, d), d) : d;
-            if (repetee >= 0) {
-              e = { ...e, avertissements: [...e.avertissements, `Les lignes de la page ${k + 1} répètent celles de la page ${repetee + 1} : la même page a-t-elle été déposée deux fois ? Retirez le fichier en double.`] };
+          // Budget : passé BUDGET_PAGES, plus de nouvelle page — la lecture rend ce qu'elle a lu (le délai global, lui,
+          // ferait tout perdre).
+          if (e && performance.now() - debut > BUDGET_PAGES) { nonLues = n - k; break; }
+          const cle = cleDePage(p.fichier, p.page);
+          // Relecture d'une page recadrée ou tournée : les autres pages sont reprises telles quelles.
+          let d = opts.reutiliser?.get(cle) ?? null;
+          if (!d) {
+            const suiviPage: SuiviLecture = (etape, a) => suivi(n > 1 ? `${etape.replace(/…$/, '')} (page ${k + 1} / ${n})…` : etape, (k + (a ?? 0)) / n);
+            const options = {
+              preparation: opts.preparations?.[cle],
+              modele: opts.modele,
+              // L'en-tête et les totaux se cherchent sur la première et la dernière page.
+              entete: k === 0 || k === n - 1,
+            };
+            try {
+              d = situer(await lireImageFacture(sourceCanvas(await dessiner(p)), m, client, suiviPage, options), p.fichier, p.page);
+              opts.surPage?.(cle, d);
+            } catch (err) {
+              // Une page qui ne se lit pas n'arrête la lecture que si c'est la première.
+              verifier();
+              if (!e) throw err;
+              signatures.push('');
+              console.warn('[facture] page illisible', err instanceof Error ? err.name : '');
+              continue;
             }
-          } catch (err) {
-            // Une page qui ne se lit pas n'arrête la lecture que si c'est la première.
-            verifier();
-            if (!e) throw err;
-            console.warn('[facture] page illisible', err instanceof Error ? err.name : '');
+          }
+          // La même page déposée deux fois (deux photos de la même feuille) : ses lignes répètent celles d'une page
+          // précédente — signalé, jamais retiré en silence (la personne retire le fichier en double).
+          const sig = signature(d.lignesFacture);
+          const repetee: number = d.lignesFacture.length >= 2 ? signatures.indexOf(sig) : -1;
+          signatures.push(sig);
+          e = e ? ajouterPages(completer(e, d), d) : d;
+          if (repetee >= 0) {
+            e = { ...e, avertissements: [...e.avertissements, `Les lignes de la page ${k + 1} répètent celles de la page ${repetee + 1} : la même page a-t-elle été déposée deux fois ? Retirez le fichier en double.`] };
           }
         }
         if (!e) throw new LectureImpossible("Aucune page lisible : la facture sera jointe, saisissez l'en-tête à la main.");
-        return e;
+        const avertissements = [...e.avertissements];
+        if (sautees.length) avertissements.push(`Facture de ${toutes.length} pages : ${sautees.length} page${sautees.length > 1 ? 's' : ''} du milieu n'${sautees.length > 1 ? 'ont' : 'a'} pas été lue${sautees.length > 1 ? 's' : ''} (5 au plus) — saisissez leurs lignes.`);
+        if (nonLues) avertissements.push(`Lecture arrêtée faute de temps : ${nonLues} page${nonLues > 1 ? 's' : ''} non lue${nonLues > 1 ? 's' : ''} — saisissez leurs lignes, ou déposez moins de pages à la fois.`);
+        return { ...e, avertissements };
       } finally {
         signal?.removeEventListener('abort', stop);
       }

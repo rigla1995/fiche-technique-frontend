@@ -179,6 +179,14 @@ export function trouverFeuille(g: Pixels): Coins | null {
   // La feuille touche les quatre bords de l'image : c'est un scan ou une photo déjà recadrée.
   const touche = (gauche.some((x) => x === 0) ? 1 : 0) + (droiteX.some((x) => x === w - 1) ? 1 : 0) + (haut === 0 ? 1 : 0) + (bas === h - 1 ? 1 : 0);
   if (touche >= 3) return null;
+  // Une feuille posée sur une table en est ENTOURÉE : le fond foncé occupe au moins 3 des 4 bords de l'image (relecture
+  // des écrans : un scan à bandeaux foncés en haut et en bas n'est pas une feuille posée — il ne se recadre pas).
+  const fonceSur = (ps: number[]) => ps.filter((i) => s.data[i] <= seuil).length / Math.max(1, ps.length);
+  const bords = [
+    fonceSur([...Array(w).keys()]), fonceSur([...Array(w).keys()].map((x) => (h - 1) * w + x)),
+    fonceSur([...Array(h).keys()].map((y) => y * w)), fonceSur([...Array(h).keys()].map((y) => y * w + w - 1)),
+  ];
+  if (bords.filter((f) => f >= 0.4).length < 3) return null;
   // Coins grossiers : extrêmes de x + y et de x − y.
   let tl: Point | null = null, br: Point | null = null, tr: Point | null = null, bl: Point | null = null;
   const contour: Point[] = [];
@@ -312,6 +320,54 @@ export function versOriginal(t: Trajet, x: number, y: number): Point {
   return { x: r.x / t.echelle, y: r.y / t.echelle };
 }
 
+/** Point (x, y) d'une image de w × h → point de cette image tournée de `rad` (taille W × H) : l'inverse d'avantRotation. */
+function apresRotation(x: number, y: number, rad: number, w: number, h: number, W: number, H: number): Point {
+  const s = Math.sin(rad), c = Math.cos(rad);
+  const u = x - w / 2, v = y - h / 2;
+  return { x: u * c - v * s + W / 2, y: u * s + v * c + H / 2 };
+}
+
+/**
+ * Le CADRE DE LA PAGE droite : la feuille recadrée (ou l'image entière), tournée de ses quarts de tour, avant le
+ * redressement fin. Une mise en page apprise s'y exprime en fractions (relecture des écrans : la page lue est agrandie par
+ * la rotation, et une photo non recadrée contient la table). Point de la page lue → fractions de ce cadre.
+ */
+export function versCadrePage(t: Trajet, x: number, y: number): Point {
+  if (t.rotation === 'source') {
+    const p = avantRotation(x / t.echelle, y / t.echelle, t.angle, t.tailles.quarts[0], t.tailles.quarts[1], t.largeur, t.hauteur);
+    return { x: p.x / t.largeur, y: p.y / t.hauteur };
+  }
+  const [WL, HL] = t.tailles.lue, [WQ, HQ] = t.tailles.quarts;
+  const a = avantRotation(x, y, t.angle, WL, HL, WQ, HQ);
+  return { x: a.x / WQ, y: a.y / HQ };
+}
+
+/** Fractions du cadre de la page droite → point de la page lue (l'inverse de versCadrePage). */
+export function depuisCadrePage(t: Trajet, fx: number, fy: number): Point {
+  if (t.rotation === 'source') {
+    const p = apresRotation(fx * t.largeur, fy * t.hauteur, t.angle, t.largeur, t.hauteur, t.tailles.quarts[0], t.tailles.quarts[1]);
+    return { x: p.x * t.echelle, y: p.y * t.echelle };
+  }
+  const [WL, HL] = t.tailles.lue, [WQ, HQ] = t.tailles.quarts;
+  return apresRotation(fx * WQ, fy * HQ, t.angle, WQ, HQ, WL, HL);
+}
+
+/**
+ * Quatre coins placés à la main (fractions de l'image), remis dans l'ordre haut gauche, haut droit, bas droit, bas gauche
+ * quel que soit l'ordre de pose ; null si le cadre se croise ou s'aplatit (relecture des écrans : posés à l'envers, ils
+ * donnaient une image en miroir).
+ */
+export function ordonnerCoins(ps: readonly [number, number][]): [number, number][] | null {
+  if (ps.length !== 4 || ps.some((p) => !Number.isFinite(p[0]) || !Number.isFinite(p[1]))) return null;
+  const cx = ps.reduce((s, p) => s + p[0], 0) / 4, cy = ps.reduce((s, p) => s + p[1], 0) / 4;
+  // y vers le bas : l'angle croissant tourne dans le sens des aiguilles d'une montre à l'écran.
+  const tries = [...ps].sort((a, b) => Math.atan2(a[1] - cy, a[0] - cx) - Math.atan2(b[1] - cy, b[0] - cx));
+  const k = tries.reduce((m, p, i) => (p[0] + p[1] < tries[m][0] + tries[m][1] ? i : m), 0);
+  const o = [...tries.slice(k), ...tries.slice(0, k)];
+  const c = o.map(([x, y]) => ({ x, y })) as Coins;
+  return convexe(c) && aire(c) >= 0.05 ? o : null;
+}
+
 /** Le cadre d'une ligne lue, en FRACTIONS de l'image d'origine (rectangle qui contient ses quatre coins replacés). */
 export function cadreSurOriginal(t: Trajet, c: { x0: number; y0: number; x1: number; y1: number }): { x0: number; y0: number; x1: number; y1: number } {
   const ps = [versOriginal(t, c.x0, c.y0), versOriginal(t, c.x1, c.y0), versOriginal(t, c.x1, c.y1), versOriginal(t, c.x0, c.y1)];
@@ -363,14 +419,40 @@ export function eclaircirZonesFoncees(g: Pixels, b = 24, seuil = 96): Pixels {
         if (q >= 0 && !vu[q] && fonce(q)) { vu[q] = 1; pile.push(q); }
       }
     }
-    if (y1 - y0 + 1 >= 3 && x1 - x0 + 1 >= 4) cadres.push([x0, y0, x1, y1]);
+    if (y1 - y0 + 1 < 3 || x1 - x0 + 1 < 4) continue;
+    // Un bandeau porte un texte CLAIR : ses pixels minoritaires sont plus clairs que lui. Une ombre forte sur le papier
+    // (texte noir sur fond gris foncé) a ses pixels minoritaires plus foncés : elle n'est pas inversée (relecture des
+    // écrans — l'inverser rendait le texte plus clair que son fond).
+    // Blocs intérieurs seulement (ceux du bord mêlent le papier voisin, plus clair : il passerait pour du texte clair).
+    const dedans = new Set(zone);
+    const interieurs = zone.filter((p) => {
+      const x = p % gw;
+      return [x > 0 ? p - 1 : -1, x < gw - 1 ? p + 1 : -1, p - gw, p + gw].every((q) => dedans.has(q));
+    });
+    const blocs = interieurs.length >= 2 ? interieurs : zone;
+    let somme = 0, n = 0;
+    for (const p of blocs) somme += v[p];
+    const m = somme / blocs.length;
+    let clairs = 0, fonces = 0;
+    for (const p of blocs) {
+      const bx = p % gw, by = (p - bx) / gw;
+      for (let y = by * b; y < Math.min(g.height, (by + 1) * b); y++) {
+        for (let x = bx * b; x < Math.min(g.width, (bx + 1) * b); x++) {
+          const val = g.data[y * g.width + x];
+          n++;
+          if (val > m + 70) clairs++; else if (val < m - 40) fonces++;
+        }
+      }
+    }
+    if (clairs > fonces && clairs >= 0.003 * n) cadres.push([x0, y0, x1, y1]);
   }
   if (!cadres.length) return g;
   // Au pixel près, dans le cadre de chaque zone (un bloc de marge) : un pixel est inversé si son voisinage est foncé — le
   // texte clair de la zone (voisinage foncé) devient foncé, le papier autour (voisinage clair) ne bouge pas.
   const { width: w, height: h, data: d } = g;
   const W = w + 1;
-  const I = new Float64Array(W * (h + 1));
+  // Image intégrale en entiers 32 bits : 255 × 3 400² tient (la page lue a 2 400 px de côté, un peu plus une fois tournée).
+  const I = new Uint32Array(W * (h + 1));
   for (let y = 0; y < h; y++) {
     let s = 0;
     for (let x = 0; x < w; x++) { s += d[y * w + x]; I[(y + 1) * W + x + 1] = I[y * W + x + 1] + s; }
