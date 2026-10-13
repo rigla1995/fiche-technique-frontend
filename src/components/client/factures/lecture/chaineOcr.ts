@@ -15,8 +15,8 @@ import { colonnesDuTitre, lireTableaux } from './lignes.ts';
 import { construireRangees, motsDeTesseract } from './rangees.ts';
 import type { BlocsTesseract } from './rangees.ts';
 import {
-  accentuer, depuisCadrePage, eclaircirZonesFoncees, effacerTraits, egaliserFond, ordonnerCoins, redresserFeuille, tournerPixels, tournerQuart,
-  trouverFeuille, versCadrePage,
+  accentuer, depuisCadrePage, eclaircirZonesFoncees, effacerTraits, egaliserFond, feuillePleine, ordonnerCoins, redresserFeuille, tournerPixels,
+  tournerQuart, trouverFeuille, versCadrePage,
 } from './image.ts';
 import type { Coins } from './image.ts';
 import type { Destinataire, EnteteLu, LigneLue, MiseEnPage, Mot, PageLue, PreparationPage, SuiviLecture, Trajet } from './types.ts';
@@ -146,6 +146,9 @@ export async function lirePageImage(
     coinsAuto = Boolean(coins);
   }
   const feuille = coins ? redresserFeuille(reduite, coins) : reduite;
+  // Le cadre de la page est la feuille : recadrée, ou l'image entière d'un scan (contre-relecture : un scan n'apprenait
+  // jamais sa mise en page).
+  const cadreFeuille = Boolean(coins) || feuillePleine(reduite);
   const essayer = async (quarts: number) => {
     const tournee = tournerQuart(feuille, quarts);
     const angle = await moteur.angle(tournee);
@@ -184,9 +187,9 @@ export async function lirePageImage(
   }
   suivi(ETAPE_OCR, debut + part);
   const t = lu.trajet;
-  // Le cadre de la page droite, où s'exprime une mise en page ; elle ne s'apprend que sur une feuille recadrée (une photo
-  // non recadrée contient la table autour).
-  const cadre = { versFraction: (x: number, y: number) => versCadrePage(t, x, y), depuisFraction: (fx: number, fy: number) => depuisCadrePage(t, fx, fy), apprendre: Boolean(t.coins) };
+  // Le cadre de la page droite, où s'exprime une mise en page ; elle ne s'apprend et ne s'applique que si ce cadre est la
+  // feuille (une photo non recadrée contient la table autour : les fractions y tomberaient à côté).
+  const cadre = { versFraction: (x: number, y: number) => versCadrePage(t, x, y), depuisFraction: (fx: number, fy: number) => depuisCadrePage(t, fx, fy), feuille: cadreFeuille };
   return { page: { largeur: lu.grise.width, hauteur: lu.grise.height, rangees: construireRangees(lu.mots, numero, lu.lignes), cadre }, grise: lu.grise, angle: lu.angle, trajet: t };
 }
 

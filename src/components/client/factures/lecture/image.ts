@@ -2,6 +2,7 @@
 // page avant la reconnaissance de caractères — fonctions PURES sur des niveaux de gris (0 = encre, 255 = papier), sans
 // DOM ni tesseract, testées par « node --test » et réemployées telles quelles par l'outil d'essai (Node).
 //   trouverFeuille     la feuille posée sur une table : ses 4 coins (photo) ; null pour un scan ou une feuille entière ;
+//   feuillePleine      l'image EST la feuille (scan, page d'un PDF numérisé) : ses bords sont du papier ;
 //   redresserFeuille   la feuille ramenée à un rectangle (perspective et inclinaison corrigées) ;
 //   tournerQuart       un quart de tour (« Pivoter ») ; tournerPixels : petit angle (redressement des lignes) ;
 //   eclaircirZonesFoncees  texte clair sur fond foncé (bandeau, cadre « FACTURE ») : la zone est inversée ;
@@ -235,6 +236,32 @@ export function trouverFeuille(g: Pixels): Coins | null {
   if (!convexe(vrais) || aire(vrais) < 0.2 * g.width * g.height) return null;
   if (vrais.some((p) => p.x < -0.05 * g.width || p.y < -0.05 * g.height || p.x > 1.05 * g.width || p.y > 1.05 * g.height)) return null;
   return vrais;
+}
+
+/**
+ * L'image EST la feuille (scan, page d'un PDF numérisé, photo déjà recadrée) quand aucun fond foncé ne l'entoure : moins
+ * de 3 de ses 4 bords sont foncés à 40 % (le critère de trouverFeuille ; bords lus juste à l'intérieur — le liseré d'un
+ * scanner ne compte pas ; un scan à bandeaux foncés en haut et en bas reste une feuille). Le cadre de la page est alors
+ * l'image entière : une mise en page s'y apprend et s'y applique (contre-relecture : un scan n'apprenait jamais). Une
+ * photo dont la feuille n'a pas été trouvée a le plus souvent la table autour : non. (Limite : une feuille photographiée
+ * sur une table CLAIRE passe pour un scan — la mise en page connue n'y est gardée que si elle lit mieux.)
+ */
+export function feuillePleine(g: Pixels): boolean {
+  const f = Math.max(1, Math.ceil(Math.max(g.width, g.height) / 260));
+  const s = reduire(g, f);
+  const { width: w, height: h } = s;
+  if (w < 4 || h < 4) return true;
+  // Image presque uniforme : pas de fond distinct du papier.
+  let min = 255, max = 0;
+  for (const v of s.data) { if (v < min) min = v; if (v > max) max = v; }
+  if (max - min < 40) return true;
+  const seuil = otsu(s);
+  const fonceSur = (ps: number[]) => ps.filter((i) => s.data[i] <= seuil).length / Math.max(1, ps.length);
+  const bords = [
+    fonceSur([...Array(w).keys()].map((x) => w + x)), fonceSur([...Array(w).keys()].map((x) => (h - 2) * w + x)),
+    fonceSur([...Array(h).keys()].map((y) => y * w + 1)), fonceSur([...Array(h).keys()].map((y) => y * w + w - 2)),
+  ];
+  return bords.filter((c) => c >= 0.4).length < 3;
 }
 
 /** Homographie qui envoie le rectangle [0, W] × [0, H] sur le quadrilatère `coins`. */

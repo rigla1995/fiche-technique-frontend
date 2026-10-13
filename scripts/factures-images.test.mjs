@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  accentuer, cadreSurOriginal, depuisCadrePage, eclaircirZonesFoncees, effacerTraits, egaliserFond, ordonnerCoins, redresserFeuille,
+  accentuer, cadreSurOriginal, depuisCadrePage, eclaircirZonesFoncees, effacerTraits, egaliserFond, feuillePleine, ordonnerCoins, redresserFeuille,
   tailleFeuille, tournerPixels, tournerQuart, trouverFeuille, versCadrePage, versOriginal,
 } from '../src/components/client/factures/lecture/image.ts';
 import { construireRangees } from '../src/components/client/factures/lecture/rangees.ts';
@@ -219,6 +219,32 @@ test('relecture : un scan à bandeaux foncés en haut et en bas n\'est pas une f
   rect(g, 0, 0, 300, 60, 40);
   rect(g, 0, 340, 300, 400, 40);
   assert.equal(trouverFeuille(g), null);
+  assert.equal(feuillePleine(g), true, 'mais l\'image est la feuille');
+});
+
+test('contre-relecture : l\'image est la feuille pour un scan (la mise en page s\'y apprend), pas pour une photo sur une table', () => {
+  const scan = vierge(300, 400, 250);
+  rect(scan, 40, 60, 260, 64, 20);
+  rect(scan, 40, 120, 200, 126, 20);
+  assert.equal(feuillePleine(scan), true, 'scan');
+  assert.equal(feuillePleine(vierge(300, 400, 240)), true, 'image uniforme');
+  assert.equal(feuillePleine(photo()), false, 'feuille posée sur une table foncée');
+  // Feuille trop petite pour être recadrée, au milieu de la table : ni recadrée, ni prise pour la feuille.
+  const petite = vierge(400, 520, 90);
+  rect(petite, 170, 220, 230, 300, 245);
+  assert.equal(trouverFeuille(petite), null);
+  assert.equal(feuillePleine(petite), false);
+});
+
+test('contre-relecture : la mise en page connue ne s\'applique ni ne s\'apprend sur une photo non recadrée', () => {
+  const vu = lireTableaux([tableau(true)], 'pdf').miseEnPage;
+  const identite = { versFraction: (x) => ({ x: x / 600, y: 0 }), depuisFraction: (fx) => ({ x: fx * 600, y: 0 }) };
+  const surTable = { ...tableau(false), cadre: { ...identite, feuille: false } };
+  const r = lireTableaux([surTable], 'ocr', vu);
+  assert.equal(r.modeleEmploye, false, 'pas appliquée');
+  const feuille = { ...tableau(false), cadre: { ...identite, feuille: true } };
+  assert.equal(lireTableaux([feuille], 'ocr', vu).modeleEmploye, true, 'appliquée sur la feuille');
+  assert.equal(lireTableaux([{ ...tableau(true), cadre: { ...identite, feuille: false } }], 'ocr').miseEnPage, null, 'pas apprise');
 });
 
 test('relecture : coins posés dans le désordre remis dans l\'ordre ; cadre croisé ou minuscule refusé', () => {

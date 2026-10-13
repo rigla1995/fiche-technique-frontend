@@ -514,10 +514,14 @@ function debutDesLignes(page: PageLue): number {
   });
 }
 
+/** Le cadre de la page est la feuille (texte d'un PDF, feuille recadrée d'une photo, scan) : une mise en page s'y apprend
+ * et s'y applique. */
+const cadreFeuille = (page: PageLue) => !page.cadre || page.cadre.feuille;
+
 /** Mise en page lue : les colonnes du premier tableau dont des lignes ont été lues, en fractions du cadre de la page (à la
- * hauteur `y` du titre) — seulement là où elle peut s'apprendre (texte d'un PDF, feuille recadrée d'une photo). */
+ * hauteur `y` du titre). */
 function miseEnPageVue(page: PageLue, colonnes: ColonneVue[], y: number): MiseEnPage | null {
-  if (!page.largeur || colonnes.length < 2 || (page.cadre && !page.cadre.apprendre)) return null;
+  if (!page.largeur || colonnes.length < 2 || !cadreFeuille(page)) return null;
   const fraction = (x: number) => (page.cadre ? page.cadre.versFraction(x, y).x : x / page.largeur);
   return { colonnes: colonnes.map((c) => ({ genre: c.genre, x0: Math.max(0, fraction(c.x0)), x1: Math.min(1, fraction(c.x1)) })) };
 }
@@ -531,7 +535,8 @@ export function lireTableaux(pages: readonly PageLue[], source: SourceLue, model
   let vue: MiseEnPage | null = null;
   let employe = false;
   for (const page of pages) {
-    const connues = modele ? colonnesConnues(modele, page) : null;
+    // Photo non recadrée (table autour) : les fractions de la feuille y tomberaient à côté — la mise en page n'y sert pas.
+    const connues = modele && cadreFeuille(page) ? colonnesConnues(modele, page) : null;
     let trouve = false;
     for (let i = 0; i < page.rangees.length; i++) {
       const titre = colonnesDuTitre(page.rangees[i]);

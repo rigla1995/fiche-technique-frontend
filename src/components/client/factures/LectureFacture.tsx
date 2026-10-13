@@ -71,6 +71,8 @@ const numeroSur = (n: EnteteLu['numero']): n is NonNullable<EnteteLu['numero']> 
 /** Durée maximale d'une lecture vue de l'écran (chargement, réseau, reconnaissance) : au-delà, « Enregistrer » se rouvre. */
 const DELAI_ECRAN = 150_000;
 const API_DELAI = { timeout: 15_000 };
+/** Préparation d'une page en texte, clés dans un ordre fixe (coins absents ≠ coins null : « page entière » choisie). */
+const clePreparation = (p: PreparationPage | undefined) => JSON.stringify({ coins: p?.coins, quarts: p?.quarts });
 const INVISIBLE: React.CSSProperties = { position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap' };
 
 const encart = (fond: string, bord: string, texte: string): React.CSSProperties => ({
@@ -215,20 +217,17 @@ export default function LectureFacture({
         if (vivant()) setClientConnu(Boolean(destinataire.matricule));
         const { lireFacture } = await import('./lecture/lireFacture');
         const aLire = fichiers.map((f) => ({ fichier: f.fichier, type: f.type, apercu: f.apercu }));
-        // Chaque page lue est gardée : une relecture (« Recadrer », « Pivoter ») ne relit que la page changée.
-        const parPage = new Map<string, EnteteLu>();
-        const garder = (cle: string, d: EnteteLu) => { parPage.set(cle, d); };
+        // Chaque page lue est gardée AVEC la préparation qui l'a lue : une relecture (« Recadrer », « Pivoter ») ne relit
+        // que les pages dont la préparation change (contre-relecture : une relecture ratée ou arrêtée laissait reprendre
+        // une page lue avec un cadre abandonné).
+        const parPage = new Map<string, { prep: string; lue: EnteteLu }>();
+        const garderAvec = (preps: Record<string, PreparationPage>) => (cle: string, d: EnteteLu) => { parPage.set(cle, { prep: clePreparation(preps[cle]), lue: d }); };
         const e = await lireFacture(aLire, destinataire, (etapeLue, a) => {
           if (vivant()) setEtape(a === undefined ? etapeLue : `${etapeLue} ${Math.round(a * 100)} %`);
-        }, controle.signal, { modele, surPage: garder });
-        let prepsLues: Record<string, PreparationPage> = {};
+        }, controle.signal, { modele, surPage: garderAvec({}) });
         relireRef.current = async (preparations, suivi, signal) => {
-          const cles = new Set([...Object.keys(preparations), ...Object.keys(prepsLues)]);
-          const changees = [...cles].filter((k) => JSON.stringify(preparations[k] ?? null) !== JSON.stringify(prepsLues[k] ?? null));
-          const reutiliser = new Map([...parPage].filter(([k]) => !changees.includes(k)));
-          const relue = await lireFacture(aLire, destinataire, suivi, signal, { preparations, modele, reutiliser, surPage: garder });
-          prepsLues = preparations;
-          return relue;
+          const reutiliser = new Map([...parPage].filter(([k, v]) => v.prep === clePreparation(preparations[k])).map(([k, v]) => [k, v.lue] as const));
+          return lireFacture(aLire, destinataire, suivi, signal, { preparations, modele, reutiliser, surPage: garderAvec(preparations) });
         };
         if (!vivant()) return;
         const liste = ((await api.get('/api/entreprise/fournisseurs', API_DELAI).catch(() => ({ data: [] }))).data as FournisseurDuCompte[]).filter((f) => !f.isLabo);

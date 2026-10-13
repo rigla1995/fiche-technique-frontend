@@ -345,7 +345,7 @@ export default function VerifierFacture({ fichiers, lu: luInitial, lecture, cibl
     if (modifiee) {
       const ok = await confirm({
         title: 'Relire la facture ?',
-        message: `Les lignes seront relues sur la page recadrée ou tournée : les choix déjà faits sur les lignes (${voc.nom('article', true)}, conversions, corrections) seront perdus.`,
+        message: `Les lignes et le bas de la facture (remise, FODEC, timbre) seront relus sur la page recadrée ou tournée : les choix déjà faits (${voc.nom('article', true)}, conversions, corrections, montants du bas) seront perdus.`,
         confirmLabel: 'Relire', tone: 'primary', icon: '🔁',
       });
       if (!ok) return;

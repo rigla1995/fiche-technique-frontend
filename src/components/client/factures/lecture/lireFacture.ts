@@ -224,7 +224,8 @@ export async function lireFacture(
   }
   const aLire = toutes.length > PAGES_IMAGES ? [...toutes.slice(0, PAGES_IMAGES - 1), toutes[toutes.length - 1]] : toutes;
   const sautees = toutes.filter((p) => !aLire.includes(p));
-  const rendues = new Map<string, Blob>();
+  // Copie JPEG impossible (mémoire d'un téléphone) : la page rendue est gardée telle quelle (contre-relecture).
+  const rendues = new Map<string, Blob | HTMLCanvasElement>();
   for (const f of lisibles.filter((x) => x.type === 'application/pdf')) {
     const numeros = aLire.filter((p) => p.source === f && !opts.reutiliser?.has(cleDePage(p.fichier, p.page))).map((p) => p.page);
     if (!numeros.length) continue;
@@ -234,15 +235,16 @@ export async function lireFacture(
         verifier();
         const c = await rendrePage(pdf, n);
         const b = await new Promise<Blob | null>((ok) => c.toBlob(ok, 'image/jpeg', 0.92));
-        c.width = 0; c.height = 0;
-        if (b) rendues.set(cleDePage(rangFichier(f), n), b);
+        if (b) { c.width = 0; c.height = 0; }
+        rendues.set(cleDePage(rangFichier(f), n), b ?? c);
       }
     });
   }
   const dessiner = (p: PageImage): Promise<HTMLCanvasElement> => {
     if (p.source.type !== 'application/pdf') return dessinerImage(lisibleEnImage(p.source) as Blob);
     const b = rendues.get(cleDePage(p.fichier, p.page));
-    return b ? dessinerImage(b) : Promise.reject(new LectureImpossible('Page du PDF illisible.'));
+    if (!b) return Promise.reject(new LectureImpossible('Page du PDF illisible.'));
+    return b instanceof Blob ? dessinerImage(b) : Promise.resolve(b);
   };
 
   // Image : reconnaissance de caractères (worker arrêté dans tous les cas, délai borné, et sur arrêt demandé).
@@ -268,15 +270,20 @@ export async function lireFacture(
         const signatures: string[] = [];
         const signature = (ls: EnteteLu['lignesFacture']) => ls.map((l) => `${l.designation.toLowerCase().replace(/\s+/g, ' ')}|${l.montant ?? ''}`).sort().join('§');
         let nonLues = 0;
+        // Durée de la page la plus longue lue jusqu'ici (orientations essayées comprises).
+        let pirePage = 0;
         for (const [k, p] of aLire.entries()) {
           verifier();
-          // Budget : passé BUDGET_PAGES, plus de nouvelle page — la lecture rend ce qu'elle a lu (le délai global, lui,
-          // ferait tout perdre).
-          if (e && performance.now() - debut > BUDGET_PAGES) { nonLues = n - k; break; }
           const cle = cleDePage(p.fichier, p.page);
           // Relecture d'une page recadrée ou tournée : les autres pages sont reprises telles quelles.
           let d = opts.reutiliser?.get(cle) ?? null;
+          // Budget : passé BUDGET_PAGES, ou s'il ne reste pas le temps d'une page aussi longue que la plus longue lue
+          // (avec une marge), plus de nouvelle page — la lecture rend ce qu'elle a lu (le délai global, lui, ferait tout
+          // perdre ; contre-relecture : une page commencée à 79 s pouvait le dépasser).
+          const ecoule = performance.now() - debut;
+          if (e && !d && (ecoule > BUDGET_PAGES || ecoule + 1.5 * pirePage > DELAI_LECTURE - 5_000)) { nonLues++; signatures.push(''); continue; }
           if (!d) {
+            const debutPage = performance.now();
             const suiviPage: SuiviLecture = (etape, a) => suivi(n > 1 ? `${etape.replace(/…$/, '')} (page ${k + 1} / ${n})…` : etape, (k + (a ?? 0)) / n);
             const options = {
               preparation: opts.preparations?.[cle],
@@ -286,10 +293,12 @@ export async function lireFacture(
             };
             try {
               d = situer(await lireImageFacture(sourceCanvas(await dessiner(p)), m, client, suiviPage, options), p.fichier, p.page);
+              pirePage = Math.max(pirePage, performance.now() - debutPage);
               opts.surPage?.(cle, d);
             } catch (err) {
               // Une page qui ne se lit pas n'arrête la lecture que si c'est la première.
               verifier();
+              pirePage = Math.max(pirePage, performance.now() - debutPage);
               if (!e) throw err;
               signatures.push('');
               console.warn('[facture] page illisible', err instanceof Error ? err.name : '');

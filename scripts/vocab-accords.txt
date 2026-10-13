@@ -3584,22 +3584,22 @@ src/components/client/factures/FenetrePieces.tsx
     miroir : Aucune pièce : joignez la facture reçue de l'enseigne (PDF, scan ou photo).
 
 src/components/client/factures/LectureFacture.tsx
-  l. 359
+  l. 358
     défaut : Fournisseur :
     miroir : Enseigne :
-  l. 378
+  l. 377
     défaut : Oui, c'est lui⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
     miroir : Oui, c'est elle⟦? — ajouter le MF ⟦·⟧ à sa fiche|⟧
-  l. 393
+  l. 392
     défaut : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucun fournisseur connu ne correspond</span>
     miroir : ⟦?<>« <strong>⟦·⟧</strong> »</>|non reconnu⟧⟦?<span> · MF ⟦·⟧</span>|⟦·⟧⟧<span> — aucune enseigne connue ne correspond</span>
-  l. 398
+  l. 397
     défaut : Créer le fournisseur…
     miroir : Créer l'enseigne…
-  l. 439
+  l. 438
     défaut :  · choisissez le fournisseur et le n° de facture pour vérifier
     miroir :  · choisissez l'enseigne et le n° de facture pour vérifier
-  l. 475
+  l. 474
     défaut : Fournisseur créé, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
     miroir : Enseigne créée, mais la liste n'a pas pu être rechargée : rechargez la page avant d'enregistrer.
 
@@ -3664,8 +3664,8 @@ src/components/client/factures/VerifierFacture.tsx
     défaut : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les articles que vous avez créés depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
     miroir : Rien n'est enregistré (ni les lignes, ni la pièce, ni les choix faits ici), sauf les denrées que vous avez créées depuis cette fenêtre. La facture reste déposée dans le bloc de saisie.
   l. 348
-    défaut : Les lignes seront relues sur la page recadrée ou tournée : les choix déjà faits sur les lignes (articles, conversions, corrections) seront perdus.
-    miroir : Les lignes seront relues sur la page recadrée ou tournée : les choix déjà faits sur les lignes (denrées, conversions, corrections) seront perdus.
+    défaut : Les lignes et le bas de la facture (remise, FODEC, timbre) seront relus sur la page recadrée ou tournée : les choix déjà faits (articles, conversions, corrections, montants du bas) seront perdus.
+    miroir : Les lignes et le bas de la facture (remise, FODEC, timbre) seront relus sur la page recadrée ou tournée : les choix déjà faits (denrées, conversions, corrections, montants du bas) seront perdus.
   l. 404
     défaut : article créé
     miroir : denrée créée
