@@ -3,6 +3,7 @@
 // lecture. Le serveur refait tous les contrôles ; ceux d'ici évitent seulement un envoi inutile.
 import api from '../../../api/client';
 import type { EtatCompta, ResultatCompta } from './compta';
+import type { MiseEnPage } from './lecture/types';
 
 export const PIECES_MAX = 5;
 export const OCTETS_MAX = 15 * 1024 * 1024;
@@ -153,6 +154,8 @@ export interface LectureEnvoyee {
   totaux: { ht: number | null; tva: number | null; timbre: number | null; ttc: number | null; fodec: number | null; remise: number | null };
   fournisseur: 'reconnu' | 'propose' | 'nouveau' | 'choisi' | null;
   duree: number | null;
+  /** Étape F5 : mise en page du tableau vue par la lecture ; apprise à la validation (si ses lignes ont été gardées). */
+  miseEnPage?: MiseEnPage | null;
 }
 export interface FactureSemblable { id: number | null; dateFacture: string; lieuNom: string | null; montantTTC: number | null; memeFacture: boolean }
 

@@ -982,7 +982,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
 
       {verification && resultatLecture && activiteId && bulkFournisseurId && (
         <VerifierFacture
-          fichiers={bulkPieces} lu={resultatLecture.entete} lecture={resultatLecture.lecture}
+          fichiers={bulkPieces} lu={resultatLecture.entete} lecture={resultatLecture.lecture} relire={resultatLecture.relire}
           cible={{ type: 'activite', id: activiteId }}
           fournisseurId={Number(bulkFournisseurId)}
           fournisseurNom={nonLaboFournisseurs.find((f) => String(f.id) === bulkFournisseurId)?.nom ?? ''}

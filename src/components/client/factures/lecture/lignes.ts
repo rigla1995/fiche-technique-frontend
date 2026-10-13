@@ -13,11 +13,11 @@
 // suffit. Une ligne lue n'est qu'une proposition : la fenêtre « Vérifier la facture » la fait relire et valider.
 import { lireNombre, millime, nombresDeRangee } from './nombres.ts';
 import { rangee } from './rangees.ts';
-import type { LigneLue, Mot, PageLue, Rangee, SourceLue } from './types.ts';
+import type { GenreColonne, LigneLue, MiseEnPage, Mot, PageLue, Rangee, SourceLue } from './types.ts';
 
 const plat = (s: string): string => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ').trim();
 
-type Colonne = 'num' | 'ref' | 'des' | 'unite' | 'qte' | 'pu' | 'puttc' | 'remise' | 'tva' | 'montant' | 'ttc';
+type Colonne = GenreColonne;
 interface Cellule { mots: Mot[]; texte: string; x0: number; x1: number }
 interface ColonneVue { genre: Colonne; x0: number; x1: number }
 
@@ -483,24 +483,93 @@ function lignesSansTitre(page: PageLue, source: SourceLue): LigneLue[] {
   return lignes;
 }
 
-/** Lignes de la facture, toutes pages lues, dans l'ordre. */
-export function lireLignes(pages: readonly PageLue[], source: SourceLue): LigneLue[] {
+// ── Étape F5 : la mise en page apprise d'un fournisseur ─────────────────────────────────────────────────────────────
+
+/** Genres de colonnes admis dans une mise en page (le serveur contrôle la même liste). */
+export const GENRES_COLONNES: readonly Colonne[] = ['num', 'ref', 'des', 'unite', 'qte', 'pu', 'puttc', 'remise', 'tva', 'montant', 'ttc'];
+
+/** Colonnes connues ramenées à la page lue (unités de la page) — par le cadre de la page droite pour une image, au milieu
+ * de sa hauteur. */
+const colonnesConnues = (m: MiseEnPage, page: PageLue): ColonneVue[] => m.colonnes.map((c) => {
+  const x0 = page.cadre ? page.cadre.depuisFraction(c.x0, 0.5).x : c.x0 * page.largeur;
+  const x1 = page.cadre ? page.cadre.depuisFraction(c.x1, 0.5).x : c.x1 * page.largeur;
+  return { genre: c.genre, x0: Math.min(x0, x1), x1: Math.max(x0, x1) };
+}).sort((a, b) => a.x0 - b.x0);
+
+/** Colonnes d'un titre lu, complétées par les colonnes connues : un genre absent du titre (mal reconnu) est ajouté s'il ne
+ * recouvre aucune colonne lue. */
+function completerColonnes(lues: ColonneVue[], connues: ColonneVue[]): ColonneVue[] {
+  const genres = new Set(lues.map((c) => c.genre));
+  const ajout = connues.filter((c) => !genres.has(c.genre) && !lues.some((l) => Math.min(l.x1, c.x1) - Math.max(l.x0, c.x0) > 0));
+  return ajout.length ? [...lues, ...ajout].sort((a, b) => a.x0 - b.x0) : lues;
+}
+
+/** Première rangée qui ressemble à une ligne de facture (des lettres, puis des nombres, ni total ni coordonnées). */
+function debutDesLignes(page: PageLue): number {
+  return page.rangees.findIndex((r) => {
+    const t = plat(r.texte);
+    if (FIN.test(t) || MOT_FIN.test(t) || PAS_UNE_LIGNE.test(t) || TOTAL_OU_TAXE.test(t)) return false;
+    const cs = cellulesDeLigne(r);
+    return cs.some((c) => /\p{L}{3,}/u.test(c.texte)) && cs.filter(estNombre).length >= 2;
+  });
+}
+
+/** Le cadre de la page est la feuille (texte d'un PDF, feuille recadrée d'une photo, scan) : une mise en page s'y apprend
+ * et s'y applique. */
+const cadreFeuille = (page: PageLue) => !page.cadre || page.cadre.feuille;
+
+/** Mise en page lue : les colonnes du premier tableau dont des lignes ont été lues, en fractions du cadre de la page (à la
+ * hauteur `y` du titre). */
+function miseEnPageVue(page: PageLue, colonnes: ColonneVue[], y: number): MiseEnPage | null {
+  if (!page.largeur || colonnes.length < 2 || !cadreFeuille(page)) return null;
+  const fraction = (x: number) => (page.cadre ? page.cadre.versFraction(x, y).x : x / page.largeur);
+  return { colonnes: colonnes.map((c) => ({ genre: c.genre, x0: Math.max(0, fraction(c.x0)), x1: Math.min(1, fraction(c.x1)) })) };
+}
+
+/**
+ * Lignes de la facture, toutes pages lues, dans l'ordre, et la mise en page vue (étape F5 : à apprendre). `modele` : la
+ * mise en page connue du fournisseur — elle complète un titre mal lu, ou remplace un titre illisible.
+ */
+export function lireTableaux(pages: readonly PageLue[], source: SourceLue, modele: MiseEnPage | null = null): { lignes: LigneLue[]; miseEnPage: MiseEnPage | null; modeleEmploye: boolean } {
   const res: LigneLue[] = [];
+  let vue: MiseEnPage | null = null;
+  let employe = false;
   for (const page of pages) {
+    // Photo non recadrée (table autour) : les fractions de la feuille y tomberaient à côté — la mise en page n'y sert pas.
+    const connues = modele && cadreFeuille(page) ? colonnesConnues(modele, page) : null;
     let trouve = false;
     for (let i = 0; i < page.rangees.length; i++) {
-      const colonnes = colonnesDuTitre(page.rangees[i]);
-      if (!colonnes) continue;
+      const titre = colonnesDuTitre(page.rangees[i]);
+      if (!titre) continue;
+      const colonnes = connues ? completerColonnes(titre, connues) : titre;
+      if (colonnes !== titre) employe = true;
       const { lignes, fin } = lignesSousTitre(page, i, colonnes, source);
-      if (lignes.length) { res.push(...lignes); trouve = true; }
+      if (lignes.length) {
+        res.push(...lignes);
+        trouve = true;
+        if (!vue) vue = miseEnPageVue(page, titre, (page.rangees[i].y0 + page.rangees[i].y1) / 2);
+      }
       i = fin - 1;
+    }
+    // Titre illisible, fournisseur connu : le tableau se lit avec ses colonnes apprises.
+    if (!trouve && connues) {
+      const debut = debutDesLignes(page);
+      if (debut >= 0) {
+        const { lignes } = lignesSousTitre(page, debut - 1, connues, source);
+        if (lignes.length) { res.push(...lignes); trouve = true; employe = true; }
+      }
     }
     if (!trouve) {
       const ticket = lignesDeTicket(page, source);
       res.push(...(ticket.length ? ticket : lignesSansTitre(page, source)));
     }
   }
-  return res;
+  return { lignes: res, miseEnPage: vue, modeleEmploye: employe };
+}
+
+/** Lignes de la facture, toutes pages lues, dans l'ordre. */
+export function lireLignes(pages: readonly PageLue[], source: SourceLue, modele: MiseEnPage | null = null): LigneLue[] {
+  return lireTableaux(pages, source, modele).lignes;
 }
 
 /** Rangée faite d'une cellule (aide aux tests). */

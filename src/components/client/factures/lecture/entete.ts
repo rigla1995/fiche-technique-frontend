@@ -5,12 +5,12 @@
 // présente en tableau ; des contrôles (clé du matricule, date plausible, HT + FODEC + TVA + timbre = TTC).
 // Le matricule et le nom du CLIENT, imprimés comme destinataire, ne sont jamais pris pour ceux du fournisseur.
 import { cleAttendue, corrigerChiffres } from '../../../admin/patente/ocr/matricule.ts';
-import { lireLignes } from './lignes.ts';
+import { lireTableaux } from './lignes.ts';
 import { datesDuTexte, millime, nombresDeRangee } from './nombres.ts';
 import type { NombreLu } from './nombres.ts';
 import { motA, rangee, segments } from './rangees.ts';
 import { nomComparable } from './rapprocher.ts';
-import type { Destinataire, EnteteLu, PageLue, Rangee, SourceLue, TotauxLus, TvaLue, ValeurLue } from './types.ts';
+import type { Destinataire, EnteteLu, MiseEnPage, PageLue, Rangee, SourceLue, TotauxLus, TvaLue, ValeurLue } from './types.ts';
 
 /** Texte comparable : sans accents, en minuscules, espaces réduits. */
 export const plat = (s: string): string => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -646,7 +646,7 @@ const ilYA = (jours: number): string => new Date(Date.now() - jours * 86_400_000
 const enLettres = (n: number): string => n.toFixed(3).replace('.', ',');
 
 /** Lit l'en-tête d'une facture à partir de ses pages. `client` : ce que l'on sait du client (jamais pris pour le fournisseur). */
-export function lireEntete(pages: readonly PageLue[], source: SourceLue, client: Destinataire = {}): EnteteLu {
+export function lireEntete(pages: readonly PageLue[], source: SourceLue, client: Destinataire = {}, modele: MiseEnPage | null = null): EnteteLu {
   const avertissements: string[] = [];
 
   // Fournisseur : par son matricule, en écartant celui du client.
@@ -700,6 +700,8 @@ export function lireEntete(pages: readonly PageLue[], source: SourceLue, client:
     avertissements.push(`Totaux lus incohérents : HT${t.fodec !== null ? ' + FODEC' : ''} + TVA${t.timbre !== null ? ' + timbre' : ''} = ${enLettres(somme)}, TTC lu ${enLettres(t.ttc)}. À relire.`);
   }
 
+  // Étape F3 : les lignes du tableau ; étape F5 : la mise en page vue (à apprendre), la mise en page connue employée.
+  const tableaux = lireTableaux(pages, source, modele);
   return {
     source,
     matricule,
@@ -711,9 +713,10 @@ export function lireEntete(pages: readonly PageLue[], source: SourceLue, client:
     date,
     totaux: t,
     lignes: pages.flatMap((p) => p.rangees.map((r) => r.texte)).filter(Boolean),
-    // Étape F3 : les lignes du tableau, à faire vérifier dans la fenêtre « Vérifier la facture ».
-    lignesFacture: lireLignes(pages, source),
+    lignesFacture: tableaux.lignes,
     pages: pages.map((p, k) => ({ largeur: p.largeur, hauteur: p.hauteur, fichier: 0, page: k + 1 })),
     avertissements,
+    miseEnPage: tableaux.miseEnPage,
+    miseEnPageConnue: tableaux.modeleEmploye,
   };
 }
