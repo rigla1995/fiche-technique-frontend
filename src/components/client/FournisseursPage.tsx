@@ -6,6 +6,7 @@ import { useVocabulaire } from '../../hooks/useVocabulaire';
 import HistoryFilterBar, { FilterField, FilterInput } from '../common/HistoryFilterBar';
 import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
+import { telechargerClasseur } from '../../compta/classeurs';
 import { controlerMatriculeFiscal } from '../admin/matriculeFiscal';
 import LecturePatente, { NoteLu, PastilleLu } from '../admin/patente/LecturePatente';
 import { valeurRecopiee } from '../admin/patente/fusion';
@@ -57,6 +58,18 @@ export default function FournisseursPage() {
   const [foPage, setFoPage] = useState(1);
   const [search, setSearch] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<Fournisseur | null>(null);
+  // Tout le répertoire (sans les labos internes) dans le modèle d'import, réimportable par l'Ajout Dynamique.
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const exporter = async () => {
+    setExportEnCours(true);
+    try {
+      await telechargerClasseur('/api/entreprise/fournisseurs/export', `fournisseurs_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch {
+      await alerte({ title: 'Export impossible', message: 'Le fichier n\'a pas pu être préparé : réessayez.', tone: 'danger' });
+    } finally {
+      setExportEnCours(false);
+    }
+  };
   // Lecture de la patente du fournisseur : pastilles « lu » et dernier champ où le curseur s'est posé (recopie).
   const [lus, setLus] = useState<Partial<Record<ChampIdentite, ChampLu>>>({});
   const [champActif, setChampActif] = useState<ChampFiche | null>(null);
@@ -233,6 +246,9 @@ export default function FournisseursPage() {
         subtitle={`${voc.n('fournisseur', filteredFournisseurs.length)}${search ? ` (${voc.acc('fournisseur', 'filtré', 'filtrée', filteredFournisseurs.length)})` : ''}`}
         onReset={() => { setSearch(''); setFoPage(1); }}
         showReset={!!search}
+        onExportExcel={exporter}
+        excelLabel={exportEnCours ? 'Export…' : 'Exporter (modèle Excel)'}
+        excelDisabled={exportEnCours || !fournisseurs.some((f) => !f.isLabo)}
         actions={canWrite && (
           <>
             <Link to="/client/fournisseurs/correspondances"
