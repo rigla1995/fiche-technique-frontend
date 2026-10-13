@@ -134,10 +134,11 @@ export default function ReferentielUnitesPage() {
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(u)}>✏️ Modifier</button>
                     {(() => {
                       const nb = u.nbArticles ?? 0;
-                      const verrou = nb > 0;
+                      const nbPu = u.nbProduits ?? 0;
+                      const verrou = nb > 0 || nbPu > 0;
                       return (
                         <button className="btn btn-danger btn-sm" disabled={verrou}
-                          title={verrou ? `Assignée à ${voc.n('article', nb)} — veuillez les supprimer (ou changer leur unité) avant` : undefined}
+                          title={verrou ? (nb > 0 ? `Assignée à ${voc.n('article', nb)} — veuillez les supprimer (ou changer leur unité) avant` : `Unité utilisée par ${voc.n('produit_utilisable', nbPu)}`) : undefined}
                           onClick={() => !verrou && setDeleteId(u.id)}
                           style={verrou ? { opacity: 0.4, cursor: 'not-allowed' } : undefined}>🗑️</button>
                       );

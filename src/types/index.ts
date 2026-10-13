@@ -234,6 +234,8 @@ export interface Unit {
   hasAppros?: boolean;
   /** Nb d'articles utilisant cette unité — > 0 = suppression verrouillée */
   nbArticles?: number;
+  /** P1 : nb de produits utilisables comptés dans cette unité — > 0 = suppression verrouillée */
+  nbProduits?: number;
 }
 
 export interface Category {
@@ -315,6 +317,11 @@ export interface Product {
   refProduit?: string | null;
   categorieProduitId?: number | null;
   categorieProduitName?: string | null;
+  /** P1 : unité finale d'un produit utilisable (kg, pièce…) et quantité que produit sa recette ; la recette et le coût
+   *  sont pour 1 unité. Absents/null : produit d'avant, compté à la recette (1 unité = 1 recette). */
+  uniteId?: number | null;
+  uniteNom?: string | null;
+  quantiteProduite?: number | null;
 }
 
 export type TypeProduitCategorie = 'vendable' | 'supplement' | 'valorise';
@@ -516,6 +523,7 @@ export interface StockEntry {
   origine?: string | null;     // PT: 'labo' = reçu par transfert uniquement (pas d'appro manuel côté activité) | 'activite'
   prixCalcule?: number | null; // PT: auto-calculated price from recipe
   prixPartiel?: boolean;       // PT: true if any recipe ingredient has no price
+  quantiteProduite?: number | null; // PT (P1) : quantité que produit une recette, dans l'unité du produit ; null = à la recette
   coutTotal?: number | null;
   coutTotalTTC?: number | null;
   nom: string;
