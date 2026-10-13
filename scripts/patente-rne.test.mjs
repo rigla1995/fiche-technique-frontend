@@ -6,12 +6,14 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   analyserExtraitRne, joindre, lectureExtraitRne, reconnaitre, reconstruireArabe, regrouperEnLignes,
-  CARACTERES_MAX, LIEN_VERIFICATION_RNE, MORCEAUX_MAX, NOTE_ADRESSE_ENTIERE, NOTE_MATRICULE_RACINE, PAGES_MAX,
+  AVERTISSEMENT_IMAGE, CARACTERES_MAX, LIEN_VERIFICATION_RNE, MORCEAUX_MAX, NOTE_ADRESSE_ENTIERE, NOTE_MATRICULE_RACINE, NOTE_PERSONNE_PHYSIQUE, PAGES_MAX, identifiantSur,
 } from '../src/components/admin/patente/rne/analyseur.ts';
 import { decouperAdresse, formeJuridiqueVersCode, normaliser, qualiteVersFrancais, rognerBouts } from '../src/components/admin/patente/rne/tables.ts';
 import { lireCasesACocher, origineDuTexte } from '../src/components/admin/patente/rne/dessins.ts';
 import { lireTextePdf } from '../src/components/admin/patente/rne/lireTextePdf.ts';
 import { imprimable } from '../src/components/admin/patente/types.ts';
+import { fusionnerPassesRne, lectureRneOcr } from '../src/components/admin/patente/rne/depuisOcr.ts';
+import { cleAttendue } from '../src/components/admin/patente/ocr/matricule.ts';
 
 // ── Extrait synthétique ────────────────────────────────────────────────────────────────────────────────────────────
 const CODE = 'ABCDEF12GHIJKL';
@@ -962,11 +964,11 @@ test('lireTextePdf : le texte d’une page numérisée est écarté ; origine in
 });
 
 // ── Modèle d'extrait inconnu ───────────────────────────────────────────────────────────────────────────────────────
-test('modèle d’extrait autre que « société » : avertissement, et tous les champs à relire', () => {
+test('modèle d’extrait autre que « société » : avertissement, et tous les champs à relire (« personne physique » : modèle connu, à relire)', () => {
   for (const [titre, type, avertissement] of [
-    ['EXTRAIT RNE (PERSONNE PHYSIQUE)', 'PERSONNE PHYSIQUE', 'Extrait de type « PERSONNE PHYSIQUE » : seul le modèle « société » est connu, relisez chaque champ.'],
-    ['EXTRAIT RNE (ASSOCIATION)', 'ASSOCIATION', 'Extrait de type « ASSOCIATION » : seul le modèle « société » est connu, relisez chaque champ.'],
-    ['EXTRAIT RNE', '', "Type d'extrait non lu dans son titre : seul le modèle « société » est connu, relisez chaque champ."],
+    ['EXTRAIT RNE (PERSONNE PHYSIQUE)', 'PERSONNE PHYSIQUE', 'Extrait « personne physique » : relisez chaque champ.'],
+    ['EXTRAIT RNE (ASSOCIATION)', 'ASSOCIATION', 'Extrait de type « ASSOCIATION » : seuls les modèles « société » et « personne physique » sont connus, relisez chaque champ.'],
+    ['EXTRAIT RNE', '', "Type d'extrait non lu dans son titre : seuls les modèles « société » et « personne physique » sont connus, relisez chaque champ."],
   ]) {
     const doc = extrait();
     morceau(doc, 1, 'EXTRAIT RNE (SOCIÉTÉ)').str = titre;
@@ -1128,4 +1130,107 @@ test('cases à cocher : page saturée de dessins → aucune case, sans calcul qu
   debut = performance.now();
   assert.deepEqual(lireCasesACocher(OPS, { fnArray: [...cadres.fnArray, ...etat.fnArray], argsArray: [...cadres.argsArray, ...etat.argsArray] }), casesEtat());
   assert.ok(performance.now() - debut < 1000);
+});
+
+// ── Extrait « personne physique » et extrait en image (correction du 13/10/2026) ───────────────────────────────────
+// Données SYNTHÉTIQUES : titulaire et identifiant fictifs.
+const TITULAIRE = 'PRENOM FICTIF';
+const pagePhysique = () => [
+  ...enTete(),
+  ar('مضمون من السجل الوطني للمؤسسات (شخص طبيعي)', 140, 657.9, 280),
+  m('EXTRAIT RNE (PERSONNE PHYSIQUE)', 220, 635.1, 165),
+  m('IDENTIFICATION DE L’ENTREPRISE', 13, 589.0, 190), ar('تعريف المؤسسة', 514, 589.0, 66),
+  ar('نوع السجل', 148, 562.5, 40), ar('عدد التصرف الداخلي', 310, 562.5, 66), ar('المعرف الوحيد', 517, 562.5, 52),
+  ar('تاجر', 60, 557.2, 22), m(GESTION, 214, 557.2, 76), m(IDENTIFIANT, 430, 557.2, 50),
+  m('TYPE DE REGISTRE', 133.1, 550.8, 55.8), m('N° DE GESTION INTERNE', 316.6, 550.8, 74.3), m('IDENTIFIANT UNIQUE', 512.3, 550.8, 62.7),
+  ar('الإسم و اللقب', 509, 536.0, 70),
+  m('Nom et prénom:', 20.2, 519.5, 62), m(TITULAIRE, 126, 519.5, 80),
+  m(':', 516, 503.6, 3), ar('الإسم التجاري', 520, 503.6, 60),
+  m('Nom commercial:', 20.2, 487.2, 73.1),
+  m(':', 505, 454.8, 3), ar('مقر النشاط', 510, 454.8, 50),
+  m('Adresse de l’activité:', 20.2, 438.9, 92), m('8 Rue des Jasmins 5000', 134, 438.9, 105), m('Monastir', 242, 438.9, 40),
+  m('INFORMATIONS RELATIVES A L’ACTIVITE', 13, 301.0, 215), ar('بيانات تخص النشاط', 507, 301.0, 70),
+  m('Activité principale:', 20.2, 243.2, 85), m('Commerce de détail', 113, 243.2, 85),
+  ...piedDePage(1),
+];
+
+test('extrait « personne physique » (PDF) : nom et prénom, adresse de l’activité, entreprise individuelle, titulaire', () => {
+  const lu = lectureExtraitRne([{ largeur: 595.28, hauteur: 841.89, morceaux: pagePhysique(), cases: null }]);
+  assert.ok(lu, 'reconnu');
+  const v = (c) => lu.champs[c]?.valeur;
+  assert.equal(v('raisonSociale'), TITULAIRE);
+  assert.equal(v('representantNom'), TITULAIRE);
+  assert.equal(v('representantQualite'), 'Titulaire');
+  assert.equal(v('formeJuridique'), 'EI');
+  assert.equal(lu.champs.formeJuridique.note, NOTE_PERSONNE_PHYSIQUE);
+  assert.equal(v('matriculeFiscal'), IDENTIFIANT);
+  assert.equal(v('adresse'), '8 Rue des Jasmins');
+  assert.equal(v('ville'), '5000 Monastir');
+  assert.ok(Object.values(lu.champs).every((c) => c.source === 'pdf' && c.aRelire), 'modèle connu d’après un seul extrait : à relire');
+  assert.ok(lu.avertissements.includes('Extrait « personne physique » : relisez chaque champ.'));
+  assert.ok(!lu.avertissements.some((a) => /Dénomination sociale|Forme juridique introuvable|siège social/.test(a)), JSON.stringify(lu.avertissements));
+});
+
+test('extrait « société » : l’en-tête « NOM ET PRÉNOM » du tableau de la direction n’est pas pris pour un nom', () => {
+  const a = analyserExtraitRne(extrait());
+  assert.equal(a.valeurs.nomPrenom, '');
+  assert.equal(lectureExtraitRne(extrait()).champs.raisonSociale.valeur, DENOMINATION);
+});
+
+// Mots de la reconnaissance de caractères (pixels d'une page de 2000 × 2830, origine en haut).
+const ID_OCR = `1234567${cleAttendue('1234567')}`; // lettre-clé cohérente
+const motOcr = (t, x0, y0, x1, li, c = 90) => ({ t, c, b: { x0, y0, x1, y1: y0 + 30 }, li });
+const ligneOcr = (y, li, ...textes) => {
+  let x = 100;
+  return textes.map((t) => { const w = 18 * t.length; const mot = motOcr(t, x, y, x + w, li); x += w + 20; return mot; });
+};
+const passeOcr = (nom) => [
+  ...ligneOcr(200, 1, 'IDENTIFIANT', 'UNIQUE', ID_OCR, '229}'),
+  ...ligneOcr(420, 2, 'EXTRAIT', 'RNE', '(PERSONNE', 'PHYSIQUE)'),
+  ...ligneOcr(700, 3, ...nom),
+  ...ligneOcr(780, 4, 'Nom', 'commercial:'),
+  ...ligneOcr(860, 5, 'Adresse', 'de', 'l’activité:', '8', 'RUE', 'DES', 'JASMINS', '5000', 'Monastir'),
+  ...ligneOcr(1000, 6, 'Activité', 'principale:', 'Commerce', 'de', 'détail'),
+  motOcr('Syxoll', 1500, 700, 1600, 3, 12), // bruit (arabe lu par le modèle « fra ») : confiance trop basse, écarté
+];
+
+test('extrait RNE en image : mots reconnus lus par l’analyseur, deux passes fusionnées (la plus espacée), clé contrôlée', () => {
+  const lu = lectureRneOcr([
+    { mots: passeOcr(['Nometprénom:', 'PRENOMFICTIF']), largeur: 2000, hauteur: 2830 },
+    { mots: passeOcr(['Nom', 'et', 'prénom:', 'PRENOM', 'FICTIF']), largeur: 2000, hauteur: 2830 },
+  ]);
+  assert.ok(lu, 'reconnu sans arabe, à son titre latin');
+  assert.equal(lu.document, 'extrait_rne');
+  const v = (c) => lu.champs[c]?.valeur;
+  assert.equal(v('raisonSociale'), TITULAIRE);
+  assert.equal(v('matriculeFiscal'), ID_OCR);
+  assert.equal(v('rne'), ID_OCR);
+  assert.equal(v('formeJuridique'), 'EI');
+  assert.equal(v('adresse'), '8 RUE DES JASMINS');
+  assert.equal(v('ville'), '5000 Monastir');
+  assert.ok(Object.values(lu.champs).every((c) => c.source === 'ocr' && c.aRelire));
+  assert.ok(lu.avertissements.includes(AVERTISSEMENT_IMAGE));
+  assert.ok(!lu.avertissements.some((a) => /Code de vérification/.test(a)), 'le code n’est jamais repris d’une image');
+  // Une seule passe, mots collés : la valeur collée est gardée (rien de mieux), à relire.
+  assert.equal(lectureRneOcr([{ mots: passeOcr(['Nometprénom:', 'PRENOMFICTIF']), largeur: 2000, hauteur: 2830 }]).champs.raisonSociale.valeur, 'PRENOMFICTIF');
+  // Pas un extrait : rien.
+  assert.equal(lectureRneOcr([{ mots: ligneOcr(200, 1, 'Carte', 'quelconque'), largeur: 2000, hauteur: 2830 }]), null);
+});
+
+test('extrait RNE en image : identifiant à lettre-clé incohérente non proposé ; deux lectures différentes citées', () => {
+  const faux = '1234567' + (cleAttendue('1234567') === 'A' ? 'B' : 'A');
+  const mots = passeOcr(['Nom', 'et', 'prénom:', 'PRENOM', 'FICTIF']).map((m) => (m.t === ID_OCR ? { ...m, t: faux } : m));
+  const lu = lectureRneOcr([{ mots, largeur: 2000, hauteur: 2830 }]);
+  assert.equal(lu.champs.matriculeFiscal, undefined);
+  assert.ok(lu.avertissements.some((a) => /Identifiant unique illisible/.test(a)));
+  assert.equal(identifiantSur(`${ID_OCR} 229}`, []), ID_OCR);
+  assert.equal(identifiantSur('', ['rien', `x ${ID_OCR} y`]), ID_OCR);
+  const autre = `7654321${cleAttendue('7654321')}`;
+  assert.equal(identifiantSur('', [ID_OCR, autre]), '', 'deux identifiants différents : aucun');
+  const f = fusionnerPassesRne([
+    { document: 'extrait_rne', champs: { adresse: { valeur: '8 RUE DES JASMNS', source: 'ocr', aRelire: true } }, lignes: [], avertissements: [] },
+    { document: 'extrait_rne', champs: { adresse: { valeur: '8 RUE DES JASMINS', source: 'ocr', aRelire: true } }, lignes: [], avertissements: [] },
+  ]);
+  assert.equal(f.champs.adresse.valeur, '8 RUE DES JASMINS');
+  assert.match(f.champs.adresse.note, /autre lecture : « 8 RUE DES JASMNS »/);
 });

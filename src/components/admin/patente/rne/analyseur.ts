@@ -16,6 +16,7 @@
 // découpée, dirigeant lu sur plusieurs lignes) ; une lecture qui ne serait qu'une valeur par défaut n'est pas posée du
 // tout (forme juridique inconnue).
 import type { ChampIdentite, ChampLu, LectureTextePdf } from '../types.ts';
+import { cleCoherente } from '../ocr/matricule.ts';
 import { texteChamp } from '../types.ts';
 import {
   decouperAdresse, estArabe, formeJuridiqueVersCode, nationaliteVersFrancais, normaliser, qualiteVersFrancais,
@@ -170,7 +171,7 @@ function segments(items: readonly Item[], ecartMax: number): Item[][] {
 //   auto   : « droite », puis « empile » s'il n'y a rien à droite (l'identifiant unique existe sous les deux formes)
 export type CleRne =
   | 'identifiantUnique' | 'dateEdition' | 'numeroExtrait' | 'typeRegistre' | 'numeroGestion'
-  | 'denomination' | 'nomCommercial' | 'enseigne' | 'adresseSiege' | 'adresseActivite' | 'formeJuridique'
+  | 'denomination' | 'nomPrenom' | 'nomCommercial' | 'enseigne' | 'adresseSiege' | 'adresseActivite' | 'formeJuridique'
   | 'capital' | 'duree' | 'datePublication' | 'activitePrincipale' | 'codeActivite' | 'dateDebutActivite';
 
 interface DefChamp {
@@ -189,10 +190,14 @@ const CHAMPS: DefChamp[] = [
   { cle: 'typeRegistre', libelle: /^TYPE DE REGISTRE$/, mode: 'empile' },
   { cle: 'numeroGestion', libelle: /^N.? ?DE GESTION INTERNE$/, mode: 'empile' },
   { cle: 'denomination', libelle: /^DENOMINATION SOCIALE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
+  // Extrait « personne physique » : « Nom et prénom: … » dans le bloc principal. Les deux-points sont exigés : sans eux,
+  // c'est l'en-tête du tableau de la direction d'un extrait « société » (lu plus bas). Mots parfois collés par la
+  // reconnaissance de caractères (« Nometprénom: »).
+  { cle: 'nomPrenom', libelle: /^NOM ?ET ?PRENOM ?:$/, mode: 'droite' },
   { cle: 'nomCommercial', libelle: /^NOM COMMERCIAL ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
   { cle: 'enseigne', libelle: /^ENSEIGNE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
   { cle: 'adresseSiege', libelle: /^ADRESSE DU SIEGE SOCIAL ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
-  { cle: 'adresseActivite', libelle: /^ADRESSE ACTIVITE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
+  { cle: 'adresseActivite', libelle: /^ADRESSE (DE L' ?)?ACTIVITE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
   { cle: 'formeJuridique', libelle: /^FORME JURIDIQUE ?:?$/, mode: 'droite', multiLigne: true, jointure: ' ' },
   { cle: 'capital', libelle: /^CAPITAL SOCIAL ?:?$/, mode: 'droite' },
   { cle: 'duree', libelle: /^DUREE DE L'ENTREPRISE ?:?$/, mode: 'droite' },
@@ -692,8 +697,15 @@ function texteBrut(L: Ligne, consommes: ReadonlySet<Item>): Fragment | null {
 // Libellés nommés à l'admin quand leur valeur a pu être coupée.
 const LIBELLES_COUPES: Partial<Record<CleRne, string>> = {
   denomination: 'Dénomination sociale', nomCommercial: 'Nom commercial', enseigne: 'Enseigne',
-  adresseSiege: 'Adresse du siège social', formeJuridique: 'Forme juridique',
+  adresseSiege: 'Adresse du siège social', adresseActivite: "Adresse de l'activité", formeJuridique: 'Forme juridique',
 };
+export const NOTE_PERSONNE_PHYSIQUE = 'personne physique : entreprise individuelle (auto-entrepreneur : changez-la)';
+export const AVERTISSEMENT_IMAGE = "Extrait RNE lu sur une image (scan, photo) : relisez chaque champ. Le PDF téléchargé du site du registre se lit sans erreur.";
+
+/** Options de lecture : `source` 'ocr' — morceaux venus de la reconnaissance de caractères (extrait scanné ou photographié). */
+export interface OptionsLectureRne {
+  source?: 'pdf' | 'ocr';
+}
 // Qualités qui désignent le représentant légal, quand l'extrait liste plusieurs dirigeants.
 const QUALITES_DE_REPRESENTANT = ['Gérant', 'Cogérant', 'Président directeur général', 'Directeur général', 'Président', 'Titulaire', 'Représentant légal'];
 
@@ -702,25 +714,35 @@ const QUALITES_DE_REPRESENTANT = ['Gérant', 'Cogérant', 'Président directeur 
  * `null` si le PDF n'a pas de couche texte, n'est pas reconnu comme un extrait RNE (ou n'en porte aucun libellé), ou
  * dépasse le gabarit d'un extrait (PAGES_MAX, MORCEAUX_MAX, CARACTERES_MAX).
  */
-export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureTextePdf | null {
+export function lectureExtraitRne(pagesTexte: readonly PageTexte[], options: OptionsLectureRne = {}): LectureTextePdf | null {
   const a = analyserExtraitRne(pagesTexte);
+  const ocr = options.source === 'ocr';
+  // Un extrait lu par la reconnaissance de caractères n'a pas son arabe (modèle « fra ») : il est reconnu à son titre
+  // latin et à un deuxième marqueur.
+  const reconnu = a.reconnaissance.estExtraitRne || (ocr && a.reconnaissance.marqueurs.includes('titre') && a.reconnaissance.marqueurs.length >= 2);
   // un papier du registre qui ne porte aucun libellé de l'extrait (attestation, récépissé) n'est pas un extrait
-  if (!a.reconnaissance.estExtraitRne || !Object.values(a.valeurs).some(Boolean)) return null;
+  if (!reconnu || !Object.values(a.valeurs).some(Boolean)) return null;
   const v = a.valeurs;
   const champs: Partial<Record<ChampIdentite, ChampLu>> = {};
   const avertissements: string[] = [];
 
   // Tous les champs sont « à relire » quand les dispositions lues ne sont pas sûrement celles du document : modèle
-  // d'extrait autre que « société » (le seul connu), ou couche texte qui est peut-être celle d'un scanner.
+  // d'extrait autre que « société » (le premier connu), « personne physique » (connu d'après un seul extrait, scanné),
+  // couche texte qui est peut-être celle d'un scanner, ou lecture d'une image.
   const { type } = a.reconnaissance;
-  const modeleInconnu = type !== 'SOCIETE';
+  const physique = /PERSONNE PHYSIQUE/.test(type);
+  const modeleInconnu = type !== 'SOCIETE' && !physique;
   const texteDouteux = pagesTexte.some((p) => p.texteDouteux);
+  const toutARelire = modeleInconnu || physique || texteDouteux || ocr;
+  if (ocr) avertissements.push(AVERTISSEMENT_IMAGE);
   if (modeleInconnu) {
     avertissements.push(type
-      ? `Extrait de type « ${type} » : seul le modèle « société » est connu, relisez chaque champ.`
-      : "Type d'extrait non lu dans son titre : seul le modèle « société » est connu, relisez chaque champ.");
+      ? `Extrait de type « ${type} » : seuls les modèles « société » et « personne physique » sont connus, relisez chaque champ.`
+      : "Type d'extrait non lu dans son titre : seuls les modèles « société » et « personne physique » sont connus, relisez chaque champ.");
+  } else if (physique && !ocr) {
+    avertissements.push('Extrait « personne physique » : relisez chaque champ.');
   }
-  if (texteDouteux) avertissements.push('Ce PDF est peut-être un document numérisé : relisez chaque champ.');
+  if (texteDouteux && !ocr) avertissements.push('Ce PDF est peut-être un document numérisé : relisez chaque champ.');
 
   // Pose un champ. Une valeur non imprimable en Windows-1252 (l'arabe) n'est jamais proposée : le champ reste absent.
   // `ligne` : libellé de l'extrait d'où vient la valeur ; si elle a pu y être coupée (une ligne non reprise la suit),
@@ -735,13 +757,20 @@ export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureText
       coupeesDites.add(ligne);
       avertissements.push(`${LIBELLES_COUPES[ligne] ?? ligne} : la valeur tient sur plusieurs lignes et a pu être coupée, relisez-la.`);
     }
-    const lu: ChampLu = { valeur, source: 'pdf', aRelire: modeleInconnu || texteDouteux || coupee || options.aRelire === true };
+    const lu: ChampLu = { valeur, source: ocr ? 'ocr' : 'pdf', aRelire: toutARelire || coupee || options.aRelire === true };
     if (options.note) lu.note = options.note;
     champs[cle] = lu;
     return true;
   };
 
-  if (!poser('raisonSociale', v.denomination, { ligne: 'denomination' })) {
+  if (physique && !v.denomination) {
+    // Personne physique : le nom et prénom du titulaire tient lieu de raison sociale.
+    if (!poser('raisonSociale', v.nomPrenom, { ligne: 'nomPrenom' })) {
+      avertissements.push(v.nomPrenom
+        ? "Le nom et prénom n'est pas en lettres latines sur l'extrait : à saisir à la main."
+        : "Nom et prénom introuvable sur l'extrait : à saisir à la main.");
+    }
+  } else if (!poser('raisonSociale', v.denomination, { ligne: 'denomination' })) {
     avertissements.push(v.denomination
       ? "La dénomination sociale n'est pas en lettres latines sur l'extrait : à saisir à la main."
       : "Dénomination sociale introuvable sur l'extrait : à saisir à la main.");
@@ -757,32 +786,43 @@ export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureText
   } else if (v.formeJuridique || a.formeJuridiqueArabe) {
     // libellé présent mais hors des tables : « Autre » ne serait pas une lecture, le champ n'est pas proposé
     avertissements.push(`Forme juridique non reconnue ${libelleForme ? `(« ${libelleForme} »)` : "sur l'extrait"} : à choisir à la main.`);
+  } else if (physique) {
+    // L'extrait d'une personne physique ne porte pas de forme juridique : entreprise individuelle, à relire.
+    poser('formeJuridique', 'EI', { aRelire: true, note: NOTE_PERSONNE_PHYSIQUE });
   } else {
     avertissements.push("Forme juridique introuvable sur l'extrait : à choisir à la main.");
   }
 
-  if (a.divergents.includes('identifiantUnique')) {
+  // Identifiant unique : par la reconnaissance de caractères, seule une lecture dont la lettre-clé est cohérente avec
+  // les 7 chiffres est proposée (la valeur lue peut porter du bruit autour : on y cherche l'identifiant).
+  const identifiant = ocr ? identifiantSur(v.identifiantUnique, a.lignes) : v.identifiantUnique;
+  if (a.divergents.includes('identifiantUnique') && !ocr) {
     avertissements.push("L'identifiant unique n'est pas le même partout sur l'extrait : il n'est pas proposé, vérifiez le document.");
-  } else if (RE_IDENTIFIANT.test(v.identifiantUnique)) {
-    poser('matriculeFiscal', v.identifiantUnique, { note: NOTE_MATRICULE_RACINE });
-    poser('rne', v.identifiantUnique);
+  } else if (RE_IDENTIFIANT.test(identifiant)) {
+    poser('matriculeFiscal', identifiant, { note: NOTE_MATRICULE_RACINE });
+    poser('rne', identifiant);
   } else {
     avertissements.push(v.identifiantUnique
       ? "Identifiant unique illisible sur l'extrait (7 chiffres et 1 lettre attendus) : matricule fiscal et RNE à saisir à la main."
       : "Identifiant unique introuvable sur l'extrait : matricule fiscal et RNE à saisir à la main.");
   }
 
-  if (v.adresseSiege) {
-    const adresse = decouperAdresse(v.adresseSiege);
+  // Adresse : celle du siège social ; une personne physique n'a pas de siège : celle de son activité (jamais pour une
+  // société : l'adresse d'activité n'est pas son adresse légale).
+  const [cleAdresse, adresseLue] = physique && !v.adresseSiege ? ['adresseActivite', v.adresseActivite] as const : ['adresseSiege', v.adresseSiege] as const;
+  if (adresseLue) {
+    const adresse = decouperAdresse(adresseLue);
     if (adresse.codePostal && adresse.ville) {
-      poser('adresse', adresse.rue, { ligne: 'adresseSiege' });
-      poser('ville', `${adresse.codePostal} ${adresse.ville}`, { ligne: 'adresseSiege' });
+      poser('adresse', adresse.rue, { ligne: cleAdresse });
+      poser('ville', `${adresse.codePostal} ${adresse.ville}`, { ligne: cleAdresse });
     } else {
       // pas de code postal sûr : la ligne n'est pas découpée, la ville reste à saisir
-      poser('adresse', v.adresseSiege, { ligne: 'adresseSiege', aRelire: true, note: NOTE_ADRESSE_ENTIERE });
+      poser('adresse', adresseLue, { ligne: cleAdresse, aRelire: true, note: NOTE_ADRESSE_ENTIERE });
     }
   } else {
-    avertissements.push("Adresse du siège social introuvable sur l'extrait : à saisir à la main.");
+    avertissements.push(physique
+      ? "Adresse de l'activité introuvable sur l'extrait : à saisir à la main."
+      : "Adresse du siège social introuvable sur l'extrait : à saisir à la main.");
   }
 
   const representant = a.representants.find((r) => QUALITES_DE_REPRESENTANT.includes(r.qualite)) ?? a.representants[0];
@@ -795,6 +835,9 @@ export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureText
       avertissements.push("Qualité du représentant non reconnue sur l'extrait : à saisir à la main.");
     }
     if (a.representants.length > 1) avertissements.push("L'extrait liste plusieurs dirigeants : vérifiez le représentant proposé.");
+  } else if (physique && poser('representantNom', v.nomPrenom, { ligne: 'nomPrenom' })) {
+    // Personne physique : le titulaire est son propre représentant.
+    poser('representantQualite', 'Titulaire');
   }
 
   if (!a.etat) {
@@ -807,8 +850,22 @@ export function lectureExtraitRne(pagesTexte: readonly PageTexte[]): LectureText
     }
   }
 
-  const code = RE_CODE_VERIFICATION.test(a.codeVerification) ? a.codeVerification : null;
-  if (!code) avertissements.push("Code de vérification introuvable sur l'extrait : il ne pourra pas être contrôlé sur le site du registre.");
+  // Code de vérification : jamais repris d'une image (une lettre mal lue enverrait vérifier un autre extrait).
+  const code = !ocr && RE_CODE_VERIFICATION.test(a.codeVerification) ? a.codeVerification : null;
+  if (!code && !ocr) avertissements.push("Code de vérification introuvable sur l'extrait : il ne pourra pas être contrôlé sur le site du registre.");
 
   return { document: 'extrait_rne', champs, lignes: a.lignes, avertissements, verification: { code, lien: LIEN_VERIFICATION_RNE } };
+}
+
+/**
+ * Identifiant unique d'un extrait lu par la reconnaissance de caractères : dans la valeur lue à côté du libellé, sinon
+ * n'importe où dans le texte reconnu, le seul « 7 chiffres + lettre » dont la lettre-clé est cohérente ('' sinon, ou
+ * s'il y en a plusieurs différents).
+ */
+export function identifiantSur(valeur: string, lignes: readonly string[]): string {
+  const coherents = (texte: string): string[] => [...texte.matchAll(/(?:^|[^\dA-Z])(\d{7}[A-Z])(?![\dA-Z])/g)].map((m) => m[1]).filter(cleCoherente);
+  const dansValeur = [...new Set(coherents(valeur))];
+  if (dansValeur.length === 1) return dansValeur[0];
+  const partout = [...new Set(lignes.flatMap(coherents))];
+  return partout.length === 1 ? partout[0] : '';
 }

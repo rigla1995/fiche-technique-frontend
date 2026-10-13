@@ -9,7 +9,9 @@
 //            lectures dont la lettre est cohérente avec les 7 chiffres, fin du matricule sur toutes les lectures
 //            complètes ; fin indécise → l'identifiant seul ;
 //   carte auto-entrepreneur (texte blanc sur bleu) : deuxième passe sur le canal rouge inversé, pour combler un vide
-//            et signaler les désaccords.
+//            et signaler les désaccords ;
+//   extrait RNE en image (scan, photo) : mots reconnus lus par l'analyseur du PDF (rne/depuisOcr.ts), sur deux passes
+//            (page ramenée à COTE_NORMAL de haut, puis de large) fusionnées.
 // Les textes rendus (avertissements, notes) sont affichés tels quels à l'admin : phrases courtes, sans jargon.
 import { texteChamp } from '../types.ts';
 import type { ChampIdentite, ChampLu, ResultatCouche, SuiviLecture } from '../types.ts';
@@ -21,6 +23,7 @@ import { ALPHABET_CLE, CHIFFRES, CODES_CATEGORIE, CODES_TVA, cleCoherente, voter
 import type { CandidatMatricule, VoteMatricule } from './matricule.ts';
 import { binariser, couperEnJetons, decouperGlyphes, etirer, gris, inverser, nettoyerBande, seuilOtsu } from './pixels.ts';
 import type { Cadre, Glyphes, Pixels } from './pixels.ts';
+import { lectureRneOcr } from '../rne/depuisOcr.ts';
 
 /** Image du document : découpe rééchantillonnée et rotation (un canvas dans le navigateur). */
 export interface Source {
@@ -181,7 +184,7 @@ export async function lireDocument(source: Source, moteur: Moteur, suivi: SuiviL
     return { document: 'inconnu', champs, lignes: lignes.filter(Boolean), avertissements: [PHOTO_COUCHEE] };
   }
   const texte = mots.map((m) => m.t).join(' ');
-  const document = reconnaitreDocument(texte);
+  let document = reconnaitreDocument(texte);
 
   if (document === 'carte_fiscale') {
     const lu = extraireCarteFiscale(rangees, largeur);
@@ -243,8 +246,26 @@ export async function lireDocument(source: Source, moteur: Moteur, suivi: SuiviL
     const passeAdresse = l1.adresse ? l1 : l2;
     poser('adresse', passeAdresse.adresse, signaler('adresse', 'Adresse'));
     poser('ville', passeAdresse.ville);
-  } else if (/Registre\s+National/i.test(texte)) {
-    avertissements.push("Extrait du RNE en image : déposez plutôt le PDF d'origine, il se lit sans erreur.");
+  } else if (/EXTRAIT\s+RNE|Registre\s+National/i.test(texte)) {
+    // Extrait RNE en image (scan, photo) : lu comme le PDF, d'après ses libellés français. Une page A4 ramenée à
+    // COTE_NORMAL de haut colle des mots de sa police étroite (« ALIARIAHI ») : deuxième lecture à COTE_NORMAL de large,
+    // les deux fusionnées (même texte : la version la plus espacée).
+    const passes = [{ mots, largeur, hauteur: page.grise.height }];
+    if (droite.hauteur > droite.largeur * 1.2) {
+      const l = COTE_NORMAL, h = Math.round((droite.hauteur * COTE_NORMAL) / droite.largeur);
+      const grise = etirer(gris(await droite.extraire({ left: 0, top: 0, width: droite.largeur, height: droite.hauteur }, l, h)));
+      passes.push({ mots: await moteur.page(grise), largeur: l, hauteur: h });
+    }
+    suivi(ETAPE, 0.9);
+    const lu = lectureRneOcr(passes);
+    if (lu) {
+      document = 'extrait_rne';
+      Object.assign(champs, lu.champs);
+      lignes = lu.lignes;
+      avertissements.push(...lu.avertissements);
+    } else {
+      avertissements.push("Extrait du RNE en image, non lu : déposez plutôt le PDF téléchargé du site du registre, il se lit sans erreur.");
+    }
   } else {
     avertissements.push(`Document non reconnu : seules la carte d'identification fiscale et la carte auto-entrepreneur se lisent en image. Si la photo est couchée ou à l'envers, redressez-la. ${CONSEIL}`);
   }
