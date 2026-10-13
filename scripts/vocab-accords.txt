@@ -1120,52 +1120,52 @@ src/components/client/ConfigurationVentePage.tsx
     miroir : Denrées valorisées (familles non consommables et vendables) — activez-les et définissez leur prix
 
 src/components/client/CorrespondancesPage.tsx
-  l. 64
+  l. 78
     défaut : un article
     miroir : une denrée
-  l. 64
+  l. 78
     défaut : Aucun article trouvé
     miroir : Aucune denrée trouvée
-  l. 65
+  l. 79
     défaut : Hors stock
     miroir : Hors armoire
-  l. 65
+  l. 79
     défaut : Hors stock
     miroir : Hors armoire
-  l. 74
+  l. 88
     défaut : La correction vaut pour les prochaines factures⟦? de ⟦·⟧|⟧. Les factures déjà validées ne changent pas : ni leur stock, ni la facture, ni l'historique. Pour en refaire une, supprimez-la dans Factures, puis déposez-la de nouveau.
     miroir : La correction vaut pour les prochaines factures⟦? de ⟦·⟧|⟧. Les factures déjà validées ne changent pas : ni leur armoire, ni la facture, ni l'historique. Pour en refaire une, supprimez-la dans Factures, puis déposez-la de nouveau.
-  l. 96
+  l. 110
     défaut : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera l'article. Les factures déjà validées ne changent pas.
     miroir : « ⟦·⟧ » de ⟦·⟧ ne sera plus reconnue : la prochaine facture redemandera la denrée. Les factures déjà validées ne changent pas.
-  l. 122
+  l. 136
     défaut : Ce que LabFlow a appris de vos factures validées : chaque ligne du fournisseur → votre article et sa conversion
     miroir : Ce que LabFlow a appris de vos factures validées : chaque ligne de l'enseigne → votre denrée et sa conversion
-  l. 127
+  l. 141
     défaut : ← Fournisseurs
     miroir : ← Enseignes
-  l. 135
+  l. 150
     défaut : Fournisseur
     miroir : Enseigne
-  l. 137
+  l. 152
     défaut : Tous les fournisseurs
     miroir : Toutes les enseignes
-  l. 142
+  l. 157
     défaut : Désignation, code fournisseur, article…
     miroir : Désignation, code enseigne, denrée…
-  l. 148
+  l. 163
     défaut : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant un appro, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture du fournisseur se reconnaîtra seule.
     miroir : <div>🔗</div>Rien n'est encore appris. Déposez une facture en saisissant une abr-rentrée, puis « Vérifier la facture et enregistrer » : chaque ligne validée est retenue ici, et la prochaine facture de l'enseigne se reconnaîtra seule.
-  l. 159
+  l. 174
     défaut : Code fournisseur
     miroir : Code enseigne
-  l. 159
+  l. 174
     défaut : Fournisseur
     miroir : Enseigne
-  l. 159
+  l. 174
     défaut : → Article LabFlow
     miroir : → Denrée LabFlow
-  l. 196
+  l. 211
     défaut : ⟦?⟦·⟧|Hors stock⟧ <span>(hors stock)</span>
     miroir : ⟦?⟦·⟧|Hors armoire⟧ <span>(hors armoire)</span>
 
@@ -1292,73 +1292,73 @@ src/components/client/FournisseursImportPage.tsx
     miroir : → Voir les enseignes et ajuster les affectations
 
 src/components/client/FournisseursPage.tsx
-  l. 183
+  l. 196
     défaut : ⟦?|Labo #⟧⟦·⟧
     miroir : ⟦?|Abr-Usine #⟧⟦·⟧
-  l. 212
+  l. 225
     défaut : Fournisseurs
     miroir : Enseignes
-  l. 216
+  l. 229
     défaut : Gérez vos fournisseurs et leurs associations
     miroir : Gérez vos enseignes et leurs associations
-  l. 223
+  l. 236
     défaut : Fournisseurs
     miroir : Enseignes
-  l. 233
+  l. 246
     défaut : ⟦·⟧ ⟦fournisseur|fournisseurs@>1⟧⟦? (⟦filtré|filtrés@>1⟧)|⟧
     miroir : ⟦·⟧ ⟦enseigne|enseignes@>1⟧⟦? (⟦filtrée|filtrées@>1⟧)|⟧
-  l. 258
+  l. 274
     défaut : + Nouveau fournisseur
     miroir : + Nouvelle enseigne
-  l. 287
+  l. 303
     défaut : Aucun fournisseur enregistré. Créez-en un pour pouvoir l'associer aux approvisionnements.
     miroir : Aucune enseigne enregistrée. Créez-en une pour pouvoir l'associer aux rentrées.
-  l. 294
+  l. 310
     défaut : 🏭 Fournisseurs Labo (auto-gérés)
     miroir : 🏭 Enseignes Abr-Usine (auto-gérées)
-  l. 303
+  l. 319
     défaut : Activités liées
     miroir : Locaux liés
-  l. 309
+  l. 325
     défaut : 🏭 ⟦·⟧
     miroir : 🏭 ⟦·⟧
-  l. 334
+  l. 350
     défaut : Activités liées
     miroir : Locaux liés
-  l. 335
+  l. 351
     défaut : Labos liés
     miroir : Abr-Usines liées
-  l. 336
+  l. 352
     défaut : Appros
     miroir : Abr-Rentrées
-  l. 374
+  l. 390
     défaut : 🏭 ⟦·⟧
     miroir : 🏭 ⟦·⟧
-  l. 434
+  l. 450
     défaut : Aucun ⟦?résultat|fournisseur. Cliquez sur "+ Nouveau fournisseur"⟧.
     miroir : ⟦?Aucun résultat|Aucune enseigne. Cliquez sur "+ Nouvelle enseigne"⟧.
-  l. 442
+  l. 458
     défaut : ⟦·⟧ ⟦fournisseur|fournisseurs@>1⟧⟦? (⟦filtré|filtrés@>1⟧)|⟧
     miroir : ⟦·⟧ ⟦enseigne|enseignes@>1⟧⟦? (⟦filtrée|filtrées@>1⟧)|⟧
-  l. 462
+  l. 478
     défaut : Voulez-vous vraiment supprimer le fournisseur <strong>"⟦·⟧"</strong> ?
     miroir : Voulez-vous vraiment supprimer l'enseigne <strong>"⟦·⟧"</strong> ?
-  l. 486
+  l. 502
     défaut : ⟦?Nouveau|Modifier le⟧ fournisseur
     miroir : ⟦?Nouvelle |Modifier l'⟧enseigne
-  l. 498
+  l. 514
     défaut : Nom du fournisseur
     miroir : Nom de l'enseigne
-  l. 535
+  l. 551
     défaut : Activités liées
     miroir : Locaux liés
-  l. 538
+  l. 554
     défaut : Aucune activité
     miroir : Aucun local
-  l. 549
+  l. 565
     défaut : Labos liés
     miroir : Abr-Usines liées
-  l. 552
+  l. 568
     défaut : ⟦<input/>⟧🏭 ⟦·⟧ ⟦?<span>(⟦·⟧)</span>|⟦·⟧⟧
     miroir : ⟦<input/>⟧🏭 ⟦·⟧ ⟦?<span>(⟦·⟧)</span>|⟦·⟧⟧
 
@@ -2415,121 +2415,121 @@ src/components/client/RecipeTree.tsx
     miroir : ⟦?⟦·⟧|Assemblage indisponible.⟧
 
 src/components/client/ReferentielArticlesPage.tsx
-  l. 147
+  l. 160
     défaut : Sélectionnez au moins une activité ou un labo
     miroir : Sélectionnez au moins un local ou une usine
-  l. 197
+  l. 210
     défaut : Au moins un article avec nom et unité requis
     miroir : Au moins une denrée avec nom et unité requise
-  l. 285
+  l. 298
     défaut : ⟦?⟦·⟧|Impossible de supprimer cet article⟧
     miroir : ⟦?⟦·⟧|Impossible de supprimer cette denrée⟧
-  l. 341
+  l. 354
     défaut : Articles
     miroir : Denrées
-  l. 343
+  l. 356
     défaut : ⟦?Matières premières et ingrédients utilisés dans votre production|Articles de votre référentiel — stock, fiches techniques et approvisionnements⟧
     miroir : ⟦?Matières premières et matières utilisées dans votre production|Denrées de votre encyclopédie — armoire, états techniques et rentrées⟧
-  l. 355
+  l. 368
     défaut : ⟦article|articles@≠1⟧
     miroir : ⟦denrée|denrées@≠1⟧
-  l. 367
+  l. 380
     défaut : ⟦·⟧⟦?| ⟦article|articles@≠1⟧⟦? sur ⟦·⟧|⟧⟧
     miroir : ⟦·⟧⟦?| ⟦denrée|denrées@≠1⟧⟦? sur ⟦·⟧|⟧⟧
-  l. 375
+  l. 391
     défaut : + Nouvel article
     miroir : + Nouvelle denrée
-  l. 384
+  l. 400
     défaut : Filtrer les articles…
     miroir : Filtrer les denrées…
-  l. 411
+  l. 427
     défaut : Aucun article défini
     miroir : Aucune denrée définie
-  l. 412
+  l. 428
     défaut : Les articles sont vos matières premières et ingrédients. Créez-en pour commencer à gérer votre stock, vos approvisionnements et vos fiches techniques.
     miroir : Les denrées sont vos matières premières et matières. Créez-en pour commencer à gérer votre armoire, vos rentrées et vos états techniques.
-  l. 415
+  l. 431
     défaut : + Créer le premier article
     miroir : + Créer la première denrée
-  l. 472
+  l. 488
     défaut : ⟦·⟧ ⟦article|articles@≠1⟧
     miroir : ⟦·⟧ ⟦denrée|denrées@≠1⟧
-  l. 505
+  l. 521
     défaut : ⟦?Commandable — proposable aux acheteurs (cliquer pour retirer)|Cliquer pour proposer cet article aux acheteurs⟧
     miroir : ⟦?Commandable — proposable aux clientes (cliquer pour retirer)|Cliquer pour proposer cette denrée aux clientes⟧
-  l. 515
+  l. 531
     défaut : ⟦?Cet article ne peut pas être supprimé car il a des approvisionnements enregistrés|⟦·⟧⟧
     miroir : ⟦?Cette denrée ne peut pas être supprimée car elle a des rentrées enregistrées|⟦·⟧⟧
-  l. 544
+  l. 560
     défaut : Ajout multiple d'articles
     miroir : Ajout multiple de denrées
-  l. 570
+  l. 586
     défaut : Ex: Poulet entier
     miroir : Ex: Denrée A
-  l. 583
+  l. 599
     défaut : ⟦?📍⟦·⟧ 🏭⟦·⟧|+ Affecter⟧<span>⟦?▲|▼⟧</span>
     miroir : ⟦?📍⟦·⟧ 🏭⟦·⟧|+ Affecter⟧<span>⟦?▲|▼⟧</span>
-  l. 604
+  l. 620
     défaut : Aucune activité ni labo configuré.
     miroir : Aucun local ni usine configuré.
-  l. 623
+  l. 639
     défaut : 🏭 ⟦·⟧
     miroir : 🏭 ⟦·⟧
-  l. 643
+  l. 659
     défaut : ⟦?Création…|Créer ⟦l'article|(⟦·⟧ articles)@>1⟧⟧
     miroir : ⟦?Création…|Créer ⟦la denrée|(⟦·⟧ denrées)@>1⟧⟧
-  l. 660
+  l. 676
     défaut : Nouvel article
     miroir : Nouvelle denrée
-  l. 703
+  l. 719
     défaut : Renseignez les informations de base de l'article.
     miroir : Renseignez les informations de base de la denrée.
-  l. 710
+  l. 726
     défaut : Ex: Poulet entier
     miroir : Ex: Denrée A
-  l. 725
+  l. 741
     défaut : 💡 Créez d'abord des catégories dans le référentiel pour pouvoir les sélectionner.
     miroir : 💡 Créez d'abord des catégories dans l'encyclopédie pour pouvoir les sélectionner.
-  l. 749
+  l. 765
     défaut : Affectez cet article à au moins une activité ou un labo.
     miroir : Affectez cette denrée à au moins un local ou une usine.
-  l. 754
+  l. 770
     défaut : Aucune activité ou labo trouvé. Créez-en depuis « Mes Activités ».
     miroir : Aucun local ou usine trouvé. Créez-en depuis « Mes Locaux ».
-  l. 807
+  l. 823
     défaut : Activité
     miroir : Local
-  l. 834
+  l. 850
     défaut : 🏭
     miroir : 🏭
-  l. 843
+  l. 859
     défaut : Laboratoire
     miroir : Usine centrale
-  l. 869
+  l. 885
     défaut : ⟦?Création…|Créer l'article⟧
     miroir : ⟦?Création…|Créer la denrée⟧
-  l. 890
+  l. 906
     défaut : Modifier l'article
     miroir : Modifier la denrée
-  l. 897
+  l. 913
     défaut : Ex: Poulet entier
     miroir : Ex: Denrée A
-  l. 924
+  l. 940
     défaut : Aucune activité ni labo configuré.
     miroir : Aucun local ni usine configuré.
-  l. 944
+  l. 960
     défaut : Activité
     miroir : Local
-  l. 968
+  l. 984
     défaut : 🏭
     miroir : 🏭
-  l. 970
+  l. 986
     défaut : Laboratoire
     miroir : Usine centrale
-  l. 1002
+  l. 1018
     défaut : Supprimer cet article ?
     miroir : Supprimer cette denrée ?
-  l. 1003
+  l. 1019
     défaut : Les stocks et historiques liés seront conservés.
     miroir : Les armoires et historiques liés seront conservés.
 

@@ -15,6 +15,7 @@ import { useConfirm } from '../common/ConfirmDialog';
 import { messageErreur } from './factures/pieces';
 import { NATURES, probablesPour } from './factures/lecture/correspondre';
 import ChoixArticle from './factures/ChoixArticle';
+import { telechargerClasseur } from '../../compta/classeurs';
 
 interface Correspondance {
   id: number; fournisseurId: number; fournisseurNom: string; cle: string; designation: string; reference: string | null;
@@ -40,6 +41,19 @@ export default function CorrespondancesPage() {
   const [recherche, setRecherche] = useState('');
   const [page, setPage] = useState(1);
   const [edition, setEdition] = useState<{ id: number; choix: string; conversion: string; envoi: boolean } | null>(null);
+  // Toutes les correspondances (du périmètre du gérant) dans un classeur à la charte des modèles — les filtres ne s'y
+  // appliquent pas.
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const exporter = async () => {
+    setExportEnCours(true);
+    try {
+      await telechargerClasseur('/api/correspondances/export', `correspondances_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch {
+      await alerte({ title: 'Export impossible', message: 'Le fichier n\'a pas pu être préparé : réessayez.', tone: 'danger' });
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   useEffect(() => {
     let vivant = true;
@@ -131,7 +145,8 @@ export default function CorrespondancesPage() {
 
       <HistoryFilterBar accent="#ea580c" accentDark={ACCENT}
         subtitle={liste ? `${filtrees.length} correspondance${filtrees.length > 1 ? 's' : ''}` : 'Chargement…'}
-        onReset={() => { setFournisseur(''); setRecherche(''); setPage(1); }} showReset={Boolean(fournisseur || recherche)}>
+        onReset={() => { setFournisseur(''); setRecherche(''); setPage(1); }} showReset={Boolean(fournisseur || recherche)}
+        onExportExcel={exporter} excelLabel={exportEnCours ? 'Export…' : 'Exporter (Excel)'} excelDisabled={exportEnCours || !liste?.length}>
         <FilterField label={voc.Nom('fournisseur')}>
           <FilterSelect value={fournisseur} onChange={(e) => { setFournisseur(e.target.value); setPage(1); }}>
             <option value="">{voc.Tous('fournisseur')}</option>

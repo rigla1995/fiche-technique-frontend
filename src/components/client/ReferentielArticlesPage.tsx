@@ -5,6 +5,7 @@ import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { telechargerClasseur } from '../../compta/classeurs';
 
 const COLOR = '#16a34a';
 const ACCENT_DARK = '#15803d';
@@ -33,6 +34,18 @@ export default function ReferentielArticlesPage() {
   const [activites, setActivites] = useState<Activite[]>([]);
   const [labos, setLabos] = useState<Labo[]>([]);
   const [loading, setLoading] = useState(true);
+  // Tout le référentiel dans le modèle d'import (réimportable par l'Ajout Dynamique) — les filtres ne s'y appliquent pas.
+  const [exportEnCours, setExportEnCours] = useState(false);
+  const exporter = async () => {
+    setExportEnCours(true);
+    try {
+      await telechargerClasseur('/api/referentiel/export', `referentiel_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    } catch {
+      await alerte({ title: 'Export impossible', message: 'Le fichier n\'a pas pu être préparé : réessayez.', tone: 'danger' });
+    } finally {
+      setExportEnCours(false);
+    }
+  };
 
   // Create wizard state
   const [showCreate, setShowCreate] = useState(false);
@@ -367,6 +380,9 @@ export default function ReferentielArticlesPage() {
         subtitle={loading ? undefined : `${filtered.length} ${voc.nom('article', filtered.length !== 1)}${(search || filterCat || filterFamille) ? ` sur ${articles.length}` : ''}`}
         onReset={() => { setSearch(''); setFilterCat(''); setFilterFamille(''); }}
         showReset={!!(search || filterCat || filterFamille)}
+        onExportExcel={exporter}
+        excelLabel={exportEnCours ? 'Export…' : 'Exporter (modèle Excel)'}
+        excelDisabled={exportEnCours || articles.length === 0}
         actions={
           <>
             <button className="btn btn-ghost" onClick={openMultiCreate} style={{ border: `1.5px solid ${COLOR}`, color: ACCENT_DARK }}>
