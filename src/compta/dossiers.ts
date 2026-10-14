@@ -25,6 +25,11 @@ export interface ExerciceSuivant {
   debut: string; fin: string; millesime: number | null; possible: boolean;
   bloquant: { id: number; debut: string; fin: string; millesime: number } | null; auto: boolean; jusqua: string | null;
 }
+export interface ExerciceFiche {
+  id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number;
+  cloturable?: boolean;
+  clos?: { le: string; par: string | null; resultat: string | null; affectee: boolean } | null;
+}
 export type EtatDossier = 'actif' | 'archive';
 export type EtatAbonnement = 'actif' | 'lecture_seule' | 'bloque' | 'suspendu';
 // S5a : `configurer` (plan de comptes) = titulaire ou gérant de niveau Complet (réponse 6 du client du 07/10) ; S5c :
@@ -75,10 +80,12 @@ export interface FicheDossier {
   identite: IdentiteLegale; identiteComplete: boolean; regime: Regime; pays: string; devise: string; decimales: number;
   // X1 : l'exercice en cours (celui du jour, sinon le plus récent des ouverts), tous les exercices, les exercices ouverts
   // (deux au plus) avec leurs périodes, et l'exercice suivant (bouton « Ouvrir », ouverture automatique).
-  exercice: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number; periodes: Periode[] } | null;
-  exercices: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number }[];
+  exercice: (ExerciceFiche & { periodes: Periode[] }) | null;
+  // X2 : `cloturable` (ouvert et fini : bouton « Clôturer l'exercice », titulaire) et, clos, qui, quand, le résultat (texte
+  // signé : positif = bénéfice) et si l'affectation du résultat est préparée. Facultatifs : un serveur d'avant X2 ne les envoie pas.
+  exercices: ExerciceFiche[];
   // Facultatifs : un serveur d'avant X1 (déploiement en cours) ne les envoie pas.
-  exercicesOuverts?: { id: number; debut: string; fin: string; etat: 'ouvert' | 'clos'; millesime: number; periodes: Periode[] }[];
+  exercicesOuverts?: (ExerciceFiche & { periodes: Periode[] })[];
   suivant?: ExerciceSuivant | null;
   acces: { role: 'titulaire' | 'gerant'; niveau: string; nom: string | null; email: string | null }[];
   droits: Droits; mouvemente: boolean; creeLe: string; modifieLe: string; etatAbonnement: EtatAbonnement;

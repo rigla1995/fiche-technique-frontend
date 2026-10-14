@@ -72,6 +72,9 @@ const texteTaxes = (r: ResumeFiscalite) => {
   return `${fmtMoisAnnee(r.periode.debut)} : ${tva} · ${certificats}`;
 };
 
+// X2 : le résultat d'un exercice clos (texte signé) → millimes, pour le dire en bénéfice ou en perte.
+const signeTexte = (t: string | null | undefined) => signe(t || '0');
+
 // Une page par dossier : changer de dossier (navigation directe) repart d'un état neuf.
 export default function ComptaDossierPage() {
   const { dossierId } = useParams();
@@ -319,9 +322,26 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                       <p style={{ margin: '8px 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
                         {x.periodes.length} période{x.periodes.length > 1 ? 's' : ''} mensuelle{x.periodes.length > 1 ? 's' : ''} : {ouvertes} ouverte{ouvertes > 1 ? 's' : ''}, {closes} close{closes > 1 ? 's' : ''} (page Périodes : valider, clore, rouvrir, journal général).
                       </p>
+                      {/* X2 : un exercice fini se clôture (titulaire seul) : l'assistant contrôle, montre le résultat et les écritures, puis clôt. */}
+                      {x.cloturable && (
+                        <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                          <Link to={`/dossiers/${fiche.id}/exercices/${x.id}/cloture`} style={{ ...petit('#1e1b4b', '#fff', '#1e1b4b'), textDecoration: 'none' }}>🔒 Clôturer l'exercice {x.millesime}</Link>
+                          <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{fiche.droits.archiver ? 'Exercice fini : résultat, à-nouveaux, clôture définitive.' : 'Exercice fini : la clôture revient au titulaire (vous pouvez suivre les contrôles).'}</span>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
+                {fiche.exercices.filter((x) => x.clos).map((x) => (
+                  <div key={x.id} style={{ marginBottom: 10, padding: '8px 12px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: '0.8rem', color: '#475569', lineHeight: 1.55 }}>
+                    <span style={{ fontWeight: 800, color: '#1e1b4b' }}>Exercice {x.millesime} · clos</span> le {new Date(x.clos!.le).toLocaleDateString('fr-FR')}{x.clos!.par ? ` par ${x.clos!.par}` : ''} ·{' '}
+                    <span style={{ fontWeight: 700, color: signeTexte(x.clos!.resultat) > 0n ? '#166534' : signeTexte(x.clos!.resultat) < 0n ? '#b91c1c' : '#475569' }}>
+                      {signeTexte(x.clos!.resultat) > 0n ? 'bénéfice' : signeTexte(x.clos!.resultat) < 0n ? 'perte' : 'résultat nul'} {fmtMontant((x.clos!.resultat || '0').replace('-', ''))}
+                    </span>
+                    {' · '}{x.clos!.affectee ? 'affectation préparée' : signeTexte(x.clos!.resultat) === 0n ? 'rien à affecter' : 'résultat à affecter'}{' · '}
+                    <Link to={`/dossiers/${fiche.id}/exercices/${x.id}/cloture`} style={{ color: '#4338ca', fontWeight: 700 }}>Voir la clôture →</Link>
+                  </div>
+                ))}
                 {fiche.exercice && (fiche.mouvemente || fiche.exercices.length > 1) && (
                   <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.5 }}>
                     {fiche.exercices.length > 1 ? 'L\'exercice suivant est ouvert : les dates des exercices ne changent plus.' : 'Le dossier a des écritures : les dates de l\'exercice ne changent plus.'}

@@ -65,6 +65,10 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   // S6b : la page Périodes ouvre les écritures d'une période (?periode=…) ; le mois en cours n'est alors pas posé.
   const [parametres] = useSearchParams();
   const periodeInitiale = Number(parametres.get('periode')) || null;
+  // X2 : l'assistant de clôture ouvre les écritures d'un exercice (?exercice=…), en brouillard (?etat=brouillard) ou par pièce (?q=…).
+  const exerciceInitial = Number(parametres.get('exercice')) || null;
+  const etatInitial: EtatEcriture | '' = parametres.get('etat') === 'brouillard' ? 'brouillard' : parametres.get('etat') === 'validee' ? 'validee' : '';
+  const qInitial = (parametres.get('q') || '').trim().slice(0, 100);
   // `lu` : la dernière réponse (en-tête, droits, choix de la saisie, total), les écritures accumulées depuis la page 1, et
   // la clé (journal, période, état, recherche) qu'elle sert — une relecture en route se voit à la différence avec la clé.
   const [lu, setLu] = useState<{ cle: string; etat: EcrituresReponse; lignes: Ecriture[] } | null>(null);
@@ -73,10 +77,10 @@ function ComptaEcritures({ dossierId }: { dossierId?: string }) {
   const [journalId, setJournalId] = useState<number | null>(null);
   const [periodeId, setPeriodeId] = useState<number | null>(periodeInitiale);
   // X1 : l'exercice choisi (null = celui du serveur : de la période demandée, sinon du jour).
-  const [exerciceId, setExerciceId] = useState<number | null>(null);
-  const [etatFiltre, setEtatFiltre] = useState<EtatEcriture | ''>('');
-  const [recherche, setRecherche] = useState('');
-  const [q, setQ] = useState('');
+  const [exerciceId, setExerciceId] = useState<number | null>(exerciceInitial);
+  const [etatFiltre, setEtatFiltre] = useState<EtatEcriture | ''>(etatInitial);
+  const [recherche, setRecherche] = useState(qInitial);
+  const [q, setQ] = useState(qInitial);
   const [plus, setPlus] = useState(false);
   const [enRelecture, setEnRelecture] = useState(false);
   const [fenetre, setFenetre] = useState<Fenetre>(null);
