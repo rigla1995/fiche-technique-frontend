@@ -2,11 +2,15 @@ import { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { PRODUCT_THEME } from '../../theme/productTheme';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { fmtQuantite } from '../../utils/recettePU';
 
 // Recette décomposée récursivement (réponse de GET /api/products/:id/cout = mapCout).
 interface RecipeIngredient { name: string; portion: number; unit: string; unitPrice: number; cost: number; }
 export interface RecipeNode {
   product: string;
+  // P1 : recette pour 1 unité du produit (unit) ; null : produit d'avant ou vendable, pour 1 recette.
+  unit?: string | null;
+  quantiteProduite?: number | null;
   ingredients: RecipeIngredient[];
   subProducts: { name: string; portion: number; unitCost: number; cost: number; details: RecipeNode }[];
   ingredientsCost: number;
@@ -19,7 +23,7 @@ function Leaf({ ing }: { ing: RecipeIngredient }) {
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '4px 8px', fontSize: '0.83rem' }}>
       <span style={{ color: '#374151' }}>🧂 {ing.name}</span>
       <span style={{ color: '#64748b', fontWeight: 600, whiteSpace: 'nowrap' }}>
-        {ing.portion} {ing.unit}
+        {fmtQuantite(ing.portion)} {ing.unit}
       </span>
     </div>
   );
@@ -37,7 +41,7 @@ function Branch({ sp, depth }: { sp: RecipeNode['subProducts'][number]; depth: n
         <span style={{ color: PRODUCT_THEME.accentText, fontSize: '0.65rem', width: 10 }}>{open ? '▼' : '▶'}</span>
         <span style={{ color: '#5b21b6', fontWeight: 600 }}>🔄 {sp.name}</span>
         <span style={{ marginLeft: 'auto', color: PRODUCT_THEME.accent, fontWeight: 600, whiteSpace: 'nowrap' }}>
-          ×{sp.portion}
+          {sp.details?.unit ? `${fmtQuantite(sp.portion)} ${sp.details.unit}` : `×${fmtQuantite(sp.portion)}`}
         </span>
       </button>
       {open && <div style={{ marginTop: 2 }}><TreeNode node={sp.details} depth={depth + 1} /></div>}
@@ -81,6 +85,11 @@ export default function RecipeTree({ productId, laboId }: { productId: number; l
   if (!node) return null;
   return (
     <div>
+      {node.unit && (
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: PRODUCT_THEME.accentText, padding: '2px 8px 6px' }}>
+          📏 Pour 1 {node.unit} ({voc.nom('recette')} pour {fmtQuantite(node.quantiteProduite)} {node.unit})
+        </div>
+      )}
       <TreeNode node={node} depth={0} />
     </div>
   );

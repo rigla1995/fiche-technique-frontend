@@ -10,6 +10,7 @@ import RecipeTree from './RecipeTree';
 import ProductCard from './ProductCard';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { fmtQuantite, lireQuantiteProduite, pourLaRecette, pourUneUnite } from '../../utils/recettePU';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number; categorieName?: string | null }[];
@@ -66,7 +67,7 @@ export default function ProductList() {
   // Add product modal state
   type AddStep = 1 | 2 | 3 | 4 | 5 | 6;
   interface IngLine { ingredientId: string; portion: string; }
-  const [utilisableForWizard, setUtilisableForWizard] = useState<{ id: number; name: string }[]>([]);
+  const [utilisableForWizard, setUtilisableForWizard] = useState<{ id: number; name: string; unite?: string }[]>([]);
   const [addModal, setAddModal] = useState<AddStep | null>(null);
   const [addName, setAddName] = useState('');
   const [addRef, setAddRef] = useState('');
@@ -98,6 +99,20 @@ export default function ProductList() {
   // Vendables », logique appros libres complète (manuel/transfert/perte/seuil/inventaire).
   const [addStockActif, setAddStockActif] = useState(false);
   const [vendableSubTab, setVendableSubTab] = useState<'produit' | 'supplement'>('produit');
+  // P1 : unité finale et quantité produite d'un produit utilisable. La recette se saisit pour cette quantité et
+  // s'enregistre pour 1 unité. addUniteAvant : unité à l'ouverture (édition ; null = produit d'avant, à la recette) ;
+  // addUniteFigee : le produit a déjà des mouvements de stock, son unité ne change plus.
+  const [addUniteId, setAddUniteId] = useState('');
+  const [addQuantiteProduite, setAddQuantiteProduite] = useState('');
+  const [addUniteAvant, setAddUniteAvant] = useState<number | null>(null);
+  const [addUniteFigee, setAddUniteFigee] = useState(false);
+  const [unitesClient, setUnitesClient] = useState<{ id: number; name: string }[]>([]);
+
+  useEffect(() => {
+    api.get('/api/unites')
+      .then(({ data }) => setUnitesClient((data as { id: number; name: string }[]).map((u) => ({ id: u.id, name: u.name }))))
+      .catch(() => setUnitesClient([]));
+  }, []);
 
   // Load activities (filtré au périmètre du gérant côté backend pour les gérants)
   useEffect(() => {
@@ -142,6 +157,8 @@ export default function ProductList() {
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddIngredients([]); setUtilisableForWizard([]); // chargés réactivement selon le périmètre
+    setAddUniteId(p.uniteId ? String(p.uniteId) : ''); setAddQuantiteProduite(p.quantiteProduite ? String(p.quantiteProduite) : '');
+    setAddUniteAvant(p.uniteId ?? null); setAddUniteFigee(false);
     // Affectation ACTUELLE du produit (pas d'auto-sélection : on reflète l'existant)
     const origine: 'labo' | 'activite' = p.origine === 'labo' ? 'labo' : 'activite';
     setAddOrigine(origine);
@@ -161,15 +178,24 @@ export default function ProductList() {
       const pdata = data as {
         name: string; refProduit?: string; isSupplement?: boolean; categorieProduitId?: number | null;
         laboIds?: number[]; activiteStockIds?: number[];
-        ingredients: { ingredientId: number; portion: number }[];
-        subProducts: { subProductId: number; portion: number }[];
+        ingredients: { ingredientId: number; portion: number | string }[];
+        subProducts: { subProductId: number; portion: number | string }[];
+        uniteId?: number | null; quantiteProduite?: number | null; uniteFigee?: boolean;
       };
       setAddName(pdata.name);
       setAddRef(pdata.refProduit || '');
       setAddIsSupplement(pdata.isSupplement ?? p.isSupplement ?? false);
       setAddCategorieId(pdata.categorieProduitId ? String(pdata.categorieProduitId) : '');
-      setAddIngLines(pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: String(i.portion) })));
-      setAddSubLines((pdata.subProducts || []).map((sp) => ({ ingredientId: String(sp.subProductId), portion: String(sp.portion) })));
+      // P1 : la recette est enregistrée pour 1 unité ; l'assistant la montre pour la quantité produite (la formule
+      // saisie). Produit d'avant ou vendable : pour 1 recette.
+      const q = pdata.uniteId && pdata.quantiteProduite ? Number(pdata.quantiteProduite) : 1;
+      const versRecette = (portion: number | string) => String(q === 1 ? Number(portion) : pourLaRecette(Number(portion), q));
+      setAddUniteId(pdata.uniteId ? String(pdata.uniteId) : '');
+      setAddQuantiteProduite(pdata.uniteId && pdata.quantiteProduite ? String(pdata.quantiteProduite) : '');
+      setAddUniteAvant(pdata.uniteId ?? null);
+      setAddUniteFigee(pdata.uniteFigee === true);
+      setAddIngLines(pdata.ingredients.map((i) => ({ ingredientId: String(i.ingredientId), portion: versRecette(i.portion) })));
+      setAddSubLines((pdata.subProducts || []).map((sp) => ({ ingredientId: String(sp.subProductId), portion: versRecette(sp.portion) })));
       // Affectation depuis le détail si disponible (plus fiable que la card)
       if (origine === 'labo') {
         if (Array.isArray(pdata.laboIds) && pdata.laboIds.length > 0) {
@@ -195,6 +221,7 @@ export default function ProductList() {
     setAddIngLines([]); setAddSubLines([]); setAddSubSearch(''); setAddIngSearch('');
     setAddSavedName(''); setAddFamilleFilter(''); setAddCatFilter(''); setAddIngVisible(20);
     setAddOrigine('activite'); setAddCheckedActivites([]);
+    setAddUniteId(''); setAddQuantiteProduite(''); setAddUniteAvant(null); setAddUniteFigee(false);
     // PU en mode appros libres : l'ENSEMBLE des activités ET des labos est AUTO-sélectionné
     // à l'ouverture — le client décoche pour exclure. (Vendables : sélection vide, inchangé.)
     if (tab === 'vendable') {
@@ -573,6 +600,13 @@ export default function ProductList() {
                         <span title={`${voc.acc('produit_utilisable', 'Fabriqué', 'Fabriquée')} ${voc.au('labo')} — ${voc.acc('produit_utilisable', 'reçu', 'reçue')} uniquement par ${voc.nom('transfert')} (pas ${voc.de('appro', false, 'court')} ${voc.acc('appro', 'manuel', 'manuelle')} en ${voc.nom('activite')}).`}
                           style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>⇄ {voc.Nom('transfert')} uniquement</span>
                       )}
+                      {/* P1 : unité finale du produit utilisable (recette et coût pour 1 unité) */}
+                      {!isVendable && p.uniteNom && (
+                        <span title={`${voc.Nom('recette')} pour ${fmtQuantite(p.quantiteProduite)} ${p.uniteNom}, ${voc.acc('recette', 'enregistré', 'enregistrée')} pour 1 ${p.uniteNom}`}
+                          style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#eef2ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                          📏 {p.uniteNom} · {voc.nom('recette')} {fmtQuantite(p.quantiteProduite)} {p.uniteNom}
+                        </span>
+                      )}
                     </>
                   );
                   const togId = (key: string | null) => (key && key.startsWith(`${p.id}-`)) ? Number(key.slice(`${p.id}-`.length)) : null;
@@ -826,17 +860,29 @@ export default function ProductList() {
             const updateSubPortion = (id: string, val: string) =>
               setAddSubLines((prev) => prev.map((l) => l.ingredientId === id ? { ...l, portion: val } : l));
 
-            const canGoStep2 = addName.trim().length > 0 && (!isVendable || !!addCategorieId);
+            // P1 : unité finale d'un produit utilisable. Sans unité : seulement un produit d'avant laissé « à la recette »
+            // (en modification) ; figé sans unité : il a déjà du stock, il reste à la recette.
+            const uniteChoisie = !isVendable && addUniteId !== '';
+            const qProduite = uniteChoisie ? lireQuantiteProduite(addQuantiteProduite) : null;
+            const produitEdite = editingId != null ? products.find((x) => x.id === editingId) : undefined;
+            const nomUnite = uniteChoisie
+              ? (unitesClient.find((u) => String(u.id) === addUniteId)?.name ?? produitEdite?.uniteNom ?? '')
+              : '';
+            const aLaRecette = !isVendable && !uniteChoisie && editingId != null && addUniteAvant == null;
+            const uniteOk = isVendable || aLaRecette || (uniteChoisie && qProduite != null);
+            // Quantité de la recette entière → pour 1 unité (produit d'avant ou vendable : inchangée).
+            const versUnite = (x: number) => (uniteChoisie && qProduite != null ? pourUneUnite(x, qProduite) : x);
+            const canGoStep2 = addName.trim().length > 0 && (!isVendable || !!addCategorieId) && uniteOk;
             const handleSave = async () => {
               setAddSaving(true);
               setAddSaveError(null);
               try {
                 const baseIngredients = addIngLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
-                  .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
+                  .map((l) => ({ ingredientId: parseInt(l.ingredientId), portion: versUnite(parseFloat(l.portion)) }));
                 const baseSubProducts = addSubLines
                   .filter((l) => l.ingredientId && parseFloat(l.portion) > 0)
-                  .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: parseFloat(l.portion) }));
+                  .map((l) => ({ subProductId: parseInt(l.ingredientId), portion: versUnite(parseFloat(l.portion)) }));
                 // L'affectation (labo XOR activité) est gérée par le backend selon origine + ids :
                 // labo → labo_pt_selections + PT des activités du labo ; activité → affectation/stock.
                 const payload = {
@@ -854,6 +900,8 @@ export default function ProductList() {
                   activiteIds: addOrigine === 'labo' ? addCheckedActivites : addAffectationIds,
                   ingredients: baseIngredients,
                   subProducts: baseSubProducts,
+                  // P1 : unité finale et quantité produite (rien d'envoyé pour un produit d'avant laissé à la recette).
+                  ...(uniteChoisie && qProduite != null ? { uniteId: parseInt(addUniteId), quantiteProduite: qProduite } : {}),
                 };
                 // ÉDITION : même wizard, même payload — le backend recompose l'affectation.
                 if (editingId) {
@@ -935,6 +983,64 @@ export default function ProductList() {
                             onChange={(e) => setAddRef(e.target.value)}
                             style={{ width: '100%', maxWidth: 280, borderColor: '#c7d2fe' }} />
                         </div>
+                        {/* P1 : unité finale et quantité produite (produit utilisable) */}
+                        {!isVendable && (() => {
+                          const figeeSansUnite = addUniteFigee && addUniteAvant == null;
+                          const parents = produitEdite?.parentProductsCount ?? 0;
+                          const options = !addUniteId || unitesClient.some((u) => String(u.id) === addUniteId)
+                            ? unitesClient
+                            : [...unitesClient, { id: Number(addUniteId), name: produitEdite?.uniteNom || '—' }];
+                          const etiquette: React.CSSProperties = { display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 };
+                          return (
+                            <div style={{ background: '#eef2ff', borderRadius: 10, padding: '12px 16px', border: '1.5px solid #c7d2fe', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                              {figeeSansUnite ? (
+                                <div style={{ fontSize: '0.8rem', color: '#3730a3' }}>
+                                  📏 Compté {voc.au('recette')} (1 unité = 1 {voc.nom('recette')}) : {voc.ce('produit_utilisable')} a déjà des mouvements {voc.de('stock')}, son unité ne change plus.
+                                </div>
+                              ) : (
+                                <>
+                                  <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+                                    <div>
+                                      <label style={etiquette}>Unité finale {aLaRecette ? null : <span style={{ color: '#ef4444' }}>*</span>}</label>
+                                      <select className="input" value={addUniteId} disabled={addUniteFigee}
+                                        onChange={(e) => setAddUniteId(e.target.value)}
+                                        style={{ minWidth: 150, borderColor: uniteChoisie || aLaRecette ? '#c7d2fe' : '#fca5a5' }}>
+                                        <option value="">{editingId != null && addUniteAvant == null ? `— ${voc.Au('recette')} (sans unité) —` : '— Choisir —'}</option>
+                                        {options.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
+                                      </select>
+                                    </div>
+                                    <div>
+                                      <label style={etiquette}>Quantité produite {uniteChoisie ? <span style={{ color: '#ef4444' }}>*</span> : null}</label>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                        <input className="input" type="number" step="0.001" min="0" placeholder="Ex. 4,6"
+                                          value={addQuantiteProduite} disabled={!uniteChoisie}
+                                          onChange={(e) => setAddQuantiteProduite(e.target.value)}
+                                          style={{ width: 110, borderColor: !uniteChoisie || qProduite != null ? '#c7d2fe' : '#fca5a5' }} />
+                                        <span style={{ fontSize: '0.82rem', color: '#4338ca', fontWeight: 600 }}>{nomUnite}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                  <div style={{ fontSize: '0.75rem', color: '#4338ca' }}>
+                                    Vous saisirez les quantités pour toute la production (ex. 4,6 kg) ; elles seront enregistrées pour 1 {nomUnite || 'unité'}, et {voc.le('stock')} se comptera {nomUnite ? `en ${nomUnite}` : 'dans cette unité'}.
+                                  </div>
+                                  {addUniteFigee && (
+                                    <div style={{ fontSize: '0.75rem', color: '#92400e' }}>
+                                      Déjà des mouvements {voc.de('stock')} : l'unité ne change plus (la quantité produite, si).
+                                    </div>
+                                  )}
+                                  {unitesClient.length === 0 && (
+                                    <div style={{ fontSize: '0.75rem', color: '#b45309' }}>Aucune unité : créez-en d'abord dans {voc.Nom('referentiel')} › Unités.</div>
+                                  )}
+                                  {editingId != null && addUniteAvant == null && uniteChoisie && parents > 0 && (
+                                    <div style={{ fontSize: '0.75rem', color: '#92400e' }}>
+                                      {voc.n('recette', parents)} qui {parents > 1 ? `l'utilisent seront ${voc.acc('recette', 'convertis', 'converties')}` : `l'utilise sera ${voc.acc('recette', 'converti', 'convertie')}`} en {nomUnite || 'cette unité'} (même quantité de matière).
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })()}
                         {isVendable && (
                           <div>
                             <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#3730a3', marginBottom: 6 }}>
@@ -1029,6 +1135,11 @@ export default function ProductList() {
                               Mode {voc.nom('supplement')} — sélectionnez {voc.acc('article', 'un seul', 'une seule')} {voc.nom('article')}
                             </div>
                           )}
+                          {uniteChoisie && qProduite != null && (
+                            <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#3730a3', fontWeight: 600 }}>
+                              📏 Quantités pour {fmtQuantite(qProduite)} {nomUnite} de « {addName.trim()} » — ramenées à 1 {nomUnite} au récapitulatif.
+                            </div>
+                          )}
                           {/* Search */}
                           <input className="input" placeholder="🔍 Rechercher…" value={addIngSearch}
                             onChange={(e) => { setAddIngSearch(e.target.value); setAddIngVisible(20); }}
@@ -1115,6 +1226,11 @@ export default function ProductList() {
                     {addModal === 4 && (() => {
                       return (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                          {uniteChoisie && qProduite != null && (
+                            <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: 8, padding: '8px 12px', fontSize: '0.8rem', color: '#3730a3', fontWeight: 600 }}>
+                              📏 Quantités pour {fmtQuantite(qProduite)} {nomUnite} de « {addName.trim()} », chaque {voc.nom('produit_utilisable')} dans son unité.
+                            </div>
+                          )}
                           <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
                             {addIsSupplement
                               ? `Mode ${voc.nom('supplement')} — sélectionnez exactement 1 ${voc.nom('produit_utilisable')} (OU utilisez l'étape ${voc.Pl('article')}).`
@@ -1150,7 +1266,7 @@ export default function ProductList() {
                                               value={line?.portion || ''}
                                               onChange={(e) => updateSubPortion(sid, e.target.value)}
                                               style={{ width: 72, padding: '3px 6px', borderRadius: 6, border: `1.5px solid ${portionValid ? '#c4b5fd' : '#ef4444'}`, fontSize: '0.82rem', textAlign: 'right' }} />
-                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>unité</span>
+                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{u.unite ?? 'unité'}</span>
                                           </div>
                                         )}
                                       </div>
@@ -1349,16 +1465,27 @@ export default function ProductList() {
                               )}
                             </div>
                           </div>
+                          {/* P1 : recette saisie pour la quantité produite, enregistrée pour 1 unité */}
+                          {uniteChoisie && qProduite != null && (
+                            <div style={{ background: '#eef2ff', border: '1.5px solid #c7d2fe', borderRadius: 10, padding: '10px 14px', fontSize: '0.82rem', color: '#3730a3' }}>
+                              📏 <strong>Saisi pour {fmtQuantite(qProduite)} {nomUnite}</strong>, enregistré <strong>pour 1 {nomUnite}</strong> : {voc.le('stock')}, la production et le coût de « {addName.trim()} » se compteront en {nomUnite}.
+                            </div>
+                          )}
                           {/* Articles list preview */}
                           <div>
                             <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748b', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{voc.Pl('article')} {voc.acc('article', 'sélectionnés', 'sélectionnées')}</div>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 110, overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, maxHeight: 160, overflowY: 'auto' }}>
                               {addIngLines.filter(l => l.ingredientId && parseFloat(l.portion) > 0).map(l => {
                                 const ing = addIngredients.find(i => String(i.id) === l.ingredientId);
                                 return (
-                                  <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#f8fafc', fontSize: '0.82rem' }}>
+                                  <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '5px 10px', borderRadius: 7, background: '#f8fafc', fontSize: '0.82rem' }}>
                                     <span style={{ color: '#374151', fontWeight: 500 }}>{ing?.nom ?? l.ingredientId}</span>
-                                    <span style={{ color: '#64748b', fontWeight: 600 }}>{l.portion} {ing?.unite}</span>
+                                    <span style={{ color: '#64748b', fontWeight: 600, textAlign: 'right' }}>
+                                      {fmtQuantite(l.portion)} {ing?.unite}
+                                      {uniteChoisie && qProduite != null && (
+                                        <span style={{ color: '#4338ca' }}> → {fmtQuantite(pourUneUnite(parseFloat(l.portion), qProduite))} {ing?.unite} pour 1 {nomUnite}</span>
+                                      )}
+                                    </span>
                                   </div>
                                 );
                               })}
@@ -1374,7 +1501,12 @@ export default function ProductList() {
                                   return (
                                     <div key={l.ingredientId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 10px', borderRadius: 7, background: '#faf5ff', border: '1px solid #ede9fe', fontSize: '0.82rem' }}>
                                       <span style={{ color: '#5b21b6', fontWeight: 500 }}>🔄 {sp?.name ?? l.ingredientId}</span>
-                                      <span style={{ color: '#7c3aed', fontWeight: 600 }}>{l.portion} unité</span>
+                                      <span style={{ color: '#7c3aed', fontWeight: 600, textAlign: 'right' }}>
+                                        {fmtQuantite(l.portion)} {sp?.unite ?? 'unité'}
+                                        {uniteChoisie && qProduite != null && (
+                                          <span> → {fmtQuantite(pourUneUnite(parseFloat(l.portion), qProduite))} {sp?.unite ?? 'unité'} pour 1 {nomUnite}</span>
+                                        )}
+                                      </span>
                                     </div>
                                   );
                                 })}

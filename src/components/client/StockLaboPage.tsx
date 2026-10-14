@@ -31,6 +31,7 @@ import VerifierFacture from './factures/VerifierFacture';
 import { phraseEnvoi } from './factures/compta';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { fmtQuantite } from '../../utils/recettePU';
 
 const currentYear = new Date().getFullYear();
 const yearStart = `${currentYear}-01-01`;
@@ -63,6 +64,7 @@ interface LaboStockRow {
   produitId?: number;
   isPT?: boolean;
   prixPartiel?: boolean;
+  quantiteProduite?: number | null; // P1 : quantité que produit une recette (unité du produit) ; null = à la recette
   type?: string;
   origine?: string | null;
   nom: string;
@@ -697,7 +699,7 @@ export default function StockLaboPage() {
           : (row.prixUnitaire != null && row.prixUnitaire > 0 ? row.prixUnitaire : 0);
         return {
           nom: row.nom,
-          unite: 'unité',
+          unite: row.unite || 'unité',
           quantite: qty,
           prixHT: prixPT,
           tva: null,
@@ -1072,6 +1074,10 @@ export default function StockLaboPage() {
                                       </td>
                                       <td style={{ textAlign: 'center', padding: '10px 14px', verticalAlign: 'middle' }}>
                                         <input type="number" min="0" step="0.001" placeholder="—" value={rs.quantite} onChange={(e) => setField(r.ingredientId, 'quantite', e.target.value)} onFocus={(e) => { e.target.select(); if (r.isPT && r.produitId) fetchPtRecipe(r.produitId); }} style={{ width: 76, textAlign: 'right', padding: '5px 8px', borderRadius: 7, fontSize: '0.85rem', ...warnStyle }} className="input" disabled={r.isPT ? hasIngredientQuantity : hasPTQuantity} />
+                                        {/* P1 : la production se saisit dans l'unité du produit */}
+                                        {r.isPT && r.quantiteProduite != null && (
+                                          <div style={{ fontSize: '0.68rem', marginTop: 2, color: '#64748b', whiteSpace: 'nowrap' }}>1 {voc.nom('recette')} = {fmtQuantite(r.quantiteProduite)} {r.unite}</div>
+                                        )}
                                         {r.isPT && r.produitId && (() => {
                                           const info = ptRecipeMap[r.produitId];
                                           if (!info || info.max === null || info.max <= 0) return null;

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Vocab } from '../../vocab/vocab';
+import { fmtQuantite } from '../../utils/recettePU';
 
 interface ManualPriceEntry {
   ingredientId: number;
@@ -27,6 +28,7 @@ interface RecetteIngredient {
 interface RecetteSousProduit {
   nom: string;
   portion: number;
+  unite?: string;
   ingredients: RecetteIngredient[];
   sousProduits: RecetteSousProduit[];
 }
@@ -36,7 +38,8 @@ interface FtContextesResponse {
   limiteTransferts: boolean;
   activites: { id: number; nom: string }[];
   labos: { id: number; nom: string }[];
-  recette: { ingredients: RecetteIngredient[]; sousProduits: RecetteSousProduit[] } | null;
+  // P1 : composition pour 1 unité du produit (unite) ; formule saisie pour quantiteProduite unités. null : pour 1 recette.
+  recette: { unite?: string | null; quantiteProduite?: number | null; ingredients: RecetteIngredient[]; sousProduits: RecetteSousProduit[] } | null;
 }
 
 interface FtContext {
@@ -351,14 +354,14 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
       lines.push(
         <div key={`${path}i${i}`} style={{ padding: `2px 0 2px ${depth * 16}px`, fontSize: '0.82rem', color: '#334155' }}>
           <span style={{ fontWeight: 500 }}>{ing.nom}</span>
-          <span style={{ color: '#64748b' }}> — {ing.portion} {ing.unite}</span>
+          <span style={{ color: '#64748b' }}> — {fmtQuantite(ing.portion)} {ing.unite}</span>
         </div>
       );
     });
     sps.forEach((sp, i) => {
       lines.push(
         <div key={`${path}s${i}`} style={{ padding: `4px 0 2px ${depth * 16}px`, fontSize: '0.82rem', fontWeight: 700, color: '#4338ca' }}>
-          ↳ {sp.nom} — {sp.portion}
+          ↳ {sp.nom} — {fmtQuantite(sp.portion)}{sp.unite ? ` ${sp.unite}` : ''}
         </div>
       );
       lines.push(...renderRecetteLines(sp.ingredients || [], sp.sousProduits || [], depth + 1, `${path}s${i}-`));
@@ -381,7 +384,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
           <div className="modal-body" style={{ padding: '20px 24px' }}>
             {/* Composition */}
             <div style={{ marginBottom: 18 }}>
-              <div style={sectionLabel}>Composition</div>
+              <div style={sectionLabel}>Composition{ftCtx?.recette?.unite ? ` pour 1 ${ftCtx.recette.unite} (${voc.nom('recette')} pour ${fmtQuantite(ftCtx.recette.quantiteProduite)} ${ftCtx.recette.unite})` : ''}</div>
               {!hasIngredients ? (
                 <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid var(--border)', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                   {t('client.fiche_technique.no_ingredients')}
@@ -522,7 +525,7 @@ export default function FicheTechniqueModal({ productId, productName, hasIngredi
                   <div style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0, background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>💰</div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 2 }}>
-                      {t('client.products.real_time_cost')}
+                      {t('client.products.real_time_cost')}{ftCtx?.recette?.unite ? ` (1 ${ftCtx.recette.unite})` : ''}
                     </div>
                     {mode === 'stock' ? (
                       selectedContexts.length === 0 || methods.length === 0 ? (

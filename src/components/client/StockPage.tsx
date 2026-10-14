@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
+import { fmtQuantite } from '../../utils/recettePU';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { libelleCategoriePt } from '../../vocab/categoriesPt';
@@ -932,7 +933,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
           : (entry.prixUnitaire != null && entry.prixUnitaire > 0 ? entry.prixUnitaire : 0);
         return {
           nom: entry.nom,
-          unite: 'unité',
+          unite: entry.unite || 'unité',
           quantite: qty,
           prixHT: prixPT,
           tva: null,
@@ -1304,6 +1305,10 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                                 title={isLaboPT ? `${voc.acc('produit', 'Reçu', 'Reçue')} uniquement par ${voc.nom('transfert')} depuis ${voc.le('labo')} — pas ${voc.de('appro', false, 'court')} ${voc.acc('appro', 'manuel', 'manuelle')} ici.` : (entry.isPT && entry.prixPartiel ? `⚠️ Prix incomplet pour ${voc.acc('article', 'certains', 'certaines')} ${voc.pl('article')} — calcul partiel` : undefined)}
                                 onFocus={(e) => { e.target.select(); if (entry.isPT && entry.produitId) fetchPtRecipe(entry.produitId); }}
                               />
+                              {/* P1 : la production se saisit dans l'unité du produit */}
+                              {entry.isPT && entry.quantiteProduite != null && !isLaboPT && (
+                                <div style={{ fontSize: '0.68rem', marginTop: 2, color: '#64748b', whiteSpace: 'nowrap' }}>1 {voc.nom('recette')} = {fmtQuantite(entry.quantiteProduite)} {entry.unite}</div>
+                              )}
                               {entry.isPT && entry.produitId && !isLaboPT && (() => {
                                 const info = ptRecipeMap[entry.produitId];
                                 // Max produisible d'après les stocks courants SERVEUR (aucun « ∞ » :
