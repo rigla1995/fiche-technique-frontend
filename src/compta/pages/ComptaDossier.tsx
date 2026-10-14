@@ -394,6 +394,8 @@ function ComptaDossier({ dossierId }: { dossierId?: string }) {
                 <LigneConfiguration libelle="Grand livre" lien={`/dossiers/${fiche.id}/livres?vue=grand-livre`} icone="📖" valeur="Par compte, par tiers" />
                 <LigneConfiguration libelle="Balance" lien={`/dossiers/${fiche.id}/livres?vue=balance`} icone="⚖️" valeur="Générale, auxiliaire" />
                 <LigneConfiguration libelle="Journaux" lien={`/dossiers/${fiche.id}/livres?vue=journaux`} icone="📒" valeur="Par journal, par période" />
+                {/* E1 : le bilan et l'état de résultat d'un exercice (NC 01, annexes 1 et 3), calculés à la demande. */}
+                <LigneConfiguration libelle="États financiers" lien={`/dossiers/${fiche.id}/etats`} icone="📊" valeur="Bilan, état de résultat" />
                 {fiche.tenue && (
                   <>
                     <LigneConfiguration libelle="Lettrage" lien={`/dossiers/${fiche.id}/lettrage`} icone="🔗"

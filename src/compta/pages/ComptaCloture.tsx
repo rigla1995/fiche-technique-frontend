@@ -115,7 +115,10 @@ function ComptaCloture({ dossierId, exerciceId }: { dossierId?: string; exercice
             {x ? `Du ${fmtJour(x.debut)} au ${fmtJour(x.fin)}${etatPx?.suivant ? ` · exercice suivant ${etatPx.suivant.millesime} (${etatPx.suivant.etat === 'ouvert' ? 'ouvert' : 'clos'})` : ' · exercice suivant non ouvert'}` : 'Contrôles, résultat, écritures de résultat et d\'à-nouveaux, affectation du résultat'}
           </p>
         </div>
-        <BoutonAide section="compta-cloture" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          {etatPx && <Link to={`/dossiers/${etatPx.dossier.id}/etats?exercice=${etatPx.exercice.id}`} style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 700, textDecoration: 'none', background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.5)', borderRadius: 9, padding: '6px 12px' }}>📊 États financiers</Link>}
+          <BoutonAide section="compta-cloture" />
+        </div>
       </div>
 
       {etat === 'chargement' && <div className="loading-text">Chargement…</div>}
