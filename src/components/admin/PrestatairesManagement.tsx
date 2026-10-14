@@ -7,10 +7,22 @@ interface Prestataire {
   id: string;
   nom: string;
   logo_url?: string | null;
-  commission_pct: number;
   actif: boolean;
   created_at: string;
 }
+
+// P2 : modes de paiement des prestataires (Espèces, Virement…) — liste tenue ici, choisie par le client à l'activation
+// d'un prestataire ; un mode se renomme ou se désactive, jamais effacé (des ventes le citent).
+interface ModePaiement {
+  id: number;
+  code: string;
+  libelle: string;
+  actif: boolean;
+  ordre: number;
+  nbPrestataires?: number;
+}
+
+const msgErreur = (e: unknown) => (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur';
 
 export default function PrestatairesManagement() {
   const [prestataires, setPrestataires] = useState<Prestataire[]>([]);
@@ -18,31 +30,36 @@ export default function PrestatairesManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Prestataire | null>(null);
   const [nom, setNom] = useState('');
-  const [commission, setCommission] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [filterStatut, setFilterStatut] = useState<'' | 'actif' | 'inactif'>('');
   const { confirm, alerte } = useConfirm();
+  const [modes, setModes] = useState<ModePaiement[]>([]);
+  const [modeForm, setModeForm] = useState<{ mode: ModePaiement | null } | null>(null);
+  const [modeLibelle, setModeLibelle] = useState('');
+  const [modeSaving, setModeSaving] = useState(false);
+  const [modeError, setModeError] = useState('');
 
   const load = useCallback(() => {
     setLoading(true);
     api.get('/api/admin/prestataires').then(({ data }) => setPrestataires(data)).catch(() => {}).finally(() => setLoading(false));
+    api.get('/api/admin/modes-paiement').then(({ data }) => setModes(data as ModePaiement[])).catch(() => setModes([]));
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
-  const openNew = () => { setEditing(null); setNom(''); setCommission(''); setError(''); setShowForm(true); };
-  const openEdit = (p: Prestataire) => { setEditing(p); setNom(p.nom); setCommission(String(p.commission_pct)); setError(''); setShowForm(true); };
+  const openNew = () => { setEditing(null); setNom(''); setError(''); setShowForm(true); };
+  const openEdit = (p: Prestataire) => { setEditing(p); setNom(p.nom); setError(''); setShowForm(true); };
 
   const handleSave = async () => {
     if (!nom.trim()) { setError('Nom requis'); return; }
     setSaving(true); setError('');
     try {
       if (editing) {
-        await api.put(`/api/admin/prestataires/${editing.id}`, { nom, commission_pct: parseFloat(commission) || 0 });
+        await api.put(`/api/admin/prestataires/${editing.id}`, { nom });
       } else {
-        await api.post('/api/admin/prestataires', { nom, commission_pct: parseFloat(commission) || 0 });
+        await api.post('/api/admin/prestataires', { nom });
       }
       setShowForm(false);
       load();
@@ -50,6 +67,30 @@ export default function PrestatairesManagement() {
       setError(e.response?.data?.message || 'Erreur');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openMode = (mode: ModePaiement | null) => { setModeForm({ mode }); setModeLibelle(mode?.libelle ?? ''); setModeError(''); };
+  const saveMode = async () => {
+    if (!modeForm || !modeLibelle.trim()) { setModeError('Libellé requis'); return; }
+    setModeSaving(true); setModeError('');
+    try {
+      if (modeForm.mode) await api.put(`/api/admin/modes-paiement/${modeForm.mode.id}`, { libelle: modeLibelle.trim() });
+      else await api.post('/api/admin/modes-paiement', { libelle: modeLibelle.trim() });
+      setModeForm(null);
+      load();
+    } catch (e: unknown) {
+      setModeError(msgErreur(e));
+    } finally {
+      setModeSaving(false);
+    }
+  };
+  const toggleMode = async (m: ModePaiement) => {
+    try {
+      await api.put(`/api/admin/modes-paiement/${m.id}`, { actif: !m.actif });
+      load();
+    } catch (e: unknown) {
+      alerte({ title: 'Modification impossible', message: msgErreur(e), tone: 'danger' });
     }
   };
 
@@ -182,6 +223,83 @@ export default function PrestatairesManagement() {
         </div>
       )}
 
+      {/* Modes de paiement des prestataires (P2) */}
+      <div className="card" style={{ marginTop: 24, padding: '18px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
+          <div>
+            <h2 style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, color: '#0f172a' }}>💳 Modes de paiement des prestataires</h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', margin: '2px 0 0' }}>
+              Proposés au client quand il active un prestataire (commission, TVA, mode de paiement). Un mode se renomme ou se désactive, il ne s'efface pas.
+            </p>
+          </div>
+          <button className="btn btn-primary" onClick={() => openMode(null)}>+ Nouveau mode</button>
+        </div>
+        {modes.length === 0 ? (
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aucun mode de paiement.</div>
+        ) : (
+          <div className="table-responsive">
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Libellé</th>
+                  <th>Statut</th>
+                  <th>Prestataires activés</th>
+                  <th style={{ textAlign: 'right' }}>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {modes.map((m) => (
+                  <tr key={m.id} style={{ opacity: m.actif ? 1 : 0.6 }}>
+                    <td style={{ fontWeight: 600, color: '#0f172a' }}>{m.libelle} <span style={{ color: '#94a3b8', fontWeight: 400, fontSize: '0.75rem' }}>({m.code})</span></td>
+                    <td>
+                      <span className="badge" style={{ background: m.actif ? '#dcfce7' : '#f1f5f9', color: m.actif ? '#16a34a' : '#64748b' }}>
+                        {m.actif ? '🟢 Actif' : '⭕ Inactif'}
+                      </span>
+                    </td>
+                    <td>{m.nbPrestataires ?? 0}</td>
+                    <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openMode(m)}>✏️ Renommer</button>
+                      <button className="btn btn-sm" onClick={() => toggleMode(m)}
+                        style={{ border: `1px solid ${m.actif ? '#f59e0b' : '#16a34a'}`, color: m.actif ? '#92400e' : '#166534', background: 'none' }}>
+                        {m.actif ? '⏸ Désactiver' : '▶ Activer'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {modeForm && (
+        <div className="modal-overlay">
+          <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
+            <div className="modal-header modal-header--primary">
+              <h2>{modeForm.mode ? 'Renommer le mode de paiement' : 'Nouveau mode de paiement'}</h2>
+              <button className="modal-close" onClick={() => setModeForm(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              {modeError && (
+                <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>
+                  ⚠️ {modeError}
+                </div>
+              )}
+              <div className="form-group">
+                <label>Libellé *</label>
+                <input className="input" autoFocus value={modeLibelle} onChange={e => setModeLibelle(e.target.value)} placeholder="ex: Chèque" maxLength={60} />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-ghost" onClick={() => setModeForm(null)}>Annuler</button>
+                <button type="button" className="btn btn-primary" disabled={modeSaving || !modeLibelle.trim()} onClick={saveMode}>
+                  {modeSaving ? 'Enregistrement…' : 'Enregistrer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal */}
       {showForm && (
         <div className="modal-overlay">
@@ -206,19 +324,9 @@ export default function PrestatairesManagement() {
                   placeholder="ex: Uber Eats"
                 />
               </div>
-              <div className="form-group">
-                <label>Commission (%)</label>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="0.1"
-                  className="input"
-                  value={commission}
-                  onChange={e => setCommission(e.target.value)}
-                  placeholder="0"
-                />
-              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 12px' }}>
+                La commission, la TVA et le mode de paiement sont saisis par chaque client à l'activation du prestataire pour une activité.
+              </p>
               <div className="modal-footer">
                 <button type="button" className="btn btn-ghost" onClick={() => setShowForm(false)}>Annuler</button>
                 <button type="button" className="btn btn-primary" disabled={saving || !nom.trim()} onClick={handleSave}>

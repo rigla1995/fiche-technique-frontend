@@ -65,6 +65,10 @@ interface ActivitePrestataire {
   prestataire_nom: string;
   taux_commission: number;
   actif: boolean;
+  // P2 : conditions du prestataire (figées sur chaque vente) ; false = à renseigner, la saisie sur ce canal est refusée.
+  taux_tva?: number;
+  mode_paiement_libelle?: string | null;
+  conditions_renseignees?: boolean;
 }
 
 interface ArticlePrixPrestataire {
@@ -94,6 +98,11 @@ interface Vente {
   total_quantite: number;
   lignes: VenteLigne[];
   notes?: string | null;
+  // P2 : conditions figées sur la vente par prestataire et chiffre net (absents d'un ancien serveur).
+  taux_commission?: number | null;
+  taux_tva_commission?: number | null;
+  mode_paiement?: string | null;
+  net?: number;
 }
 
 type Tab = 'saisie_produits' | 'saisie_supplements' | 'saisie_valorises' | 'historique';
@@ -519,7 +528,8 @@ export default function VentesPage() {
       if (histDateTo) params.set('to', histDateTo);
       if (histType !== 'all') params.set('type', histType);
       if (histTypeProduit !== 'all') params.set('typeProduit', histTypeProduit);
-      if (histPrestaId) params.set('prestataireId', histPrestaId);
+      // Le serveur filtre sur le prestataire (uuid de la plateforme), pas sur le lien activité–prestataire.
+      if (histPrestaId) params.set('prestataireId', activePrests.find(p => p.id === histPrestaId)?.prestataire_id ?? histPrestaId);
       if (selectedVenteIds.size > 0) params.set('selectedIds', [...selectedVenteIds].join(','));
       const resp = await api.get(`/api/ventes/export-excel?${params}`, { responseType: 'blob' });
       const url = URL.createObjectURL(resp.data as Blob);
@@ -620,6 +630,13 @@ export default function VentesPage() {
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>{voc.Aucun('activite')} disponible</div>
         ) : (
           <>
+            {/* P2 : un prestataire activé sans ses conditions (commission, TVA, mode de paiement) refuse la saisie */}
+            {activePrests.some(ap => ap.conditions_renseignees === false) && (
+              <div style={{ background: '#fef3c7', border: '1.5px solid #fcd34d', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: '0.84rem', color: '#92400e', fontWeight: 600 }}>
+                ⚠ Conditions à renseigner pour {activePrests.filter(ap => ap.conditions_renseignees === false).map(ap => ap.prestataire_nom).join(', ')} : la saisie sur ce canal est refusée tant que la commission, la TVA et le mode de paiement manquent.{' '}
+                <Link to={`/client/ventes/prestataires?activiteId=${selectedActiviteId}`} style={{ color: '#92400e', fontWeight: 800 }}>Renseigner →</Link>
+              </div>
+            )}
             {/* Tabs — no horizontal scroll */}
             <div style={{ display: 'flex', gap: 4, borderBottom: `2px solid ${CB}`, marginBottom: 24, flexWrap: 'wrap' }}>
               {([
@@ -756,6 +773,12 @@ export default function VentesPage() {
                               </td>
                               <td style={{ padding: '10px 16px', textAlign: 'center', fontSize: '0.88rem', color: isSel ? '#fff' : undefined }}>
                                 {v.type_vente === 'directe' ? '🏪 Directe' : `🛵 ${v.prestataire_nom || voc.Nom('prestataire')}`}
+                                {/* P2 : les conditions figées le jour de la vente */}
+                                {v.type_vente === 'prestataire' && v.taux_commission != null && (
+                                  <div style={{ fontSize: '0.68rem', color: isSel ? 'rgba(255,255,255,0.75)' : 'var(--text-muted)', marginTop: 1, whiteSpace: 'nowrap' }}>
+                                    {v.taux_commission} % · TVA {v.taux_tva_commission ?? 0} %{v.mode_paiement ? ` · ${v.mode_paiement}` : ''}
+                                  </div>
+                                )}
                               </td>
                               <td style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: isSel ? '#fff' : CD }}>
                                 {ligneQte > 0 ? (ligneQte % 1 === 0 ? ligneQte.toFixed(0) : ligneQte.toFixed(3)) : '—'}
