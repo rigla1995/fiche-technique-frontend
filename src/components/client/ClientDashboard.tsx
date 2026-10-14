@@ -79,6 +79,8 @@ interface FiltresOptions {
   activites: { id: number; nom: string }[];
   labos: { id: number; nom: string }[];
   prestataires: { id: string; nom: string }[];
+  /** P2 : modes de paiement des prestataires (absent d'un serveur pas encore à jour). */
+  modes_paiement?: { id: number; nom: string }[];
   categories_produit: { id: number; nom: string; type_produit?: 'vendable' | 'supplement' | 'valorise' | null }[];
   categories_articles: { id: number; nom: string }[];
   familles: { id: number; nom: string }[];
@@ -90,18 +92,18 @@ interface FiltresOptions {
 }
 
 interface FiltresState {
-  activites: string[]; labos: string[]; canaux: string[]; prestataires: string[];
+  activites: string[]; labos: string[]; canaux: string[]; prestataires: string[]; modesPaiement: string[];
   catProduits: string[]; typesProduit: string[]; catArticles: string[];
   familles: string[]; fournisseurs: string[]; typesPerte: string[]; sources: string[];
 }
 
-const FILTRE_KEYS: (keyof FiltresState)[] = ['activites', 'labos', 'canaux', 'prestataires', 'catProduits', 'typesProduit', 'catArticles', 'familles', 'fournisseurs', 'typesPerte', 'sources'];
-const emptyFiltres = (): FiltresState => ({ activites: [], labos: [], canaux: [], prestataires: [], catProduits: [], typesProduit: [], catArticles: [], familles: [], fournisseurs: [], typesPerte: [], sources: [] });
+const FILTRE_KEYS: (keyof FiltresState)[] = ['activites', 'labos', 'canaux', 'prestataires', 'modesPaiement', 'catProduits', 'typesProduit', 'catArticles', 'familles', 'fournisseurs', 'typesPerte', 'sources'];
+const emptyFiltres = (): FiltresState => ({ activites: [], labos: [], canaux: [], prestataires: [], modesPaiement: [], catProduits: [], typesProduit: [], catArticles: [], familles: [], fournisseurs: [], typesPerte: [], sources: [] });
 
-// Filtres pertinents par onglet (les autres ne s'affichent pas).
+// Filtres pertinents par onglet (les autres ne s'affichent pas). P2 : mode de paiement figé sur chaque vente par prestataire.
 const FILTRES_PAR_TAB: Record<TabKey, (keyof FiltresState)[]> = {
-  overview: ['activites', 'canaux', 'prestataires', 'catProduits', 'typesProduit'],
-  ventes: ['activites', 'canaux', 'prestataires', 'catProduits', 'typesProduit'],
+  overview: ['activites', 'canaux', 'prestataires', 'modesPaiement', 'catProduits', 'typesProduit'],
+  ventes: ['activites', 'canaux', 'prestataires', 'modesPaiement', 'catProduits', 'typesProduit'],
   achats: ['activites', 'catArticles', 'familles', 'fournisseurs'],
   pertes: ['activites', 'labos', 'catArticles', 'familles', 'typesPerte'],
   labo: ['labos'],
@@ -138,6 +140,10 @@ const libellesClesExport = (voc: Vocab): Record<string, string> => ({
   marge: voc.Nom('marge'),
   marge_brute: `${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`,
   marge_apres_com: `${voc.Nom('marge')} apres com`,
+  tva_commissions: 'TVA commissions',
+  ca_prestataires: `CA ${voc.pl('prestataire')}`,
+  net_prestataires: `Net ${voc.pl('prestataire')}`,
+  net: 'Net',
   marge_nette: `${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')}`,
   food_cost_pct: `${voc.Nom('food_cost')} pct`,
   taux_marge_pct: `Taux ${voc.court('marge')} pct`,
@@ -335,7 +341,7 @@ export default function ClientDashboard() {
       // Montants en DT — heuristique sur les clés (jamais les compteurs/pourcentages).
       const isMoney = (k: string) =>
         !/(^|_)(nb|pct|pts|qte|quantite|seuil|jours|part)(_|$)/.test(k)
-        && /(^|_)(ca|marge|valeur|montant|total|pertes?|achats?|commissions?|panier|couts?|prix|appros?|transferts?|production|ventes?|ht|tva|timbre|charges?)(_|$)/.test(k);
+        && /(^|_)(ca|marge|valeur|montant|total|pertes?|achats?|commissions?|net|panier|couts?|prix|appros?|transferts?|production|ventes?|ht|tva|timbre|charges?)(_|$)/.test(k);
       const cellValue = (v: unknown) =>
         typeof v === 'number' || typeof v === 'string' ? v : v == null ? '' : String(v);
 
@@ -476,6 +482,7 @@ export default function ClientDashboard() {
             {visibles.includes('sources') && <MultiSelectFilter label="Type de vente" icon="🛒" options={sourcesB2b} selected={filtres.sources} onChange={setFiltre('sources')} alwaysShow />}
             {visibles.includes('canaux') && <MultiSelectFilter label="Type de vente" icon="🛒" options={canaux} selected={filtres.canaux} onChange={setFiltre('canaux')} />}
             {visibles.includes('prestataires') && <MultiSelectFilter label={voc.Pl('prestataire')} icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
+            {visibles.includes('modesPaiement') && <MultiSelectFilter label="Mode de paiement" icon="💳" options={toOpts(options.modes_paiement ?? [])} selected={filtres.modesPaiement} onChange={setFiltre('modesPaiement')} />}
             {visibles.includes('catProduits') && <MultiSelectFilter label={`Catégories ${voc.court('produit', true)}`} icon="🍽️" options={toCatProduitOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}
             {visibles.includes('typesProduit') && <MultiSelectFilter label="Types" icon="🏷️" options={typesProduit} selected={filtres.typesProduit} onChange={setFiltre('typesProduit')} />}
             {visibles.includes('catArticles') && <MultiSelectFilter label={`Catégories ${voc.court('article', true)}`} icon="🧂" options={toOpts(options.categories_articles)} selected={filtres.catArticles} onChange={setFiltre('catArticles')} />}
@@ -541,7 +548,12 @@ function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
       <div style={kpiGrid}>
         <KpiCard icon="💵" label="Chiffre d'affaires" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${voc.n('vente', k.nb_ventes)} · panier ${fmtDT(k.panier_moyen, 2)}`} />
         <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
-        <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}`} />
+        <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}${k.tva_commissions != null ? ` + TVA ${fmtDT(k.tva_commissions)}` : ''}`} />
+        {/* P2 : chiffre net des prestataires = leur CA − commissions − TVA sur les commissions (conditions figées sur chaque vente) */}
+        {k.net_prestataires != null && (
+          <KpiCard icon="🛵" label={`Net ${voc.pl('prestataire')}`} value={fmtDT(k.net_prestataires)} delta={k.deltas?.net_prestataires} accent="#b45309"
+            sub={`CA ${fmtDT(k.ca_prestataires ?? 0)} · commissions ${fmtDT(k.commissions)} · TVA ${fmtDT(k.tva_commissions ?? 0)}`} />
+        )}
         <KpiCard icon="🏁" label={`${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')} ${voc.acc('marge', 'estimé', 'estimée')}`} value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={`charges fixes ${fmtDT(k.charges)}`} />
         <KpiCard icon={voc.icon('produit')} label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse accent={k.food_cost_pct != null && k.food_cost_pct > seuil ? '#dc2626' : '#2563eb'} sub={`${voc.nom('cout_matiere')} ${fmtDT(k.cout_matiere)}`} />
         <KpiCard icon={voc.icon('perte')} label={voc.Pl('perte')} value={fmtDT(k.pertes)} delta={k.deltas?.pertes} inverse accent="#ef4444" sub={k.pertes_pct_ca != null ? `${fmtNum(k.pertes_pct_ca)}% du CA` : undefined} />
@@ -579,6 +591,9 @@ function VentesTab({ data, seuil }: { data: any; seuil: number }) {
     { key: 'ca', label: 'CA', fmt: (v) => fmtDT(Number(v)) },
     { key: 'marge_brute', label: `${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`, fmt: (v) => fmtDT(Number(v)) },
     { key: 'commissions', label: 'Commissions', fmt: (v) => (Number(v) > 0 ? `− ${fmtDT(Number(v))}` : '—') },
+    // P2 : TVA sur les commissions et net du canal (CA − commissions − TVA), aux conditions figées sur chaque vente.
+    { key: 'tva_commissions', label: 'TVA comm.', fmt: (v) => (Number(v) > 0 ? `− ${fmtDT(Number(v))}` : '—') },
+    { key: 'net', label: 'Net', fmt: (v) => <strong style={{ color: '#b45309' }}>{fmtDT(Number(v))}</strong> },
     { key: 'marge_apres_com', label: `${voc.Nom('marge')} canal`, fmt: (v) => <strong style={{ color: Number(v) >= 0 ? '#16a34a' : '#dc2626' }}>{fmtDT(Number(v))}</strong> },
     { key: 'food_cost_pct', label: voc.Nom('food_cost'), fmt: (v) => <FoodCostBadge pct={v as number | null} seuil={seuil} /> },
   ];
@@ -596,7 +611,12 @@ function VentesTab({ data, seuil }: { data: any; seuil: number }) {
       <div style={kpiGrid}>
         <KpiCard icon="💵" label="CA" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${k.nb_ventes} ${voc.pl('vente')} · panier ${fmtDT(k.panier_moyen, 2)}`} />
         <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
-        <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}`} />
+        <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}${k.tva_commissions != null ? ` + TVA ${fmtDT(k.tva_commissions)}` : ''}`} />
+        {/* P2 : chiffre net des prestataires = leur CA − commissions − TVA sur les commissions (conditions figées sur chaque vente) */}
+        {k.net_prestataires != null && (
+          <KpiCard icon="🛵" label={`Net ${voc.pl('prestataire')}`} value={fmtDT(k.net_prestataires)} delta={k.deltas?.net_prestataires} accent="#b45309"
+            sub={`CA ${fmtDT(k.ca_prestataires ?? 0)} · commissions ${fmtDT(k.commissions)} · TVA ${fmtDT(k.tva_commissions ?? 0)}`} />
+        )}
         <KpiCard icon="🏁" label={`${voc.Nom('marge')} ${voc.acc('marge', 'net', 'nette')} ${voc.acc('marge', 'estimé', 'estimée')}`} value={fmtDT(k.marge_nette)} delta={k.deltas?.marge_nette} accent={k.marge_nette >= 0 ? '#16a34a' : '#dc2626'} sub={k.taux_marge_nette_pct != null ? `${k.taux_marge_nette_pct}% du CA` : undefined} />
         <KpiCard icon={voc.icon('produit')} label={voc.Nom('food_cost')} value={k.food_cost_pct != null ? `${k.food_cost_pct}%` : '—'} delta={k.deltas?.food_cost_pts} inverse />
       </div>
