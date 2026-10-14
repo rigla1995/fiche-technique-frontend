@@ -2,7 +2,7 @@
 # Chaque unité qui contient un appel voc ou une balise, rendue avec le lexique par défaut puis avec le
 # lexique MIROIR (scripts/vocab-lexiques-test.json : genre et élision inversés, autres mots).
 # À relire en revue : un accord faux dans une ligne « miroir » est un accord resté écrit en dur.
-# 1322 unité(s), 67 fichier(s).
+# 1331 unité(s), 67 fichier(s).
 
 src/components/client/AbonnementGerantPage.tsx
   l. 67
@@ -362,466 +362,478 @@ src/components/client/ClientDashboard.tsx
   l. 32
     défaut : Acheteurs (B2B)
     miroir : Clientes (B2B)
-  l. 112
+  l. 114
     défaut : Vente directe
     miroir : Encaissement direct
-  l. 113
+  l. 115
     défaut : Via prestataire
     miroir : Via agence
-  l. 116
+  l. 118
     défaut : Produits
     miroir : Inventions
-  l. 117
+  l. 119
     défaut : Suppléments
     miroir : Options
-  l. 118
+  l. 120
     défaut : Valorisés
     miroir : Valorisées
-  l. 125
+  l. 127
     défaut : Vente manuelle
     miroir : Encaissement manuel
-  l. 126
+  l. 128
     défaut : Portail acheteur
     miroir : Portail abr-cliente
-  l. 137
+  l. 139
     défaut : Coût matière
     miroir : Enveloppe matière
-  l. 138
+  l. 140
     défaut : Marge
     miroir : Écart
-  l. 139
+  l. 141
     défaut : Marge brute
     miroir : Écart brut
-  l. 140
+  l. 142
     défaut : Marge apres com
     miroir : Écart apres com
-  l. 141
+  l. 144
+    défaut : CA prestataires
+    miroir : CA agences
+  l. 145
+    défaut : Net prestataires
+    miroir : Net agences
+  l. 147
     défaut : Marge nette
     miroir : Écart net
-  l. 142
+  l. 148
     défaut : Food cost pct
     miroir : Incidence matière pct
-  l. 143
+  l. 149
     défaut : Taux marge pct
     miroir : Taux abr-écart pct
-  l. 144
+  l. 150
     défaut : Taux marge nette pct
     miroir : Taux abr-écart net pct
-  l. 145
+  l. 151
     défaut : Nb ventes
     miroir : Nb encaissements
-  l. 146
+  l. 152
     défaut : Pertes
     miroir : Abandons
-  l. 147
+  l. 153
     défaut : Pertes pct ca
     miroir : Abandons pct ca
-  l. 148
+  l. 154
     défaut : Valeur stock
     miroir : Valeur abr-armoire
-  l. 149
+  l. 155
     défaut : Ventes acheteurs
     miroir : Encaissements abr-clientes
-  l. 150
+  l. 156
     défaut : Nb ventes acheteurs
     miroir : Nb encaissements abr-clientes
-  l. 151
+  l. 157
     défaut : Top marge
     miroir : Top abr-écart
-  l. 152
+  l. 158
     défaut : Flop marge
     miroir : Flop abr-écart
-  l. 153
+  l. 159
     défaut : Produits
     miroir : Inventions
-  l. 154
+  l. 160
     défaut : Nb appros
     miroir : Nb abr-rentrées
-  l. 155
+  l. 161
     défaut : Receptions transferts
     miroir : Receptions abr-expéditions
-  l. 156
+  l. 162
     défaut : Nb transferts
     miroir : Nb expéditions
-  l. 157
+  l. 163
     défaut : Stock bas
     miroir : Armoire basse
-  l. 158
+  l. 164
     défaut : Achats par fournisseur
     miroir : Achats par enseigne
-  l. 159
+  l. 165
     défaut : Fournisseur
     miroir : Enseigne
-  l. 160
+  l. 166
     défaut : Stock par categorie
     miroir : Armoire par categorie
-  l. 161
+  l. 167
     défaut : Alertes stock
     miroir : Alertes abr-armoire
-  l. 162
+  l. 168
     défaut : Article
     miroir : Denrée
-  l. 163
+  l. 169
     défaut : Inventaires
     miroir : Pesées
-  l. 164
+  l. 170
     défaut : Activité
     miroir : Local
-  l. 165
+  l. 171
     défaut : Top articles
     miroir : Top abr-denrées
-  l. 166
+  l. 172
     défaut : Appros
     miroir : Abr-Rentrées
-  l. 167
+  l. 173
     défaut : Receptions labo
     miroir : Receptions abr-usine
-  l. 168
+  l. 174
     défaut : Nb receptions labo
     miroir : Nb receptions abr-usine
-  l. 169
+  l. 175
     défaut : Production PT
     miroir : Production EI
-  l. 170
+  l. 176
     défaut : Transferts
     miroir : Expéditions
-  l. 171
+  l. 177
     défaut : Cessions labo
     miroir : Cessions abr-usine
-  l. 172
+  l. 178
     défaut : Nb cessions labo
     miroir : Nb cessions abr-usine
-  l. 173
+  l. 179
     défaut : Ventes labo
     miroir : Encaissements abr-usine
-  l. 174
+  l. 180
     défaut : Nb ventes labo
     miroir : Nb encaissements abr-usine
-  l. 175
+  l. 181
     défaut : Production par produit
     miroir : Production par invention
-  l. 176
+  l. 182
     défaut : Pertes par type
     miroir : Abandons par type
-  l. 177
+  l. 183
     défaut : Top transferts
     miroir : Top abr-expéditions
-  l. 178
+  l. 184
     défaut : Transferts par activite
     miroir : Expéditions par local
-  l. 179
+  l. 185
     défaut : Acheteurs factures
     miroir : Clientes factures
-  l. 180
+  l. 186
     défaut : Acheteur
     miroir : Cliente
-  l. 181
+  l. 187
     défaut : Top acheteurs
     miroir : Top abr-clientes
-  l. 306
+  l. 312
     défaut : P. Vendable
     miroir : Inv. vendue
-  l. 306
+  l. 312
     défaut : Supplément
     miroir : Option
-  l. 306
+  l. 312
     défaut : P. Valorisé
     miroir : Inv. valorisée
-  l. 429
+  l. 435
     défaut : ventes, marges
     miroir : encaissements, écarts
-  l. 430
+  l. 436
     défaut : achats, stocks
     miroir : achats, armoires
-  l. 431
+  l. 437
     défaut : pertes
     miroir : abandons
-  l. 432
+  l. 438
     défaut : labo
     miroir : usine
-  l. 433
+  l. 439
     défaut : ventes B2B
     miroir : encaissements B2B
-  l. 474
+  l. 480
     défaut : Activités
     miroir : Locaux
-  l. 474
+  l. 480
     défaut : 🏪
     miroir : 🏪
-  l. 475
+  l. 481
     défaut : Labos
     miroir : Usines
-  l. 478
+  l. 484
     défaut : Prestataires
     miroir : Agences
-  l. 479
+  l. 486
     défaut : Catégories produits
     miroir : Catégories abr-inventions
-  l. 481
+  l. 488
     défaut : Catégories articles
     miroir : Catégories abr-denrées
-  l. 483
+  l. 490
     défaut : Fournisseurs
     miroir : Enseignes
-  l. 484
+  l. 491
     défaut : Type de perte
     miroir : Type d'abandon
-  l. 484
+  l. 491
     défaut : 🗑️
     miroir : 🗑️
-  l. 542
+  l. 549
     défaut : ⟦·⟧ ⟦vente|ventes@>1⟧ · panier ⟦·⟧
     miroir : ⟦·⟧ ⟦encaissement|encaissements@>1⟧ · panier ⟦·⟧
-  l. 543
+  l. 550
     défaut : 📈
     miroir : 📈
-  l. 543
+  l. 550
     défaut : Marge brute
     miroir : Écart brut
-  l. 545
+  l. 554
+    défaut : Net prestataires
+    miroir : Net agences
+  l. 557
     défaut : Marge nette estimée
     miroir : Écart net estimé
-  l. 546
+  l. 558
     défaut : 🍔
     miroir : 🍔
-  l. 546
+  l. 558
     défaut : Food cost
     miroir : Incidence matière
-  l. 546
+  l. 558
     défaut : coût matière ⟦·⟧
     miroir : enveloppe matière ⟦·⟧
-  l. 547
+  l. 559
     défaut : 🗑️
     miroir : 🗑️
-  l. 547
+  l. 559
     défaut : Pertes
     miroir : Abandons
-  l. 548
+  l. 560
     défaut : Valeur du stock
     miroir : Valeur de l'armoire
-  l. 551
+  l. 563
     défaut : 🤝
     miroir : 🤝
-  l. 551
+  l. 563
     défaut : Ventes acheteurs (B2B)
     miroir : Encaissements abr-clientes (B2B)
-  l. 552
+  l. 564
     défaut : ⟦·⟧ ⟦facture|factures@>1⟧ — hors CA activités
     miroir : ⟦·⟧ ⟦facture|factures@>1⟧ — hors CA des locaux
-  l. 558
+  l. 570
     défaut : ⚠️ ⟦·⟧ ⟦article|articles@>1⟧ sous le seuil — voir Achats & stock
     miroir : ⚠️ ⟦·⟧ ⟦denrée|denrées@>1⟧ sous le seuil — voir Achats & armoire
-  l. 559
+  l. 571
     défaut : 🍔 ⟦·⟧ ⟦produit|produits@>1⟧ à food cost > ⟦·⟧%
     miroir : 🍔 ⟦·⟧ ⟦invention|inventions@>1⟧ à incidence matière > ⟦·⟧%
-  l. 561
+  l. 573
     défaut : 📋 Aucun inventaire enregistré
     miroir : 📋 Aucune pesée enregistrée
-  l. 562
+  l. 574
     défaut : 📋 Dernier inventaire il y a ⟦·⟧ j
     miroir : 📋 Dernière pesée il y a ⟦·⟧ j
-  l. 566
+  l. 578
     défaut : Évolution du CA et des marges (par ⟦?jour|⟦?semaine|mois⟧⟧)
     miroir : Évolution du CA et des écarts (par ⟦?jour|⟦?semaine|mois⟧⟧)
-  l. 575
+  l. 587
     défaut : Aucune activité dans le périmètre.
     miroir : Aucun local dans le périmètre.
-  l. 580
+  l. 592
     défaut : Marge brute
     miroir : Écart brut
-  l. 582
+  l. 597
     défaut : Marge canal
     miroir : Écart canal
-  l. 583
+  l. 598
     défaut : Food cost
     miroir : Incidence matière
-  l. 586
+  l. 601
     défaut : Produit
     miroir : Invention
-  l. 591
+  l. 606
     défaut : Marge
     miroir : Écart
-  l. 592
+  l. 607
     défaut : Food cost
     miroir : Incidence matière
-  l. 597
+  l. 612
     défaut : ⟦·⟧ ventes · panier ⟦·⟧
     miroir : ⟦·⟧ encaissements · panier ⟦·⟧
-  l. 598
+  l. 613
     défaut : 📈
     miroir : 📈
-  l. 598
+  l. 613
     défaut : Marge brute
     miroir : Écart brut
-  l. 600
+  l. 617
+    défaut : Net prestataires
+    miroir : Net agences
+  l. 620
     défaut : Marge nette estimée
     miroir : Écart net estimé
-  l. 601
+  l. 621
     défaut : 🍔
     miroir : 🍔
-  l. 601
+  l. 621
     défaut : Food cost
     miroir : Incidence matière
-  l. 604
+  l. 624
     défaut : Du CA à la marge nette (cascade)
     miroir : Du CA à l'écart net (cascade)
-  l. 607
+  l. 627
     défaut : Marges par canal de vente
     miroir : Écarts par canal de vente
-  l. 612
+  l. 632
     défaut : CA & marge par catégorie de produits
     miroir : CA & écart par catégorie d'inventions
-  l. 614
+  l. 634
     défaut : · marge ⟦·⟧
     miroir : · écart ⟦·⟧
-  l. 617
+  l. 637
     défaut : ⟦?Produits|⟦?Suppléments|Valorisés⟧⟧
     miroir : ⟦?Inventions|⟦?Options|Valorisées⟧⟧
-  l. 621
+  l. 641
     défaut : 🏆 Meilleures marges
     miroir : 🏆 Meilleurs écarts
-  l. 624
+  l. 644
     défaut : ⚠️ Marges les plus faibles
     miroir : ⚠️ Écarts les plus faibles
-  l. 628
+  l. 648
     défaut : Détail par produit (⟦·⟧)
     miroir : Détail par invention (⟦·⟧)
-  l. 637
+  l. 657
     défaut : Aucune activité dans le périmètre.
     miroir : Aucun local dans le périmètre.
-  l. 640
+  l. 660
     défaut : Article
     miroir : Denrée
-  l. 642
+  l. 662
     défaut : Stock
     miroir : Armoire
-  l. 648
+  l. 668
     défaut : ⟦·⟧ ⟦approvisionnement|approvisionnements@>1⟧
     miroir : ⟦·⟧ ⟦rentrée|rentrées@>1⟧
-  l. 649
+  l. 669
     défaut : Réceptions labo
     miroir : Réceptions abr-usine
-  l. 649
+  l. 669
     défaut : ⟦·⟧ ⟦transfert|transferts@>1⟧
     miroir : ⟦·⟧ ⟦expédition|expéditions@>1⟧
-  l. 650
+  l. 670
     défaut : Valeur du stock
     miroir : Valeur de l'armoire
-  l. 651
+  l. 671
     défaut : Articles sous seuil
     miroir : Denrées sous seuil
-  l. 661
+  l. 681
     défaut : Achats par fournisseur
     miroir : Achats par enseigne
-  l. 666
+  l. 686
     défaut : Valeur du stock par catégorie
     miroir : Valeur de l'armoire par catégorie
-  l. 673
+  l. 693
     défaut : Derniers inventaires
     miroir : Dernières pesées
-  l. 696
+  l. 716
     défaut : 🗑️
     miroir : 🗑️
-  l. 696
+  l. 716
     défaut : Pertes (activités + labos)
     miroir : Abandons (abr-locaux + abr-usines)
-  l. 697
+  l. 717
     défaut : pertes / chiffre d'affaires
     miroir : abandons / chiffre d'affaires
-  l. 699
+  l. 719
     défaut : Évolution des pertes
     miroir : Évolution des abandons
-  l. 707
+  l. 727
     défaut : Par site (activités et labos)
     miroir : Par site (locaux et usines)
-  l. 715
+  l. 735
     défaut : Articles les plus perdus
     miroir : Denrées les plus perdues
-  l. 725
+  l. 745
     défaut : Aucun labo dans le périmètre.
     miroir : Aucune usine dans le périmètre.
-  l. 730
+  l. 750
     défaut : Valeur du stock labo
     miroir : Valeur de l'armoire abr-usine
-  l. 731
+  l. 751
     défaut : ⟦·⟧ ⟦appro|appros@>1⟧
     miroir : ⟦·⟧ abr-⟦rentrée|rentrées@>1⟧
-  l. 732
+  l. 752
     défaut : Production PT
     miroir : Production EI
-  l. 733
+  l. 753
     défaut : Transferts émis
     miroir : Expéditions émises
-  l. 733
+  l. 753
     défaut : ⟦·⟧ ⟦transfert|transferts@>1⟧
     miroir : ⟦·⟧ ⟦expédition|expéditions@>1⟧
-  l. 737
+  l. 757
     défaut : 🏭
     miroir : 🏭
-  l. 737
+  l. 757
     défaut : Cessions labo→labo
     miroir : Cessions abr-usine→abr-usine
-  l. 742
+  l. 762
     défaut : 🗑️
     miroir : 🗑️
-  l. 742
+  l. 762
     défaut : Pertes labo
     miroir : Abandons abr-usine
-  l. 743
+  l. 763
     défaut : 💵
     miroir : 💵
-  l. 743
+  l. 763
     défaut : Ventes labo
     miroir : Encaissements abr-usine
-  l. 743
+  l. 763
     défaut : ⟦·⟧ ⟦vente|ventes@>1⟧
     miroir : ⟦·⟧ ⟦encaissement|encaissements@>1⟧
-  l. 746
+  l. 766
     défaut : 🤝
     miroir : 🤝
-  l. 746
+  l. 766
     défaut : Ventes acheteurs
     miroir : Encaissements abr-clientes
-  l. 751
+  l. 771
     défaut : Production par produit (valeur)
     miroir : Production par invention (valeur)
-  l. 754
+  l. 774
     défaut : Transferts par activité destinataire
     miroir : Expéditions par local destinataire
-  l. 759
+  l. 779
     défaut : Articles les plus transférés
     miroir : Denrées les plus transférées
-  l. 762
+  l. 782
     défaut : Pertes par type
     miroir : Abandons par type
-  l. 774
+  l. 794
     défaut : Le module Acheteurs n'est pas actif sur ce compte.
     miroir : Le module Abr-Clientes n'est pas actif sur ce compte.
-  l. 780
+  l. 800
     défaut : Acheteur
     miroir : Cliente
-  l. 787
+  l. 807
     défaut : CA acheteurs (TTC)
     miroir : CA abr-clientes (TTC)
-  l. 791
+  l. 811
     défaut : à traiter (tous labos)
     miroir : à traiter (toutes usines)
-  l. 792
+  l. 812
     défaut : 🤝
     miroir : 🤝
-  l. 792
+  l. 812
     défaut : Acheteurs servis
     miroir : Clientes servies
-  l. 793
+  l. 813
     défaut : carnet : ⟦·⟧ ⟦actif|actifs@>1⟧ / ⟦·⟧
     miroir : carnet : ⟦·⟧ ⟦active|actives@>1⟧ / ⟦·⟧
-  l. 795
+  l. 815
     défaut : Évolution du CA acheteurs (par ⟦?jour|⟦?semaine|mois⟧⟧)
     miroir : Évolution du CA des clientes (par ⟦?jour|⟦?semaine|mois⟧⟧)
-  l. 800
+  l. 820
     défaut : 🏆 Meilleurs acheteurs (CA TTC)
     miroir : 🏆 Meilleures clientes (CA TTC)
-  l. 809
+  l. 829
     défaut : Articles les plus vendus aux acheteurs (TTC)
     miroir : Denrées les plus vendues aux clientes (TTC)
 
@@ -996,42 +1008,57 @@ src/components/client/ConfigChargesPage.tsx
     miroir : Aucun local disponible
 
 src/components/client/ConfigPrestatairesPage.tsx
-  l. 92
+  l. 113
+    défaut : Désactiver ⟦·⟧ pour cette activité ?
+    miroir : Désactiver ⟦·⟧ pour ce local ?
+  l. 114
+    défaut : ⟦?Ses conditions (commission, TVA, mode de paiement)⟦? et ses ⟦·⟧ prix|⟧ seront effacés. Vous devrez les ressaisir pour le réactiver. |⟧Les ventes déjà enregistrées ne changent pas.
+    miroir : ⟦?Ses conditions (commission, TVA, mode de paiement)⟦? et ses ⟦·⟧ prix|⟧ seront effacés. Vous devrez les ressaisir pour le réactiver. |⟧Les encaissements déjà enregistrés ne changent pas.
+  l. 170
     défaut : 🛵
     miroir : 🛵
-  l. 93
+  l. 171
     défaut : Config Prestataires
     miroir : Config Abr-Agences
-  l. 97
-    défaut : Activez les prestataires de livraison pour cette activité
-    miroir : Activez les agences de livraison pour ce local
-  l. 103
+  l. 175
+    défaut : Activez les prestataires de livraison pour cette activité, avec leur commission, la TVA et le mode de paiement
+    miroir : Activez les agences de livraison pour ce local, avec leur commission, la TVA et le mode de paiement
+  l. 181
     défaut : ⟦prestataire|prestataires@≠1⟧ ⟦actif|actifs@≠1⟧
     miroir : ⟦agence|agences@≠1⟧ ⟦active|actives@≠1⟧
-  l. 123
+  l. 201
     défaut : ← sélectionner l'activité
     miroir : ← sélectionner le local
-  l. 128
+  l. 206
+    défaut : ⚠ ⟦·⟧ ⟦prestataire|prestataires@≠1⟧ sans conditions : renseignez la commission, la TVA et le mode de paiement, sinon la saisie des ventes sur ce canal est refusée.
+    miroir : ⚠ ⟦·⟧ ⟦agence|agences@≠1⟧ sans conditions : renseignez la commission, la TVA et le mode de paiement, sinon la saisie des encaissements sur ce canal est refusée.
+  l. 212
     défaut : Aucune activité disponible
     miroir : Aucun local disponible
-  l. 131
+  l. 215
     défaut : 🛵
     miroir : 🛵
-  l. 132
+  l. 216
     défaut : Aucun prestataire disponible — contactez l'administrateur
     miroir : Aucune agence disponible — contactez l'administrateur
-  l. 137
+  l. 221
     défaut : Prestataires disponibles — activez ceux que vous utilisez
     miroir : Agences disponibles — activez celles que vous utilisez
-  l. 154
+  l. 238
     défaut : 🛵
     miroir : 🛵
-  l. 159
-    défaut : ⟦?✓ Actif pour cette activité — apparaît dans la config vente|Inactif pour cette activité⟧
-    miroir : ⟦?✓ Active pour ce local — apparaît dans la config encaissement|Inactive pour ce local⟧
-  l. 173
+  l. 244
+    défaut : Inactif pour cette activité
+    miroir : Inactive pour ce local
+  l. 276
     défaut : ⟦?Désactiver|Activer⟧ ce prestataire
     miroir : ⟦?Désactiver|Activer⟧ cette agence
+  l. 303
+    défaut : Ces conditions servent au chiffre net du tableau de bord : net = prix de vente − commission − TVA sur la commission. Chaque vente garde les conditions du jour de la saisie.
+    miroir : Ces conditions servent au chiffre net du tableau de bord : net = prix d'encaissement − commission − TVA sur la commission. Chaque encaissement garde les conditions du jour de la saisie.
+  l. 336
+    défaut : Exemple : sur 100 DT de ventes, commission ⟦·⟧ DT, TVA ⟦·⟧ DT,<strong> net ⟦·⟧ DT</strong>.
+    miroir : Exemple : sur 100 DT d'encaissements, commission ⟦·⟧ DT, TVA ⟦·⟧ DT,<strong> net ⟦·⟧ DT</strong>.
 
 src/components/client/ConfigurationVentePage.tsx
   l. 231
@@ -3468,129 +3495,129 @@ src/components/client/VenteGuard.tsx
     miroir : Ce module est disponible en option. Envoyez une demande d'activation à l'administrateur et votre zone encaissement sera activée sous 24h.
 
 src/components/client/VentesPage.tsx
-  l. 128
+  l. 137
     défaut : 🧂 Supplément
     miroir : 🧂 Option
-  l. 129
+  l. 138
     défaut : 🛍️ Produit
     miroir : 🛍️ Invention
-  l. 256
+  l. 265
     défaut : Nom produit
     miroir : Nom abr-invention
-  l. 263
+  l. 272
     défaut : Date de vente
     miroir : Date d'encaissement
-  l. 269
+  l. 278
     défaut : ✓ Ventes enregistrées !
     miroir : ✓ Encaissements enregistrés !
-  l. 270
+  l. 279
     défaut : ⟦?Enregistrement…|✓ Confirmer les ventes⟧
     miroir : ⟦?Enregistrement…|✓ Confirmer les encaissements⟧
-  l. 502
+  l. 511
     défaut : Annuler cette vente ?
     miroir : Annuler cet encaissement ?
-  l. 503
+  l. 512
     défaut : Le stock des articles vendus sera réintégré.
     miroir : L'armoire des articles vendus sera réintégrée.
-  l. 505
+  l. 514
     défaut : Oui, annuler la vente
     miroir : Oui, annuler l'encaissement
-  l. 581
+  l. 591
     défaut : Ventes Activités⟦? — ⟦·⟧|⟧⟦<HelpButton/>⟧
     miroir : Encaissements Abr-Locaux⟦? — ⟦·⟧|⟧⟦<HelpButton/>⟧
-  l. 585
+  l. 595
     défaut : Saisissez vos ventes directes et via prestataires
     miroir : Saisissez vos encaissements directs et via agences
-  l. 620
+  l. 630
     défaut : Aucune activité disponible
     miroir : Aucun local disponible
-  l. 626
+  l. 643
     défaut : 📝 Saisie des ventes produits
     miroir : 📝 Saisie des encaissements abr-inventions
-  l. 627
+  l. 644
     défaut : 🧂 Saisie des ventes suppléments
     miroir : 🧂 Saisie des encaissements abr-options
-  l. 628
+  l. 645
     défaut : 💎 Saisie des ventes valorisées
     miroir : 💎 Saisie des encaissements valorisés
-  l. 649
+  l. 666
     défaut : 🛍️ Produits vendables
     miroir : 🛍️ Inventions vendues
-  l. 650
+  l. 667
     défaut : Aucun produit vendable configuré pour cette activité
     miroir : Aucune invention vendue configurée pour ce local
-  l. 656
+  l. 673
     défaut : 🧂 Suppléments vendables
     miroir : 🧂 Options vendables
-  l. 657
+  l. 674
     défaut : Aucun supplément vendable configuré pour cette activité
     miroir : Aucune option vendable configurée pour ce local
-  l. 663
+  l. 680
     défaut : 💎 Ventes Valorisées
     miroir : 💎 Encaissements Valorisés
-  l. 664
+  l. 681
     défaut : Aucun produit valorisé actif pour cette activité
     miroir : Aucune invention valorisée active pour ce local
-  l. 683
+  l. 700
     défaut : Prestataire
     miroir : Agence
-  l. 686
+  l. 703
     défaut : 📦 Type produit
     miroir : 📦 Type abr-invention
-  l. 688
+  l. 705
     défaut : Tous types produit
     miroir : Tous types abr-invention
-  l. 689
+  l. 706
     défaut : 🛍️ Produit
     miroir : 🛍️ Invention
-  l. 690
+  l. 707
     défaut : 🧂 Supplément
     miroir : 🧂 Option
-  l. 695
+  l. 712
     défaut : 🚚 Prestataire
     miroir : 🚚 Agence
-  l. 697
+  l. 714
     défaut : Tous prestataires
     miroir : Toutes agences
-  l. 706
+  l. 723
     défaut : <div>💸</div>⟦?Aucune vente enregistrée|Aucun résultat pour ces filtres⟧
     miroir : <div>💸</div>Aucun ⟦?encaissement enregistré|résultat pour ces filtres⟧
-  l. 717
+  l. 734
     défaut : Type produit
     miroir : Type abr-invention
-  l. 757
-    défaut : ⟦?🏪 Directe|🛵 ⟦?⟦·⟧|Prestataire⟧⟧
-    miroir : ⟦?🏪 Directe|🛵 ⟦?⟦·⟧|Agence⟧⟧
-  l. 802
+  l. 774
+    défaut : ⟦?🏪 Directe|🛵 ⟦?⟦·⟧|Prestataire⟧⟧⟦·⟧
+    miroir : ⟦?🏪 Directe|🛵 ⟦?⟦·⟧|Agence⟧⟧⟦·⟧
+  l. 825
     défaut : ⚠️ Confirmer la vente
     miroir : ⚠️ Confirmer l'encaissement
-  l. 807
+  l. 830
     défaut : Cette vente est définitive.
     miroir : Cet encaissement est définitif.
-  l. 809
+  l. 832
     défaut : Elle <strong>ne pourra pas être annulée</strong> après confirmation.
     miroir : Il <strong>ne pourra pas être annulé</strong> après confirmation.
-  l. 810
+  l. 833
     défaut : Elle <strong>impactera directement votre stock activité</strong> en déduisant les quantités vendues.
     miroir : Il <strong>impactera directement votre armoire du local</strong> en déduisant les quantités vendues.
 
 src/components/client/dashboardV2Widgets.tsx
-  l. 106
+  l. 110
     défaut : Marge brute
     miroir : Écart brut
-  l. 120
+  l. 124
     défaut : Coût matière
     miroir : Enveloppe matière
-  l. 127
+  l. 131
     défaut : Marge nette
     miroir : Écart net
-  l. 269
+  l. 273
     défaut : Produit
     miroir : Invention
-  l. 270
+  l. 274
     défaut : Supplément
     miroir : Option
-  l. 271
+  l. 275
     défaut : Valorisé
     miroir : Valorisée
 

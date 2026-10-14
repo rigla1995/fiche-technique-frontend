@@ -21,6 +21,8 @@ export const fmtNum = (n: number | null | undefined) =>
 // ── Types des réponses API ────────────────────────────────────────────────────
 export interface Kpis {
   ca: number; cout_matiere: number; commissions: number; charges: number;
+  /** P2 : TVA sur les commissions, CA et net des prestataires (absents d'un serveur pas encore à jour). */
+  tva_commissions?: number; ca_prestataires?: number; net_prestataires?: number;
   marge_brute: number; marge_apres_com: number; marge_nette: number;
   food_cost_pct: number | null; taux_marge_pct: number | null; taux_marge_nette_pct: number | null;
   nb_ventes: number; panier_moyen: number; pertes: number; pertes_pct_ca: number | null;
@@ -29,6 +31,8 @@ export interface Kpis {
 }
 export interface LigneAgg {
   ca: number; cout: number; commissions: number; qte: number;
+  /** P2 : TVA sur la commission et net (CA − commission − TVA). */
+  tva_commissions?: number; net?: number;
   marge_brute: number; marge_apres_com: number; food_cost_pct: number | null;
 }
 export interface ProduitLigne extends LigneAgg { nom: string; type: string; part_ca_pct: number }
