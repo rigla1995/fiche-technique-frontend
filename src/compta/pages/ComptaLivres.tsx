@@ -229,6 +229,8 @@ function ComptaLivres({ dossierId }: { dossierId?: string }) {
                 {v.icone} {v.libelle}
               </button>
             ))}
+            {/* E1 : le bilan et l'état de résultat ont leur page (exercice de la sélection). */}
+            <Link to={`/dossiers/${etatPx.dossier.id}/etats${exerciceId ? `?exercice=${exerciceId}` : ''}`} style={{ ...bouton('#fff', '#334155', '#cbd5e1'), textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>📊 États financiers</Link>
           </div>
 
           {/* La sélection commune */}
