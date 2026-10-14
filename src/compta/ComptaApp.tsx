@@ -41,6 +41,7 @@ const ComptaEcritures = lazy(() => import('./pages/ComptaEcritures'));
 // S6b : les périodes d'un dossier (valider tout, clore, rouvrir, journal général PDF, centralisation).
 const ComptaPeriodes = lazy(() => import('./pages/ComptaPeriodes'));
 // X2 : l'assistant « Clôturer l'exercice » (contrôles, résultat, écritures, affectation du résultat).
+const ComptaEtats = lazy(() => import('./pages/ComptaEtats'));
 const ComptaCloture = lazy(() => import('./pages/ComptaCloture'));
 // S6c : les livres d'un dossier (grand livre, balance, livre-journal, exports Excel).
 const ComptaLivres = lazy(() => import('./pages/ComptaLivres'));
@@ -118,6 +119,7 @@ export default function ComptaApp() {
               <Route path="/dossiers/:dossierId/periodes" element={<ComptaPeriodes />} />
               <Route path="/dossiers/:dossierId/exercices/:exerciceId/cloture" element={<ComptaCloture />} />
               <Route path="/dossiers/:dossierId/livres" element={<ComptaLivres />} />
+              <Route path="/dossiers/:dossierId/etats" element={<ComptaEtats />} />
               <Route path="/dossiers/:dossierId/lettrage" element={<ComptaLettrage />} />
               <Route path="/dossiers/:dossierId/echeancier" element={<ComptaEcheancier />} />
               <Route path="/dossiers/:dossierId/taxes-mois" element={<ComptaTaxesMois />} />
