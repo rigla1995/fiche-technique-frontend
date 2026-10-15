@@ -67,6 +67,8 @@ export interface AbonnementConfig {
   nbGerants: number;
   nbAcheteurs?: number;
   formuleActivites?: 'basique' | 'premium' | null;
+  /** D1 : interrupteur des prestataires de livraison du compte (absent = actif). */
+  prestatairesActifs?: boolean;
   montantOnboarding: number;
   /** Domaine d'activité du compte (lot 1a) — les compteurs ci-dessus sont dérivés des composants. */
   domaineId?: number | null;
@@ -149,6 +151,8 @@ export interface Abonnement {
     activePromoOnboarding: Promotion | null;
     configBreakdown?: {
       formuleActivites?: 'basique' | 'premium' | null;
+  /** D1 : interrupteur des prestataires de livraison du compte (absent = actif). */
+  prestatairesActifs?: boolean;
       activite: { nb: number; total: number };
       labo:     { nb: number; total: number };
       gerant:   { nb: number; total: number };
@@ -407,6 +411,8 @@ export interface DomaineProfil {
   composants: Composant[];
   lexique: Record<string, LexiqueEntree>;
   regles: Record<string, unknown>;
+  /** D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui). */
+  prestataires?: boolean;
 }
 
 /**

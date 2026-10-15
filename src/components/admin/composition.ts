@@ -31,12 +31,15 @@ export interface DomaineOption {
 }
 
 export interface ReglesComposition {
+  /** D1 : prestataires de livraison proposés aux comptes du domaine. */
+  prestataires: boolean;
   acheteurs_requiert_labo: boolean;
   depot_exige_acheteurs: boolean;
   formules: ('basique' | 'premium')[];
 }
 
 export const REGLES_DEFAUT: ReglesComposition = {
+  prestataires: true,
   acheteurs_requiert_labo: true,
   depot_exige_acheteurs: true,
   formules: ['basique', 'premium'],
@@ -77,6 +80,7 @@ export function resoudreRegles(raw?: Record<string, unknown> | null): ReglesComp
   return {
     acheteurs_requiert_labo: typeof r.acheteurs_requiert_labo === 'boolean' ? r.acheteurs_requiert_labo : REGLES_DEFAUT.acheteurs_requiert_labo,
     depot_exige_acheteurs: typeof r.depot_exige_acheteurs === 'boolean' ? r.depot_exige_acheteurs : REGLES_DEFAUT.depot_exige_acheteurs,
+    prestataires: typeof r.prestataires === 'boolean' ? r.prestataires : REGLES_DEFAUT.prestataires,
     formules: formulesRaw.length > 0 ? formulesRaw : REGLES_DEFAUT.formules,
   };
 }

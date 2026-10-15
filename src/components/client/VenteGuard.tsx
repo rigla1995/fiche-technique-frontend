@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import api from '../../api/client';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { useAuth } from '../../context/AuthContext';
 
 const C = '#b45309';
 const CD = '#78350f';
@@ -13,6 +14,8 @@ const CB = '#fcd34d';
 type VenteSummary = { hasActivitesVente?: boolean };
 
 export default function VenteGuard() {
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = useAuth().user?.domaine?.prestataires !== false;
   const voc = useVocabulaire();
   const [status, setStatus] = useState<'loading' | 'active' | 'inactive' | 'no_vente'>('loading');
   const [hasPending, setHasPending] = useState(false);
@@ -67,7 +70,7 @@ export default function VenteGuard() {
           <div style={{ fontSize: '3rem', marginBottom: 12 }}>🛒</div>
           <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module {voc.Court('vente')}</h1>
           <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.92rem' }}>
-            Ce module permet de gérer votre catalogue vendable, {voc.votre('prestataire', true)} de livraison et {voc.votre('vente', true)}.
+            Ce module permet de gérer votre catalogue vendable{prestatairesOk ? <>, {voc.votre('prestataire', true)} de livraison</> : ''} et {voc.votre('vente', true)}.
           </p>
         </div>
 
@@ -102,7 +105,7 @@ export default function VenteGuard() {
         <div style={{ fontSize: '3rem', marginBottom: 12 }}>🛒</div>
         <h1 style={{ fontSize: '1.6rem', fontWeight: 900, color: '#fff', margin: '0 0 8px' }}>Module {voc.Court('vente')}</h1>
         <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.92rem' }}>
-          Ce module permet de gérer votre catalogue vendable, {voc.votre('prestataire', true)} de livraison et {voc.votre('vente', true)}.
+          Ce module permet de gérer votre catalogue vendable{prestatairesOk ? <>, {voc.votre('prestataire', true)} de livraison</> : ''} et {voc.votre('vente', true)}.
         </p>
       </div>
 
