@@ -3,17 +3,19 @@ import { Link, useParams, useSearchParams } from 'react-router-dom';
 import BoutonAide from '../BoutonAide';
 import { messageDossier, statutDe, texteEtatAbonnement } from '../dossiers';
 import { fmtJour, fmtMontant, versMillimes } from '../ecritures';
-import { lireEtats, telechargerEtatsPdf, type CompteEtat, type CoteBilan, type EtatsReponse, type LigneResultat } from '../etats';
+import { enregistrerNotes, lireEtats, telechargerEtatsPdf, type CompteEtat, type CoteBilan, type EtatsReponse, type LigneResultat } from '../etats';
 import { bouton, inp, lbl, pastille, petit } from '../styles';
 
 // « États financiers » (LabFlow Compta, étape E1 ; labflow-reprise/achats-compta/PLAN-ETATS-FINANCIERS.md §2 ligne E1, §3 ;
 // réponses du client du 14/10 — « ok pour les 5 ») : le bilan (NC 01, annexe 1) et l'état de résultat (annexe 3, par
 // nature) d'un exercice du dossier, colonnes N et N−1 (l'exercice précédent, calculé pareil ; vide au premier exercice),
 // chaque poste dépliable sur ses comptes, les contrôles (bilan équilibré, résultat cohérent, comptes sans poste), les
-// mentions de la NC 01 (§19 : entreprise, matricule, arrêté ou situation provisoire, unité), le PDF. Le serveur calcule et
-// décide ; l'écran choisit (exercice, brouillard compris — dans l'adresse) et montre. Lecture pour tout accès au dossier ;
-// rien n'est écrit. Les lectures sont numérotées : une réponse partie avant la dernière demande n'écrase jamais la dernière.
-// Vocabulaire comptable fixe.
+// mentions de la NC 01 (§19 : entreprise, matricule, arrêté ou situation provisoire, unité), le PDF. E2 (§2 ligne E2) :
+// l'état des flux de trésorerie (annexe 5, méthode indirecte, contrôle bouclé), les notes — soldes intermédiaires de gestion
+// (annexe 8), détail des postes (les postes dépliés), texte libre de l'exercice (titulaire, Complet) — et le jeu complet en
+// PDF. Le serveur calcule et décide ; l'écran choisit (exercice, brouillard compris — dans l'adresse) et montre ; seules les
+// notes s'écrivent. Les lectures sont numérotées : une réponse partie avant la dernière demande n'écrase jamais la
+// dernière. Vocabulaire comptable fixe.
 type Role = 'titulaire' | 'gerant';
 const mono = 'ui-monospace, monospace';
 const pluriel = (n: number, un: string, des: string) => `${n} ${n > 1 ? des : un}`;
@@ -48,6 +50,9 @@ function ComptaEtats({ dossierId }: { dossierId?: string }) {
   const [info, setInfo] = useState('');
   const [occupe, setOccupe] = useState(false);
   const [ouverts, setOuverts] = useState<Set<string>>(() => new Set());
+  // E2 : le texte libre des notes en cours de rédaction, repris du serveur à chaque changement d'exercice.
+  const [texteNotes, setTexteNotes] = useState('');
+  const notesPour = useRef<number | null>(null);
   const tour = useRef(0);
 
   const cleDemandee = `${exerciceId ?? ''}/${brouillard}`;
@@ -61,6 +66,7 @@ function ComptaEtats({ dossierId }: { dossierId?: string }) {
         setErreur('');
         setExerciceId((x) => x ?? r.selection.exercice);
         setServie(`${exerciceId ?? r.selection.exercice}/${brouillard}`);
+        if (notesPour.current !== r.exercice.id) { notesPour.current = r.exercice.id; setTexteNotes(r.notes.texte); }
       })
       .catch((err) => {
         if (moi !== tour.current) return;
@@ -83,15 +89,36 @@ function ComptaEtats({ dossierId }: { dossierId?: string }) {
 
   const role: Role = etatPx?.dossier.espace.role || 'titulaire';
   const basculer = (cle: string) => setOuverts((s) => { const n = new Set(s); if (n.has(cle)) n.delete(cle); else n.add(cle); return n; });
-  const pdf = async () => {
+  const pdf = async (complet: boolean) => {
     if (!etatPx || occupe) return;
     setOccupe(true);
     setInfo('');
     try {
-      await telechargerEtatsPdf(etatPx.dossier.id, { exerciceId, brouillard });
-      setInfo('PDF téléchargé : bilan et état de résultat.');
+      await telechargerEtatsPdf(etatPx.dossier.id, { exerciceId, brouillard }, complet);
+      setInfo(complet ? 'PDF téléchargé : jeu complet (bilan, état de résultat, flux de trésorerie, notes).' : 'PDF téléchargé : bilan et état de résultat.');
     } catch (err) {
       setErreur(messageDossier(err, 'PDF impossible, réessayez.', role));
+    } finally {
+      setOccupe(false);
+    }
+  };
+  // E2 : enregistrer les notes ; un refus sur un état périmé (404, 409) relit la page.
+  const peutEcrire = !!etatPx && etatPx.droits.configurer && etatPx.dossier.etat === 'actif' && etatPx.etatAbonnement === 'actif';
+  const notesModifiees = !!etatPx && texteNotes !== etatPx.notes.texte;
+  const enregistrer = async () => {
+    if (!etatPx || occupe) return;
+    setOccupe(true);
+    setInfo('');
+    try {
+      const n = await enregistrerNotes(etatPx.dossier.id, etatPx.exercice.id, texteNotes);
+      setEtatPx({ ...etatPx, notes: n });
+      setTexteNotes(n.texte);
+      setErreur('');
+      setInfo(n.texte ? 'Notes enregistrées.' : 'Notes effacées.');
+    } catch (err) {
+      const s = statutDe(err);
+      setErreur(messageDossier(err, 'Enregistrement impossible, réessayez.', role));
+      if (s === 404 || s === 409) charger();
     } finally {
       setOccupe(false);
     }
@@ -161,7 +188,8 @@ function ComptaEtats({ dossierId }: { dossierId?: string }) {
               <input type="checkbox" checked={brouillard} onChange={(ev) => { setBrouillard(ev.target.checked); setInfo(''); }} />
               Brouillard compris{etatPx.brouillard.nb ? ` (${pluriel(etatPx.brouillard.nb, 'écriture', 'écritures')})` : ''}
             </label>
-            <button type="button" onClick={pdf} disabled={occupe || lecture} style={{ ...bouton('#1e1b4b', '#fff', '#1e1b4b'), opacity: occupe || lecture ? 0.6 : 1 }}>📄 PDF</button>
+            <button type="button" onClick={() => pdf(false)} disabled={occupe || lecture} style={{ ...bouton('#1e1b4b', '#fff', '#1e1b4b'), opacity: occupe || lecture ? 0.6 : 1 }}>📄 PDF</button>
+            <button type="button" onClick={() => pdf(true)} disabled={occupe || lecture} title="Bilan, état de résultat, flux de trésorerie et notes en un seul document" style={{ ...bouton('#fff', '#1e1b4b', '#1e1b4b'), opacity: occupe || lecture ? 0.6 : 1 }}>📚 Jeu complet (PDF)</button>
             <Link to={`/dossiers/${etatPx.dossier.id}/livres?vue=balance`} style={{ ...petit('#f8fafc', '#334155', '#cbd5e1'), textDecoration: 'none' }}>⚖️ Balance</Link>
             {(x.clos || x.fini) && <Link to={`/dossiers/${etatPx.dossier.id}/exercices/${x.id}/cloture`} style={{ ...petit('#f8fafc', '#334155', '#cbd5e1'), textDecoration: 'none' }}>🔒 Clôture</Link>}
             {lecture && <span style={{ fontSize: '0.78rem', color: '#64748b', padding: '9px 0' }}>Lecture…</span>}
@@ -224,6 +252,50 @@ function ComptaEtats({ dossierId }: { dossierId?: string }) {
                 ? <tr key={`T${i}`}><td colSpan={3} style={{ padding: '10px 8px 4px', fontWeight: 800, color: '#1e1b4b' }}>{l.titre}</td></tr>
                 : <Rangee key={l.code} cle={`R/${l.code}`} libelle={l.libelle} n={l.n} n1={l.n1} niveau={l.calcul ? 0 : 1} gras={!!l.calcul} fond={l.code === 'resultatNet' ? '#eef2ff' : l.calcul ? '#f8fafc' : undefined} zero={l.calcul ? '0,000' : '—'} comptes={l.comptes} ouverts={ouverts} basculer={basculer} />))}
             </Tableau>
+          </div>
+
+          {/* E2 : l'état des flux de trésorerie (annexe 5, méthode indirecte) */}
+          {etatPx.flux && (
+            <div style={carte}>
+              <h2 style={titreCarte}>💧 État des flux de trésorerie</h2>
+              <p style={{ margin: '0 0 12px', fontSize: '0.78rem', color: '#64748b' }}>NC 01, annexe 5 (méthode indirecte) : du résultat net à la variation de trésorerie, puis investissement et financement. Trésorerie : {etatPx.flux.tresorerie.libelle.toLowerCase()}.</p>
+              <Tableau colonnes={e.colonnes}>
+                {etatPx.flux.lignes.map((l, i) => (l.titre !== undefined
+                  ? <tr key={`F${i}`}><td colSpan={3} style={{ padding: '10px 8px 4px', fontWeight: 800, color: '#1e1b4b' }}>{l.titre}</td></tr>
+                  : <Rangee key={l.code} cle={`F/${l.code}`} libelle={l.libelle} n={l.n} n1={l.n1} niveau={l.calcul === 'total' ? 0 : 1} gras={l.calcul === 'total' || l.calcul === 'resultat'} italique={l.calcul === 'tresorerieDebut' || l.calcul === 'tresorerieFin'} fond={l.code === 'variationTresorerie' ? '#eef2ff' : l.calcul === 'total' ? '#f8fafc' : undefined} zero={l.calcul ? '0,000' : '—'} comptes={l.comptes} ouverts={ouverts} basculer={basculer} />))}
+              </Tableau>
+            </div>
+          )}
+
+          {/* E2 : les notes — soldes intermédiaires de gestion, détail des postes, texte libre */}
+          <div style={carte}>
+            <h2 style={titreCarte}>📝 Notes aux états financiers</h2>
+            {etatPx.sig && (
+              <>
+                <div style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.95rem', margin: '0 0 4px' }}>1. Soldes intermédiaires de gestion</div>
+                <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#64748b' }}>NC 01, annexe 8 : marge commerciale, production, valeur ajoutée, excédent brut d'exploitation, résultat des activités ordinaires, résultat net.</p>
+                <Tableau colonnes={e.colonnes}>
+                  {etatPx.sig.lignes.map((l, i) => (l.titre !== undefined
+                    ? <tr key={`S${i}`}><td colSpan={3} style={{ padding: '10px 8px 4px', fontWeight: 800, color: '#1e1b4b' }}>{l.titre}</td></tr>
+                    : <Rangee key={l.code} cle={`S/${l.code}`} libelle={l.libelle} n={l.n} n1={l.n1} niveau={l.calcul ? 0 : 1} gras={!!l.calcul} fond={l.code === 'resultatNet' ? '#eef2ff' : l.calcul ? '#f8fafc' : undefined} zero={l.calcul ? '0,000' : '—'} comptes={l.comptes} ouverts={ouverts} basculer={basculer} />))}
+                </Tableau>
+              </>
+            )}
+            <div style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.95rem', margin: '16px 0 4px' }}>{etatPx.sig ? '2' : '1'}. Détail des postes</div>
+            <p style={{ margin: '0 0 10px', fontSize: '0.78rem', color: '#64748b' }}>Les comptes de chaque poste se lisent en dépliant les postes du bilan et de l'état de résultat ci-dessus ; le jeu complet (PDF) les reprend tous.</p>
+            <div style={{ fontWeight: 800, color: '#1e1b4b', fontSize: '0.95rem', margin: '16px 0 4px' }}>{etatPx.sig ? '3' : '2'}. Notes de l'entreprise</div>
+            <p style={{ margin: '0 0 8px', fontSize: '0.78rem', color: '#64748b' }}>
+              Méthodes comptables, faits marquants, engagements : un texte libre par exercice, repris dans le jeu complet.
+              {etatPx.notes.modifieLe ? ` Rédigées le ${new Date(etatPx.notes.modifieLe).toLocaleDateString('fr-FR')}${etatPx.notes.modifiePar ? ` par ${etatPx.notes.modifiePar}` : ''}.` : ' Aucune note pour cet exercice.'}
+            </p>
+            <label htmlFor="fe-notes" style={lbl}>Texte des notes</label>
+            <textarea id="fe-notes" value={texteNotes} onChange={(ev) => setTexteNotes(ev.target.value)} readOnly={!peutEcrire} maxLength={etatPx.notes.longueurMax} rows={8}
+              placeholder={peutEcrire ? 'Méthodes comptables retenues, faits marquants de l\'exercice, engagements hors bilan…' : 'Rédaction réservée au titulaire et au niveau Complet.'}
+              style={{ ...inp, resize: 'vertical', fontFamily: 'inherit', lineHeight: 1.5, background: peutEcrire ? '#fff' : '#f8fafc' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8, flexWrap: 'wrap' }}>
+              {peutEcrire && <button type="button" onClick={enregistrer} disabled={occupe || !notesModifiees} style={{ ...bouton('#1e1b4b', '#fff', '#1e1b4b'), opacity: occupe || !notesModifiees ? 0.6 : 1 }}>Enregistrer les notes</button>}
+              <span style={{ fontSize: '0.76rem', color: '#64748b' }}>{texteNotes.length} / {etatPx.notes.longueurMax} caractères{notesModifiees ? ' · modifications non enregistrées' : ''}</span>
+            </div>
           </div>
         </>
       )}
