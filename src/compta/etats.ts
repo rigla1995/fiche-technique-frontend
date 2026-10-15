@@ -26,6 +26,11 @@ export interface RubriqueBilan { code: string; libelle: string | null; postes: P
 export interface GroupeBilan { code: string; libelle: string; rubriques: RubriqueBilan[]; total: TotalEtat | null }
 export interface CoteBilan { groupes: GroupeBilan[]; total: TotalEtat }
 export type LigneResultat = { titre: string; code?: undefined } | (Montants & { code: string; libelle: string; calcul?: 'total'; comptes?: CompteEtat[]; titre?: undefined });
+// E2 : une ligne de l'état des flux (annexe 5, méthode indirecte) : titre, ligne à comptes, ou calcul (résultat net, total,
+// trésorerie au début et à la fin).
+export type LigneFlux = { titre: string; code?: undefined } | (Montants & { code: string; libelle: string; calcul?: 'total' | 'resultat' | 'tresorerieDebut' | 'tresorerieFin'; comptes?: CompteEtat[]; titre?: undefined });
+// E2 : le texte libre des notes d'un exercice (méthodes comptables, faits marquants), qui, quand, longueur bornée.
+export interface NotesExercice { texte: string; modifiePar: string | null; modifieLe: string | null; longueurMax: number }
 export interface ControleEtat { code: string; libelle: string; ok: boolean; detail: string }
 export interface EtatsReponse {
   dossier: { id: number; nom: string; etat: EtatDossier; source: 'saisi' | 'labflow'; espace: EspaceDossiers };
@@ -42,6 +47,11 @@ export interface EtatsReponse {
   provisoire: { report: ReportProvisoire | null };
   bilan: { actifs: CoteBilan; passifs: CoteBilan };
   resultat: { lignes: LigneResultat[]; net: Montants };
+  // E2 : l'état des flux de trésorerie (null si le paquet du pays n'en a pas le modèle), les soldes intermédiaires de
+  // gestion (annexe 8), les notes de l'exercice.
+  flux: { lignes: LigneFlux[]; tresorerie: { libelle: string; debut: Montants; fin: Montants; variation: Montants } } | null;
+  sig: { lignes: LigneResultat[] } | null;
+  notes: NotesExercice;
   controles: ControleEtat[];
   pret: boolean;
   sansPoste: { id: number; numero: string; libelle: string; solde: string }[];
@@ -59,8 +69,14 @@ export const lireEtats = async (dossierId: number | string, p: ParametresEtats =
   const { data } = await api.get(chemin(dossierId), { params: params(p) });
   return data as EtatsReponse;
 };
-// Le PDF (bilan, état de résultat) de la sélection en cours ; nom de repli si le navigateur ne lit pas l'en-tête.
-export const telechargerEtatsPdf = (dossierId: number, p: ParametresEtats) => {
-  const q = new URLSearchParams(params(p)).toString();
-  return telechargerClasseur(`${chemin(dossierId, '.pdf')}${q ? `?${q}` : ''}`, `etats-financiers-${dossierId}.pdf`, 'application/pdf');
+// Le PDF (bilan, état de résultat) de la sélection en cours ; `complet` (E2) : le jeu complet — flux de trésorerie et notes
+// en plus ; nom de repli si le navigateur ne lit pas l'en-tête.
+export const telechargerEtatsPdf = (dossierId: number, p: ParametresEtats, complet = false) => {
+  const q = new URLSearchParams({ ...params(p), ...(complet ? { complet: '1' } : {}) }).toString();
+  return telechargerClasseur(`${chemin(dossierId, '.pdf')}${q ? `?${q}` : ''}`, `etats-financiers${complet ? '-complets' : ''}-${dossierId}.pdf`, 'application/pdf');
+};
+// E2 : enregistrer le texte libre des notes d'un exercice (titulaire, Complet) ; → les notes relues.
+export const enregistrerNotes = async (dossierId: number, exerciceId: number, texte: string): Promise<NotesExercice> => {
+  const { data } = await api.put(chemin(dossierId, `/${encodeURIComponent(String(exerciceId))}/notes`), { texte });
+  return (data as { notes: NotesExercice }).notes;
 };
