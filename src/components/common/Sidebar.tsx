@@ -110,6 +110,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { t } = useTranslation();
   const voc = useVocabulaire();
   const { user, logout } = useAuth();
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = user?.domaine?.prestataires !== false;
   const navigate = useNavigate();
   const handleLogout = () => { onClose(); logout(); navigate('/login'); };
   const [typesSummary, setTypesSummary] = useState<ActiviteTypesSummary | null>(null);
@@ -566,7 +568,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <CollapsibleHeader label={voc.Nom('espace_vente')} icon="🛒" isOpen={openSections.has('vente')} locked={false} onToggle={() => toggleSection('vente')} />
                       {openSections.has('vente') && (
                         <>
-                          <li><NavLink to="/client/ventes/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('prestataire')}</span><span className="link-label">Config {voc.Court('prestataire', true)}</span></NavLink></li>
+                          {prestatairesOk && <li><NavLink to="/client/ventes/prestataires" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">{voc.icon('prestataire')}</span><span className="link-label">Config {voc.Court('prestataire', true)}</span></NavLink></li>}
                           {user?.role === 'client' && <li><NavLink to="/client/ventes/charges" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏗️</span><span className="link-label">Config Charges</span></NavLink></li>}
                           <li><NavLink to="/client/ventes/configuration" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Configuration {voc.Court('vente')}</span></NavLink></li>
                           <li><NavLink to="/client/ventes" end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💰</span><span className="link-label">{voc.Pl('vente')} {voc.Court('activite', true)}</span></NavLink></li>

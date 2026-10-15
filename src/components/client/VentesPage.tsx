@@ -344,6 +344,8 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
 
 export default function VentesPage() {
   const { user } = useAuth();
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = user?.domaine?.prestataires !== false;
   const voc = useVocabulaire();
   const { confirm, alerte } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -431,7 +433,7 @@ export default function VentesPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const activePrests = prestataires;
+  const activePrests = prestatairesOk ? prestataires : [];
   const produits = articles.filter(a => !a.is_supplement);
   const supplements = articles.filter(a => a.is_supplement);
   const allArticles = [...articles, ...valoriseArticles];
@@ -593,7 +595,7 @@ export default function VentesPage() {
               <HelpButton section="saisie-ventes" variant="solid" size={18} tip="Aide" /></h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-              Saisissez {voc.votre('vente', true)} {voc.acc('vente', 'directs', 'directes')} et via {voc.pl('prestataire')}
+              Saisissez {voc.votre('vente', true)} {voc.acc('vente', 'directs', 'directes')}{prestatairesOk ? <> et via {voc.pl('prestataire')}</> : ''}
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -697,7 +699,7 @@ export default function VentesPage() {
                   <FilterSelect value={histType} onChange={e => { setHistType(e.target.value as typeof histType); setHistPage(0); }}>
                     <option value="all">Tous types vente</option>
                     <option value="directe">Directe</option>
-                    <option value="prestataire">{voc.Nom('prestataire')}</option>
+                    {prestatairesOk && <option value="prestataire">{voc.Nom('prestataire')}</option>}
                   </FilterSelect>
                 </FilterField>
                 <FilterField label={`📦 Type ${voc.court('produit')}`}>

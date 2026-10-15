@@ -98,7 +98,7 @@ type ProfilAdmin = DomaineProfil & { lexiqueEcarts?: LexiqueEcarts; tarifs?: Tar
 interface LexiqueRow { sg: string; pl: string; courtSg: string; courtPl: string; icon: string; g: 'm' | 'f' | null; el: boolean | null; courtEl?: boolean; appo?: boolean }
 type LexiqueState = Record<string, LexiqueRow>;
 
-// ── Règles : 8 clés, défaut = comportement actuel ───────────────────────────
+// ── Règles : 9 clés, défaut = comportement actuel ───────────────────────────
 const REGLES_DEFAUT = {
   acheteurs_requiert_labo: true,
   depot_exige_acheteurs: true,
@@ -108,6 +108,7 @@ const REGLES_DEFAUT = {
   types_perte: ['avarie', 'dechet'] as string[],
   supplement_max_composants: 1,
   b2b_depuis_activite: false,
+  prestataires: true,
 };
 interface ReglesState {
   acheteurs_requiert_labo: boolean;
@@ -118,8 +119,11 @@ interface ReglesState {
   types_perte: string;
   supplement_max_composants: string;
   b2b_depuis_activite: boolean;
+  prestataires: boolean;
 }
-const REGLES_BOOL: { cle: 'acheteurs_requiert_labo' | 'depot_exige_acheteurs' | 'espace_produit_verrou_basique_sans_labo' | 'b2b_depuis_activite'; label: string; aide: string }[] = [
+const REGLES_BOOL: { cle: 'acheteurs_requiert_labo' | 'depot_exige_acheteurs' | 'espace_produit_verrou_basique_sans_labo' | 'b2b_depuis_activite' | 'prestataires'; label: string; aide: string }[] = [
+  // D1 (15/10/2026) : prestataires de livraison par domaine ; l'admin peut aussi les couper compte par compte (Abonnements).
+  { cle: 'prestataires', label: 'Prestataires de livraison', aide: 'Proposer les prestataires de livraison (ventes via prestataire, commissions, prix prestataire) aux comptes de ce domaine. À non, rien n\'apparaît chez eux ; les ventes déjà saisies restent lisibles. Réglable aussi compte par compte (Abonnements).' },
   { cle: 'acheteurs_requiert_labo', label: 'Option Acheteurs ⇒ au moins 1 labo', aide: 'La base acheteurs (B2B) ne peut être activée que si le compte a au moins une unité de production.' },
   { cle: 'depot_exige_acheteurs', label: 'Compte dépôt ⇒ labo + acheteurs', aide: 'Un compte sans activité (dépôt) doit avoir au moins 1 labo ET l\'option Acheteurs.' },
   { cle: 'espace_produit_verrou_basique_sans_labo', label: 'Espace Produit verrouillé en Basique sans labo', aide: 'Formule Basique et 0 labo ⇒ Espace Produit inaccessible (la base Labo l\'inclut).' },
@@ -314,6 +318,7 @@ function toReglesState(regles: Record<string, unknown> | undefined): ReglesState
     types_perte: list('types_perte', REGLES_DEFAUT.types_perte).join(', '),
     supplement_max_composants: num('supplement_max_composants', REGLES_DEFAUT.supplement_max_composants),
     b2b_depuis_activite: bool('b2b_depuis_activite', REGLES_DEFAUT.b2b_depuis_activite),
+    prestataires: bool('prestataires', REGLES_DEFAUT.prestataires),
   };
 }
 
@@ -328,6 +333,7 @@ function reglesEffectives(s: ReglesState): Record<string, unknown> {
     types_perte: normaliseCodesPerte(s.types_perte),
     supplement_max_composants: Number(s.supplement_max_composants),
     b2b_depuis_activite: s.b2b_depuis_activite,
+    prestataires: s.prestataires,
   };
 }
 

@@ -5,6 +5,7 @@ import HelpButton from '../common/HelpButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import type { Activite } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { useAuth } from '../../context/AuthContext';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -536,6 +537,9 @@ function HistoriqueTab() {
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConfigurationVentePage() {
+  const { user } = useAuth();
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = user?.domaine?.prestataires !== false;
   const { confirm, alerte } = useConfirm();
   const voc = useVocabulaire();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -604,7 +608,7 @@ export default function ConfigurationVentePage() {
 
   useEffect(() => { if (activeTab === 'historique') loadHistorique(); }, [activeTab, loadHistorique]);
 
-  const activePrests = prestataires.filter(p => p.actif);
+  const activePrests = prestatairesOk ? prestataires.filter(p => p.actif) : [];
   const produitRows = rows.filter(r => !r.produit.isSupplement);
   const supplementRows = rows.filter(r => r.produit.isSupplement);
   const valoriseRows: ProduitRow[] = valorises.map(v => ({
@@ -764,7 +768,7 @@ export default function ConfigurationVentePage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Link to="/client/ventes/prestataires" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>{voc.icon('prestataire')} {voc.Pl('prestataire')}</Link>
+            {prestatairesOk && <Link to="/client/ventes/prestataires" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>{voc.icon('prestataire')} {voc.Pl('prestataire')}</Link>}
             <Link to="/client/ventes/charges" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>🏗️ Charges</Link>
           </div>
         </div>
@@ -790,7 +794,7 @@ export default function ConfigurationVentePage() {
           <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '60px 0' }}>{voc.Aucun('activite')} disponible</div>
         ) : (
           <>
-            {activePrests.length === 0 && activeTab !== 'historique' && (
+            {prestatairesOk && activePrests.length === 0 && activeTab !== 'historique' && (
               <div style={{ background: '#fef9c3', border: `1px solid ${CB}`, borderRadius: 10, padding: '10px 16px', fontSize: '0.83rem', color: '#854d0e', marginBottom: 18, display: 'flex', alignItems: 'center', gap: 10 }}>
                 💡 {voc.Aucun('prestataire')} {voc.acc('prestataire', 'actif', 'active')} — les colonnes {voc.nom('prestataire')} n'apparaîtront pas.
                 <Link to="/client/ventes/prestataires" style={{ color: C, fontWeight: 700, marginLeft: 4 }}>Configurer {voc.le('prestataire', true)} →</Link>

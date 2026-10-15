@@ -248,6 +248,8 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
   const [nbParCode, setNbParCode] = useState<Record<string, number>>({});
   const [formuleActivites, setFormuleActivites] = useState<Formule>('premium');
   const [montantOnboarding, setMontantOnboarding] = useState('');
+  // D1 : prestataires de livraison du compte (actif par défaut ; proposé seulement si le domaine les permet).
+  const [prestatairesActifs, setPrestatairesActifs] = useState(true);
   // true dès que l'admin a saisi lui-même le montant : la grille ne l'écrase plus
   const obManuel = useRef(false);
   const [preview, setPreview] = useState<PricingPreview | null>(null);
@@ -448,6 +450,7 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
         nbActivites, nbLabos, nbGerants, nbAcheteurs,
         formuleActivites,
         montantOnboarding: parseFloat(montantOnboarding) || 0,
+        prestatairesActifs: regles.prestataires ? prestatairesActifs : true,
         promotions: promos.map(mapPromoForApi),
       });
       // Id du client créé si la réponse le fournit (plusieurs formes tolérées).
@@ -689,6 +692,17 @@ export default function AddClientModal({ onClose, onCreated, initialValues }: Pr
                           );
                         })}
                       </div>
+                    </div>
+                  )}
+
+                  {/* D1 : prestataires de livraison — interrupteur du compte, quand le domaine les propose */}
+                  {regles.prestataires && (
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '14px 16px' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.88rem', fontWeight: 700, color: '#0f172a' }}>
+                        <input type="checkbox" checked={prestatairesActifs} onChange={(e) => setPrestatairesActifs(e.target.checked)} />
+                        🛵 Prestataires de livraison
+                      </label>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: 4 }}>Ventes via prestataire, commissions, prix prestataire. Décochez pour un compte qui n'en a pas l'usage ; réglable ensuite dans Abonnements.</div>
                     </div>
                   )}
 
