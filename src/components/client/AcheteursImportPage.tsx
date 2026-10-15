@@ -76,7 +76,7 @@ export default function AcheteursImportPage() {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: CL, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>1️⃣</div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a' }}>Téléchargez le modèle</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Colonnes : Nom / Entreprise / Email / Téléphone / Adresse / Matricule fiscal</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Colonnes : Nom / Entreprise / Email / Téléphone / Adresse / Matricule fiscal / Type / RNE</div>
           </div>
         </div>
         <button onClick={downloadTemplate}
@@ -84,7 +84,7 @@ export default function AcheteursImportPage() {
           📄 Télécharger modele_acheteurs.xlsx
         </button>
         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 10 }}>
-          Seul le <strong>Nom</strong> est obligatoire. L'email est requis uniquement pour créer un compte portail.
+          <strong>Type</strong> obligatoire : <strong>Professionnel</strong> (Entreprise = raison sociale, Matricule fiscal et Adresse obligatoires) ou <strong>Particulier</strong> (Téléphone obligatoire). Une ligne incomplète est refusée avec son motif. L'email est requis uniquement pour créer un compte portail.
         </div>
       </div>
 
