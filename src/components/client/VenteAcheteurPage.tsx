@@ -18,7 +18,8 @@ const PAGE_ACCENT = { border: CB, bg: CL, text: CD };
 const CATS_PAR_PAGE = 5;
 const LIGNES_PAR_CAT = 10;
 
-interface Acheteur { id: number; nom: string; entreprise: string | null; actif: boolean }
+// D2 : type de la fiche — une fiche « à préciser » ne peut pas être facturée (le serveur le dit), on la signale dans la liste.
+interface Acheteur { id: number; nom: string; entreprise: string | null; actif: boolean; type?: 'b2b' | 'b2c' | 'a_preciser' }
 interface Labo { id: number; nom: string }
 interface Offre {
   articleType: 'ingredient' | 'produit'; articleId: number; nom: string; unite: string; categorie: string;
@@ -288,7 +289,7 @@ export default function VenteAcheteurPage() {
                 <label style={lblStyle}>{voc.Nom('acheteur')} *</label>
                 <select value={acheteurId} onChange={e => setAcheteurId(e.target.value)} style={{ ...inp, minWidth: 200 }}>
                   <option value="">— Choisir —</option>
-                  {acheteurs.map(a => <option key={a.id} value={a.id}>{a.nom}{a.entreprise ? ` (${a.entreprise})` : ''}</option>)}
+                  {acheteurs.map(a => <option key={a.id} value={a.id}>{a.nom}{a.entreprise && a.type !== 'b2c' ? ` (${a.entreprise})` : ''}{a.type === 'a_preciser' ? ' — type à préciser' : ''}</option>)}
                 </select>
               </div>
               <div>
