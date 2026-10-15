@@ -273,6 +273,8 @@ export default function ClientDashboard() {
 
   // Socle par domaine (lot 1b-2) : types de perte et seuil coût matière du compte.
   const { user } = useAuth();
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = user?.domaine?.prestataires !== false;
   const perteTypes = usePerteTypes();
   const typesPerteOpts = useMemo<MultiSelectOption[]>(() => perteTypes.map((t) => ({ value: t.code, label: perteLabel(t.code, true) })), [perteTypes]);
   // Seuil : celui renvoyé par le dashboard v2 (`seuils.coutMatierePct`), sinon la règle du
@@ -290,7 +292,7 @@ export default function ClientDashboard() {
   // Filtres posés sur un autre onglet, invisibles ici (ils n'affectent pas ces données).
   const filtresCaches = FILTRE_KEYS.reduce((n, k) => n + (filtres[k].length && !visibles.includes(k) ? 1 : 0), 0);
   const tabsVisibles = useMemo(() => computeTabsVisibles(options, voc), [options, voc]);
-  const canaux = useMemo(() => canauxOpts(voc), [voc]);
+  const canaux = useMemo(() => canauxOpts(voc).filter((c) => prestatairesOk || c.value !== 'prestataire'), [voc, prestatairesOk]);
   const typesProduit = useMemo(() => typesProduitOpts(voc), [voc]);
   const sourcesB2b = useMemo(() => sourcesB2bOpts(voc), [voc]);
 
@@ -481,7 +483,7 @@ export default function ClientDashboard() {
             {visibles.includes('labos') && <MultiSelectFilter label={voc.Pl('labo')} icon="🧪" options={toOpts(options.labos)} selected={filtres.labos} onChange={setFiltre('labos')} />}
             {visibles.includes('sources') && <MultiSelectFilter label="Type de vente" icon="🛒" options={sourcesB2b} selected={filtres.sources} onChange={setFiltre('sources')} alwaysShow />}
             {visibles.includes('canaux') && <MultiSelectFilter label="Type de vente" icon="🛒" options={canaux} selected={filtres.canaux} onChange={setFiltre('canaux')} />}
-            {visibles.includes('prestataires') && <MultiSelectFilter label={voc.Pl('prestataire')} icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
+            {prestatairesOk && visibles.includes('prestataires') && <MultiSelectFilter label={voc.Pl('prestataire')} icon="🚚" options={toOpts(options.prestataires)} selected={filtres.prestataires} onChange={setFiltre('prestataires')} />}
             {visibles.includes('modesPaiement') && <MultiSelectFilter label="Mode de paiement" icon="💳" options={toOpts(options.modes_paiement ?? [])} selected={filtres.modesPaiement} onChange={setFiltre('modesPaiement')} />}
             {visibles.includes('catProduits') && <MultiSelectFilter label={`Catégories ${voc.court('produit', true)}`} icon="🍽️" options={toCatProduitOpts(options.categories_produit)} selected={filtres.catProduits} onChange={setFiltre('catProduits')} alwaysShow />}
             {visibles.includes('typesProduit') && <MultiSelectFilter label="Types" icon="🏷️" options={typesProduit} selected={filtres.typesProduit} onChange={setFiltre('typesProduit')} />}
@@ -540,6 +542,8 @@ const twoCols: React.CSSProperties = { display: 'grid', gridTemplateColumns: 're
 
 function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
   const voc = useVocabulaire();
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = useAuth().user?.domaine?.prestataires !== false;
   if (data.vide || !data.kpis) return <EmptyHint text="Aucune donnée dans le périmètre." />;
   const k: Kpis = data.kpis;
   const a = data.alertes ?? {};
@@ -548,9 +552,9 @@ function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
       <div style={kpiGrid}>
         <KpiCard icon="💵" label="Chiffre d'affaires" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${voc.n('vente', k.nb_ventes)} · panier ${fmtDT(k.panier_moyen, 2)}`} />
         <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
-        <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}${k.tva_commissions != null ? ` + TVA ${fmtDT(k.tva_commissions)}` : ''}`} />
+        {prestatairesOk && <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}${k.tva_commissions != null ? ` + TVA ${fmtDT(k.tva_commissions)}` : ''}`} />}
         {/* P2 : chiffre net des prestataires = leur CA − commissions − TVA sur les commissions (conditions figées sur chaque vente) */}
-        {k.net_prestataires != null && (
+        {prestatairesOk && k.net_prestataires != null && (
           <KpiCard icon="🛵" label={`Net ${voc.pl('prestataire')}`} value={fmtDT(k.net_prestataires)} delta={k.deltas?.net_prestataires} accent="#b45309"
             sub={`CA ${fmtDT(k.ca_prestataires ?? 0)} · commissions ${fmtDT(k.commissions)} · TVA ${fmtDT(k.tva_commissions ?? 0)}`} />
         )}
@@ -584,6 +588,8 @@ function OverviewTab({ data, seuil }: { data: any; seuil: number }) {
 
 function VentesTab({ data, seuil }: { data: any; seuil: number }) {
   const voc = useVocabulaire();
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = useAuth().user?.domaine?.prestataires !== false;
   if (data.vide || !data.kpis) return <EmptyHint text={`${voc.Aucun('activite')} dans le périmètre.`} />;
   const k: Kpis = data.kpis;
   const canalCols: ColonneDef<any>[] = [
@@ -611,9 +617,9 @@ function VentesTab({ data, seuil }: { data: any; seuil: number }) {
       <div style={kpiGrid}>
         <KpiCard icon="💵" label="CA" value={fmtDT(k.ca)} delta={k.deltas?.ca} sub={`${k.nb_ventes} ${voc.pl('vente')} · panier ${fmtDT(k.panier_moyen, 2)}`} />
         <KpiCard icon={voc.icon('marge')} label={`${voc.Nom('marge')} ${voc.acc('marge', 'brut', 'brute')}`} value={fmtDT(k.marge_brute)} delta={k.deltas?.marge_brute} accent="#16a34a" sub={k.taux_marge_pct != null ? `${k.taux_marge_pct}% du CA` : undefined} />
-        <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}${k.tva_commissions != null ? ` + TVA ${fmtDT(k.tva_commissions)}` : ''}`} />
+        {prestatairesOk && <KpiCard icon="🤝" label="Après commissions" value={fmtDT(k.marge_apres_com)} delta={k.deltas?.marge_apres_com} accent="#d97706" sub={`commissions ${fmtDT(k.commissions)}${k.tva_commissions != null ? ` + TVA ${fmtDT(k.tva_commissions)}` : ''}`} />}
         {/* P2 : chiffre net des prestataires = leur CA − commissions − TVA sur les commissions (conditions figées sur chaque vente) */}
-        {k.net_prestataires != null && (
+        {prestatairesOk && k.net_prestataires != null && (
           <KpiCard icon="🛵" label={`Net ${voc.pl('prestataire')}`} value={fmtDT(k.net_prestataires)} delta={k.deltas?.net_prestataires} accent="#b45309"
             sub={`CA ${fmtDT(k.ca_prestataires ?? 0)} · commissions ${fmtDT(k.commissions)} · TVA ${fmtDT(k.tva_commissions ?? 0)}`} />
         )}

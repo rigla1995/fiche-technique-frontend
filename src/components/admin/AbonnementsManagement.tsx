@@ -466,6 +466,33 @@ export default function AbonnementsManagement() {
   };
 
   // Changement de formule d'activités (basique ⇄ premium) — recalcule la mensualité côté serveur
+  // D1 : interrupteur des prestataires de livraison du compte (la règle du domaine reste prioritaire).
+  const [prestaSaving, setPrestaSaving] = useState(false);
+  const basculerPrestataires = async () => {
+    if (!selected || !selected.config || prestaSaving) return;
+    const actifs = selected.config.prestatairesActifs !== false;
+    const ok = await confirm({
+      title: actifs ? 'Couper les prestataires de livraison ?' : 'Proposer les prestataires de livraison ?',
+      message: actifs
+        ? 'Le compte ne verra plus les prestataires : ventes via prestataire, commissions, prix prestataire. Les ventes déjà saisies restent lisibles.'
+        : 'Le compte retrouve les prestataires de livraison, si son domaine les propose.',
+      confirmLabel: actifs ? 'Couper' : 'Proposer',
+    });
+    if (!ok) return;
+    setFormuleError(null);
+    setPrestaSaving(true);
+    try {
+      await api.put(`/api/abonnements/client/${selected.clientId}/config`, { prestatairesActifs: !actifs });
+      const abRes = await api.get(`/api/abonnements/client/${selected.clientId}?withPricing=1`);
+      setSelected(abRes.data);
+      fetchList();
+    } catch (err: unknown) {
+      setFormuleError((err as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors du réglage des prestataires');
+    } finally {
+      setPrestaSaving(false);
+    }
+  };
+
   const changerFormule = async () => {
     if (!selected || !selected.config || formuleSaving) return;
     const cfg = selected.config;
@@ -1173,6 +1200,22 @@ export default function AbonnementsManagement() {
                     <span style={{ fontSize: 14, fontWeight: 800, color: '#4c1d95' }}>{totalMensuel} DT/mois</span>
                   </div>
                   <div style={{ padding: '14px 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {/* D1 : prestataires de livraison du compte (interrupteur de l'admin ; la règle du domaine reste prioritaire) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 800, padding: '4px 12px', borderRadius: 12,
+                        background: cfg.prestatairesActifs !== false ? '#dcfce7' : '#f1f5f9',
+                        color: cfg.prestatairesActifs !== false ? '#166534' : '#64748b',
+                        border: `1px solid ${cfg.prestatairesActifs !== false ? '#bbf7d0' : '#e2e8f0'}`,
+                      }}>
+                        🛵 Prestataires de livraison : {cfg.prestatairesActifs !== false ? 'proposés' : 'coupés'}
+                      </span>
+                      <button onClick={basculerPrestataires} disabled={prestaSaving}
+                        style={{ fontSize: 11, padding: '4px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', cursor: prestaSaving ? 'default' : 'pointer', fontWeight: 700, opacity: prestaSaving ? 0.7 : 1 }}>
+                        {prestaSaving ? '…' : cfg.prestatairesActifs !== false ? 'Couper' : 'Proposer'}
+                      </button>
+                      <span style={{ fontSize: 11, color: '#64748b' }}>(la règle du domaine reste prioritaire)</span>
+                    </div>
                     {/* Formule d'activités : badge + changement — sans objet pour un compte dépôt (0 activité) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                       {cfg.nbActivites === 0 ? (

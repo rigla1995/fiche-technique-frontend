@@ -5,6 +5,7 @@ import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
 import type { Activite } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import { useAuth } from '../../context/AuthContext';
 
 // P2 « Conditions des prestataires et chiffre net » (labflow-reprise/produits-prestataires/PLAN.md §2 ligne P2 ; réponses
 // du client du 13/10) : activer un prestataire pour une activité demande ses CONDITIONS — commission (%), TVA (%) sur la
@@ -44,6 +45,8 @@ const apiMsg = (e: unknown, fallback: string) =>
 
 export default function ConfigPrestatairesPage() {
   const voc = useVocabulaire();
+  // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
+  const prestatairesOk = useAuth().user?.domaine?.prestataires !== false;
   const { confirm, alerte } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
@@ -156,6 +159,18 @@ export default function ConfigPrestatairesPage() {
   const aRenseigner = activitePrestataires.filter(ap => !ap.conditions_renseignees).length;
   const selectedActivite = activites.find(a => a.id === selectedActiviteId);
 
+  if (!prestatairesOk) {
+    return (
+      <div className="page">
+        <div style={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 16, padding: '22px 24px', maxWidth: 640 }}>
+          <div style={{ fontWeight: 800, color: '#1e1b4b', marginBottom: 6 }}>{voc.Pl('prestataire')} de livraison : non proposés à ce compte</div>
+          <p style={{ margin: 0, fontSize: '0.86rem', color: '#64748b', lineHeight: 1.6 }}>
+            Votre domaine d'activité ne les propose pas, ou l'administrateur les a coupés pour ce compte. {voc.Le('vente', true)} déjà {voc.acc('vente', 'saisis', 'saisies')} via {voc.pl('prestataire')} restent lisibles dans l'historique.
+          </p>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="page-content">
       {/* Hero */}
