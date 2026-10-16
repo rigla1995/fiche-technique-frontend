@@ -7,7 +7,7 @@ import type { CompteCourt, JournauxReponse } from './journaux';
 /** Compte par défaut : peut manquer au plan (id null, non imputable). */
 export interface CompteDefaut { id: number | null; numero: string; libelle: string; imputable: boolean }
 export interface CategorieAchat { id: number; nom: string; famille: string | null; nbArticles: number; defaut: CompteDefaut; compte: CompteCourt | null }
-export interface ArticleAchat { id: number; nom: string; unite: string | null; categorieId: number | null; compte: CompteCourt | null }
+export interface ArticleAchat { id: number; nom: string; code?: string | null; unite: string | null; categorieId: number | null; compte: CompteCourt | null }
 export interface NatureAchat { valeur: string; libelle: string; defaut: CompteDefaut; compte: CompteCourt | null }
 export interface ComptesAchatReponse {
   dossier: JournauxReponse['dossier'];

@@ -6,6 +6,7 @@ import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../com
 import { useConfirm } from '../common/ConfirmDialog';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { telechargerClasseur } from '../../compta/classeurs';
+import CodeArticle from '../common/CodeArticle';
 
 const COLOR = '#16a34a';
 const ACCENT_DARK = '#15803d';
@@ -17,9 +18,10 @@ interface ArticleEditForm {
   nom: string;
   uniteId: string;
   categorieId: string;
+  code: string;
 }
 
-const emptyEditForm: ArticleEditForm = { nom: '', uniteId: '', categorieId: '' };
+const emptyEditForm: ArticleEditForm = { nom: '', uniteId: '', categorieId: '', code: '' };
 
 interface ArtRow { nom: string; uniteId: string; categorieId: string; activiteIds: number[]; laboIds: number[]; }
 const emptyArtRow = (): ArtRow => ({ nom: '', uniteId: '', categorieId: '', activiteIds: [], laboIds: [] });
@@ -53,6 +55,9 @@ export default function ReferentielArticlesPage() {
   const [createNom, setCreateNom] = useState('');
   const [createUniteId, setCreateUniteId] = useState('');
   const [createCategorieId, setCreateCategorieId] = useState('');
+  // D3 : code de l'article — proposé par le serveur d'après la catégorie, remplaçable par le client.
+  const [createCode, setCreateCode] = useState('');
+  const [codePropose, setCodePropose] = useState('');
   const [selectedActiviteIds, setSelectedActiviteIds] = useState<number[]>([]);
   const [selectedLaboIds, setSelectedLaboIds] = useState<number[]>([]);
   const [creating, setCreating] = useState(false);
@@ -120,9 +125,19 @@ export default function ReferentielArticlesPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // D3 : le code proposé suit la catégorie choisie (le serveur connaît les codes déjà pris).
+  useEffect(() => {
+    if (!showCreate) return;
+    let vivant = true;
+    api.get('/api/articles/code-propose', { params: { categorieId: createCategorieId || undefined } })
+      .then(({ data }) => { if (vivant) setCodePropose((data as { code?: string }).code || ''); })
+      .catch(() => { if (vivant) setCodePropose(''); });
+    return () => { vivant = false; };
+  }, [showCreate, createCategorieId]);
+
   // ── Create wizard ──
   const openCreate = () => {
-    setCreateNom(''); setCreateUniteId(''); setCreateCategorieId('');
+    setCreateNom(''); setCreateUniteId(''); setCreateCategorieId(''); setCreateCode(''); setCodePropose('');
     setSelectedActiviteIds([]); setSelectedLaboIds([]);
     setCreateError(''); setCreateStep(1); setShowCreate(true);
   };
@@ -165,6 +180,7 @@ export default function ReferentielArticlesPage() {
         nom: createNom.trim(),
         unitId: parseInt(createUniteId),
         categorieId: createCategorieId ? parseInt(createCategorieId) : null,
+        code: (createCode || codePropose).trim() || undefined,
       });
       const articleId = res.data.id;
       await Promise.all([
@@ -235,6 +251,7 @@ export default function ReferentielArticlesPage() {
       nom: a.name,
       uniteId: a.unitId ? String(a.unitId) : '',
       categorieId: a.categorieId ? String(a.categorieId) : '',
+      code: a.code || '',
     });
     setEditError('');
     setEditActivites([]);
@@ -277,6 +294,7 @@ export default function ReferentielArticlesPage() {
         nom: editForm.nom.trim(),
         unitId: parseInt(editForm.uniteId),
         categorieId: editForm.categorieId ? parseInt(editForm.categorieId) : null,
+        code: editForm.code.trim() || undefined,
       });
       closeEdit();
       load();
@@ -304,7 +322,8 @@ export default function ReferentielArticlesPage() {
     : categories;
 
   const filtered = articles.filter(a => {
-    if (search && !a.name.toLowerCase().includes(search.toLowerCase())) return false;
+    // D3 : la recherche porte sur le nom ou le code
+    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !(a.code || '').toLowerCase().includes(search.toLowerCase())) return false;
     if (filterCat && String(a.categorieId) !== filterCat) return false;
     if (filterFamille && String(a.familleId) !== filterFamille) return false;
     return true;
@@ -397,7 +416,7 @@ export default function ReferentielArticlesPage() {
         <FilterField label="🔍 Recherche">
           <FilterInput
             value={search} onChange={e => setSearch(e.target.value)}
-            placeholder={`Filtrer ${voc.le('article', true)}…`}
+            placeholder={`Filtrer ${voc.le('article', true)} (nom ou code)…`}
           />
         </FilterField>
         {familles.length > 0 && (
@@ -510,8 +529,9 @@ export default function ReferentielArticlesPage() {
                                 width: 6, height: 6, borderRadius: '50%',
                                 background: COLOR, flexShrink: 0, display: 'inline-block',
                               }} />
-                              <span style={{ flex: 1, fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>
-                                {a.name}
+                              <span style={{ flex: 1, minWidth: 0 }}>
+                                <div style={{ fontWeight: 600, fontSize: '0.88rem', color: '#0f172a' }}>{a.name}</div>
+                                <CodeArticle code={a.code} />
                               </span>
                               <span style={{ background: '#e0e7ff', color: '#4338ca', padding: '2px 8px', borderRadius: 6, fontWeight: 600, fontSize: '0.72rem' }}>
                                 {a.unitName || a.unit?.name || '—'}
@@ -748,6 +768,13 @@ export default function ReferentielArticlesPage() {
                       </select>
                     )}
                   </div>
+                  {/* D3 : code unique du compte, proposé d'après la catégorie */}
+                  <div className="form-group">
+                    <label>Code</label>
+                    <input className="input" value={createCode || codePropose} placeholder={codePropose || 'FAR-0001'} maxLength={20}
+                      onChange={e => setCreateCode(e.target.value.toUpperCase())} style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace' }} />
+                    <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4 }}>Proposé d'après la catégorie ; modifiable (2 à 20 caractères : lettres, chiffres, tirets), unique dans {voc.votre('referentiel')}.</div>
+                  </div>
                   <div className="modal-footer">
                     <button className="btn btn-ghost" onClick={closeCreate}>Annuler</button>
                     <button
@@ -911,6 +938,12 @@ export default function ReferentielArticlesPage() {
               <div className="form-group">
                 <label>Nom *</label>
                 <input className="input" autoFocus value={editForm.nom} placeholder={voc.ex('Ex: Poulet entier', `Ex: ${voc.Nom('article')} A`)} onChange={e => setEditForm(p => ({ ...p, nom: e.target.value }))} />
+              </div>
+              {/* D3 : code unique du compte ; un changement de catégorie le garde */}
+              <div className="form-group">
+                <label>Code</label>
+                <input className="input" value={editForm.code} maxLength={20} onChange={e => setEditForm(p => ({ ...p, code: e.target.value.toUpperCase() }))} style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace' }} />
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4 }}>Unique dans {voc.votre('referentiel')} ; il reste le même si la catégorie change.</div>
               </div>
               <div className="form-group">
                 <label>Unité *</label>

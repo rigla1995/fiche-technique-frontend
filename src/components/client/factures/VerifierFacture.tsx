@@ -397,8 +397,8 @@ export default function VerifierFacture({ fichiers, lu: luInitial, lecture, cibl
     modifierId(id, { creation: { ...c, enCours: true, erreur: null } }, false);
     try {
       const { data } = await api.post('/api/articles', { name: c.nom.trim(), unitId: Number(c.uniteId), categorieId: c.categorieId ? Number(c.categorieId) : null });
-      const a = data as { id: number; name: string; unitName?: string; categorieName?: string | null };
-      const nouveau: ArticleConnu = { id: a.id, nom: a.name, unite: a.unitName ?? unites?.find((u) => String(u.id) === c.uniteId)?.name ?? '', categorie: a.categorieName ?? null, selectionne: false };
+      const a = data as { id: number; name: string; unitName?: string; categorieName?: string | null; code?: string | null };
+      const nouveau: ArticleConnu = { id: a.id, nom: a.name, unite: a.unitName ?? unites?.find((u) => String(u.id) === c.uniteId)?.name ?? '', categorie: a.categorieName ?? null, selectionne: false, code: a.code ?? null };
       setCtx((x) => (x ? { ...x, articles: [...x.articles, nouveau] } : x));
       const conv = proposerConversion(designation, unite || null, nouveau.unite);
       modifierId(id, { creation: null, choix: `a:${nouveau.id}`, etat: 'confirmee', conversion: fNb(conv.n), conversionSure: conv.sure, raison: `${voc.nom('article')} ${voc.acc('article', 'créé', 'créée')}` }, false);

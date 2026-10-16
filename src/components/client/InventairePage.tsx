@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
+import CodeArticle from '../common/CodeArticle';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
@@ -20,6 +21,7 @@ interface InventaireRow {
   produitId?: number;
   isPT?: boolean;
   nom: string;
+  code?: string | null; // D3
   unite: string;
   categorie: string;
   seuilMin: number | null;
@@ -381,6 +383,7 @@ export default function InventairePage() {
                                     {alarm && <span style={{ background: '#fef3c7', border: '1px solid #f59e0b', borderRadius: 5, padding: '1px 5px', fontSize: '0.67rem', fontWeight: 800, color: '#d97706' }}>⚠ DATE</span>}
                                     {r.isPT && <span style={{ background: '#ede9fe', border: '1px solid #a78bfa', borderRadius: 5, padding: '1px 5px', fontSize: '0.67rem', fontWeight: 800, color: '#7c3aed' }}>{voc.Court('pt')}</span>}
                                     {r.nom}
+                                    {r.code && <CodeArticle code={r.code} inline style={{ fontWeight: 400 }} />}
                                   </div>
                                   <div style={{ fontSize: '0.71rem', marginTop: 4, display: 'flex', gap: 7, alignItems: 'center' }}>
                                     <span style={{ background: isLaboMode ? '#ede9fe' : '#dbeafe', color: themeColor, borderRadius: 5, padding: '1px 6px', fontWeight: 700, fontSize: '0.67rem' }}>{r.unite}</span>

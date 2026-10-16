@@ -98,6 +98,17 @@ export default function ProductForm() {
       .catch(() => {});
   }, []);
 
+  // D3 : à la création, la référence se propose d'après la catégorie choisie tant que le champ est vide (DES-0001…).
+  useEffect(() => {
+    if (isEdit || !categorieProduitId || refProduit.trim()) return;
+    let vivant = true;
+    api.get('/api/produits/ref-proposee', { params: { categorieProduitId } })
+      .then(({ data }) => { if (vivant) setRefProduit((data as { code?: string }).code || ''); })
+      .catch(() => {});
+    return () => { vivant = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEdit, categorieProduitId]);
+
   // ── Load ingredients + product data ──────────────────────────────────────
   useEffect(() => {
     if (!preStepDone) return;

@@ -5,12 +5,13 @@ import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useConfirm } from '../common/ConfirmDialog';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
+import CodeArticle from '../common/CodeArticle';
 
 const COLOR = '#16a34a';
 const GRADIENT = 'linear-gradient(135deg, #14532d 0%, #16a34a 55%, #4ade80 100%)';
 
-interface CatRow { nom: string; familleId: string; }
-const emptyRow = (): CatRow => ({ nom: '', familleId: '' });
+interface CatRow { nom: string; familleId: string; prefixe: string; }
+const emptyRow = (): CatRow => ({ nom: '', familleId: '', prefixe: '' });
 
 export default function ReferentielCategoriesPage() {
   const { alerte } = useConfirm();
@@ -29,6 +30,7 @@ export default function ReferentielCategoriesPage() {
   const [editItem, setEditItem] = useState<Category | null>(null);
   const [editNom, setEditNom] = useState('');
   const [editFamilleId, setEditFamilleId] = useState('');
+  const [editPrefixe, setEditPrefixe] = useState(''); // D3
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -50,6 +52,15 @@ export default function ReferentielCategoriesPage() {
     setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
   const addRow = () => setRows(prev => [...prev, emptyRow()]);
   const removeRow = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i));
+  // D3 : préfixe proposé d'après le nom (le serveur connaît les préfixes pris), posé si la case est encore vide.
+  const proposerPrefixe = async (i: number, nom: string) => {
+    if (!nom.trim()) return;
+    try {
+      const { data } = await api.get('/api/categories/prefixe-propose', { params: { nom: nom.trim() } });
+      const p = (data as { prefixe?: string | null }).prefixe || '';
+      setRows(prev => prev.map((r, idx) => (idx === i && !r.prefixe.trim() ? { ...r, prefixe: p } : r)));
+    } catch { /* la proposition est un confort : le serveur en pose une à l'enregistrement */ }
+  };
 
   const handleCreate = async () => {
     const valid = rows.filter(r => r.nom.trim());
@@ -58,7 +69,7 @@ export default function ReferentielCategoriesPage() {
     setCreating(true); setCreateError('');
     try {
       await Promise.all(valid.map(r =>
-        api.post('/api/categories', { nom: r.nom.trim(), familleId: r.familleId ? parseInt(r.familleId) : null })
+        api.post('/api/categories', { nom: r.nom.trim(), familleId: r.familleId ? parseInt(r.familleId) : null, prefixeCode: r.prefixe.trim() || undefined })
       ));
       closeCreate(); load();
     } catch (e: unknown) {
@@ -69,6 +80,7 @@ export default function ReferentielCategoriesPage() {
   const openEdit = (c: Category) => {
     setEditItem(c); setEditNom(c.name);
     setEditFamilleId(c.familleId ? String(c.familleId) : '');
+    setEditPrefixe(c.prefixeCode || '');
     setEditError(''); setSaving(false);
   };
   const closeEdit = () => setEditItem(null);
@@ -81,6 +93,7 @@ export default function ReferentielCategoriesPage() {
       await api.put(`/api/categories/${editItem!.id}`, {
         nom: editNom.trim(),
         familleId: editFamilleId ? parseInt(editFamilleId) : null,
+        prefixeCode: editPrefixe.trim() || undefined,
       });
       closeEdit(); load();
     } catch (e: unknown) {
@@ -158,6 +171,7 @@ export default function ReferentielCategoriesPage() {
             <thead>
               <tr>
                 <th>Nom</th>
+                <th>Préfixe</th>
                 <th>Famille</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
@@ -166,6 +180,7 @@ export default function ReferentielCategoriesPage() {
               {filtered.map(c => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
+                  <td><CodeArticle code={c.prefixeCode} inline style={{ fontSize: '0.8rem', fontWeight: 700, color: '#15803d' }} /></td>
                   <td>{c.familleName ? <span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>🗂️ {c.familleName}</span> : <span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>—</span>}</td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
                     <button className="btn btn-ghost btn-sm" onClick={() => openEdit(c)}>✏️ Modifier</button>
@@ -199,6 +214,7 @@ export default function ReferentielCategoriesPage() {
               {createError && <div style={{ background: '#fee2e2', color: '#dc2626', border: '1px solid #fecaca', borderRadius: 6, padding: '8px 12px', marginBottom: 12, fontSize: '0.85rem' }}>{createError}</div>}
               <div style={{ display: 'flex', gap: 8, fontWeight: 700, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6, paddingLeft: 2 }}>
                 <div style={{ flex: 2 }}>Nom *</div>
+                <div style={{ flex: 1 }}>Préfixe</div>
                 {familles.length > 0 && <div style={{ flex: 2 }}>Famille *</div>}
                 <div style={{ width: 32 }} />
               </div>
@@ -210,8 +226,12 @@ export default function ReferentielCategoriesPage() {
                     placeholder={voc.ex('Ex: Viandes', 'Ex: Catégorie A')}
                     value={row.nom}
                     onChange={e => updateRow(i, 'nom', e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
+                    onBlur={e => proposerPrefixe(i, e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); proposerPrefixe(i, row.nom); if (i === rows.length - 1) addRow(); } }}
                   />
+                  <input className="input" style={{ flex: 1, fontFamily: 'ui-monospace, Menlo, Consolas, monospace', textTransform: 'uppercase' }} placeholder="FAR" maxLength={4}
+                    title={`Préfixe des codes ${voc.de('article', true)} de la catégorie (2 à 4 lettres ou chiffres) — proposé d'après le nom`}
+                    value={row.prefixe} onChange={e => updateRow(i, 'prefixe', e.target.value.toUpperCase())} />
                   {familles.length > 0 && (
                     <select className="input" style={{ flex: 2 }} value={row.familleId} onChange={e => updateRow(i, 'familleId', e.target.value)}>
                       <option value="">— Famille —</option>
@@ -246,6 +266,12 @@ export default function ReferentielCategoriesPage() {
               <div className="form-group">
                 <label>Nom *</label>
                 <input className="input" autoFocus value={editNom} placeholder={voc.ex('Ex: Viandes & Volailles', 'Ex: Catégorie A')} onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+              </div>
+              {/* D3 : préfixe des codes ; en changer ne renumérote pas les articles déjà codés */}
+              <div className="form-group">
+                <label>Préfixe des codes</label>
+                <input className="input" value={editPrefixe} maxLength={4} placeholder="FAR" onChange={e => setEditPrefixe(e.target.value.toUpperCase())} style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace' }} />
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4 }}>2 à 4 lettres ou chiffres, unique dans votre compte (catégories {voc.de('article', true)} et {voc.de('produit', true)}). {voc.Le('article', true)} déjà {voc.acc('article', 'codés', 'codées')} gardent leur code.</div>
               </div>
               {familles.length > 0 && (
                 <div className="form-group">

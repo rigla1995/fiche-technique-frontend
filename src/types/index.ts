@@ -245,6 +245,8 @@ export interface Unit {
 export interface Category {
   id: number;
   name: string;
+  /** D3 : préfixe des codes de ses articles (« FAR » → FAR-0001), unique dans le compte */
+  prefixeCode?: string | null;
   familleId?: number | null;
   familleName?: string | null;
   clientId?: number | null;
@@ -268,6 +270,8 @@ export interface Famille {
 export interface Article {
   id: number;
   name: string;
+  /** D3 : code unique du compte (« FAR-0012 »), affiché sous le nom partout où l'article paraît */
+  code?: string | null;
   unit: Unit;
   unitId: number;
   unitName?: string;
@@ -333,6 +337,8 @@ export type TypeProduitCategorie = 'vendable' | 'supplement' | 'valorise';
 export interface CategorieProduit {
   id: number;
   name: string;
+  /** D3 : préfixe des références de ses produits (« DES » → DES-0001), unique dans le compte avec les catégories d'articles */
+  prefixeCode?: string | null;
   typeProduit?: TypeProduitCategorie;
   clientId?: number | null;
   produitsCount?: number;
@@ -524,6 +530,7 @@ export interface ActiviteTypesSummary {
 
 export interface StockEntry {
   ingredientId: number;        // negative = PT product (-produitId)
+  code?: string | null;        // D3 : code de l'article (absent pour un PT)
   produitId?: number;          // set for PT rows
   isPT?: boolean;
   origine?: string | null;     // PT: 'labo' = reçu par transfert uniquement (pas d'appro manuel côté activité) | 'activite'
@@ -576,6 +583,7 @@ export interface HistoriqueApproEntry {
   updatedAt: string | null;
   ingredientId: number;
   ingredientNom: string;
+  ingredientCode?: string | null; // D3
   uniteNom: string;
   categorieNom: string;
   typeAppro: string;
@@ -633,6 +641,7 @@ export interface Perte {
   id: number;
   ingredientId: number;
   ingredientNom: string;
+  ingredientCode?: string | null; // D3
   uniteNom: string;
   quantite: number;
   typePerte: string; // code du domaine (regles.types_perte) — défaut 'avarie' | 'dechet'
@@ -663,6 +672,7 @@ export interface HistoriquePerteEntry {
   activiteNom?: string | null;
   ingredientId: number;
   ingredientNom: string;
+  ingredientCode?: string | null; // D3
   uniteNom: string;
   categorieNom: string | null;
   quantite: number;
@@ -716,6 +726,7 @@ export interface Transfert {
   prixUnitaireTva: number | null;
   ingredientId: number;          // négatif = produit transformé (-produitId)
   ingredientNom: string;
+  ingredientCode?: string | null; // D3
   uniteNom: string;
   categorieNom: string;
   activiteId: number | null;     // destination activité (flux historique)

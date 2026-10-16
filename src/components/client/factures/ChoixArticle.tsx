@@ -6,7 +6,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { chercherArticles } from './lecture/correspondre';
 
-export interface ArticleChoisissable { id: number; nom: string; unite: string }
+export interface ArticleChoisissable { id: number; nom: string; unite: string; code?: string | null }
 
 interface Props<T extends ArticleChoisissable> {
   /** '' (rien), 'a:<id>' (un article) ou 'h:<nature>' (hors stock). */
@@ -76,7 +76,7 @@ export default function ChoixArticle<T extends ArticleChoisissable>({ valeur, ar
 
   const choisi = valeur.startsWith('a:') ? articles.find((a) => `a:${a.id}` === valeur) : undefined;
   const nature = valeur.startsWith('h:') ? natures.find((n) => `h:${n.valeur}` === valeur) : undefined;
-  const affiche = choisi ? `${choisi.nom} (${choisi.unite})` : nature ? `${libelles.horsStock} : ${nature.libelle}` : libelles.aChoisir;
+  const affiche = choisi ? `${choisi.code ? `${choisi.code} · ` : ''}${choisi.nom} (${choisi.unite})` : nature ? `${libelles.horsStock} : ${nature.libelle}` : libelles.aChoisir;
 
   const clavier = (ev: React.KeyboardEvent) => {
     if (ev.key === 'Escape') { ev.stopPropagation(); ev.preventDefault(); fermer(true); return; }
@@ -115,7 +115,10 @@ export default function ChoixArticle<T extends ArticleChoisissable>({ valeur, ar
                   <div id={`${id}-${k}`} data-rang={k} role="option" aria-selected={o.valeur === valeur}
                     onMouseDown={(ev) => ev.preventDefault()} onClick={() => choisir(o.valeur)} onMouseEnter={() => setActif(k)}
                     style={{ padding: '4px 8px', borderRadius: 6, fontSize: '0.8rem', cursor: 'pointer', display: 'flex', gap: 6, alignItems: 'baseline', background: k === actif ? '#e0e7ff' : o.valeur === valeur ? '#f1f5f9' : 'transparent' }}>
-                    <span style={{ flex: 1 }}>{o.libelle}</span>
+                    <span style={{ flex: 1 }}>
+                      {o.article?.code && <span style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: '0.7rem', color: '#64748b', marginRight: 6 }}>{o.article.code}</span>}
+                      {o.libelle}
+                    </span>
                     {o.article && <span style={{ fontSize: '0.7rem', color: '#64748b' }}>{o.article.unite}</span>}
                     {note && <span style={{ fontSize: '0.68rem', color: '#b45309' }}>{note}</span>}
                   </div>

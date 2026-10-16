@@ -152,7 +152,7 @@ function ComptaComptesAchat({ dossierId }: { dossierId?: string }) {
                     c.compte, `${texteDefaut(c.defaut)} (par défaut)`,
                     { cible: { type: 'categorie', id: c.id }, libelle: `la catégorie ${c.nom}`, compte: c.compte, defaut: texteDefaut(c.defaut) },
                     `${c.nbArticles} article${c.nbArticles > 1 ? 's' : ''}${regles ? ` · ${regles} réglé${regles > 1 ? 's' : ''} à part` : ''}`)}
-                  {ouverte && arts.map((a) => ligne(`a${a.id}`, a.nom, a.compte, `comme la catégorie`,
+                  {ouverte && arts.map((a) => ligne(`a${a.id}`, a.code ? `${a.code} ${a.nom}` : a.nom, a.compte, `comme la catégorie`,
                     { cible: { type: 'article', id: a.id }, libelle: `l'article ${a.nom}`, compte: a.compte, defaut: `celui de la catégorie (${c.compte ? texteCompte(c.compte) : texteDefaut(c.defaut)})` },
                     a.unite ? `unité : ${a.unite}` : undefined, 24))}
                 </div>
@@ -162,7 +162,7 @@ function ComptaComptesAchat({ dossierId }: { dossierId?: string }) {
               <div>
                 {ligne('sans', <button type="button" onClick={() => basculer('sans')} style={{ ...lien, fontSize: '0.84rem', color: '#0f172a', padding: 0 }} aria-expanded={ouvertes.has('sans')}>{ouvertes.has('sans') ? '▼' : '▶'} Sans catégorie</button>,
                   null, `${sansCategorie} (par défaut)`, null, `${(articlesPar.get('sans') || []).length} article(s) : réglez-les un par un`)}
-                {ouvertes.has('sans') && (articlesPar.get('sans') || []).map((a) => ligne(`a${a.id}`, a.nom, a.compte, `${sansCategorie} (par défaut)`,
+                {ouvertes.has('sans') && (articlesPar.get('sans') || []).map((a) => ligne(`a${a.id}`, a.code ? `${a.code} ${a.nom}` : a.nom, a.compte, `${sansCategorie} (par défaut)`,
                   { cible: { type: 'article', id: a.id }, libelle: `l'article ${a.nom}`, compte: a.compte, defaut: sansCategorie }, undefined, 24))}
               </div>
             )}
