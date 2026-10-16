@@ -73,6 +73,16 @@ export default function ProductList() {
   const [addRef, setAddRef] = useState('');
   const [addIsSupplement, setAddIsSupplement] = useState(false);
   const [addCategorieId, setAddCategorieId] = useState('');
+  // D3 : la référence se propose d'après la catégorie choisie tant que le champ est vide (DES-0001…).
+  useEffect(() => {
+    if (!addCategorieId || addRef.trim()) return;
+    let vivant = true;
+    api.get('/api/produits/ref-proposee', { params: { categorieProduitId: addCategorieId } })
+      .then(({ data }) => { if (vivant) setAddRef((data as { code?: string }).code || ''); })
+      .catch(() => {});
+    return () => { vivant = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addCategorieId]);
   const [addIngLines, setAddIngLines] = useState<IngLine[]>([]);
   const [addSubLines, setAddSubLines] = useState<IngLine[]>([]);
   const [addSubSearch, setAddSubSearch] = useState('');

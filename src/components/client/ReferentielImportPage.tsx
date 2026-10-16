@@ -125,7 +125,7 @@ export default function ReferentielImportPage() {
           <div style={{ width: 36, height: 36, borderRadius: 10, background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', flexShrink: 0 }}>1️⃣</div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '1rem', color: '#0f172a' }}>Téléchargez le modèle</div>
-            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Fichier Excel avec les colonnes : {voc.Nom('article')} / Unité / Catégorie / Famille</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Fichier Excel avec les colonnes : {voc.Nom('article')} / Unité / Catégorie / Famille / Code</div>
           </div>
         </div>
         <button
@@ -136,7 +136,7 @@ export default function ReferentielImportPage() {
           {downloading ? '⏳ Téléchargement…' : '📄 Télécharger modele_referentiel.xlsx'}
         </button>
         <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '10px 0 0' }}>
-          Remplissez chaque ligne avec {voc.un('article')}. Les colonnes Unité, Catégorie et Famille créent automatiquement les données manquantes dans {voc.votre('referentiel')}.
+          Remplissez chaque ligne avec {voc.un('article')}. Les colonnes Unité, Catégorie et Famille créent automatiquement les données manquantes dans {voc.votre('referentiel')}. La colonne Code est facultative : vide, le code est proposé d'après la catégorie (FAR-0001, FAR-0002…) ; un code déjà pris met la ligne en erreur.
         </p>
       </div>
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import CodeArticle from '../common/CodeArticle';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import TransferConfirmModal, { type TransferDestGroup, type TransferLine } from './TransferConfirmModal';
 import ApproPreviewPanel, { type PreviewLine } from './ApproPreviewPanel';
@@ -54,6 +55,7 @@ const qtyColor = (q: number | null) => {
 interface LaboStockRow {
   ingredientId: number;
   nom: string;
+  code?: string | null; // D3
   unite: string;
   categorie: string;
   quantite: number | null;
@@ -829,6 +831,7 @@ export default function TransferPage() {
                               <tr style={{ borderBottom: '1px solid #f1f5f9', ...(qtyExceedsStock ? { borderLeft: '3px solid #ef4444', background: '#fff5f5' } : dateConflict ? { borderLeft: '3px solid #f59e0b' } : {}) }}>
                                 <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                                   <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>{r.nom}</div>
+                                  <CodeArticle code={r.code} />
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, justifyContent: 'center' }}>
                                     <span style={{ fontSize: '0.7rem', background: '#f5f3ff', color: '#7e22ce', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{r.unite}</span>
                                     <button className="btn btn-ghost btn-sm" onClick={() => toggleTransfers(r.ingredientId)}

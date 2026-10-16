@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import TypeApproFilter from '../common/TypeApproFilter';
+import CodeArticle from '../common/CodeArticle';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
@@ -561,7 +562,7 @@ export default function HistoriqueApproPage() {
                       <input type="checkbox" checked={isSelected} onChange={() => toggleSelect(r.id)} style={{ cursor: 'pointer', accentColor: '#1e40af' }} />
                     </td>
                     <td style={{ padding: '8px 10px' }}>
-                      <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientNom}</div>
+                      <div style={{ fontWeight: 700, fontSize: '0.86rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.ingredientCode && <CodeArticle code={r.ingredientCode} inline style={{ marginRight: 6, fontWeight: 400 }} />}{r.ingredientNom}</div>
                       <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.uniteNom} · {libelleCategoriePt(voc, r.categorieNom)}</div>
                     </td>
                     <td style={{ padding: '8px 10px' }}>

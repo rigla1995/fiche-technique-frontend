@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import api from '../../api/client';
+import CodeArticle from '../common/CodeArticle';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { fmtQuantite } from '../../utils/recettePU';
 import { useAuth } from '../../context/AuthContext';
@@ -1250,6 +1251,7 @@ function StockMatrix({ entries, categoryFilter, ingredientFilter, nameFilter, fo
                           <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
                             <td style={{ padding: '10px 14px', verticalAlign: 'middle', textAlign: 'center' }}>
                               <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text)' }}>{entry.nom}</div>
+                              <CodeArticle code={entry.code} />
                               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3, justifyContent: 'center' }}>
                                 <span style={{ fontSize: '0.7rem', background: '#eff6ff', color: '#1e40af', borderRadius: 4, padding: '1px 7px', fontWeight: 600 }}>{entry.unite}</span>
                                 <button onClick={() => toggleHistory(entry.ingredientId)}

@@ -22,7 +22,7 @@ interface Correspondance {
   uniteFacture: string | null; articleId: number | null; articleNom: string | null; uniteStock: string | null;
   horsStock: string | null; conversion: number; emplois: number; derniereFois: string; auteurNom?: string | null;
 }
-interface Article { id: number; name: string; unitName?: string }
+interface Article { id: number; name: string; unitName?: string; code?: string | null }
 
 const PAR_PAGE = 20;
 const ACCENT = '#c2410c';
@@ -72,7 +72,7 @@ export default function CorrespondancesPage() {
   const pagees = filtrees.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
   const unite = (id: number) => articles.find((a) => a.id === id)?.unitName ?? '';
   // Choix d'un autre article : champ de recherche, suggestions = les plus proches de la désignation.
-  const articlesConnus = useMemo(() => articles.map((a) => ({ id: a.id, nom: a.name, unite: a.unitName ?? '' })), [articles]);
+  const articlesConnus = useMemo(() => articles.map((a) => ({ id: a.id, nom: a.name, unite: a.unitName ?? '', code: a.code ?? null })), [articles]);
   const classer = useMemo(() => probablesPour({ correspondances: [], achats: [], articles: articlesConnus }), [articlesConnus]);
   const libellesChoix = {
     unArticle: voc.un('article'), aucunArticle: `${voc.Aucun('article')} ${voc.acc('article', 'trouvé', 'trouvée')}`,
