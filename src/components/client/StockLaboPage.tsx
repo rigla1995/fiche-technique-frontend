@@ -30,6 +30,7 @@ import LectureFacture, { PastilleLue, type ResultatLecture } from './factures/Le
 import VerifierFacture from './factures/VerifierFacture';
 import { phraseEnvoi } from './factures/compta';
 import { enregistrerAvecConfirmation, libererFichiers, messageErreur, type FichierChoisi } from './factures/pieces';
+import CodeArticle from '../common/CodeArticle';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { fmtQuantite } from '../../utils/recettePU';
 
@@ -68,6 +69,7 @@ interface LaboStockRow {
   type?: string;
   origine?: string | null;
   nom: string;
+  code?: string | null; // D3
   unite: string;
   categorie: string;
   activite?: string | null;
@@ -1027,6 +1029,7 @@ export default function StockLaboPage() {
                                         <div style={{ fontWeight: 700, fontSize: '0.88rem' }}>
                                           {r.isPT && <span style={{ fontSize: '0.68rem', background: '#7c3aed', color: '#fff', borderRadius: 4, padding: '1px 5px', marginRight: 5, fontWeight: 700 }}>{voc.Court('pt')}</span>}
                                           {r.nom}
+                                          {r.code && <CodeArticle code={r.code} inline style={{ marginLeft: 6, fontWeight: 400 }} />}
                                           {r.isPT && r.origine === 'labo' && r.type === 'vendable' && (
                                             <span title={`${voc.Nom('produit_valorise')} ${voc.acc('produit_valorise', 'composé', 'composée')} — ${voc.acc('produit_valorise', 'fabriqué', 'fabriquée')} ${voc.au('labo')} puis ${voc.acc('produit_valorise', 'transféré', 'transférée')} vers ${voc.le('activite', true)} (${voc.acc('produit_valorise', 'vendu', 'vendue')} en valorisé).`}
                                               style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#ecfeff', color: '#0e7490', border: '1px solid #a5f3fc', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap', marginLeft: 6 }}>

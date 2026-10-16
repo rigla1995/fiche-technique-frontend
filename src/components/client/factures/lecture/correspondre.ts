@@ -15,7 +15,7 @@ export const NATURES: { valeur: NatureHorsStock; libelle: string }[] = [
   { valeur: 'autre', libelle: 'Autre frais' },
 ];
 
-export interface ArticleConnu { id: number; nom: string; unite: string; categorie?: string | null; selectionne?: boolean }
+export interface ArticleConnu { id: number; nom: string; unite: string; categorie?: string | null; selectionne?: boolean; code?: string | null }
 export interface CorrespondanceConnue {
   id: number; cle: string; designation: string; reference: string | null; uniteFacture: string | null;
   articleId: number | null; horsStock: NatureHorsStock | null; conversion: number; emplois: number;
@@ -187,13 +187,14 @@ export function probablesPour(ctx: Contexte): (designation: string) => ArticleCo
  * chez ce fournisseur, puis les plus proches de la désignation), les noms où chaque mot tapé commence un mot d'abord.
  * Sans recherche : les `suggestions` premiers. → au plus `max` articles, et le nombre total trouvé.
  */
-export function chercherArticles<T extends { nom: string }>(liste: readonly T[], recherche: string, max = 30, suggestions = 8): { trouves: T[]; total: number } {
+// D3 : la recherche porte aussi sur le code de l'article (« far 12 » trouve FAR-0012).
+export function chercherArticles<T extends { nom: string; code?: string | null }>(liste: readonly T[], recherche: string, max = 30, suggestions = 8): { trouves: T[]; total: number } {
   const mots = normaliserDesignation(recherche).split(' ').filter(Boolean);
   if (!mots.length) return { trouves: liste.slice(0, suggestions), total: liste.length };
   const debutDeMot: T[] = [];
   const ailleurs: T[] = [];
   for (const a of liste) {
-    const nom = ` ${normaliserDesignation(a.nom)}`;
+    const nom = ` ${normaliserDesignation(a.nom)}${a.code ? ` ${normaliserDesignation(a.code)}` : ''}`;
     if (!mots.every((m) => nom.includes(m))) continue;
     (mots.every((m) => nom.includes(` ${m}`)) ? debutDeMot : ailleurs).push(a);
   }

@@ -21,8 +21,8 @@ const typeOptions = (voc: Vocab): { value: TypeProduitCategorie; label: string; 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
 
-interface CatRow { nom: string; }
-const emptyRow = (): CatRow => ({ nom: '' });
+interface CatRow { nom: string; prefixe: string; }
+const emptyRow = (): CatRow => ({ nom: '', prefixe: '' });
 
 export default function ProductCategoriesPage() {
   const { alerte } = useConfirm();
@@ -42,6 +42,7 @@ export default function ProductCategoriesPage() {
   const [editItem, setEditItem] = useState<CategorieProduit | null>(null);
   const [editNom, setEditNom] = useState('');
   const [editType, setEditType] = useState<TypeProduitCategorie>('vendable');
+  const [editPrefixe, setEditPrefixe] = useState(''); // D3
   const [saving, setSaving] = useState(false);
   const [editError, setEditError] = useState('');
 
@@ -59,30 +60,39 @@ export default function ProductCategoriesPage() {
 
   const openCreate = () => { setRows([emptyRow()]); setCreateType('vendable'); setCreateError(''); setShowCreate(true); };
   const closeCreate = () => setShowCreate(false);
-  const updateRow = (i: number, val: string) => setRows(prev => prev.map((r, idx) => idx === i ? { nom: val } : r));
+  const updateRow = (i: number, field: keyof CatRow, val: string) => setRows(prev => prev.map((r, idx) => idx === i ? { ...r, [field]: val } : r));
   const addRow = () => setRows(prev => [...prev, emptyRow()]);
   const removeRow = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i));
+  // D3 : préfixe proposé d'après le nom (unique avec les catégories d'articles), posé si la case est encore vide.
+  const proposerPrefixe = async (i: number, nom: string) => {
+    if (!nom.trim()) return;
+    try {
+      const { data } = await api.get('/api/categories-produit/prefixe-propose', { params: { nom: nom.trim() } });
+      const p = (data as { prefixe?: string | null }).prefixe || '';
+      setRows(prev => prev.map((r, idx) => (idx === i && !r.prefixe.trim() ? { ...r, prefixe: p } : r)));
+    } catch { /* le serveur en pose une à l'enregistrement */ }
+  };
 
   const handleCreate = async () => {
     const valid = rows.filter(r => r.nom.trim());
     if (!valid.length) { setCreateError('Au moins un nom requis'); return; }
     setCreating(true); setCreateError('');
     try {
-      await Promise.all(valid.map(r => api.post('/api/categories-produit', { nom: r.nom.trim(), typeProduit: createType })));
+      await Promise.all(valid.map(r => api.post('/api/categories-produit', { nom: r.nom.trim(), typeProduit: createType, prefixeCode: r.prefixe.trim() || undefined })));
       closeCreate(); load();
     } catch (e: unknown) {
       setCreateError(apiMsg(e, "Erreur lors de l'enregistrement"));
     } finally { setCreating(false); }
   };
 
-  const openEdit = (c: CategorieProduit) => { setEditItem(c); setEditNom(c.name); setEditType(c.typeProduit ?? 'vendable'); setEditError(''); setSaving(false); };
+  const openEdit = (c: CategorieProduit) => { setEditItem(c); setEditNom(c.name); setEditType(c.typeProduit ?? 'vendable'); setEditPrefixe(c.prefixeCode || ''); setEditError(''); setSaving(false); };
   const closeEdit = () => setEditItem(null);
 
   const handleSave = async () => {
     if (!editNom.trim()) { setEditError('Nom requis'); return; }
     setSaving(true);
     try {
-      await api.put(`/api/categories-produit/${editItem!.id}`, { nom: editNom.trim(), typeProduit: editType });
+      await api.put(`/api/categories-produit/${editItem!.id}`, { nom: editNom.trim(), typeProduit: editType, prefixeCode: editPrefixe.trim() || undefined });
       closeEdit(); load();
     } catch (e: unknown) {
       setEditError(apiMsg(e, "Erreur lors de l'enregistrement"));
@@ -156,6 +166,7 @@ export default function ProductCategoriesPage() {
             <thead>
               <tr>
                 <th>Nom</th>
+                <th>Préfixe</th>
                 <th>Type</th>
                 <th>{voc.Pl('produit')}</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -165,6 +176,7 @@ export default function ProductCategoriesPage() {
               {filtered.map(c => (
                 <tr key={c.id}>
                   <td style={{ fontWeight: 600, color: '#0f172a' }}>{c.name}</td>
+                  <td><span style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace', fontSize: '0.8rem', fontWeight: 700, color: '#4338ca' }}>{c.prefixeCode || ''}</span></td>
                   <td><span style={{ fontSize: '0.74rem', fontWeight: 700, background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{typeIcon(c.typeProduit)} {typeLabel(c.typeProduit)}</span></td>
                   <td><span style={{ fontSize: '0.82rem', color: COLOR, fontWeight: 600 }}>{c.produitsCount ?? 0} {voc.nom('produit', (c.produitsCount ?? 0) !== 1)}</span></td>
                   <td className="actions-cell" style={{ justifyContent: 'flex-end' }}>
@@ -203,9 +215,13 @@ export default function ProductCategoriesPage() {
                     autoFocus={i === 0}
                     placeholder={voc.ex('Ex: Boissons', 'Ex: Catégorie A')}
                     value={row.nom}
-                    onChange={e => updateRow(i, e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (i === rows.length - 1) addRow(); } }}
+                    onChange={e => updateRow(i, 'nom', e.target.value)}
+                    onBlur={e => proposerPrefixe(i, e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); proposerPrefixe(i, row.nom); if (i === rows.length - 1) addRow(); } }}
                   />
+                  <input className="input" style={{ width: 90, fontFamily: 'ui-monospace, Menlo, Consolas, monospace', textTransform: 'uppercase' }} placeholder="DES" maxLength={4}
+                    title={`Préfixe des références ${voc.de('produit', true)} de la catégorie (2 à 4 lettres ou chiffres) — proposé d'après le nom`}
+                    value={row.prefixe} onChange={e => updateRow(i, 'prefixe', e.target.value.toUpperCase())} />
                   <button onClick={() => removeRow(i)} disabled={rows.length === 1} style={{ width: 32, height: 32, border: 'none', borderRadius: 6, background: rows.length === 1 ? '#f1f5f9' : '#fee2e2', color: rows.length === 1 ? '#94a3b8' : '#dc2626', cursor: rows.length === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, flexShrink: 0 }}>×</button>
                 </div>
               ))}
@@ -240,6 +256,11 @@ export default function ProductCategoriesPage() {
               <div className="form-group">
                 <label>Nom *</label>
                 <input className="input" autoFocus value={editNom} placeholder={voc.ex('Ex: Boissons', 'Ex: Catégorie A')} onChange={e => setEditNom(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSave()} />
+              </div>
+              <div className="form-group">
+                <label>Préfixe des références</label>
+                <input className="input" value={editPrefixe} maxLength={4} placeholder="DES" onChange={e => setEditPrefixe(e.target.value.toUpperCase())} style={{ fontFamily: 'ui-monospace, Menlo, Consolas, monospace' }} />
+                <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)', marginTop: 4 }}>2 à 4 lettres ou chiffres, unique dans votre compte (catégories {voc.de('produit', true)} et {voc.de('article', true)}).</div>
               </div>
               <div className="modal-footer">
                 <button className="btn btn-ghost" onClick={closeEdit}>Annuler</button>
