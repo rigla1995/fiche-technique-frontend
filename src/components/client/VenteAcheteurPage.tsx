@@ -55,6 +55,9 @@ export default function VenteAcheteurPage() {
   const [dateLivraison, setDateLivraison] = useState(new Date().toISOString().slice(0, 10));
   const [remise, setRemise] = useState('0');
   const [timbre, setTimbre] = useState(true);
+  // Module Livreurs (L2) : livreur facultatif sur une vente expédiée (livreurs actifs du compte)
+  const [livreurs, setLivreurs] = useState<{ id: number; nom: string; actif: boolean }[]>([]);
+  const [livreurId, setLivreurId] = useState('');
 
   // Filtres du catalogue + pagination à 2 niveaux
   const [search, setSearch] = useState('');
@@ -81,6 +84,9 @@ export default function VenteAcheteurPage() {
       setOffres(actives);
     }).catch(() => setError('Erreur de chargement'))
       .finally(() => setLoading(false));
+    api.get('/api/livreurs')
+      .then(({ data }) => setLivreurs(((data.livreurs || []) as { id: number; nom: string; actif: boolean }[]).filter(l => l.actif)))
+      .catch(() => {});
   }, []);
 
   const getLigne = (k: string): Ligne => lignes[k] || { quantite: '', prix: '' };
@@ -133,6 +139,7 @@ export default function VenteAcheteurPage() {
         statut: statutVente,
         dateExpedition: dateCommande,
         dateLivraison: statutVente === 'livree' ? dateLivraison : undefined,
+        livreurId: statutVente === 'expediee' && livreurId ? Number(livreurId) : undefined,
         remisePct: totaux.remisePct,
         timbreFiscal: timbre,
         lignes: lignesActives.map(({ o, l }) => ({
@@ -310,6 +317,15 @@ export default function VenteAcheteurPage() {
                   <option value="livree">✅ Livrée</option>
                 </select>
               </div>
+              {statutVente === 'expediee' && livreurs.length > 0 && (
+                <div>
+                  <label style={lblStyle}>🏍️ Livreur (facultatif)</label>
+                  <select value={livreurId} onChange={e => setLivreurId(e.target.value)} style={{ ...inp, minWidth: 160 }}>
+                    <option value="">— Par vos soins —</option>
+                    {livreurs.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
+                  </select>
+                </div>
+              )}
               {statutVente === 'livree' && (
                 <div>
                   <label style={lblStyle}>Date de livraison *</label>
@@ -456,6 +472,11 @@ export default function VenteAcheteurPage() {
                 {statutVente === 'livree' && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
                     <span>📦 Livraison</span><strong style={{ color: '#1e293b' }}>{fmtDate(dateLivraison)}</strong>
+                  </div>
+                )}
+                {statutVente === 'expediee' && livreurId && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
+                    <span>🏍️ Livreur</span><strong style={{ color: '#065f46' }}>{livreurs.find(l => String(l.id) === livreurId)?.nom}</strong>
                   </div>
                 )}
                 {totaux.remisePct > 0 && (

@@ -38,6 +38,9 @@ interface Commande {
   factureTtc: number | null;
   motifAnnulation: string | null;
   createdByNom: string | null;
+  /** Module Livreurs (L2) : livreur à qui la commande expédiée est confiée. */
+  livreurId: number | null;
+  livreurNom: string | null;
 }
 
 interface LigneDetail {
@@ -50,9 +53,12 @@ interface CommandeDetail extends Commande {
   lignes: LigneDetail[];
   historique: HistoEtat[];
   facture: { id: number; numero: string; montantBrutTtc: number; montantHt: number; montantTva: number; timbreFiscal: boolean; montantTimbre: number; montantTtc: number } | null;
+  livraisonAffecteeAt: string | null;
+  livraisonAffecteeParNom: string | null;
 }
 
 interface AcheteurOpt { id: number; nom: string }
+interface LivreurOpt { id: number; nom: string; actif: boolean }
 
 const STATUT_BADGE: Record<Statut, { label: string; bg: string; color: string }> = {
   en_attente: { label: '⏳ En attente', bg: '#fef3c7', color: '#92400e' },
@@ -84,12 +90,14 @@ export default function CommandesAcheteursPage() {
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [acheteurs, setAcheteurs] = useState<AcheteurOpt[]>([]);
   const [labos, setLabos] = useState<LaboOpt[]>([]);
+  const [livreurs, setLivreurs] = useState<LivreurOpt[]>([]);
   const [loading, setLoading] = useState(true);
   const [statut, setStatut] = useState(searchParams.get('statut') || '');
   const [acheteurId, setAcheteurId] = useState('');
   const [source, setSource] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [livreurFiltre, setLivreurFiltre] = useState('');
   const [page, setPage] = useState(1);
   const [error, setError] = useState('');
   const [flash, setFlash] = useState('');
@@ -111,6 +119,15 @@ export default function CommandesAcheteursPage() {
   const [expErr, setExpErr] = useState('');
   const [expManquants, setExpManquants] = useState<Manquant[]>([]);
   const [expSaving, setExpSaving] = useState(false);
+  // Module Livreurs (L2) : livreur facultatif à l'expédition
+  const [expLivreurId, setExpLivreurId] = useState('');
+
+  // Module Livreurs (L2) : confier une commande expédiée à un livreur, en changer ou le retirer
+  const [affCmd, setAffCmd] = useState<Commande | null>(null);
+  const [affLivreurId, setAffLivreurId] = useState('');
+  const [affErr, setAffErr] = useState('');
+  const [affSaving, setAffSaving] = useState(false);
+  const livreursActifs = livreurs.filter(l => l.actif);
 
   // Livraison d'une commande expédiée
   const [livCmd, setLivCmd] = useState<Commande | null>(null);
@@ -130,6 +147,7 @@ export default function CommandesAcheteursPage() {
     if (source) qs.set('source', source);
     if (from) qs.set('from', from);
     if (to) qs.set('to', to);
+    if (livreurFiltre) qs.set('livreurId', livreurFiltre);
     api.get(`/api/acheteurs/commandes?${qs}`)
       .then(({ data }) => {
         setCommandes(data);
@@ -139,12 +157,14 @@ export default function CommandesAcheteursPage() {
       })
       .catch(() => setError('Erreur de chargement'))
       .finally(() => setLoading(false));
-  }, [statut, acheteurId, source, from, to]);
+  }, [statut, acheteurId, source, from, to, livreurFiltre]);
   useEffect(() => { load(); }, [load]);
   // Tout changement de filtre ramène à la première page
-  useEffect(() => { setPage(1); }, [statut, acheteurId, source, from, to]);
+  useEffect(() => { setPage(1); }, [statut, acheteurId, source, from, to, livreurFiltre]);
   useEffect(() => {
     api.get('/api/acheteurs').then(({ data }) => setAcheteurs(data.acheteurs)).catch(() => {});
+    // Livreurs du compte (module Livreurs) : sans livreur, les choix et le filtre n'apparaissent pas
+    api.get('/api/livreurs').then(({ data }) => setLivreurs((data.livreurs || []) as LivreurOpt[])).catch(() => {});
     api.get('/api/labo').then(({ data }) => {
       setLabos(data);
       if (data.length === 1) setExpLaboId(String(data[0].id));
@@ -167,7 +187,7 @@ export default function CommandesAcheteursPage() {
       const ExcelJS = (await import('exceljs')).default;
       const wb = new ExcelJS.Workbook();
       const ws = wb.addWorksheet(nomOnglet(`${voc.Pl('vente')} ${voc.Court('acheteur', true)}`));
-      const COLS = 14;
+      const COLS = 15;
       const periode = from || to ? `Période ${from ? fmtDate(from) : '…'} → ${to ? fmtDate(to) : '…'}` : 'Toutes dates';
       const headerIdx = await brandHeader(wb, ws, {
         titre: `${voc.Pl('vente')} & commandes ${voc.compl('acheteur', true)}`,
@@ -176,27 +196,28 @@ export default function CommandesAcheteursPage() {
         colCount: COLS,
       });
       headerRow(ws, headerIdx,
-        ['Date', voc.Nom('acheteur'), 'Entreprise', voc.Court('labo'), 'Source', 'Statut', 'Expédiée le', 'Livrée le', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation'],
-        { widths: [12, 22, 18, 15, 13, 12, 12, 12, 8, 10, 14, 13, 15, 24] });
+        ['Date', voc.Nom('acheteur'), 'Entreprise', voc.Court('labo'), 'Source', 'Statut', 'Expédiée le', 'Livrée le', 'Livreur', 'Lignes', 'Remise %', 'Brut TTC', 'Facture', 'Net TTC facturé', 'Motif annulation'],
+        { widths: [12, 22, 18, 15, 13, 12, 12, 12, 16, 8, 10, 14, 13, 15, 24] });
       commandes.forEach((c, i) => {
         const row = ws.addRow([
           fmtDate(c.dateCommande), c.acheteurNom, c.acheteurEntreprise || '', c.laboNom || '',
           c.source === 'portail' ? 'Portail' : `${voc.Nom('vente')} ${voc.acc('vente', 'direct', 'directe')}`,
           badgeOf(c.statut).label.replace(/^\S+\s/, ''),
           c.dateExpedition ? fmtDate(c.dateExpedition) : '', c.dateLivraison ? fmtDate(c.dateLivraison) : '',
+          c.livreurNom || '',
           c.nbLignes, c.remisePct, c.totalBrutTtc,
           c.factureNumero || '', c.factureTtc ?? '', c.motifAnnulation || '',
         ]);
         dataRowStyle(row, { index: i, selected: selectedIds.has(c.id), colCount: COLS });
-        row.getCell(11).numFmt = FMT_DT;
-        row.getCell(13).numFmt = FMT_DT;
+        row.getCell(12).numFmt = FMT_DT;
+        row.getCell(14).numFmt = FMT_DT;
       });
       const lastDataRow = ws.rowCount;
-      const totalRow = ws.addRow(['Total — CA TTC facturé (expédiées/livrées)', '', '', '', '', '', '', '', '', '', '', '', totalPeriode, '']);
-      ws.mergeCells(totalRow.number, 1, totalRow.number, 12);
+      const totalRow = ws.addRow(['Total — CA TTC facturé (expédiées/livrées)', '', '', '', '', '', '', '', '', '', '', '', '', totalPeriode, '']);
+      ws.mergeCells(totalRow.number, 1, totalRow.number, 13);
       totalRowStyle(totalRow, { colCount: COLS });
       totalRow.getCell(1).alignment = { horizontal: 'right', vertical: 'middle' };
-      totalRow.getCell(13).numFmt = FMT_DT;
+      totalRow.getCell(14).numFmt = FMT_DT;
       brandFooter(ws, COLS);
       finalize(ws, { headerRowIdx: headerIdx, colCount: COLS, lastDataRow });
       const buf = await wb.xlsx.writeBuffer();
@@ -215,7 +236,7 @@ export default function CommandesAcheteursPage() {
   const openExpedier = async (c: Commande) => {
     setExpCmd(c); setExpErr(''); setExpManquants([]); setExpTimbre(true);
     setExpRemise(String(c.remisePct || 0)); setExpDate(today());
-    setExpStatut('expediee'); setExpDateLiv(today());
+    setExpStatut('expediee'); setExpDateLiv(today()); setExpLivreurId('');
     // Labo réinitialisé à chaque ouverture (pas d'héritage silencieux de l'expédition précédente)
     setExpLaboId(labos.length === 1 ? String(labos[0].id) : '');
     setExpLignes([]); setExpLignesLoading(true);
@@ -249,9 +270,11 @@ export default function CommandesAcheteursPage() {
         // État final du traitement : livrée directement = les deux jalons sont actés
         statut: expStatut,
         dateLivraison: expStatut === 'livree' ? expDateLiv : undefined,
+        // Module Livreurs (L2) : livreur facultatif, seulement sur une expédition
+        livreurId: expStatut === 'expediee' && expLivreurId ? Number(expLivreurId) : undefined,
       });
       setExpCmd(null);
-      setFlash(`Commande ${expStatut === 'livree' ? 'livrée' : 'expédiée'} — facture ${data.facture.numero} (${fmt(data.facture.montantTtc)})`);
+      setFlash(`Commande ${expStatut === 'livree' ? 'livrée' : 'expédiée'} — facture ${data.facture.numero} (${fmt(data.facture.montantTtc)})${data.commande?.livreurNom ? ` · confiée à ${data.commande.livreurNom}` : ''}`);
       load();
     } catch (e: unknown) {
       const resp = (e as { response?: { status?: number; data?: { message?: string; manquants?: Manquant[] } } })?.response;
@@ -278,6 +301,22 @@ export default function CommandesAcheteursPage() {
       setLivErr((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de la livraison');
     } finally {
       setLivSaving(false);
+    }
+  };
+
+  // Module Livreurs (L2) : POST /commandes/:id/livreur — confier, changer, ou retirer ({ livreurId: null })
+  const affecter = async () => {
+    if (!affCmd) return;
+    setAffSaving(true); setAffErr('');
+    try {
+      const { data } = await api.post(`/api/acheteurs/commandes/${affCmd.id}/livreur`, { livreurId: affLivreurId ? Number(affLivreurId) : null });
+      setAffCmd(null);
+      setFlash(data.commande?.livreurNom ? `Commande confiée à ${data.commande.livreurNom}` : 'Livreur retiré de la commande');
+      load();
+    } catch (e: unknown) {
+      setAffErr((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de l\'affectation');
+    } finally {
+      setAffSaving(false);
     }
   };
 
@@ -365,7 +404,7 @@ export default function CommandesAcheteursPage() {
       {/* Bloc filtres (composant partagé) — période en premier, puis les autres filtres */}
       <HistoryFilterBar accent={C} accentDark={CD}
         subtitle={`${voc.n('vente', commandes.length)}${selectedIds.size > 0 ? ` · ${selectedIds.size} ${voc.acc('vente', 'sélectionné', 'sélectionnée', selectedIds.size)} (surbrillance export)` : ''}`}
-        onReset={(statut || acheteurId || source || from || to) ? () => { setStatut(''); setAcheteurId(''); setSource(''); setFrom(''); setTo(''); } : undefined}
+        onReset={(statut || acheteurId || source || from || to || livreurFiltre) ? () => { setStatut(''); setAcheteurId(''); setSource(''); setFrom(''); setTo(''); setLivreurFiltre(''); } : undefined}
         onExportExcel={exportExcel} excelDisabled={exporting || commandes.length === 0} excelLabel="Exporter"
         actions={
           <Link to="/client/acheteurs/vente" style={{ height: 36, display: 'inline-flex', alignItems: 'center', gap: 6, padding: '0 16px', borderRadius: 8, border: 'none', background: `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', fontWeight: 700, fontSize: '0.82rem', textDecoration: 'none', boxShadow: '0 4px 14px rgba(109,40,217,0.3)' }}>
@@ -401,6 +440,15 @@ export default function CommandesAcheteursPage() {
             <option value="portail">{`🌐 Portail ${voc.court('acheteur')}`}</option>
           </FilterSelect>
         </FilterField>
+        {livreurs.length > 0 && (
+          <FilterField label="🏍️ Livreur">
+            <FilterSelect value={livreurFiltre} onChange={e => setLivreurFiltre(e.target.value)}>
+              <option value="">— Tous —</option>
+              <option value="sans">Sans livreur</option>
+              {livreurs.map(l => <option key={l.id} value={l.id}>{l.nom}{l.actif ? '' : ' (désactivé)'}</option>)}
+            </FilterSelect>
+          </FilterField>
+        )}
       </HistoryFilterBar>
 
       {/* Liste */}
@@ -464,6 +512,9 @@ export default function CommandesAcheteursPage() {
                         {c.statut === 'livree' && c.dateLivraison && (
                           <div style={{ fontSize: '0.68rem', color: '#166534', fontWeight: 600, marginTop: 3 }}>le {fmtDate(c.dateLivraison)}</div>
                         )}
+                        {(c.statut === 'expediee' || c.statut === 'livree') && c.livreurNom && (
+                          <div title={c.statut === 'expediee' ? 'En cours de livraison' : 'Livrée par ce livreur'} style={{ fontSize: '0.68rem', color: '#065f46', fontWeight: 700, marginTop: 3, whiteSpace: 'nowrap' }}>🏍️ {c.livreurNom}</div>
+                        )}
                       </td>
                       <td style={{ padding: '9px 14px' }}>
                         {/* 4 actions sur 2 lignes : Détail / Traiter · Facture / Annuler */}
@@ -492,6 +543,16 @@ export default function CommandesAcheteursPage() {
                             style={miniBtn('#fef2f2', '#fecaca', '#b91c1c', c.statut === 'annulee' || busyId === c.id)}>
                             {busyId === c.id ? '…' : '↩️ Annuler'}
                           </button>
+                          {livreurs.length > 0 && (
+                            <button onClick={() => { setAffCmd(c); setAffLivreurId(c.livreurId ? String(c.livreurId) : ''); setAffErr(''); }}
+                              disabled={c.statut !== 'expediee'}
+                              title={c.statut === 'expediee'
+                                ? (c.livreurNom ? `Changer de livreur ou le retirer (${c.livreurNom})` : 'Confier la livraison à un livreur')
+                                : 'Seule une commande expédiée se confie à un livreur'}
+                              style={{ ...miniBtn('#ecfdf5', '#6ee7b7', '#065f46', c.statut !== 'expediee'), gridColumn: '1 / -1' }}>
+                              🏍️ {c.statut === 'expediee' && c.livreurNom ? `Livreur : ${c.livreurNom}` : 'Livreur'}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -590,6 +651,15 @@ export default function CommandesAcheteursPage() {
                   <option value="livree">✅ Livrée directement</option>
                 </select>
               </div>
+              {expStatut === 'expediee' && livreursActifs.length > 0 && (
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>🏍️ Livreur (facultatif)</label>
+                  <select value={expLivreurId} onChange={e => setExpLivreurId(e.target.value)} style={{ ...inp, width: '100%', boxSizing: 'border-box' }}>
+                    <option value="">— Livraison par vos soins —</option>
+                    {livreursActifs.map(l => <option key={l.id} value={l.id}>{l.nom}</option>)}
+                  </select>
+                </div>
+              )}
               {expStatut === 'livree' && (
                 <div>
                   <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 5 }}>Date de livraison</label>
@@ -658,6 +728,37 @@ export default function CommandesAcheteursPage() {
         </div>
       )}
 
+      {/* Modal livreur (commande expédiée) — module Livreurs L2 : confier, changer, retirer */}
+      {affCmd && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 440, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#065f46' }}>🏍️ Confier la livraison</h2>
+              <button onClick={() => setAffCmd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+            </div>
+            <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 14 }}>
+              {affCmd.acheteurNom} · expédiée le {fmtDate(affCmd.dateExpedition)}{affCmd.factureNumero ? ` · ${affCmd.factureNumero}` : ''}.
+              Le livreur voit la commande sur son téléphone dès l'enregistrement ; {voc.le('acheteur')} la voit « en cours de livraison ».
+            </div>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#065f46', marginBottom: 5 }}>Livreur</label>
+            <select value={affLivreurId} onChange={e => setAffLivreurId(e.target.value)} style={{ ...inp, width: '100%', boxSizing: 'border-box', marginBottom: 14 }}>
+              <option value="">— Aucun livreur (livraison par vos soins) —</option>
+              {livreurs.filter(l => l.actif || String(l.id) === affLivreurId).map(l => (
+                <option key={l.id} value={l.id} disabled={!l.actif}>{l.nom}{l.actif ? '' : ' (désactivé)'}</option>
+              ))}
+            </select>
+            {affErr && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>⚠️ {affErr}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setAffCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
+              <button onClick={affecter} disabled={affSaving || affLivreurId === (affCmd.livreurId ? String(affCmd.livreurId) : '')}
+                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: affLivreurId === (affCmd.livreurId ? String(affCmd.livreurId) : '') ? '#cbd5e1' : 'linear-gradient(135deg,#065f46,#059669)', color: '#fff', cursor: affSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                {affSaving ? '…' : affLivreurId ? '🏍️ Confier' : 'Retirer le livreur'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal détail */}
       {detail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -672,6 +773,7 @@ export default function CommandesAcheteursPage() {
               {detail.laboNom ? `${voc.Court('labo')} : ${detail.laboNom} · ` : ''}{badgeOf(detail.statut).label}
               {detail.dateExpedition ? ` · Expédiée le ${fmtDate(detail.dateExpedition)}` : ''}
               {detail.dateLivraison ? ` · Livrée le ${fmtDate(detail.dateLivraison)}` : ''}
+              {detail.livreurNom ? ` · 🏍️ ${detail.livreurNom}${detail.livraisonAffecteeAt ? ` (confiée le ${new Date(detail.livraisonAffecteeAt).toLocaleDateString('fr-FR')}${detail.livraisonAffecteeParNom ? ` par ${detail.livraisonAffecteeParNom}` : ''})` : ''}` : ''}
               {detail.motifAnnulation ? ` · Motif : ${detail.motifAnnulation}` : ''}
               {detail.notes ? ` · ${detail.notes}` : ''}
             </div>
