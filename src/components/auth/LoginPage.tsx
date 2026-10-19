@@ -52,6 +52,9 @@ export default function LoginPage() {
         navigate('/admin', { replace: true });
       } else if (loggedUser.role === 'acheteur') {
         navigate('/portail', { replace: true });
+      } else if (loggedUser.role === 'livreur') {
+        // Module Livreurs (L1) : espace téléphone ; mot de passe initial à remplacer d'abord.
+        navigate(loggedUser.doitChangerMdp ? '/livreur/mot-de-passe' : '/livreur', { replace: true });
       } else {
         navigate('/', { replace: true });
       }
@@ -59,7 +62,7 @@ export default function LoginPage() {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(msg === 'invite_pending'
         ? "Votre compte n'est pas encore activé. Consultez votre email d'invitation."
-        : 'Identifiants incorrects. Vérifiez votre email et mot de passe.');
+        : 'Identifiants incorrects. Vérifiez votre email (ou votre téléphone) et votre mot de passe.');
     } finally {
       setLoading(false);
     }
@@ -131,22 +134,24 @@ export default function LoginPage() {
             )}
 
             <div style={{ marginBottom: 16 }}>
-              <label htmlFor="email" className="auth-label">Adresse email</label>
+              <label htmlFor="email" className="auth-label">Adresse email ou téléphone</label>
               <div style={{ position: 'relative' }}>
                 <span className="auth-champ-icone">
                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 5L2 7"/>
                   </svg>
                 </span>
+                {/* Module Livreurs (L1) : un livreur se connecte par son numéro de téléphone — champ texte, pas « email ». */}
                 <input
                   id="email"
-                  type="email"
+                  type="text"
+                  inputMode="email"
                   className="auth-champ avec-icone"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  autoComplete="email"
-                  placeholder="votre@email.com"
+                  autoComplete="username"
+                  placeholder="votre@email.com ou 22 345 678"
                 />
               </div>
             </div>

@@ -593,6 +593,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <li><NavLink to="/client/acheteurs/tarifs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">💲</span><span className="link-label">Tarifs {voc.Court('acheteur', true)}</span></NavLink></li>
                           <li><NavLink to="/client/acheteurs/vente" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🧾</span><span className="link-label">{voc.Nouveau('vente', false, 'Nom')}</span></NavLink></li>
                           <li><NavLink to="/client/acheteurs/commandes" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">📦</span><span className="link-label">{voc.Pl('vente')} {voc.Court('acheteur', true)}</span></NavLink></li>
+                          {/* Module Livreurs (L1) : comptes livreurs du compte, client et gérant ayant l'accès acheteurs */}
+                          <li><NavLink to="/client/livreurs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} onClick={onClose}><span className="link-icon">🏍️</span><span className="link-label">Livreurs</span></NavLink></li>
                         </>
                       )}
                     </>
