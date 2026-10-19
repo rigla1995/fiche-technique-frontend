@@ -25,6 +25,9 @@ interface Commande {
   factureId: number | null;
   factureNumero: string | null;
   factureTtc: number | null;
+  /** Module Livreurs (L2) : commande expédiée confiée à un livreur. */
+  enLivraison: boolean;
+  livreurNom: string | null;
 }
 interface Detail extends Commande {
   notes: string | null;
@@ -122,6 +125,9 @@ export default function PortailCommandesPage() {
                         {c.statut === 'expediee' && c.dateExpedition && (
                           <div style={{ fontSize: '0.7rem', color: '#1d4ed8', marginTop: 3 }}>le {fmtDate(c.dateExpedition)}</div>
                         )}
+                        {c.statut === 'expediee' && c.enLivraison && (
+                          <div style={{ fontSize: '0.7rem', color: '#065f46', fontWeight: 700, marginTop: 3, whiteSpace: 'nowrap' }}>🏍️ En cours de livraison{c.livreurNom ? ` · ${c.livreurNom}` : ''}</div>
+                        )}
                         {c.statut === 'livree' && c.dateLivraison && (
                           <div style={{ fontSize: '0.7rem', color: '#166534', marginTop: 3 }}>le {fmtDate(c.dateLivraison)}</div>
                         )}
@@ -162,6 +168,7 @@ export default function PortailCommandesPage() {
             <div style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: BADGE[detail.statut].bg, color: BADGE[detail.statut].color }}>{BADGE[detail.statut].label}</span>
               {detail.dateExpedition && <span>Expédiée le {fmtDate(detail.dateExpedition)}</span>}
+              {detail.enLivraison && <span style={{ color: '#065f46', fontWeight: 700 }}>· 🏍️ En cours de livraison{detail.livreurNom ? ` (${detail.livreurNom})` : ''}</span>}
               {detail.dateLivraison && <span>· Livrée le {fmtDate(detail.dateLivraison)}</span>}
               {detail.notes && <span>· {detail.notes}</span>}
             </div>

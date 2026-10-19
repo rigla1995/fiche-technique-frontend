@@ -93,6 +93,7 @@ const PrestatairesManagement = lazy(() => import('./components/admin/Prestataire
 const LivreursPage = lazy(() => import('./components/client/LivreursPage'));
 const LivreurAccueilPage = lazy(() => import('./components/livreur/LivreurAccueilPage'));
 const LivreurMotDePassePage = lazy(() => import('./components/livreur/LivreurMotDePassePage'));
+const LivreurCommandePage = lazy(() => import('./components/livreur/LivreurCommandePage'));
 
 const PageLoader = () => <div className="page-loading"><div className="spinner" /></div>;
 
@@ -190,6 +191,7 @@ export default function App() {
           {/* Espace livreur (plein écran, téléphone, rôle livreur — module Livreurs L1) */}
           <Route path="/livreur" element={<RequireLivreur><LivreurAccueilPage /></RequireLivreur>} />
           <Route path="/livreur/mot-de-passe" element={<RequireLivreur laisserMotDePasse><LivreurMotDePassePage /></RequireLivreur>} />
+          <Route path="/livreur/commandes/:id" element={<RequireLivreur><LivreurCommandePage /></RequireLivreur>} />
 
           {/* Super Admin routes */}
           <Route element={<Layout requireRole="super_admin" />}>
