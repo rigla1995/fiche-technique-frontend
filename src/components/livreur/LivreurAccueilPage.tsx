@@ -20,11 +20,12 @@ export default function LivreurAccueilPage() {
   }, []);
 
   const aLivrer = (livraisons || []).filter((l) => l.statut === 'expediee');
-  const livrees = (livraisons || []).filter((l) => l.statut === 'livree');
+  // Mémoire : livrées, et non livrées en attente de la décision du responsable (L3)
+  const livrees = (livraisons || []).filter((l) => l.statut === 'livree' || l.statut === 'livraison_echouee');
 
   const carte = (l: Livraison, faite: boolean) => (
     <Link key={l.id} to={`/livreur/commandes/${l.id}`}
-      style={{ display: 'block', background: '#fff', border: `1px solid ${faite ? '#e5e7eb' : '#a7f3d0'}`, borderLeft: `5px solid ${faite ? '#9ca3af' : '#059669'}`, borderRadius: 14, padding: '12px 14px', textDecoration: 'none', color: 'inherit', opacity: faite ? 0.8 : 1 }}>
+      style={{ display: 'block', background: '#fff', border: `1px solid ${faite ? '#e5e7eb' : '#a7f3d0'}`, borderLeft: `5px solid ${l.statut === 'livraison_echouee' ? '#ea580c' : faite ? '#9ca3af' : '#059669'}`, borderRadius: 14, padding: '12px 14px', textDecoration: 'none', color: 'inherit', opacity: faite ? 0.8 : 1 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
         <div style={{ minWidth: 0 }}>
           <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '1rem' }}>{l.acheteurNom}</div>
@@ -40,7 +41,7 @@ export default function LivreurAccueilPage() {
         {l.acheteurTelephone && <div>📞 {l.acheteurTelephone}</div>}
       </div>
       <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: '#6b7280' }}>
-        <span>{faite ? `✅ Livrée le ${fmtDate(l.dateLivraison)}` : `🚚 Expédiée le ${fmtDate(l.dateExpedition)}`}{l.depart ? ` · départ ${l.depart}` : ''}</span>
+        <span>{l.statut === 'livraison_echouee' ? '⚠️ Non livrée — en attente de votre responsable' : faite ? `✅ Livrée le ${fmtDate(l.dateLivraison)}` : `🚚 Expédiée le ${fmtDate(l.dateExpedition)}`}{l.depart && !faite ? ` · départ ${l.depart}` : ''}</span>
         <span style={{ color: CD, fontWeight: 700 }}>Voir ›</span>
       </div>
     </Link>
@@ -81,7 +82,7 @@ export default function LivreurAccueilPage() {
 
       {livrees.length > 0 && (
         <>
-          <h2 style={{ fontSize: '0.8rem', fontWeight: 800, color: '#6b7280', margin: '22px 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Livrées récemment</h2>
+          <h2 style={{ fontSize: '0.8rem', fontWeight: 800, color: '#6b7280', margin: '22px 0 10px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Terminées récemment</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>{livrees.map((l) => carte(l, true))}</div>
         </>
       )}

@@ -24,6 +24,8 @@ const STEP_STYLE: Record<string, { label: string; icon: string; color: string; b
   expediee: { label: 'Expédiée', icon: '🚚', color: '#1d4ed8', bg: '#dbeafe' },
   livree: { label: 'Livrée', icon: '✓', color: '#166534', bg: '#dcfce7' },
   annulee: { label: 'Annulée', icon: '✕', color: '#991b1b', bg: '#fee2e2' },
+  // Module Livreurs (L3) : le livreur n'a pas pu livrer — l'étape remplace « Livrée » tant que le gérant n'a pas tranché
+  livraison_echouee: { label: 'Non livrée', icon: '⚠', color: '#9a3412', bg: '#ffedd5' },
 };
 
 const fmtDate = (d: string | null | undefined) => {
@@ -41,19 +43,20 @@ export default function CommandeStepper({ statut, historique, dateCommande, show
   // « Expédiée » sans trace en_attente : on se base sur le statut ET la trace)
   const idxOf = (s: string) => FLOW.indexOf(s as (typeof FLOW)[number]);
   let reached = idxOf(statut);
-  if (statut === 'annulee') {
+  // Annulée / non livrée : l'étape atteinte est la plus avancée du flux nominal dans la trace
+  const horsFlux = statut === 'annulee' || statut === 'livraison_echouee';
+  if (horsFlux) {
     reached = 0;
     for (const h of historique || []) reached = Math.max(reached, idxOf(h.statut));
   }
   if (reached < 0) reached = 0;
 
-  // Étapes affichées : le flux jusqu'à l'état atteint, puis « Annulée » à la
-  // place de l'étape suivante si la commande a été annulée ; sinon le flux
-  // complet avec les étapes restantes en attente.
-  const steps: { statut: string; done: boolean; current: boolean }[] = statut === 'annulee'
+  // Étapes affichées : le flux jusqu'à l'état atteint, puis « Annulée » (ou « Non livrée ») à la
+  // place de l'étape suivante ; sinon le flux complet avec les étapes restantes en attente.
+  const steps: { statut: string; done: boolean; current: boolean }[] = horsFlux
     ? [
       ...FLOW.slice(0, reached + 1).map((s) => ({ statut: s as string, done: true, current: false })),
-      { statut: 'annulee', done: true, current: true },
+      { statut, done: true, current: true },
     ]
     : FLOW.map((s, i) => ({ statut: s as string, done: i <= reached, current: i === reached }));
 
@@ -74,7 +77,7 @@ export default function CommandeStepper({ statut, historique, dateCommande, show
             )}
             <span style={{
               width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: step.statut === 'livree' || step.statut === 'annulee' ? '1rem' : '0.95rem', fontWeight: 800,
+              fontSize: step.statut === 'livree' || step.statut === 'annulee' || step.statut === 'livraison_echouee' ? '1rem' : '0.95rem', fontWeight: 800,
               background: step.done ? st.bg : '#f8fafc',
               border: step.done ? `2px solid ${st.color}` : '2px dashed #e2e8f0',
               color: step.done ? st.color : '#cbd5e1',
@@ -93,7 +96,7 @@ export default function CommandeStepper({ statut, historique, dateCommande, show
             {showAuteur && step.done && h?.parNom && (
               <span style={{ fontSize: '0.64rem', color: '#94a3b8', marginTop: 1, textAlign: 'center' }}>par {h.parNom}</span>
             )}
-            {step.statut === 'annulee' && h?.motif && (
+            {(step.statut === 'annulee' || step.statut === 'livraison_echouee') && h?.motif && (
               <span style={{ fontSize: '0.68rem', color: '#b91c1c', fontWeight: 600, marginTop: 3, textAlign: 'center', maxWidth: 150 }}>{h.motif}</span>
             )}
           </div>

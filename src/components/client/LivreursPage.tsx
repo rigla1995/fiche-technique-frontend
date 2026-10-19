@@ -32,10 +32,24 @@ export default function LivreursPage() {
   const [copie, setCopie] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
 
+  // L3 : option du compte « les livreurs encaissent à la livraison »
+  const [encaissement, setEncaissement] = useState(false);
+  const [encaissementBusy, setEncaissementBusy] = useState(false);
   const charger = () => api.get('/api/livreurs').then(({ data }) => {
     setLivreurs((data as { livreurs: Livreur[] }).livreurs || []);
     setMax((data as { max: number | null }).max ?? null);
+    setEncaissement((data as { encaissement?: boolean }).encaissement === true);
   });
+  const basculerEncaissement = async () => {
+    if (encaissementBusy) return;
+    setEncaissementBusy(true);
+    try {
+      const { data } = await api.put('/api/livreurs/options', { encaissement: !encaissement });
+      setEncaissement((data as { encaissement: boolean }).encaissement === true);
+    } catch (e: unknown) {
+      alerte({ title: 'Modification impossible', message: (e as { response?: { data?: { message?: string } } })?.response?.data?.message || 'Erreur', tone: 'danger' });
+    } finally { setEncaissementBusy(false); }
+  };
   useEffect(() => { charger().finally(() => setLoading(false)); }, []);
 
   const atLimit = max !== null && livreurs.length >= max;
@@ -180,6 +194,23 @@ export default function LivreursPage() {
           )}
           <GuideButton section="livreurs" />
         </div>
+      </div>
+
+      {/* L3 : encaissement par les livreurs (montant perçu + mode de paiement demandés à la livraison) */}
+      <div style={{ background: '#fff', border: `1px solid ${encaissement ? '#6ee7b7' : '#e5e7eb'}`, borderRadius: 14, padding: '12px 16px', marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap' }}>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontWeight: 800, color: '#0f172a', fontSize: '0.92rem' }}>💰 Les livreurs encaissent à la livraison</div>
+          <div style={{ fontSize: '0.8rem', color: '#6b7280', marginTop: 2 }}>
+            {encaissement
+              ? 'À chaque livraison validée, le livreur saisit le montant perçu et le mode de paiement ; vous les retrouvez dans le détail de la commande.'
+              : 'Désactivé : le livreur n\'envoie que la facture signée ou cachetée par le client.'}
+          </div>
+        </div>
+        <button onClick={basculerEncaissement} disabled={encaissementBusy} role="switch" aria-checked={encaissement}
+          title={encaissement ? 'Désactiver l\'encaissement par les livreurs' : 'Activer l\'encaissement par les livreurs'}
+          style={{ width: 54, height: 30, borderRadius: 15, border: 'none', cursor: encaissementBusy ? 'default' : 'pointer', position: 'relative', background: encaissement ? '#059669' : '#cbd5e1', flexShrink: 0, transition: 'background .2s' }}>
+          <span style={{ position: 'absolute', top: 3, left: encaissement ? 27 : 3, width: 24, height: 24, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)', transition: 'left .2s' }} />
+        </button>
       </div>
 
       {/* Mot de passe initial : affiché UNE fois */}
