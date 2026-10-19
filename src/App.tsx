@@ -89,6 +89,10 @@ const CommandesAcheteursPage = lazy(() => import('./components/client/CommandesA
 const PortailAcheteurPage = lazy(() => import('./components/portail/PortailAcheteurPage'));
 const PortailCommandesPage = lazy(() => import('./components/portail/PortailCommandesPage'));
 const PrestatairesManagement = lazy(() => import('./components/admin/PrestatairesManagement'));
+// Module Livreurs (L1) : gestion côté client / gérant, espace du livreur sur téléphone.
+const LivreursPage = lazy(() => import('./components/client/LivreursPage'));
+const LivreurAccueilPage = lazy(() => import('./components/livreur/LivreurAccueilPage'));
+const LivreurMotDePassePage = lazy(() => import('./components/livreur/LivreurMotDePassePage'));
 
 const PageLoader = () => <div className="page-loading"><div className="spinner" /></div>;
 
@@ -98,6 +102,17 @@ function RequireAcheteur({ children }: { children: React.ReactElement }) {
   if (isLoading) return <PageLoader />;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'acheteur') return <Navigate to="/" replace />;
+  return children;
+}
+
+// Espace livreur (module Livreurs, L1) : plein écran, réservé au rôle livreur ; un mot de passe initial encore en
+// place renvoie d'abord vers son remplacement.
+function RequireLivreur({ children, laisserMotDePasse = false }: { children: React.ReactElement; laisserMotDePasse?: boolean }) {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <PageLoader />;
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.role !== 'livreur') return <Navigate to="/" replace />;
+  if (user.doitChangerMdp && !laisserMotDePasse) return <Navigate to="/livreur/mot-de-passe" replace />;
   return children;
 }
 
@@ -134,6 +149,8 @@ function RootRedirect() {
   if (user.role === 'super_admin' || user.role === 'boss') return <Navigate to="/admin" replace />;
   // Acheteur : son portail dédié
   if (user.role === 'acheteur') return <Navigate to="/portail" replace />;
+  // Livreur (L1) : son espace téléphone
+  if (user.role === 'livreur') return <Navigate to="/livreur" replace />;
   // Gérant : pas de tableau de bord — direction le Référentiel
   if (user.role === 'gerant') return <Navigate to={GERANT_HOME} replace />;
   // Onboarding steps
@@ -169,6 +186,10 @@ export default function App() {
           {/* Portail acheteur (plein écran, rôle acheteur) */}
           <Route path="/portail" element={<RequireAcheteur><PortailAcheteurPage /></RequireAcheteur>} />
           <Route path="/portail/commandes" element={<RequireAcheteur><PortailCommandesPage /></RequireAcheteur>} />
+
+          {/* Espace livreur (plein écran, téléphone, rôle livreur — module Livreurs L1) */}
+          <Route path="/livreur" element={<RequireLivreur><LivreurAccueilPage /></RequireLivreur>} />
+          <Route path="/livreur/mot-de-passe" element={<RequireLivreur laisserMotDePasse><LivreurMotDePassePage /></RequireLivreur>} />
 
           {/* Super Admin routes */}
           <Route element={<Layout requireRole="super_admin" />}>
@@ -265,6 +286,7 @@ export default function App() {
               <Route path="/client/acheteurs/tarifs" element={<TarifsAcheteursPage />} />
               <Route path="/client/acheteurs/vente" element={<VenteAcheteurPage />} />
               <Route path="/client/acheteurs/commandes" element={<CommandesAcheteursPage />} />
+              <Route path="/client/livreurs" element={<LivreursPage />} />
             </Route>
           </Route>
 

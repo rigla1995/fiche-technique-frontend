@@ -2,9 +2,14 @@ export interface User {
   id: number;
   name: string;
   email: string;
-  /** 'comptable' (LabFlow Compta, étape S2b) : n'utilise que compta.labflow-tn.com. */
-  role: 'super_admin' | 'boss' | 'client' | 'gerant' | 'acheteur' | 'comptable';
+  /** 'comptable' (LabFlow Compta, étape S2b) : n'utilise que compta.labflow-tn.com.
+   *  'livreur' (module Livreurs, L1) : espace /livreur sur téléphone, rattaché à un compte client. */
+  role: 'super_admin' | 'boss' | 'client' | 'gerant' | 'acheteur' | 'comptable' | 'livreur';
   onboardingStep?: number;
+  /** Livreur : mot de passe initial remis par le client, à remplacer avant tout accès à son espace. */
+  doitChangerMdp?: boolean;
+  /** Livreur : sa fiche (téléphone de connexion, entreprise servie). */
+  livreur?: { id: number; telephone: string; entreprise: string | null } | null;
   phone?: string;
   entrepriseName?: string | null;
   modeCompte?: 'actif' | 'read_only' | 'desactive' | 'archive' | 'bloque';
@@ -225,6 +230,23 @@ export interface Gerant {
   actif: boolean;
   createdAt: string;
   activatedAt?: string | null;
+}
+
+/** Module Livreurs (L1) : compte livreur du compte client (GET /api/livreurs). */
+export interface Livreur {
+  id: number;
+  userId: number;
+  nom: string;
+  telephone: string;
+  email: string | null;
+  actif: boolean;
+  activatedAt: string | null;
+  /** Invitation par e-mail pas encore acceptée. */
+  inviteEnAttente: boolean;
+  /** Mot de passe initial remis par le client, pas encore remplacé. */
+  doitChangerMdp: boolean;
+  creePar: string | null;
+  createdAt: string;
 }
 
 export interface AuthResponse {
