@@ -9,6 +9,7 @@ import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../com
 import Pagination from '../common/Pagination';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { nomOnglet } from '../../vocab/excel';
+import type { Tentative } from '../livreur/livraisons';
 
 // Thème violet de l'Espace Acheteurs
 const C = '#6d28d9';
@@ -18,7 +19,7 @@ const CB = '#c4b5fd';
 const PAGE_ACCENT = { border: CB, bg: CL, text: CD };
 const PAR_PAGE = 10;
 
-type Statut = 'en_attente' | 'expediee' | 'livree' | 'annulee';
+type Statut = 'en_attente' | 'expediee' | 'livree' | 'annulee' | 'livraison_echouee';
 
 interface Commande {
   id: string;
@@ -55,6 +56,11 @@ interface CommandeDetail extends Commande {
   facture: { id: number; numero: string; montantBrutTtc: number; montantHt: number; montantTva: number; timbreFiscal: boolean; montantTimbre: number; montantTtc: number } | null;
   livraisonAffecteeAt: string | null;
   livraisonAffecteeParNom: string | null;
+  /** Module Livreurs (L3) : passages du livreur (le plus récent d'abord), retour au dépôt, sortie de stock effective. */
+  livraisonRapportee: boolean;
+  stockSorti: boolean;
+  livraison: Tentative | null;
+  livraisons: Tentative[];
 }
 
 interface AcheteurOpt { id: number; nom: string }
@@ -65,6 +71,8 @@ const STATUT_BADGE: Record<Statut, { label: string; bg: string; color: string }>
   expediee: { label: '🚚 Expédiée', bg: '#dbeafe', color: '#1d4ed8' },
   livree: { label: '✅ Livrée', bg: '#dcfce7', color: '#166534' },
   annulee: { label: '✕ Annulée', bg: '#fee2e2', color: '#991b1b' },
+  // Module Livreurs (L3) : le livreur n'a pas pu livrer — relancer ou annuler
+  livraison_echouee: { label: '⚠️ Non livrée', bg: '#ffedd5', color: '#9a3412' },
 };
 
 // Type de vente : saisie manuelle du vendeur (source 'client') ou commande du portail
@@ -128,6 +136,12 @@ export default function CommandesAcheteursPage() {
   const [affErr, setAffErr] = useState('');
   const [affSaving, setAffSaving] = useState(false);
   const livreursActifs = livreurs.filter(l => l.actif);
+
+  // Module Livreurs (L3) : relancer une commande non livrée (nouvelle tentative, même livreur / autre / sans)
+  const [relCmd, setRelCmd] = useState<Commande | null>(null);
+  const [relLivreurId, setRelLivreurId] = useState('');
+  const [relErr, setRelErr] = useState('');
+  const [relSaving, setRelSaving] = useState(false);
 
   // Livraison d'une commande expédiée
   const [livCmd, setLivCmd] = useState<Commande | null>(null);
@@ -320,6 +334,30 @@ export default function CommandesAcheteursPage() {
     }
   };
 
+  // Module Livreurs (L3) : POST /commandes/:id/relancer { livreurId } — la commande repasse « Expédiée »
+  const relancer = async () => {
+    if (!relCmd) return;
+    setRelSaving(true); setRelErr('');
+    try {
+      const { data } = await api.post(`/api/acheteurs/commandes/${relCmd.id}/relancer`, { livreurId: relLivreurId ? Number(relLivreurId) : null });
+      setRelCmd(null);
+      setFlash(data.commande?.livreurNom ? `Livraison relancée — confiée à ${data.commande.livreurNom}` : 'Livraison relancée (sans livreur : à livrer par vos soins)');
+      load();
+    } catch (e: unknown) {
+      setRelErr((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Erreur lors de la relance');
+    } finally {
+      setRelSaving(false);
+    }
+  };
+
+  // Module Livreurs (L3) : la facture signée / cachetée rapportée par le livreur (photo ou PDF)
+  const ouvrirFactureSignee = async (commandeId: string) => {
+    try {
+      const res = await api.get(`/api/acheteurs/commandes/${commandeId}/livraison/piece`, { responseType: 'blob' });
+      window.open(URL.createObjectURL(res.data), '_blank');
+    } catch { setError('Erreur lors de l\'ouverture de la facture signée'); }
+  };
+
   const openDetail = async (id: string) => {
     try {
       const { data } = await api.get(`/api/acheteurs/commandes/${id}`);
@@ -423,6 +461,7 @@ export default function CommandesAcheteursPage() {
             <option value="en_attente">En attente</option>
             <option value="expediee">Expédiées</option>
             <option value="livree">Livrées</option>
+            <option value="livraison_echouee">⚠️ Non livrées</option>
             <option value="annulee">Annulées</option>
           </FilterSelect>
         </FilterField>
@@ -543,7 +582,13 @@ export default function CommandesAcheteursPage() {
                             style={miniBtn('#fef2f2', '#fecaca', '#b91c1c', c.statut === 'annulee' || busyId === c.id)}>
                             {busyId === c.id ? '…' : '↩️ Annuler'}
                           </button>
-                          {livreurs.length > 0 && (
+                          {c.statut === 'livraison_echouee' ? (
+                            <button onClick={() => { setRelCmd(c); setRelLivreurId(c.livreurId ? String(c.livreurId) : ''); setRelErr(''); }}
+                              title="Nouvelle tentative de livraison (même livreur, un autre, ou sans) — sinon annulez la commande"
+                              style={{ ...miniBtn('#fff7ed', '#fdba74', '#9a3412'), gridColumn: '1 / -1' }}>
+                              🔁 Relancer la livraison
+                            </button>
+                          ) : livreurs.length > 0 && (
                             <button onClick={() => { setAffCmd(c); setAffLivreurId(c.livreurId ? String(c.livreurId) : ''); setAffErr(''); }}
                               disabled={c.statut !== 'expediee'}
                               title={c.statut === 'expediee'
@@ -759,6 +804,37 @@ export default function CommandesAcheteursPage() {
         </div>
       )}
 
+      {/* Modal relance (commande non livrée) — module Livreurs L3 */}
+      {relCmd && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, padding: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#9a3412' }}>🔁 Relancer la livraison</h2>
+              <button onClick={() => setRelCmd(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+            </div>
+            <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 14, lineHeight: 1.5 }}>
+              {relCmd.acheteurNom}{relCmd.factureNumero ? ` · ${relCmd.factureNumero}` : ''} — la commande repasse <strong>Expédiée</strong> pour une nouvelle tentative ; la facture est conservée.
+              Si la marchandise avait été rapportée {voc.au('depot')}, {voc.le('stock')} ressort aujourd'hui. Pour abandonner {voc.le('vente')}, utilisez plutôt ↩️ Annuler.
+            </div>
+            <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: '#9a3412', marginBottom: 5 }}>Livreur de la nouvelle tentative</label>
+            <select value={relLivreurId} onChange={e => setRelLivreurId(e.target.value)} style={{ ...inp, width: '100%', boxSizing: 'border-box', marginBottom: 14 }}>
+              <option value="">— Aucun livreur (livraison par vos soins) —</option>
+              {livreurs.filter(l => l.actif || String(l.id) === relLivreurId).map(l => (
+                <option key={l.id} value={l.id} disabled={!l.actif}>{l.nom}{l.actif ? '' : ' (désactivé)'}</option>
+              ))}
+            </select>
+            {relErr && <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>⚠️ {relErr}</div>}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+              <button onClick={() => setRelCmd(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
+              <button onClick={relancer} disabled={relSaving}
+                style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: 'linear-gradient(135deg,#9a3412,#ea580c)', color: '#fff', cursor: relSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                {relSaving ? '…' : '🔁 Relancer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Modal détail */}
       {detail && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
@@ -809,6 +885,38 @@ export default function CommandesAcheteursPage() {
                   style={{ background: CD, color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}>
                   📄 PDF
                 </button>
+              </div>
+            )}
+            {/* Module Livreurs (L3) : passages du livreur — facture signée, ou motif et note de l'échec */}
+            {(detail.livraisons?.length > 0) && (
+              <div style={{ background: detail.livraison?.resultat === 'echec' ? '#fff7ed' : '#ecfdf5', border: `1px solid ${detail.livraison?.resultat === 'echec' ? '#fed7aa' : '#a7f3d0'}`, borderRadius: 12, padding: '12px 16px', marginBottom: 14, fontSize: '0.82rem' }}>
+                <div style={{ fontWeight: 800, color: detail.livraison?.resultat === 'echec' ? '#9a3412' : '#065f46', marginBottom: 6 }}>
+                  🏍️ Passage{detail.livraisons.length > 1 ? 's' : ''} du livreur
+                  {detail.statut === 'livraison_echouee' && (
+                    <span style={{ marginLeft: 8, fontWeight: 600, color: '#9a3412' }}>— {detail.livraisonRapportee ? `marchandise rapportée ${voc.au('depot')} (${voc.nom('stock')} ${voc.acc('stock', 'revenu', 'revenue')})` : `marchandise non rapportée (${voc.nom('stock')} toujours ${voc.acc('stock', 'sorti', 'sortie')})`} : relancez ou annulez</span>
+                  )}
+                </div>
+                {detail.livraisons.map(t => (
+                  <div key={t.id} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', padding: '5px 0', borderTop: '1px solid rgba(0,0,0,0.05)' }}>
+                    <span style={{ color: '#64748b', whiteSpace: 'nowrap' }}>{new Date(t.le).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                    <strong>{t.livreurNom}</strong>
+                    {t.resultat === 'livree' ? (
+                      <span style={{ color: '#065f46', fontWeight: 700 }}>
+                        ✅ Livrée{t.receptionnaire ? ` — réceptionnée par ${t.receptionnaire}` : ''}
+                        {t.montantPercu != null ? ` — ${t.montantPercu > 0 ? `encaissé ${fmt(t.montantPercu)}${t.modePaiement ? ` (${t.modePaiement})` : ''}` : 'rien encaissé'}` : ''}
+                      </span>
+                    ) : (
+                      <span style={{ color: '#9a3412', fontWeight: 700 }}>⚠️ Non livrée — {t.motifLibelle}{t.rapporteeDepot ? ` · rapportée ${voc.au('depot')}` : ' · non rapportée'}</span>
+                    )}
+                    {t.factureSignee && (
+                      <button onClick={() => ouvrirFactureSignee(detail.id)} title={`${t.factureSignee.nom} (${t.factureSignee.type})`}
+                        style={{ background: '#fff', border: '1px solid #6ee7b7', color: '#065f46', borderRadius: 8, padding: '4px 10px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer' }}>
+                        📎 Facture signée
+                      </button>
+                    )}
+                    {t.note && <span style={{ color: '#475569', fontStyle: 'italic', width: '100%' }}>« {t.note} »</span>}
+                  </div>
+                ))}
               </div>
             )}
             {/* Suivi de la commande — stepper d'états */}

@@ -10,7 +10,7 @@ const CD = '#4c1d95';
 const CL = '#f5f3ff';
 const CB = '#c4b5fd';
 
-type Statut = 'en_attente' | 'expediee' | 'livree' | 'annulee';
+type Statut = 'en_attente' | 'expediee' | 'livree' | 'annulee' | 'livraison_echouee';
 
 interface Commande {
   id: string;
@@ -28,9 +28,13 @@ interface Commande {
   /** Module Livreurs (L2) : commande expédiée confiée à un livreur. */
   enLivraison: boolean;
   livreurNom: string | null;
+  /** Module Livreurs (L3) : motif du dernier échec de livraison ; facture signée rapportée par le livreur. */
+  echecMotif: string | null;
+  factureSignee: boolean;
 }
 interface Detail extends Commande {
   notes: string | null;
+  livraison: { resultat: 'livree' | 'echec'; motifLibelle: string | null; receptionnaire: string | null; livreurNom: string; le: string; factureSignee: boolean } | null;
   lignes: { designation: string; quantite: number; prixTtc: number; tauxTva: number }[];
   historique: { statut: Statut; dateEffet: string | null; motif: string | null; le: string }[];
   facture: {
@@ -44,6 +48,7 @@ const BADGE_MAP: Record<Statut, { label: string; bg: string; color: string }> = 
   expediee: { label: '🚚 Expédiée', bg: '#dbeafe', color: '#1d4ed8' },
   livree: { label: '✅ Livrée', bg: '#dcfce7', color: '#166534' },
   annulee: { label: '✕ Annulée', bg: '#fee2e2', color: '#991b1b' },
+  livraison_echouee: { label: '⚠️ Livraison non aboutie', bg: '#ffedd5', color: '#9a3412' },
 };
 // Fallback : un statut inattendu ne doit pas casser la page
 const BADGE = new Proxy(BADGE_MAP, {
@@ -77,6 +82,13 @@ export default function PortailCommandesPage() {
       const res = await api.get(`/api/portail/factures/${factureId}/pdf`, { responseType: 'blob' });
       window.open(URL.createObjectURL(res.data), '_blank');
     } catch { setError('Erreur lors de l\'ouverture de la facture'); }
+  };
+  // Module Livreurs (L3) : la facture signée / cachetée rapportée par le livreur (photo ou PDF)
+  const ouvrirFactureSignee = async (commandeId: string) => {
+    try {
+      const res = await api.get(`/api/portail/commandes/${commandeId}/livraison/piece`, { responseType: 'blob' });
+      window.open(URL.createObjectURL(res.data), '_blank');
+    } catch { setError('Erreur lors de l\'ouverture de la facture signée'); }
   };
 
   const brutLignes = (d: Detail) => d.lignes.reduce((s, l) => s + l.prixTtc * l.quantite, 0);
@@ -134,6 +146,9 @@ export default function PortailCommandesPage() {
                         {c.statut === 'annulee' && c.motifAnnulation && (
                           <div style={{ fontSize: '0.7rem', color: '#991b1b', marginTop: 3 }}>{c.motifAnnulation}</div>
                         )}
+                        {c.statut === 'livraison_echouee' && (
+                          <div style={{ fontSize: '0.7rem', color: '#9a3412', marginTop: 3 }}>{c.echecMotif ? `${c.echecMotif} · ` : ''}nouvelle tentative à venir</div>
+                        )}
                       </td>
                       <td style={{ padding: '10px 14px', whiteSpace: 'nowrap' }}>
                         {c.factureId ? (
@@ -142,6 +157,12 @@ export default function PortailCommandesPage() {
                             📄 {c.factureNumero}
                           </button>
                         ) : <span style={{ color: '#cbd5e1' }}>—</span>}
+                        {c.factureSignee && (
+                          <button onClick={() => ouvrirFactureSignee(c.id)} title="Facture signée à la livraison"
+                            style={{ marginLeft: 6, background: '#ecfdf5', border: '1px solid #6ee7b7', color: '#065f46', borderRadius: 8, padding: '5px 8px', fontWeight: 700, fontSize: '0.76rem', cursor: 'pointer' }}>
+                            📎 Signée
+                          </button>
+                        )}
                       </td>
                       <td style={{ padding: '10px 14px' }}>
                         <button onClick={() => openDetail(c.id)} title="Détail" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1rem' }}>👁️</button>
@@ -169,6 +190,18 @@ export default function PortailCommandesPage() {
               <span style={{ padding: '2px 9px', borderRadius: 20, fontSize: '0.7rem', fontWeight: 700, background: BADGE[detail.statut].bg, color: BADGE[detail.statut].color }}>{BADGE[detail.statut].label}</span>
               {detail.dateExpedition && <span>Expédiée le {fmtDate(detail.dateExpedition)}</span>}
               {detail.enLivraison && <span style={{ color: '#065f46', fontWeight: 700 }}>· 🏍️ En cours de livraison{detail.livreurNom ? ` (${detail.livreurNom})` : ''}</span>}
+              {detail.livraison?.resultat === 'livree' && (
+                <span style={{ color: '#065f46' }}>· 🏍️ Livrée par {detail.livraison.livreurNom}{detail.livraison.receptionnaire ? `, réceptionnée par ${detail.livraison.receptionnaire}` : ''}</span>
+              )}
+              {detail.statut === 'livraison_echouee' && detail.livraison?.resultat === 'echec' && (
+                <span style={{ color: '#9a3412', fontWeight: 700 }}>· ⚠️ {detail.livraison.motifLibelle || 'Livraison non aboutie'} — une nouvelle tentative sera organisée</span>
+              )}
+              {detail.factureSignee && (
+                <button onClick={() => ouvrirFactureSignee(detail.id)}
+                  style={{ background: '#ecfdf5', border: '1px solid #6ee7b7', color: '#065f46', borderRadius: 8, padding: '3px 9px', fontWeight: 700, fontSize: '0.72rem', cursor: 'pointer' }}>
+                  📎 Facture signée
+                </button>
+              )}
               {detail.dateLivraison && <span>· Livrée le {fmtDate(detail.dateLivraison)}</span>}
               {detail.notes && <span>· {detail.notes}</span>}
             </div>

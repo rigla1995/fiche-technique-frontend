@@ -51,6 +51,12 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
     } else if (eventType === 'comptable_parti') {
       // LabFlow Compta (S3b) : le comptable a quitté l'accès → partie « Gérants Comptabilité » de la page Gérants.
       navigate('/client/gerants#gerants-comptabilite');
+    } else if (eventType === 'livraison_validee') {
+      // Module Livreurs (L3) : livraison validée par le livreur → commandes livrées
+      navigate('/client/acheteurs/commandes?statut=livree');
+    } else if (eventType === 'livraison_echouee') {
+      // Module Livreurs (L3) : échec de livraison → commandes non livrées (relancer ou annuler)
+      navigate('/client/acheteurs/commandes?statut=livraison_echouee');
     } else {
       navigate(user?.role === 'super_admin' ? '/admin/support' : '/client/support');
     }
@@ -211,6 +217,10 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                           ? 'linear-gradient(135deg,#e0e7ff,#c7d2fe)'
                           : n.eventType === 'comptable_parti'
                           ? 'linear-gradient(135deg,#eef2ff,#e0e7ff)'
+                          : n.eventType === 'livraison_validee'
+                          ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
+                          : n.eventType === 'livraison_echouee'
+                          ? 'linear-gradient(135deg,#ffedd5,#fed7aa)'
                           : n.statut === 'validée'
                           ? 'linear-gradient(135deg,#d1fae5,#a7f3d0)'
                           : 'linear-gradient(135deg,#fee2e2,#fecaca)',
@@ -220,6 +230,8 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                           : n.eventType === 'new_demande' ? '📥'
                           : n.eventType === 'demande_acces_recue' ? '🌐'
                           : n.eventType === 'comptable_parti' ? '📒'
+                          : n.eventType === 'livraison_validee' ? '🏍️'
+                          : n.eventType === 'livraison_echouee' ? '⚠️'
                           : n.statut === 'validée' ? '✅' : '❌'}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -234,6 +246,10 @@ export default function Header({ onMenu }: { onMenu: () => void }) {
                             ? "Nouvelle demande d'accès"
                             : n.eventType === 'comptable_parti'
                             ? 'Un comptable a quitté votre comptabilité'
+                            : n.eventType === 'livraison_validee'
+                            ? `Commande livrée${n.notesAdmin ? ` — ${n.notesAdmin}` : ''}`
+                            : n.eventType === 'livraison_echouee'
+                            ? `Livraison non aboutie${n.notesAdmin ? ` — ${n.notesAdmin}` : ''}`
                             : `Demande ${n.statut === 'validée' ? 'validée ✓' : 'refusée ✗'} — ${typeLabel(n.type)}`}
                         </div>
                         {n.clientNom && (

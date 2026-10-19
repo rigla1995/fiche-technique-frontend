@@ -11,7 +11,10 @@ export interface AppNotification {
     | 'nouvelle_commande_acheteur'
     | 'demande_acces_recue'
     // LabFlow Compta (S3b) : un comptable a quitté l'accès à la comptabilité du client
-    | 'comptable_parti';
+    | 'comptable_parti'
+    // Module Livreurs (L3) : le livreur a validé la livraison (facture signée) / n'a pas pu livrer
+    | 'livraison_validee'
+    | 'livraison_echouee';
   demandeId?: number;
   refId?: number;
   refKind?: string;
