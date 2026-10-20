@@ -91,6 +91,7 @@ const PortailCommandesPage = lazy(() => import('./components/portail/PortailComm
 const PrestatairesManagement = lazy(() => import('./components/admin/PrestatairesManagement'));
 // Module Livreurs (L1) : gestion côté client / gérant, espace du livreur sur téléphone.
 const LivreursPage = lazy(() => import('./components/client/LivreursPage'));
+const LivraisonsSuiviPage = lazy(() => import('./components/client/LivraisonsSuiviPage'));
 const LivreurAccueilPage = lazy(() => import('./components/livreur/LivreurAccueilPage'));
 const LivreurMotDePassePage = lazy(() => import('./components/livreur/LivreurMotDePassePage'));
 const LivreurCommandePage = lazy(() => import('./components/livreur/LivreurCommandePage'));
@@ -289,6 +290,7 @@ export default function App() {
               <Route path="/client/acheteurs/vente" element={<VenteAcheteurPage />} />
               <Route path="/client/acheteurs/commandes" element={<CommandesAcheteursPage />} />
               <Route path="/client/livreurs" element={<LivreursPage />} />
+              <Route path="/client/livraisons" element={<LivraisonsSuiviPage />} />
             </Route>
           </Route>
 

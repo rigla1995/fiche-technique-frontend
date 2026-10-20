@@ -800,12 +800,21 @@ function AcheteursTab({ data }: { data: any }) {
   if (data.vide) return <EmptyHint text={`Le module ${voc.Court('acheteur', true)} n'est pas actif sur ce compte.`} />;
   const k = data.kpis ?? {};
   const STATUT_LABELS: Record<string, string> = {
-    en_attente: 'En attente', expediee: 'Expédiées', livree: 'Livrées', annulee: 'Annulées',
+    en_attente: 'En attente', expediee: 'Expédiées', livree: 'Livrées', annulee: 'Annulées', livraison_echouee: 'Non livrées',
   };
   const achCols: ColonneDef<any>[] = [
     { key: 'acheteur', label: voc.Nom('acheteur'), align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
     { key: 'nb', label: 'Factures', fmt: (v) => fmtNum(Number(v)) },
     { key: 'valeur', label: 'CA TTC', fmt: (v) => <strong>{fmtDT(Number(v))}</strong> },
+  ];
+  // Module Livreurs (L4) : bilan des passages des livreurs sur la période (même période et mêmes labos que l'onglet)
+  const liv = data.livraisons;
+  const livCols: ColonneDef<any>[] = [
+    { key: 'livreur', label: 'Livreur', align: 'left', fmt: (v) => <strong>{String(v)}</strong> },
+    { key: 'livrees', label: 'Livrées', fmt: (v) => fmtNum(Number(v)) },
+    { key: 'echecs', label: 'Non livrées', fmt: (v) => <span style={{ color: Number(v) > 0 ? '#9a3412' : undefined, fontWeight: Number(v) > 0 ? 700 : 400 }}>{fmtNum(Number(v))}</span> },
+    { key: 'delai_moyen_jours', label: 'Délai moyen', fmt: (v) => (v == null ? '—' : `${fmtNum(Number(v))} j`) },
+    { key: 'encaisse', label: 'Encaissé', fmt: (v) => fmtDT(Number(v)) },
   ];
   return (
     <>
@@ -835,6 +844,28 @@ function AcheteursTab({ data }: { data: any }) {
       <ChartCard title={`${voc.Pl('article')} les plus ${voc.acc('article', 'vendus', 'vendues')} ${voc.au('acheteur', true)} (TTC)`} height="auto">
         <HBarList rows={data.top_articles ?? []} labelKey="nom" valueKey="valeur" color="#6d28d9" max={10} />
       </ChartCard>
+      {liv && (
+        <>
+          <div style={{ height: 14 }} />
+          <div style={kpiGrid}>
+            <KpiCard icon="🏍️" label="Livraisons par vos livreurs" value={String(liv.total)} accent="#059669"
+              sub={`${liv.livrees} livrée${liv.livrees > 1 ? 's' : ''} · ${liv.echecs} non livrée${liv.echecs > 1 ? 's' : ''}`} />
+            <KpiCard icon="⚠️" label="Taux d'échec" value={liv.taux_echec_pct != null ? `${fmtNum(liv.taux_echec_pct)}%` : '—'} inverse accent={liv.taux_echec_pct > 0 ? '#ea580c' : '#16a34a'} sub="livraisons non abouties" />
+            <KpiCard icon="⏱️" label="Délai moyen de livraison" value={liv.delai_moyen_jours != null ? `${fmtNum(liv.delai_moyen_jours)} j` : '—'} accent="#2563eb" sub="expédition → livraison" />
+            <KpiCard icon="💰" label="Encaissé par les livreurs" value={fmtDT(liv.encaisse)} accent="#b45309" sub="montants perçus déclarés" />
+          </div>
+          <div style={twoCols}>
+            <ChartCard title="🏍️ Par livreur" height="auto">
+              <SortableTable rows={liv.par_livreur ?? []} colonnes={livCols} defaultSort="livrees" maxHeight={260} />
+            </ChartCard>
+            <ChartCard title="Motifs des livraisons non abouties" height="auto">
+              {(liv.motifs ?? []).length === 0
+                ? <EmptyHint text="Aucun échec de livraison sur la période." />
+                : <HBarList rows={liv.motifs} labelKey="libelle" valueKey="nb" color="#ea580c" max={5} fmt={(v) => `${fmtNum(v)} échec${v > 1 ? 's' : ''}`} />}
+            </ChartCard>
+          </div>
+        </>
+      )}
     </>
   );
 }

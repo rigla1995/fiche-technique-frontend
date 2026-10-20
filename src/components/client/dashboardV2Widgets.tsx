@@ -184,8 +184,10 @@ export function DonutChart({ data, nameKey, valueKey = 'valeur', formatter }: {
 }
 
 // ── Liste à barres horizontales proportionnelles ─────────────────────────────
-export function HBarList({ rows, labelKey, valueKey = 'valeur', color = '#2563eb', suffix, max = 10 }: {
+export function HBarList({ rows, labelKey, valueKey = 'valeur', color = '#2563eb', suffix, max = 10, fmt = fmtDT }: {
   rows: Record<string, unknown>[]; labelKey: string; valueKey?: string; color?: string; suffix?: (r: Record<string, unknown>) => string; max?: number;
+  /** Format de la valeur (montant en DT par défaut ; un compte pour les listes de nombres, ex. motifs d'échec de livraison). */
+  fmt?: (v: number) => string;
 }) {
   const list = rows.slice(0, max);
   if (!list.length) return <EmptyHint />;
@@ -198,7 +200,7 @@ export function HBarList({ rows, labelKey, valueKey = 'valeur', color = '#2563eb
           <div key={i}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, fontSize: '0.78rem', marginBottom: 3 }}>
               <span style={{ color: '#334155', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{String(r[labelKey])}</span>
-              <span style={{ color: '#1e293b', fontWeight: 800, flexShrink: 0 }}>{fmtDT(v)}{suffix ? ` ${suffix(r)}` : ''}</span>
+              <span style={{ color: '#1e293b', fontWeight: 800, flexShrink: 0 }}>{fmt(v)}{suffix ? ` ${suffix(r)}` : ''}</span>
             </div>
             <div style={{ height: 7, borderRadius: 5, background: '#f1f5f9', overflow: 'hidden' }}>
               <div style={{ width: `${(v / top) * 100}%`, height: '100%', borderRadius: 5, background: color }} />
