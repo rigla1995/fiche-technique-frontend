@@ -352,6 +352,12 @@ export interface Product {
   uniteId?: number | null;
   uniteNom?: string | null;
   quantiteProduite?: number | null;
+  /** C2 : variante (recette propre à un canal de vente) — son produit d'origine et son libellé (« Livraison ») ; pour un
+   *  produit d'origine, le nombre de ses variantes. */
+  varianteDeId?: number | null;
+  varianteDeNom?: string | null;
+  varianteLibelle?: string | null;
+  variantesCount?: number;
 }
 
 export type TypeProduitCategorie = 'vendable' | 'supplement' | 'valorise';

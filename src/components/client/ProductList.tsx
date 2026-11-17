@@ -11,6 +11,8 @@ import ProductCard from './ProductCard';
 import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { fmtQuantite, lireQuantiteProduite, pourLaRecette, pourUneUnite } from '../../utils/recettePU';
+// C2 : une variante (recette propre à un canal de vente) se range sous son produit d'origine.
+import { rangerVariantes } from './produits/variantes';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number; categorieName?: string | null }[];
@@ -36,7 +38,7 @@ export default function ProductList() {
   const { canWrite, user } = useAuth();
   const canWriteProducts = canWrite && user?.role !== 'gerant';
 
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const tab = (searchParams.get('tab') as TabType) || 'vendable';
   const laboId = searchParams.get('laboId') || '';
 
@@ -160,7 +162,7 @@ export default function ProductList() {
 
   // Ouvre le wizard (celui de l'ajout) pré-rempli avec le produit : mêmes 5 étapes,
   // mêmes règles — la sauvegarde bascule en PUT quand editingId est renseigné.
-  const openEditModal = useCallback(async (p: Product) => {
+  const openEditModal = useCallback(async (p: Product, etape: 1 | 3 = 1) => {
     setEditingId(p.id);
     setAddIsSupplement(p.isSupplement ?? false);
     setAddName(p.name); setAddRef(''); setAddCategorieId('');
@@ -182,7 +184,7 @@ export default function ProductList() {
       setAddCheckedLabos((p.labos ?? []).map((l) => l.id));
       setAddCheckedActivites([]);
     }
-    setAddModal(1);
+    setAddModal(etape);
     try {
       const { data } = await api.get(`/api/products/${p.id}`);
       const pdata = data as {
@@ -223,6 +225,24 @@ export default function ProductList() {
       }
     } catch { /* le wizard reste utilisable avec les données de la card */ }
   }, []);
+
+  // C2 : arrivée depuis Configuration vente (« Ajuster la recette » d'une variante tout juste créée) : l'assistant
+  // s'ouvre sur ce produit, à l'étape des articles de sa recette. Le paramètre est retiré de l'adresse aussitôt.
+  const aModifier = searchParams.get('modifier');
+  useEffect(() => {
+    if (!aModifier || loading || products.length === 0) return;
+    let vivant = true;
+    Promise.resolve().then(() => {
+      if (!vivant) return;
+      const cible = products.find((p) => String(p.id) === aModifier);
+      const suite = new URLSearchParams(searchParams);
+      suite.delete('modifier');
+      setSearchParams(suite, { replace: true });
+      if (cible && canWriteProducts) openEditModal(cible, 3);
+    });
+    return () => { vivant = false; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aModifier, loading, products]);
 
   const openAddModal = useCallback((isSupplement = false) => {
     setEditingId(null);
@@ -377,9 +397,10 @@ export default function ProductList() {
   const searched = isVendable && filterCategorieId
     ? searchedAll.filter((p) => p.categorieProduitId === filterCategorieId)
     : searchedAll;
-  const bySubTab = isVendable
+  // C2 : chaque variante est rangée juste sous son produit d'origine (quand il est dans la liste affichée).
+  const bySubTab = rangerVariantes(isVendable
     ? searched.filter((p) => vendableSubTab === 'produit' ? !p.isSupplement : !!p.isSupplement)
-    : searched;
+    : searched);
   const totalPages = Math.max(1, Math.ceil(bySubTab.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const paginated = bySubTab.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
@@ -603,6 +624,19 @@ export default function ProductList() {
                   if (nbSub) summaryParts.push(isVendable ? `${nbSub} ${voc.court('produit_utilisable', nbSub)}` : `${nbSub} sous-produit${nbSub > 1 ? 's' : ''}`);
                   const badges = (
                     <>
+                      {/* C2 : variante (recette propre à un canal de vente) et produit d'origine qui en a */}
+                      {p.varianteDeId != null && (
+                        <span title={`Variante ${voc.de('produit')}${p.varianteDeNom ? ` « ${p.varianteDeNom} »` : ''} : ${voc.son('recette')} et son coût lui sont propres`}
+                          style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#fff7ed', color: '#9a3412', border: '1px solid #fdba74', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                          ↳ Variante{p.varianteLibelle ? ` · ${p.varianteLibelle}` : ''}
+                        </span>
+                      )}
+                      {p.varianteDeId == null && (p.variantesCount ?? 0) > 0 && (
+                        <span title={`${voc.Nom('recette')} propre à un canal : ${p.variantesCount} variante${(p.variantesCount ?? 0) > 1 ? 's' : ''}, ${(p.variantesCount ?? 0) > 1 ? 'rangées' : 'rangée'} juste après`}
+                          style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#fff7ed', color: '#9a3412', border: '1px solid #fdba74', borderRadius: 20, padding: '2px 8px', whiteSpace: 'nowrap' }}>
+                          {p.variantesCount} variante{(p.variantesCount ?? 0) > 1 ? 's' : ''}
+                        </span>
+                      )}
                       {isVendable && p.categorieProduitName && (
                         <span style={{ fontSize: '0.62rem', fontWeight: 700, letterSpacing: '0.04em', background: '#e0e7ff', color: '#3730a3', border: '1px solid #c7d2fe', borderRadius: 20, padding: '2px 8px' }}>🏷️ {p.categorieProduitName}</span>
                       )}

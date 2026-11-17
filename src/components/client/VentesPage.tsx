@@ -199,8 +199,19 @@ function ArticleRow({ av }: { av: ArticleVendable }) {
   const setQte = (channel: string, val: string) =>
     setQtes(prev => ({ ...prev, [av.id]: { ...prev[av.id], [channel]: val } }));
   // C1 : une case n'est ouverte que si la ligne est en vente sur ce canal ; sinon un tiret, sans saisie possible.
-  const directOuvert = ouvertSur(av, CANAL_DIRECT, prixPrestataires);
-  const ferme = <span title={`Pas en ${voc.nom('vente')} sur ce canal`} style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>—</span>;
+  // Sous chaque case ouverte, le prix DE CE CANAL (direct ou prestataire) : celui qui valorise la quantité saisie.
+  const cellule = (channel: string, canal: string, prix: number | null) => (
+    ouvertSur(av, canal, prixPrestataires) ? (
+      <>
+        <input type="number" min="0" step="0.001" value={getQte(channel)} placeholder="0"
+          onChange={e => setQte(channel, e.target.value)}
+          style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(channel) ? C : CB}`, background: getQte(channel) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+        <div style={{ fontSize: '0.72rem', fontWeight: 700, color: C, marginTop: 3, whiteSpace: 'nowrap' as const }}>{fmtMoney(prix)}</div>
+      </>
+    ) : (
+      <span title={`Pas en ${voc.nom('vente')} sur ce canal`} style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>—</span>
+    )
+  );
 
   return (
     <tr style={{ borderBottom: `1px solid ${CB}` }}>
@@ -208,25 +219,10 @@ function ArticleRow({ av }: { av: ArticleVendable }) {
         <div style={{ fontWeight: 700, fontSize: '0.9rem', color: CD }}>{av.nom}</div>
         {av.unite_nom && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
       </td>
-      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        {directOuvert
-          ? <span style={{ fontWeight: 700, color: C, fontSize: '0.9rem' }}>{fmtMoney(av.prix_vente)}</span>
-          : ferme}
-      </td>
-      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        {directOuvert ? (
-          <input type="number" min="0" step="0.001" value={getQte('direct')} placeholder="0"
-            onChange={e => setQte('direct', e.target.value)}
-            style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte('direct') ? C : CB}`, background: getQte('direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
-        ) : ferme}
-      </td>
+      <td style={{ padding: '8px 16px', textAlign: 'center' }}>{cellule('direct', CANAL_DIRECT, av.prix_vente)}</td>
       {activePrests.map(ap => (
         <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
-          {ouvertSur(av, ap.id, prixPrestataires) ? (
-            <input type="number" min="0" step="0.001" value={getQte(ap.id)} placeholder="0"
-            onChange={e => setQte(ap.id, e.target.value)}
-            style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(ap.id) ? C : CB}`, background: getQte(ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
-          ) : ferme}
+          {cellule(ap.id, ap.id, calcPrixPrestataire(av.id, ap.id, prixPrestataires))}
         </td>
       ))}
     </tr>
@@ -308,7 +304,6 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
           <thead>
             <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
               <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.05em' }}>Article</th>
-              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.05em', whiteSpace: 'nowrap' as const }}>Prix vente</th>
               <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.05em', whiteSpace: 'nowrap' as const }}>🏪 Qté directe</th>
               {activePrests.map(ap => (
                 <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase' as const, letterSpacing: '0.05em', whiteSpace: 'nowrap' as const }}>
@@ -320,7 +315,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={3 + activePrests.length} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <td colSpan={2 + activePrests.length} style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
                   Aucun résultat pour ce filtre
                 </td>
               </tr>
@@ -334,7 +329,7 @@ function SaisieTable({ subset, page, setPage, label, emptyIcon = '🛍️', empt
                     prevCat = cat;
                     out.push(
                       <tr key={`cat-${cat ?? 'none'}`} style={{ background: `${CD}0d` }}>
-                        <td colSpan={3 + activePrests.length} style={{ padding: '7px 16px', fontWeight: 800, fontSize: '0.74rem', color: CD, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
+                        <td colSpan={2 + activePrests.length} style={{ padding: '7px 16px', fontWeight: 800, fontSize: '0.74rem', color: CD, textTransform: 'uppercase' as const, letterSpacing: '0.06em' }}>
                           🏷️ {cat ?? 'Sans catégorie'}
                         </td>
                       </tr>
