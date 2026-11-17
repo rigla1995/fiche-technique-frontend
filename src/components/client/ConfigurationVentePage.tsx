@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useContext, createContext } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
 import { useConfirm } from '../common/ConfirmDialog';
@@ -12,6 +12,8 @@ import {
   surCase, celluleAEnvoyer, apercuCopie,
 } from './ventes/canaux';
 import type { Edition, EtatCellule, CelluleEnvoyee } from './ventes/canaux';
+// C2 : recette propre à un canal — une variante du produit, rangée sous lui, le remplace sur les canaux choisis.
+import { LIBELLE_DEFAUT, LIBELLE_MAX, comparerAvecVariantes, lireLibelle, canauxParDefaut, peutAvoirVariante } from './produits/variantes';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -44,6 +46,10 @@ interface Produit {
   isSupplement: boolean;
   type: string;
   categorieProduitName?: string | null;
+  /** C2 : variante (recette propre à un canal) — son produit d'origine et son libellé. */
+  varianteDeId?: number | null;
+  varianteDeNom?: string | null;
+  varianteLibelle?: string | null;
 }
 
 interface ArticleVendable {
@@ -113,6 +119,9 @@ interface CVCtxType {
   modifierPrix: (cle: string, enr: EtatCellule, texte: string) => void;
   modifierCase: (cle: string, coche: boolean) => void;
   cocherColonne: (lignes: ProduitRow[], canal: string, coche: boolean) => void;
+  /** C2 : ouvre la fenêtre « recette propre à un canal » pour cette ligne (réservé au titulaire du compte). */
+  ouvrirVariante: (row: ProduitRow) => void;
+  peutVarier: boolean;
   saveError: string;
   dirtyCount: number;
   handleSaveAll: () => void;
@@ -175,16 +184,37 @@ function CelluleCanal({ row, canal }: { row: ProduitRow; canal: string }) {
   );
 }
 
-function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: number; showPortion: boolean }) {
-  const { activePrests, edits, prixPrestataires } = useContext(CVCtx);
+function ProduitTableRow({ row, idx, showPortion, avecVariantes }: { row: ProduitRow; idx: number; showPortion: boolean; avecVariantes: boolean }) {
+  const { activePrests, edits, prixPrestataires, ouvrirVariante, peutVarier, dirtyCount } = useContext(CVCtx);
+  const voc = useVocabulaire();
   // Une ligne est « en vente » dès qu'un canal la vend (modifications en attente comprises).
   const isActive = [CANAL_DIRECT, ...activePrests.map(ap => ap.id)]
     .some(canal => etatAffiche(etatEnregistre(row.vendable, prixPrestataires, canal), edits[cleDe(row, canal)]).enVente);
+  // C2 : une variante est rangée sous son produit d'origine, en retrait, avec son libellé.
+  const variante = row.produit.varianteDeId != null;
+  const proposer = avecVariantes && peutVarier && peutAvoirVariante(row.produit);
 
   return (
     <tr style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
-      <td style={{ padding: '12px 16px', opacity: isActive ? 1 : 0.6 }}>
-        <div style={{ fontWeight: isActive ? 700 : 500, fontSize: '0.9rem', color: isActive ? CD : 'var(--text)' }}>{row.produit.name}</div>
+      <td style={{ padding: variante ? '10px 16px 10px 34px' : '12px 16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontWeight: isActive ? 700 : 500, fontSize: '0.9rem', color: isActive ? CD : 'var(--text)', opacity: isActive ? 1 : 0.6 }}>
+            {variante && <span aria-hidden="true" style={{ color: C, marginRight: 5 }}>↳</span>}{row.produit.name}
+          </span>
+          {variante && (
+            <span title={`Variante ${voc.de('produit')}${row.produit.varianteDeNom ? ` « ${row.produit.varianteDeNom} »` : ''} : ${voc.son('recette')} et son coût lui sont propres`}
+              style={{ fontSize: '0.62rem', fontWeight: 700, background: '#fff7ed', color: '#9a3412', border: '1px solid #fdba74', borderRadius: 20, padding: '1px 8px', whiteSpace: 'nowrap' }}>
+              Variante{row.produit.varianteLibelle ? ` · ${row.produit.varianteLibelle}` : ''}
+            </span>
+          )}
+          {proposer && (
+            <button type="button" onClick={() => ouvrirVariante(row)} disabled={dirtyCount > 0}
+              title={dirtyCount > 0 ? 'Enregistrez d\'abord vos modifications' : `Préparer ${voc.ce('produit')} autrement pour un canal (quantités, emballage…) : une variante, avec ${voc.son('recette')}`}
+              style={{ padding: '2px 9px', borderRadius: 7, border: `1px solid ${CB}`, background: '#fff', color: dirtyCount > 0 ? '#9ca3af' : C, fontSize: '0.68rem', fontWeight: 700, cursor: dirtyCount > 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+              ＋ {voc.Nom('recette')} par canal
+            </button>
+          )}
+        </div>
       </td>
       {showPortion && (
         <td style={{ padding: '8px 16px', textAlign: 'center' }}>
@@ -217,7 +247,7 @@ function ToutLeCanal({ lignes, canal }: { lignes: ProduitRow[]; canal: string })
   );
 }
 
-function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: ProduitRow[]; showPortion: boolean; isSupplement?: boolean }) {
+function ProduitTable({ tableRows, showPortion, isSupplement, avecVariantes = false }: { tableRows: ProduitRow[]; showPortion: boolean; isSupplement?: boolean; avecVariantes?: boolean }) {
   const { activePrests, prixPrestataires, edits, saveError, dirtyCount, handleSaveAll, saving } = useContext(CVCtx);
   const voc = useVocabulaire();
   const [filterNom, setFilterNom] = useState('');
@@ -247,11 +277,11 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
     if (filterPresta && !etatAffiche(etatEnregistre(r.vendable, prixPrestataires, filterPresta), edits[cleDe(r, filterPresta)]).enVente) return false;
     return true;
   }).sort((a, b) => {
-    // Regrouper par catégorie de produit (puis par nom)
+    // Regrouper par catégorie de produit, puis par nom — une variante juste sous son produit d'origine (C2).
     const ca = a.categorieProduitName ?? '￿';
     const cb = b.categorieProduitName ?? '￿';
     if (ca !== cb) return ca.localeCompare(cb, 'fr');
-    return a.produit.name.localeCompare(b.produit.name, 'fr');
+    return comparerAvecVariantes(a.produit, b.produit);
   });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -352,7 +382,7 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
                       </tr>
                     );
                   }
-                  out.push(<ProduitTableRow key={row.produit.id} row={row} idx={idx} showPortion={showPortion} />);
+                  out.push(<ProduitTableRow key={row.produit.id} row={row} idx={idx} showPortion={showPortion} avecVariantes={avecVariantes} />);
                 });
                 return out;
               })()
@@ -548,6 +578,7 @@ export default function ConfigurationVentePage() {
   const prestatairesOk = user?.domaine?.prestataires !== false;
   const { confirm, alerte } = useConfirm();
   const voc = useVocabulaire();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -566,6 +597,10 @@ export default function ConfigurationVentePage() {
   const [copie, setCopie] = useState<{ source: string; cible: string; pct: string; pas: number; retirer: boolean } | null>(null);
   const [copieErr, setCopieErr] = useState('');
   const [copieSaving, setCopieSaving] = useState(false);
+  // C2 : recette propre à un canal (fenêtre de création d'une variante).
+  const [variante, setVariante] = useState<{ row: ProduitRow; libelle: string; canaux: string[] } | null>(null);
+  const [varianteErr, setVarianteErr] = useState('');
+  const [varianteSaving, setVarianteSaving] = useState(false);
 
   const [histEntries, setHistEntries] = useState<HistConfigEntry[]>([]);
   const [histLoading, setHistLoading] = useState(false);
@@ -729,6 +764,44 @@ export default function ConfigurationVentePage() {
     } finally { setCopieSaving(false); }
   };
 
+  // C2 — recette propre à un canal : une variante du produit (copie à ajuster) le remplace sur les canaux cochés, au
+  // même prix. Réservé au titulaire du compte, comme la création d'un produit.
+  const peutVarier = user?.role === 'client';
+  const tousLesCanaux = [CANAL_DIRECT, ...activePrests.map(ap => ap.id)];
+  const ouvrirVariante = (row: ProduitRow) => {
+    setVarianteErr('');
+    const proposes = canauxParDefaut(tousLesCanaux);
+    setVariante({ row, libelle: LIBELLE_DEFAUT, canaux: proposes.length ? proposes : [CANAL_DIRECT] });
+  };
+  const creerVariante = async () => {
+    if (!variante || !selectedActiviteId) return;
+    const libelle = lireLibelle(variante.libelle);
+    if (!libelle) { setVarianteErr(`Donnez un nom à la variante (${LIBELLE_MAX} caractères au plus).`); return; }
+    if (variante.canaux.length === 0) { setVarianteErr('Cochez au moins un canal.'); return; }
+    setVarianteSaving(true);
+    setVarianteErr('');
+    try {
+      const { data } = await api.post(`/api/produits/${variante.row.produit.id}/variantes`, {
+        activite_id: selectedActiviteId, libelle, canaux: variante.canaux,
+      });
+      const cree = data as { produit: { id: number; name: string }; canaux: { canal: string; prix: number | null }[] };
+      const aRegler = cree.canaux.filter(c => c.prix == null).length;
+      setVariante(null);
+      loadAll();
+      const ouvrir = await confirm({
+        title: `Variante créée : ${cree.produit.name}`,
+        message: `${voc.Son('recette')} est pour l'instant ${voc.acc('recette', 'identique à celui', 'identique à celle')} ${voc.du('produit')} d'origine : ouvrez la variante pour l'ajuster (quantités, emballage…).`
+          + (aRegler ? ` Sur ${aRegler} ${aRegler > 1 ? 'canaux' : 'canal'}, ${voc.le('produit')} d'origine n'avait pas de prix : saisissez le prix de la variante dans la grille.` : ''),
+        confirmLabel: `Ajuster ${voc.le('recette')}`,
+        cancelLabel: 'Plus tard',
+        tone: 'primary',
+      });
+      if (ouvrir) navigate(`/client/products?tab=vendable&modifier=${cree.produit.id}`);
+    } catch (e: unknown) {
+      setVarianteErr(apiMsg(e, 'Création impossible'));
+    } finally { setVarianteSaving(false); }
+  };
+
   const toggleSelectHist = (id: number) => {
     setSelectedHistIds(prev => {
       const next = new Set(prev);
@@ -782,7 +855,7 @@ export default function ConfigurationVentePage() {
 
   const ctxValue: CVCtxType = {
     activePrests, prixPrestataires,
-    edits, modifierPrix, modifierCase, cocherColonne, saveError,
+    edits, modifierPrix, modifierCase, cocherColonne, ouvrirVariante, peutVarier, saveError,
     dirtyCount, handleSaveAll, saving,
     histEntries, histLoading,
     histFilterNom, histFilterType, histFilterDu, histFilterAu,
@@ -886,7 +959,7 @@ export default function ConfigurationVentePage() {
                     <div style={{ fontSize: '0.72rem', color: C }}>{voc.Pl('produit')} de type "Vendable" {voc.acc('produit', 'assignés', 'assignées')} à {voc.ce('activite')} — activez-les et définissez leur prix</div>
                   </div>
                 </div>
-                <ProduitTable tableRows={produitRows} showPortion={false} />
+                <ProduitTable tableRows={produitRows} showPortion={false} avecVariantes />
               </div>
             )}
 
@@ -899,7 +972,7 @@ export default function ConfigurationVentePage() {
                     <div style={{ fontSize: '0.72rem', color: C }}>{voc.Pl('produit')} {voc.pl('supplement')} {voc.acc('produit', 'assignés', 'assignées')} à {voc.ce('activite')} — activez-les et définissez leur prix</div>
                   </div>
                 </div>
-                <ProduitTable tableRows={supplementRows} showPortion={false} isSupplement />
+                <ProduitTable tableRows={supplementRows} showPortion={false} isSupplement avecVariantes />
               </div>
             )}
 
@@ -918,6 +991,58 @@ export default function ConfigurationVentePage() {
 
             {activeTab === 'historique' && <HistoriqueTab />}
           </>
+        )}
+
+        {/* C2 — fenêtre « Recette par canal » : création d'une variante du produit */}
+        {variante && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div role="dialog" aria-label="Variante par canal" style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', padding: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: CD }}>＋ {voc.Nom('recette')} par canal</h2>
+                <button onClick={() => setVariante(null)} aria-label="Fermer" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+              </div>
+              <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 14, lineHeight: 1.5 }}>
+                <strong>{variante.row.produit.name}</strong> garde {voc.son('recette')}. LabFlow en crée une <strong>variante</strong> : une copie
+                à ajuster (quantités, emballage…), qui le remplace sur les canaux cochés, au même prix. Son coût et sa sortie{' '}
+                {voc.de('stock')} se calculent sur {voc.son('recette')} propre.
+              </div>
+              <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 12 }}>
+                Nom de la variante
+                <input type="text" value={variante.libelle} maxLength={LIBELLE_MAX} placeholder={LIBELLE_DEFAUT}
+                  onChange={e => setVariante({ ...variante, libelle: e.target.value })}
+                  style={{ display: 'block', width: '100%', marginTop: 5, padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, fontSize: '0.88rem', color: CD, boxSizing: 'border-box' }} />
+                <span style={{ display: 'block', marginTop: 4, fontWeight: 500, color: 'var(--text-muted)' }}>
+                  Elle s'appellera « {variante.row.produit.name} — {lireLibelle(variante.libelle) ?? '…'} ».
+                </span>
+              </label>
+              <div style={{ fontSize: '0.74rem', fontWeight: 700, color: CD, marginBottom: 6 }}>Canaux où la variante remplace l'original</div>
+              <div style={{ border: `1px solid ${CB}`, borderRadius: 10, marginBottom: 14 }}>
+                {tousLesCanaux.map((canal, i) => {
+                  const etat = etatEnregistre(variante.row.vendable, prixPrestataires, canal);
+                  const coche = variante.canaux.includes(canal);
+                  return (
+                    <label key={canal} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderTop: i ? `1px solid ${CB}` : 'none', cursor: 'pointer', fontSize: '0.85rem', color: CD }}>
+                      <input type="checkbox" checked={coche}
+                        onChange={e => setVariante({ ...variante, canaux: e.target.checked ? [...variante.canaux, canal] : variante.canaux.filter(c => c !== canal) })}
+                        style={{ accentColor: C, width: 16, height: 16 }} />
+                      <span style={{ fontWeight: 700 }}>{nomCanal(canal)}</span>
+                      <span style={{ marginLeft: 'auto', fontSize: '0.78rem', color: etat.prix != null ? C : 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                        {etat.prix != null ? fmtMoney(etat.prix) : 'sans prix : à saisir ensuite'}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+              {varianteErr && <div role="alert" style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>⚠️ {varianteErr}</div>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button onClick={() => setVariante(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
+                <button onClick={creerVariante} disabled={varianteSaving}
+                  style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: `linear-gradient(135deg, ${CD}, ${C})`, color: '#fff', cursor: varianteSaving ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                  {varianteSaving ? '…' : 'Créer la variante'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* C1 — fenêtre « Copier un canal » */}
