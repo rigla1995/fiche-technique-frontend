@@ -9,9 +9,9 @@ import { useAuth } from '../../context/AuthContext';
 // C1 : canaux de vente — chaque canal (vente directe, prestataires) a sa case « en vente » et son prix.
 import {
   CANAL_DIRECT, PAS_ARRONDI, MAJORATION_MIN, MAJORATION_MAX, cleCellule, lireCle, etatEnregistre, etatAffiche, surPrix,
-  surCase, celluleAEnvoyer, apercuCopie,
+  surCase, celluleAEnvoyer, apercuCopie, remplacantSur, accorderOrigine, cocherCanal,
 } from './ventes/canaux';
-import type { Edition, EtatCellule, CelluleEnvoyee } from './ventes/canaux';
+import type { Edition, EtatCellule, CelluleEnvoyee, LigneGrille } from './ventes/canaux';
 // C2 : recette propre à un canal — une variante du produit, rangée sous lui, le remplace sur les canaux choisis.
 import { LIBELLE_DEFAUT, LIBELLE_MAX, comparerAvecVariantes, lireLibelle, canauxParDefaut, peutAvoirVariante } from './produits/variantes';
 
@@ -119,6 +119,8 @@ interface CVCtxType {
   modifierPrix: (cle: string, enr: EtatCellule, texte: string) => void;
   modifierCase: (cle: string, coche: boolean) => void;
   cocherColonne: (lignes: ProduitRow[], canal: string, coche: boolean) => void;
+  /** C2 : la variante qui remplace cette ligne sur ce canal (sa cellule y est alors verrouillée), ou null. */
+  remplacant: (row: ProduitRow, canal: string) => ProduitRow | null;
   /** C2 : ouvre la fenêtre « recette propre à un canal » pour cette ligne (réservé au titulaire du compte). */
   ouvrirVariante: (row: ProduitRow) => void;
   peutVarier: boolean;
@@ -160,25 +162,40 @@ const ExcelIcon = () => (
 /** Référence d'une ligne de la grille pour les canaux : le type et l'identifiant de ce qui est vendu. */
 const typeDe = (row: ProduitRow): string => (row.produit.type === 'ingredient' ? 'ingredient' : 'produit');
 const cleDe = (row: ProduitRow, canal: string): string => cleCellule(typeDe(row), row.produit.id, canal);
+/** La même ligne, pour les règles entre un produit et ses variantes (ventes/canaux.ts). */
+const ligneDe = (row: ProduitRow): LigneGrille & { row: ProduitRow } => ({
+  type: typeDe(row), id: row.produit.id, varianteDeId: row.produit.varianteDeId ?? null, vendable: row.vendable, row,
+});
 
 /** C1 — une cellule de la grille : la case « en vente » et le prix d'une ligne sur un canal. */
 function CelluleCanal({ row, canal }: { row: ProduitRow; canal: string }) {
-  const { edits, prixPrestataires, modifierPrix, modifierCase } = useContext(CVCtx);
+  const { edits, prixPrestataires, modifierPrix, modifierCase, remplacant } = useContext(CVCtx);
   const voc = useVocabulaire();
   const cle = cleDe(row, canal);
   const enr = etatEnregistre(row.vendable, prixPrestataires, canal);
   const a = etatAffiche(enr, edits[cle]);
-  const infobulle = a.cochable ? `En ${voc.nom('vente')} sur ce canal` : 'Saisissez d\'abord un prix';
+  // C2 : sur un canal, une variante en vente tient la place de son produit d'origine — la cellule de l'origine y est
+  // verrouillée. Si les deux y sont cochés (état d'avant cette règle), la case reste ouverte pour pouvoir décocher.
+  const variante = remplacant(row, canal);
+  const verrou = variante != null;
+  const nomVariante = variante ? (variante.produit.varianteLibelle || variante.produit.name) : '';
+  const fermee = !a.cochable || (verrou && !a.enVente);
+  const infobulle = verrou
+    ? (a.enVente
+      ? `La variante « ${nomVariante} » se vend déjà sur ce canal : décochez cette case ou celle de la variante`
+      : `Sur ce canal, la variante « ${nomVariante} » remplace ${voc.ce('produit')} : décochez la variante pour rouvrir cette case`)
+    : a.cochable ? `En ${voc.nom('vente')} sur ce canal` : 'Saisissez d\'abord un prix';
   return (
-    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
-      <input type="checkbox" checked={a.enVente} disabled={!a.cochable} aria-label={infobulle} title={infobulle}
+    <div title={verrou ? infobulle : undefined} data-verrou={verrou ? 'variante' : undefined}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+      <input type="checkbox" checked={a.enVente} disabled={fermee} aria-label={infobulle} title={infobulle}
         onChange={e => modifierCase(cle, e.target.checked)}
-        style={{ accentColor: C, width: 17, height: 17, cursor: a.cochable ? 'pointer' : 'not-allowed' }} />
+        style={{ accentColor: verrou ? '#dc2626' : C, width: 17, height: 17, cursor: fermee ? 'not-allowed' : 'pointer' }} />
       <div style={{ position: 'relative', display: 'inline-block' }}>
-        <input type="number" min="0" step="0.01" value={a.texte} placeholder="—"
+        <input type="number" min="0" step="0.01" value={a.texte} placeholder="—" disabled={verrou} aria-label={verrou ? infobulle : undefined}
           onChange={e => modifierPrix(cle, enr, e.target.value)}
-          style={{ width: 92, padding: '6px 28px 6px 8px', borderRadius: 8, border: `1.5px solid ${a.modifie ? C : CB}`, background: a.modifie ? CL : '#fafafa', fontSize: '0.86rem', fontWeight: 700, color: a.enVente ? CD : 'var(--text-muted)', outline: 'none' }} />
-        <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
+          style={{ width: 92, padding: '6px 28px 6px 8px', borderRadius: 8, border: `1.5px solid ${verrou ? '#e2e8f0' : a.modifie ? C : CB}`, background: verrou ? '#f1f5f9' : a.modifie ? CL : '#fafafa', fontSize: '0.86rem', fontWeight: 700, color: verrou ? '#94a3b8' : a.enVente ? CD : 'var(--text-muted)', outline: 'none', cursor: verrou ? 'not-allowed' : 'text' }} />
+        <span aria-hidden="true" style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: verrou ? '0.7rem' : '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>{verrou ? '🔒' : 'DT'}</span>
       </div>
     </div>
   );
@@ -679,6 +696,10 @@ export default function ConfigurationVentePage() {
     const { article_type, article_id, canal } = lireCle(cle);
     return etatEnregistre(vendableDe.get(`${article_type}:${article_id}`), prixPrestataires, canal);
   };
+  // C2 : sur un canal, une variante en vente tient la place de son produit d'origine (cellule de l'origine verrouillée).
+  const lignesGrille = toutesLesLignes.map(ligneDe);
+  const remplacant = (row: ProduitRow, canal: string): ProduitRow | null =>
+    remplacantSur(ligneDe(row), lignesGrille, prixPrestataires, canal, edits)?.row ?? null;
   // Seules les cellules réellement changées partent au serveur (une saisie ramenée à l'enregistré ne compte pas).
   const cellules = Object.entries(edits)
     .map(([cle, ed]) => celluleAEnvoyer(cle, enregistreDe(cle), ed))
@@ -687,24 +708,18 @@ export default function ConfigurationVentePage() {
 
   const modifierPrix = (cle: string, enr: EtatCellule, texte: string) => {
     setSaveError('');
-    setEdits(prev => ({ ...prev, [cle]: surPrix(enr, prev[cle], texte) }));
+    setEdits(prev => accorderOrigine({ ...prev, [cle]: surPrix(enr, prev[cle], texte) }, cle, lignesGrille, prixPrestataires));
   };
+  // C2 : une variante cochée sur un canal y fait décocher son produit d'origine ; décochée, elle lui rend sa case.
   const modifierCase = (cle: string, coche: boolean) => {
     setSaveError('');
-    setEdits(prev => ({ ...prev, [cle]: surCase(prev[cle], coche) }));
+    setEdits(prev => accorderOrigine({ ...prev, [cle]: surCase(prev[cle], coche) }, cle, lignesGrille, prixPrestataires));
   };
-  // « ✓ Tout » ne coche que les lignes qui ont un prix sur ce canal ; « ✕ Aucun » garde les prix.
+  // « ✓ Tout » ne coche que les lignes qui ont un prix sur ce canal, sans toucher à ce qu'une variante remplace ;
+  // « ✕ Aucun » garde les prix.
   const cocherColonne = (lignes: ProduitRow[], canal: string, coche: boolean) => {
     setSaveError('');
-    setEdits(prev => {
-      const suite = { ...prev };
-      for (const row of lignes) {
-        const cle = cleDe(row, canal);
-        const a = etatAffiche(etatEnregistre(row.vendable, prixPrestataires, canal), suite[cle]);
-        if (coche ? (a.cochable && !a.enVente) : a.enVente) suite[cle] = surCase(suite[cle], coche);
-      }
-      return suite;
-    });
+    setEdits(prev => cocherCanal(prev, lignes.map(ligneDe), lignesGrille, prixPrestataires, canal, coche));
   };
 
   // Un seul envoi, tout ou rien : le serveur refuse l'ensemble si une cellule est fausse, et dit laquelle.
@@ -731,6 +746,9 @@ export default function ConfigurationVentePage() {
     ? apercuCopie(toutesLesLignes.map(r => ({
         source: etatEnregistre(r.vendable, prixPrestataires, copie.source),
         cible: etatEnregistre(r.vendable, prixPrestataires, copie.cible),
+        // C2 : un produit et sa variante ne se remplacent pas par copie (même règle que le serveur).
+        cle: `${typeDe(r)}:${r.produit.id}`,
+        origine: typeDe(r) === 'produit' && r.produit.varianteDeId != null ? `produit:${r.produit.varianteDeId}` : null,
       })), pctCopie, copie.pas, copie.retirer)
     : null;
   const ouvrirCopie = () => {
@@ -748,7 +766,7 @@ export default function ConfigurationVentePage() {
         activite_id: selectedActiviteId, source: copie.source, cible: copie.cible,
         majoration_pct: pctCopie, arrondi: copie.pas, retirer_absents: copie.retirer,
       });
-      const bilan = data as { copies: number; prix_remplaces: number; retires: number };
+      const bilan = data as { copies: number; prix_remplaces: number; retires: number; laisses?: number };
       const cible = nomCanal(copie.cible);
       setCopie(null);
       loadAll();
@@ -756,7 +774,8 @@ export default function ConfigurationVentePage() {
         title: 'Canal copié',
         message: `${bilan.copies} ligne${bilan.copies > 1 ? 's' : ''} sur ${cible}`
           + (bilan.prix_remplaces ? ` · ${bilan.prix_remplaces} prix remplacé${bilan.prix_remplaces > 1 ? 's' : ''}` : '')
-          + (bilan.retires ? ` · ${bilan.retires} retirée${bilan.retires > 1 ? 's' : ''}` : '') + '.',
+          + (bilan.retires ? ` · ${bilan.retires} retirée${bilan.retires > 1 ? 's' : ''}` : '')
+          + (bilan.laisses ? ` · ${bilan.laisses} laissée${bilan.laisses > 1 ? 's' : ''} telle${bilan.laisses > 1 ? 's' : ''} quelle${bilan.laisses > 1 ? 's' : ''} (variante en place)` : '') + '.',
         tone: 'info',
       });
     } catch (e: unknown) {
@@ -855,7 +874,7 @@ export default function ConfigurationVentePage() {
 
   const ctxValue: CVCtxType = {
     activePrests, prixPrestataires,
-    edits, modifierPrix, modifierCase, cocherColonne, ouvrirVariante, peutVarier, saveError,
+    edits, modifierPrix, modifierCase, cocherColonne, remplacant, ouvrirVariante, peutVarier, saveError,
     dirtyCount, handleSaveAll, saving,
     histEntries, histLoading,
     histFilterNom, histFilterType, histFilterDu, histFilterAu,
@@ -1097,10 +1116,13 @@ export default function ConfigurationVentePage() {
                   : !apercu
                     ? `Majoration entre ${MAJORATION_MIN} % et ${MAJORATION_MAX} %.`
                     : apercu.copies === 0
-                      ? `Rien ne se vend encore sur ${nomCanal(copie.source)} : rien à copier.`
+                      ? (apercu.laisses
+                        ? `Rien à copier : ${apercu.laisses} ligne${apercu.laisses > 1 ? 's' : ''} où une variante tient déjà la place sur ${nomCanal(copie.cible)}.`
+                        : `Rien ne se vend encore sur ${nomCanal(copie.source)} : rien à copier.`)
                       : `${apercu.copies} ligne${apercu.copies > 1 ? 's' : ''} à copier`
                         + (apercu.remplaces ? ` · ${apercu.remplaces} prix remplacé${apercu.remplaces > 1 ? 's' : ''}` : '')
-                        + (apercu.retires ? ` · ${apercu.retires} retirée${apercu.retires > 1 ? 's' : ''}` : '')}
+                        + (apercu.retires ? ` · ${apercu.retires} retirée${apercu.retires > 1 ? 's' : ''}` : '')
+                        + (apercu.laisses ? ` · ${apercu.laisses} laissée${apercu.laisses > 1 ? 's' : ''} telle${apercu.laisses > 1 ? 's' : ''} quelle${apercu.laisses > 1 ? 's' : ''} (variante en place)` : '')}
               </div>
               {copieErr && <div role="alert" style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>⚠️ {copieErr}</div>}
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>

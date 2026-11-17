@@ -5,7 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   CANAL_DIRECT, cleCellule, lireCle, lirePrixSaisi, etatEnregistre, etatAffiche, surPrix, surCase, garder,
-  celluleAEnvoyer, majorer, apercuCopie, ouvertALaSaisie,
+  celluleAEnvoyer, majorer, apercuCopie, ouvertALaSaisie, afficheSur, remplacantSur, accorderOrigine, cocherCanal,
 } from '../src/components/client/ventes/canaux.ts';
 
 const LIEN = 'lien-glovo';
@@ -125,7 +125,111 @@ test('apercuCopie : copiés, prix remplacés, retirés', () => {
     { source: { prix: 6, enVente: false }, cible: { prix: 7, enVente: true } },       // absent de la source
     { source: { prix: null, enVente: false }, cible: { prix: null, enVente: false } },
   ];
-  assert.deepEqual(apercuCopie(lignes, 20, 0.01, false), { copies: 3, remplaces: 1, retires: 0 });
-  assert.deepEqual(apercuCopie(lignes, 20, 0.01, true), { copies: 3, remplaces: 1, retires: 1 });
-  assert.deepEqual(apercuCopie(lignes, 0, 0.01, false), { copies: 3, remplaces: 2, retires: 0 });
+  assert.deepEqual(apercuCopie(lignes, 20, 0.01, false), { copies: 3, remplaces: 1, retires: 0, laisses: 0 });
+  assert.deepEqual(apercuCopie(lignes, 20, 0.01, true), { copies: 3, remplaces: 1, retires: 1, laisses: 0 });
+  assert.deepEqual(apercuCopie(lignes, 0, 0.01, false), { copies: 3, remplaces: 2, retires: 0, laisses: 0 });
+});
+
+test('apercuCopie : un produit et sa variante ne se remplacent pas (C2, même règle que le serveur)', () => {
+  const vend = (prix) => ({ prix, enVente: true });
+  const rien = { prix: null, enVente: false };
+  // La source vend l'original, la cible vend déjà la variante : rien n'est copié ni retiré pour ce produit.
+  const versPrestataire = [
+    { cle: 'produit:1', origine: null, source: vend(20), cible: { prix: 24, enVente: false } },
+    { cle: 'produit:5', origine: 'produit:1', source: rien, cible: vend(24) },
+    { cle: 'produit:2', origine: null, source: vend(9), cible: rien },
+  ];
+  assert.deepEqual(apercuCopie(versPrestataire, 0, 0.01, true), { copies: 1, remplaces: 0, retires: 0, laisses: 1 });
+  // Dans l'autre sens : la source vend la variante, la cible vend l'original.
+  const versDirecte = [
+    { cle: 'produit:1', origine: null, source: rien, cible: vend(20) },
+    { cle: 'produit:5', origine: 'produit:1', source: vend(24), cible: rien },
+  ];
+  assert.deepEqual(apercuCopie(versDirecte, 0, 0.01, true), { copies: 0, remplaces: 0, retires: 0, laisses: 1 });
+  // Un article valorisé de même numéro qu'un produit n'est pas de la famille.
+  const valorise = [
+    { cle: 'ingredient:1', origine: null, source: vend(3), cible: rien },
+    { cle: 'produit:5', origine: 'produit:1', source: rien, cible: vend(24) },
+  ];
+  assert.deepEqual(apercuCopie(valorise, 0, 0.01, false), { copies: 1, remplaces: 0, retires: 0, laisses: 0 });
+});
+
+// ── C2 : un produit et sa variante sur un même canal ──
+const P = { type: 'produit', id: 1, varianteDeId: null, vendable: { id: 'avP', prix_vente: 20, actif: true, directe: true } };
+const V = { type: 'produit', id: 5, varianteDeId: 1, vendable: { id: 'avV', prix_vente: 0, actif: true, directe: false } };
+const AUTRE = { type: 'produit', id: 2, varianteDeId: null, vendable: { id: 'avA', prix_vente: 9, actif: true, directe: true } };
+const VALORISE = { type: 'ingredient', id: 1, vendable: { id: 'avI', prix_vente: 4, actif: true, directe: true } };
+const GRILLE = [P, V, AUTRE, VALORISE];
+// Chez le prestataire : l'original a gardé son prix (24) sans y être en vente, la variante s'y vend à 24.
+const PRIX = [
+  { article_vendable_id: 'avP', activite_prestataire_id: LIEN, prix_vente: 24, en_vente: false },
+  { article_vendable_id: 'avV', activite_prestataire_id: LIEN, prix_vente: 24, en_vente: true },
+];
+
+test('remplacantSur : la variante en vente verrouille la cellule de son produit d\'origine, sur ce canal seulement', () => {
+  assert.equal(remplacantSur(P, GRILLE, PRIX, LIEN, {}), V);
+  assert.equal(remplacantSur(P, GRILLE, PRIX, CANAL_DIRECT, {}), null);
+  assert.equal(remplacantSur(V, GRILLE, PRIX, LIEN, {}), null);        // une variante n'est jamais verrouillée
+  assert.equal(remplacantSur(AUTRE, GRILLE, PRIX, LIEN, {}), null);
+  assert.equal(remplacantSur(VALORISE, GRILLE, PRIX, LIEN, {}), null); // même numéro que le produit, autre nature
+  // La variante décochée (modification en attente) : la cellule de l'origine se rouvre aussitôt.
+  const decochee = { [cleCellule('produit', 5, LIEN)]: surCase(undefined, false) };
+  assert.equal(remplacantSur(P, GRILLE, PRIX, LIEN, decochee), null);
+});
+
+test('accorderOrigine : cocher la variante décoche l\'origine, la décocher lui rend sa case', () => {
+  const cleV = cleCellule('produit', 5, CANAL_DIRECT);
+  const cleP = cleCellule('produit', 1, CANAL_DIRECT);
+  // Un premier prix saisi sur la variante en vente directe la coche : l'origine cède sa case, son prix est gardé.
+  let ed = accorderOrigine({ [cleV]: surPrix({ prix: null, enVente: false }, undefined, '22') }, cleV, GRILLE, PRIX);
+  assert.equal(afficheSur(V, PRIX, CANAL_DIRECT, ed).enVente, true);
+  assert.deepEqual(afficheSur(P, PRIX, CANAL_DIRECT, ed), { texte: '20', prix: 20, enVente: false, cochable: true, modifie: true });
+  assert.equal(remplacantSur(P, GRILLE, PRIX, CANAL_DIRECT, ed), V);
+  assert.deepEqual(celluleAEnvoyer(cleP, { prix: 20, enVente: true }, ed[cleP]), { article_type: 'produit', article_id: 1, canal: CANAL_DIRECT, en_vente: false });
+  // Le prix effacé : la variante n'est plus en vente, l'origine retrouve sa case et plus rien n'est à envoyer pour elle.
+  ed = accorderOrigine({ ...ed, [cleV]: surPrix({ prix: null, enVente: false }, ed[cleV], '') }, cleV, GRILLE, PRIX);
+  assert.equal(afficheSur(P, PRIX, CANAL_DIRECT, ed).enVente, true);
+  assert.equal(ed[cleP], undefined);
+  // Une case de l'origine décochée à la main n'est pas « rendue » par la variante.
+  ed = { [cleP]: surCase(undefined, false) };
+  ed = accorderOrigine({ ...ed, [cleV]: surCase(undefined, false) }, cleV, GRILLE, PRIX);
+  assert.equal(afficheSur(P, PRIX, CANAL_DIRECT, ed).enVente, false);
+  // La cellule d'un autre produit ou d'un article valorisé ne touche à rien.
+  assert.deepEqual(accorderOrigine({}, cleCellule('produit', 2, LIEN), GRILLE, PRIX), {});
+  assert.deepEqual(accorderOrigine({}, cleCellule('ingredient', 1, LIEN), GRILLE, PRIX), {});
+});
+
+test('accorderOrigine : deux variantes — l\'origine ne revient que lorsque aucune ne tient la place', () => {
+  const W = { type: 'produit', id: 6, varianteDeId: 1, vendable: { id: 'avW', prix_vente: 21, actif: true, directe: false } };
+  const grille = [...GRILLE, W];
+  const cleV = cleCellule('produit', 5, CANAL_DIRECT);
+  const cleW = cleCellule('produit', 6, CANAL_DIRECT);
+  let ed = accorderOrigine({ [cleV]: surPrix({ prix: null, enVente: false }, undefined, '22') }, cleV, grille, PRIX);
+  ed = accorderOrigine({ ...ed, [cleW]: surCase(ed[cleW], true) }, cleW, grille, PRIX);
+  ed = accorderOrigine({ ...ed, [cleV]: surCase(ed[cleV], false) }, cleV, grille, PRIX);
+  assert.equal(afficheSur(P, PRIX, CANAL_DIRECT, ed).enVente, false); // la seconde variante tient encore la place
+  ed = accorderOrigine({ ...ed, [cleW]: surCase(ed[cleW], false) }, cleW, grille, PRIX);
+  assert.equal(afficheSur(P, PRIX, CANAL_DIRECT, ed).enVente, true);
+});
+
+test('cocherCanal : « Tout » ne change pas qui tient la place, « Aucun » décoche tout', () => {
+  // Chez le prestataire : la variante y est, l'origine (qui a un prix) reste décochée ; l'autre produit n'a pas de prix.
+  let ed = cocherCanal({}, GRILLE, GRILLE, PRIX, LIEN, true);
+  assert.equal(afficheSur(P, PRIX, LIEN, ed).enVente, false);
+  assert.equal(afficheSur(V, PRIX, LIEN, ed).enVente, true);
+  assert.equal(afficheSur(AUTRE, PRIX, LIEN, ed).enVente, false);
+  // « Aucun » puis « Tout » : la variante revient, pas l'origine.
+  ed = cocherCanal(ed, GRILLE, GRILLE, PRIX, LIEN, false);
+  assert.equal(afficheSur(V, PRIX, LIEN, ed).enVente, false);
+  ed = cocherCanal(ed, GRILLE, GRILLE, PRIX, LIEN, true);
+  assert.equal(afficheSur(V, PRIX, LIEN, ed).enVente, true);
+  assert.equal(afficheSur(P, PRIX, LIEN, ed).enVente, false);
+  // En vente directe, l'origine se vend : une variante qui y a un prix n'y est pas cochée d'office.
+  const avecPrix = [P, { ...V, vendable: { ...V.vendable, prix_vente: 22 } }, AUTRE, VALORISE];
+  ed = cocherCanal({}, avecPrix, avecPrix, PRIX, CANAL_DIRECT, true);
+  assert.equal(afficheSur(avecPrix[1], PRIX, CANAL_DIRECT, ed).enVente, false);
+  assert.equal(afficheSur(P, PRIX, CANAL_DIRECT, ed).enVente, true);
+  // Seules les lignes affichées sont touchées (filtre de recherche), mais la règle regarde toute la grille.
+  ed = cocherCanal({}, [P], GRILLE, PRIX, LIEN, true);
+  assert.deepEqual(ed, {});
 });

@@ -49,6 +49,18 @@ export function rangerVariantes<T extends AvecVariante>(liste: readonly T[]): T[
   return rangee;
 }
 
+/**
+ * La liste après la suppression d'un produit : sans lui ; si c'était une variante, son produit d'origine en compte une
+ * de moins (son badge suit, sans recharger la page).
+ */
+export function sansLeProduit<T extends AvecVariante & { variantesCount?: number }>(liste: readonly T[], supprime: AvecVariante): T[] {
+  return liste.filter((p) => p.id !== supprime.id).map((p) => (
+    supprime.varianteDeId != null && p.id === supprime.varianteDeId
+      ? { ...p, variantesCount: Math.max(0, (p.variantesCount ?? 0) - 1) }
+      : p
+  ));
+}
+
 /** Libellé saisi : espaces ramenés à un seul ; null s'il est vide ou trop long. */
 export function lireLibelle(texte: string): string | null {
   const libelle = String(texte ?? '').replace(/\s+/g, ' ').trim();

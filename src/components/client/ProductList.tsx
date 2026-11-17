@@ -12,7 +12,7 @@ import GuideButton from './GuideButton';
 import HistoryFilterBar, { FilterField, FilterInput, FilterSelect } from '../common/HistoryFilterBar';
 import { fmtQuantite, lireQuantiteProduite, pourLaRecette, pourUneUnite } from '../../utils/recettePU';
 // C2 : une variante (recette propre à un canal de vente) se range sous son produit d'origine.
-import { rangerVariantes } from './produits/variantes';
+import { rangerVariantes, sansLeProduit } from './produits/variantes';
 
 interface ProductDetail {
   ingredients: { ingredientName: string; portion: number; unitName: string; unitPrice: number; categorieName?: string | null }[];
@@ -340,7 +340,8 @@ export default function ProductList() {
         await api.delete(`/api/produits/${product.id}/stock-pt-history`);
       }
       await api.delete(`/api/products/${product.id}`);
-      setProducts((p) => p.filter((x) => x.id !== product.id));
+      // Une variante supprimée : le badge « N variantes » de son produit d'origine suit, sans recharger la page.
+      setProducts((p) => sansLeProduit(p, product));
       setDeleteModal(null);
       setDeleteError(null);
     } catch (err: unknown) {
