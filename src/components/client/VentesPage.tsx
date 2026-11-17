@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useContext, createContext } from 'react';
+// C1 : canaux de vente — une ligne ne se saisit que sur les canaux où elle est en vente (Configuration vente).
+import { CANAL_DIRECT, etatEnregistre } from './ventes/canaux';
 import { useSearchParams, Link } from 'react-router-dom';
 import api from '../../api/client';
 import HelpButton from '../common/HelpButton';
@@ -42,6 +44,7 @@ interface ArticleValoriseRaw {
     article_id: number;
     prix_vente: number;
     actif: boolean;
+    directe?: boolean;
   } | null;
 }
 
@@ -52,6 +55,8 @@ interface ArticleVendable {
   article_id: number;
   prix_vente: number;
   actif: boolean;
+  /** C1 : en vente directe (absent d'un serveur d'avant les canaux = oui). */
+  directe?: boolean;
   nom: string;
   unite_nom?: string | null;
   is_supplement?: boolean;
@@ -75,6 +80,8 @@ interface ArticlePrixPrestataire {
   article_vendable_id: string;
   activite_prestataire_id: string;
   prix_vente: number | null;
+  /** C1 : en vente chez ce prestataire (absent = oui dès qu'il y a un prix). */
+  en_vente?: boolean;
 }
 
 interface VenteLigne {
@@ -160,6 +167,10 @@ function calcPrixPrestataire(
 
 
 
+// C1 : la ligne est-elle en vente sur ce canal ('directe' ou le lien d'un prestataire) ? Sinon sa case de saisie est fermée.
+const ouvertSur = (av: ArticleVendable, canal: string, prix: ArticlePrixPrestataire[]): boolean =>
+  etatEnregistre({ id: av.id, prix_vente: av.prix_vente, actif: av.actif, directe: av.directe }, prix, canal).enVente;
+
 // ── Sub-components ────────────────────────────────────────────────────────────
 
 function PaginationBar({ total, page, setPage }: { total: number; page: number; setPage: (p: number) => void }) {
@@ -182,10 +193,14 @@ function PaginationBar({ total, page, setPage }: { total: number; page: number; 
 }
 
 function ArticleRow({ av }: { av: ArticleVendable }) {
-  const { activePrests, qtes, setQtes } = useContext(VPCtx);
+  const { activePrests, prixPrestataires, qtes, setQtes } = useContext(VPCtx);
+  const voc = useVocabulaire();
   const getQte = (channel: string) => qtes[av.id]?.[channel] ?? '';
   const setQte = (channel: string, val: string) =>
     setQtes(prev => ({ ...prev, [av.id]: { ...prev[av.id], [channel]: val } }));
+  // C1 : une case n'est ouverte que si la ligne est en vente sur ce canal ; sinon un tiret, sans saisie possible.
+  const directOuvert = ouvertSur(av, CANAL_DIRECT, prixPrestataires);
+  const ferme = <span title={`Pas en ${voc.nom('vente')} sur ce canal`} style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>—</span>;
 
   return (
     <tr style={{ borderBottom: `1px solid ${CB}` }}>
@@ -194,18 +209,24 @@ function ArticleRow({ av }: { av: ArticleVendable }) {
         {av.unite_nom && <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{av.unite_nom}</div>}
       </td>
       <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        <span style={{ fontWeight: 700, color: C, fontSize: '0.9rem' }}>{fmtMoney(av.prix_vente)}</span>
+        {directOuvert
+          ? <span style={{ fontWeight: 700, color: C, fontSize: '0.9rem' }}>{fmtMoney(av.prix_vente)}</span>
+          : ferme}
       </td>
       <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        <input type="number" min="0" step="0.001" value={getQte('direct')} placeholder="0"
-          onChange={e => setQte('direct', e.target.value)}
-          style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte('direct') ? C : CB}`, background: getQte('direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+        {directOuvert ? (
+          <input type="number" min="0" step="0.001" value={getQte('direct')} placeholder="0"
+            onChange={e => setQte('direct', e.target.value)}
+            style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte('direct') ? C : CB}`, background: getQte('direct') ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+        ) : ferme}
       </td>
       {activePrests.map(ap => (
         <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
-          <input type="number" min="0" step="0.001" value={getQte(ap.id)} placeholder="0"
+          {ouvertSur(av, ap.id, prixPrestataires) ? (
+            <input type="number" min="0" step="0.001" value={getQte(ap.id)} placeholder="0"
             onChange={e => setQte(ap.id, e.target.value)}
             style={{ width: 78, padding: '7px 8px', borderRadius: 8, border: `1.5px solid ${getQte(ap.id) ? C : CB}`, background: getQte(ap.id) ? CL : '#fafafa', textAlign: 'center', fontSize: '0.88rem', fontWeight: 600, outline: 'none' }} />
+          ) : ferme}
         </td>
       ))}
     </tr>
@@ -415,6 +436,7 @@ export default function VentesPage() {
           article_id: vv.id,
           prix_vente: vv.vendable!.prix_vente,
           actif: true,
+          directe: vv.vendable!.directe,
           nom: vv.nom,
           unite_nom: vv.unite_nom,
           is_supplement: false,
@@ -447,7 +469,7 @@ export default function VentesPage() {
 
     const directLignes = allArticles.flatMap(av => {
       const qte = parseFloat(qtes[av.id]?.['direct'] ?? '') || 0;
-      if (qte <= 0) return [];
+      if (qte <= 0 || !ouvertSur(av, CANAL_DIRECT, prixPrestataires)) return [];
       return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: av.prix_vente }];
     });
     if (directLignes.length > 0) list.push({ type_vente: 'directe', lignes: directLignes });
@@ -455,7 +477,7 @@ export default function VentesPage() {
     for (const ap of activePrests) {
       const lignes = allArticles.flatMap(av => {
         const qte = parseFloat(qtes[av.id]?.[ap.id] ?? '') || 0;
-        if (qte <= 0) return [];
+        if (qte <= 0 || !ouvertSur(av, ap.id, prixPrestataires)) return [];
         const prix = calcPrixPrestataire(av.id, ap.id, prixPrestataires);
         return [{ article_type: av.article_type, article_id: av.article_id, quantite: qte, prix_unitaire: prix ?? 0 }];
       });

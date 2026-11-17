@@ -6,6 +6,12 @@ import { useConfirm } from '../common/ConfirmDialog';
 import type { Activite } from '../../types';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import { useAuth } from '../../context/AuthContext';
+// C1 : canaux de vente — chaque canal (vente directe, prestataires) a sa case « en vente » et son prix.
+import {
+  CANAL_DIRECT, PAS_ARRONDI, MAJORATION_MIN, MAJORATION_MAX, cleCellule, lireCle, etatEnregistre, etatAffiche, surPrix,
+  surCase, celluleAEnvoyer, apercuCopie,
+} from './ventes/canaux';
+import type { Edition, EtatCellule, CelluleEnvoyee } from './ventes/canaux';
 
 const apiMsg = (e: unknown, fallback = 'Erreur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -47,6 +53,8 @@ interface ArticleVendable {
   prix_vente: number;
   portion: number | null;
   actif: boolean;
+  /** C1 : en vente directe (absent d'un serveur d'avant les canaux = oui). */
+  directe?: boolean;
   categorie_produit_id?: number | null;
 }
 
@@ -67,6 +75,8 @@ interface ArticlePrixPrestataire {
   article_vendable_id: string;
   activite_prestataire_id: string;
   prix_vente: number | null;
+  /** C1 : en vente chez ce prestataire (absent d'un serveur d'avant les canaux = oui dès qu'il y a un prix). */
+  en_vente?: boolean;
 }
 
 interface ProduitRow {
@@ -98,11 +108,12 @@ type Tab = 'produits' | 'supplements' | 'valorises' | 'historique';
 interface CVCtxType {
   activePrests: ActivitePrestataire[];
   prixPrestataires: ArticlePrixPrestataire[];
-  editingPrixVente: Record<string, string>;
-  editingPrixPrest: Record<string, string>;
-  setEditingPrixVente: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  setEditingPrixPrest: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  toggleVendable: (row: ProduitRow) => void;
+  /** C1 : modifications en attente, par cellule (produit × canal). */
+  edits: Record<string, Edition>;
+  modifierPrix: (cle: string, enr: EtatCellule, texte: string) => void;
+  modifierCase: (cle: string, coche: boolean) => void;
+  cocherColonne: (lignes: ProduitRow[], canal: string, coche: boolean) => void;
+  saveError: string;
   dirtyCount: number;
   handleSaveAll: () => void;
   saving: boolean;
@@ -137,67 +148,43 @@ const ExcelIcon = () => (
 
 // ── Module-level sub-components ───────────────────────────────────────────────
 
-function PrixInput({ avId, savedPrix }: { avId: string; savedPrix: number }) {
-  const { editingPrixVente, setEditingPrixVente } = useContext(CVCtx);
-  const isDirty = avId in editingPrixVente;
-  const val = isDirty ? editingPrixVente[avId] : String(savedPrix);
+/** Référence d'une ligne de la grille pour les canaux : le type et l'identifiant de ce qui est vendu. */
+const typeDe = (row: ProduitRow): string => (row.produit.type === 'ingredient' ? 'ingredient' : 'produit');
+const cleDe = (row: ProduitRow, canal: string): string => cleCellule(typeDe(row), row.produit.id, canal);
 
-  const handleChange = (v: string) => {
-    setEditingPrixVente(prev => ({ ...prev, [avId]: v }));
-  };
-
+/** C1 — une cellule de la grille : la case « en vente » et le prix d'une ligne sur un canal. */
+function CelluleCanal({ row, canal }: { row: ProduitRow; canal: string }) {
+  const { edits, prixPrestataires, modifierPrix, modifierCase } = useContext(CVCtx);
+  const voc = useVocabulaire();
+  const cle = cleDe(row, canal);
+  const enr = etatEnregistre(row.vendable, prixPrestataires, canal);
+  const a = etatAffiche(enr, edits[cle]);
+  const infobulle = a.cochable ? `En ${voc.nom('vente')} sur ce canal` : 'Saisissez d\'abord un prix';
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <input type="number" min="0" step="0.01" value={val}
-        onChange={e => handleChange(e.target.value)}
-        style={{ width: 95, padding: '7px 30px 7px 8px', borderRadius: 8, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.88rem', fontWeight: 700, color: CD, outline: 'none' }} />
-      <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
-    </div>
-  );
-}
-
-function PrestInput({ avId, ap }: { avId: string; ap: ActivitePrestataire }) {
-  const { editingPrixPrest, setEditingPrixPrest, prixPrestataires } = useContext(CVCtx);
-  const key = `${avId}__${ap.id}`;
-  const existing = prixPrestataires.find(p => p.article_vendable_id === avId && p.activite_prestataire_id === ap.id);
-  const isDirty = key in editingPrixPrest;
-  const val = isDirty ? editingPrixPrest[key] : (existing?.prix_vente != null ? String(existing.prix_vente) : '');
-
-  return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <input type="number" min="0" step="0.01" value={val} placeholder="—"
-        onChange={e => setEditingPrixPrest(prev => ({ ...prev, [key]: e.target.value }))}
-        style={{ width: 90, padding: '5px 26px 5px 6px', borderRadius: 7, border: `1.5px solid ${isDirty ? C : CB}`, background: isDirty ? CL : '#fafafa', fontSize: '0.82rem', fontWeight: 700, color: CD, outline: 'none' }} />
-      <span style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
+    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+      <input type="checkbox" checked={a.enVente} disabled={!a.cochable} aria-label={infobulle} title={infobulle}
+        onChange={e => modifierCase(cle, e.target.checked)}
+        style={{ accentColor: C, width: 17, height: 17, cursor: a.cochable ? 'pointer' : 'not-allowed' }} />
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <input type="number" min="0" step="0.01" value={a.texte} placeholder="—"
+          onChange={e => modifierPrix(cle, enr, e.target.value)}
+          style={{ width: 92, padding: '6px 28px 6px 8px', borderRadius: 8, border: `1.5px solid ${a.modifie ? C : CB}`, background: a.modifie ? CL : '#fafafa', fontSize: '0.86rem', fontWeight: 700, color: a.enVente ? CD : 'var(--text-muted)', outline: 'none' }} />
+        <span style={{ position: 'absolute', right: 7, top: '50%', transform: 'translateY(-50%)', fontSize: '0.6rem', color: C, pointerEvents: 'none', fontWeight: 700 }}>DT</span>
+      </div>
     </div>
   );
 }
 
 function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: number; showPortion: boolean }) {
-  const { activePrests, editingPrixVente, toggleVendable } = useContext(CVCtx);
-  const isActive = row.vendable?.actif === true;
-
-  const hasPrixDirect = () => {
-    if (!row.vendable) return false;
-    if (row.vendable.id in editingPrixVente) return parseFloat(editingPrixVente[row.vendable.id] || '0') > 0;
-    return (row.vendable.prix_vente ?? 0) > 0;
-  };
-  const hasPrix = hasPrixDirect();
-  // Activation : on se base sur le prix ENREGISTRÉ (le backend refuse l'activation sans prix > 0).
-  const hasSavedPrix = (row.vendable?.prix_vente ?? 0) > 0;
+  const { activePrests, edits, prixPrestataires } = useContext(CVCtx);
+  // Une ligne est « en vente » dès qu'un canal la vend (modifications en attente comprises).
+  const isActive = [CANAL_DIRECT, ...activePrests.map(ap => ap.id)]
+    .some(canal => etatAffiche(etatEnregistre(row.vendable, prixPrestataires, canal), edits[cleDe(row, canal)]).enVente);
 
   return (
-    <tr style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7', opacity: row.vendable && !isActive ? 0.6 : 1 }}>
-      <td style={{ padding: '12px 16px' }}>
+    <tr style={{ borderBottom: `1px solid ${CB}`, background: idx % 2 === 0 ? '#fff' : '#fffdf7' }}>
+      <td style={{ padding: '12px 16px', opacity: isActive ? 1 : 0.6 }}>
         <div style={{ fontWeight: isActive ? 700 : 500, fontSize: '0.9rem', color: isActive ? CD : 'var(--text)' }}>{row.produit.name}</div>
-        {row.error && <div style={{ fontSize: '0.7rem', color: '#dc2626', marginTop: 2 }}>{row.error}</div>}
-      </td>
-      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        <input type="checkbox" checked={isActive}
-          disabled={row.saving || (!!row.vendable && !isActive && !hasSavedPrix)}
-          title={(!!row.vendable && !isActive && !hasSavedPrix) ? 'Saisissez et enregistrez un prix de vente > 0 pour activer' : undefined}
-          onChange={() => toggleVendable(row)}
-          style={{ accentColor: C, width: 17, height: 17, cursor: (!!row.vendable && !isActive && !hasSavedPrix) ? 'not-allowed' : 'pointer' }} />
       </td>
       {showPortion && (
         <td style={{ padding: '8px 16px', textAlign: 'center' }}>
@@ -206,26 +193,35 @@ function ProduitTableRow({ row, idx, showPortion }: { row: ProduitRow; idx: numb
           </span>
         </td>
       )}
-      <td style={{ padding: '8px 16px', textAlign: 'center' }}>
-        {row.vendable
-          ? <PrixInput avId={row.vendable.id} savedPrix={row.vendable.prix_vente} />
-          : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
+      <td style={{ padding: '8px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <CelluleCanal row={row} canal={CANAL_DIRECT} />
       </td>
       {activePrests.map(ap => (
-        <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center' }}>
-          {isActive && row.vendable && hasPrix
-            ? <PrestInput avId={row.vendable.id} ap={ap} />
-            : <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>—</span>}
+        <td key={ap.id} style={{ padding: '8px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+          <CelluleCanal row={row} canal={ap.id} />
         </td>
       ))}
     </tr>
   );
 }
 
+/** C1 — sous le titre d'une colonne : cocher ou décocher tout le canal (lignes filtrées ; rien n'est enregistré avant « Enregistrer »). */
+function ToutLeCanal({ lignes, canal }: { lignes: ProduitRow[]; canal: string }) {
+  const { cocherColonne } = useContext(CVCtx);
+  const bouton = { padding: '1px 7px', borderRadius: 6, border: `1px solid ${CB}`, background: '#fff', color: C, fontSize: '0.64rem', fontWeight: 700, cursor: 'pointer', textTransform: 'none' as const, letterSpacing: 0 };
+  return (
+    <div style={{ display: 'flex', gap: 4, justifyContent: 'center', marginTop: 5 }}>
+      <button type="button" onClick={() => cocherColonne(lignes, canal, true)} title="Cocher toutes les lignes qui ont un prix sur ce canal" style={bouton}>✓ Tout</button>
+      <button type="button" onClick={() => cocherColonne(lignes, canal, false)} title="Décocher toutes les lignes de ce canal (les prix sont gardés)" style={bouton}>✕ Aucun</button>
+    </div>
+  );
+}
+
 function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: ProduitRow[]; showPortion: boolean; isSupplement?: boolean }) {
-  const { activePrests, prixPrestataires, dirtyCount, handleSaveAll, saving } = useContext(CVCtx);
+  const { activePrests, prixPrestataires, edits, saveError, dirtyCount, handleSaveAll, saving } = useContext(CVCtx);
   const voc = useVocabulaire();
   const [filterNom, setFilterNom] = useState('');
+  // C1 : filtre « en vente sur ce canal » ('directe' ou le lien d'un prestataire).
   const [filterPresta, setFilterPresta] = useState('');
   const [page, setPage] = useState(1);
 
@@ -248,10 +244,7 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
 
   const filtered = tableRows.filter(r => {
     if (filterNom && !r.produit.name.toLowerCase().includes(filterNom.toLowerCase())) return false;
-    if (filterPresta) {
-      const hasPrix = prixPrestataires.some(p => p.article_vendable_id === r.vendable?.id && p.activite_prestataire_id === filterPresta && p.prix_vente != null);
-      if (!hasPrix) return false;
-    }
+    if (filterPresta && !etatAffiche(etatEnregistre(r.vendable, prixPrestataires, filterPresta), edits[cleDe(r, filterPresta)]).enVente) return false;
     return true;
   }).sort((a, b) => {
     // Regrouper par catégorie de produit (puis par nom)
@@ -264,7 +257,8 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
   const safePage = Math.min(page, totalPages);
   const paginated = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
-  const colCount = 2 + (showPortion ? 1 : 0) + 1 + activePrests.length;
+  const colCount = 1 + (showPortion ? 1 : 0) + 1 + activePrests.length;
+  const directe = `${voc.Nom('vente')} ${voc.acc('vente', 'direct', 'directe')}`;
   return (
     <div>
       <div style={{ display: 'flex', gap: 10, padding: '12px 16px', borderBottom: `1px solid ${CB}`, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -277,9 +271,10 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
         {activePrests.length > 0 && (
           <select value={filterPresta} onChange={e => setFilterPresta(e.target.value)}
             style={{ flex: '1 1 160px', minWidth: 130, padding: '7px 10px', borderRadius: 8, border: `1.5px solid ${filterPresta ? C : CB}`, background: filterPresta ? CL : '#fafafa', fontSize: '0.83rem', color: CD, outline: 'none', cursor: 'pointer' }}>
-            <option value="">{voc.Tous('prestataire', '')}</option>
+            <option value="">Tous les canaux</option>
+            <option value={CANAL_DIRECT}>🏪 En {voc.nom('vente')} {voc.acc('vente', 'direct', 'directe')}</option>
             {activePrests.map(ap => (
-              <option key={ap.id} value={ap.id}>{ap.prestataire_nom}</option>
+              <option key={ap.id} value={ap.id}>🛵 En {voc.nom('vente')} : {ap.prestataire_nom}</option>
             ))}
           </select>
         )}
@@ -306,19 +301,30 @@ function ProduitTable({ tableRows, showPortion, isSupplement }: { tableRows: Pro
           )}
         </button>
       </div>
+      {saveError && (
+        <div role="alert" style={{ margin: '10px 16px 0', background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '9px 14px', fontSize: '0.82rem', fontWeight: 600 }}>
+          ⚠️ {saveError}
+        </div>
+      )}
+      <div style={{ padding: '8px 16px 0', fontSize: '0.74rem', color: 'var(--text-muted)' }}>
+        Pour chaque canal : cochez la case pour y vendre la ligne, au prix saisi à côté. Une case ne se coche qu'avec un prix ; décochée, son prix est gardé.
+      </div>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: colCount * 110 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: colCount * 150 }}>
           <thead>
             <tr style={{ background: CL, borderBottom: `2px solid ${CB}` }}>
               <th style={{ padding: '11px 16px', textAlign: 'left', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{voc.Nom('produit')}</th>
-              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vendable</th>
               {showPortion && (
                 <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{voc.Nom('portion')}</th>
               )}
-              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>🏪 Prix direct</th>
+              <th style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                🏪 {directe}
+                <ToutLeCanal lignes={filtered} canal={CANAL_DIRECT} />
+              </th>
               {activePrests.map(ap => (
                 <th key={ap.id} style={{ padding: '11px 16px', textAlign: 'center', fontSize: '0.78rem', fontWeight: 800, color: C, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
                   🛵 {ap.prestataire_nom}
+                  <ToutLeCanal lignes={filtered} canal={ap.id} />
                 </th>
               ))}
             </tr>
@@ -552,9 +558,14 @@ export default function ConfigurationVentePage() {
   const [rows, setRows] = useState<ProduitRow[]>([]);
   const [valorises, setValorises] = useState<ArticleValorise[]>([]);
 
-  const [editingPrixVente, setEditingPrixVente] = useState<Record<string, string>>({});
-  const [editingPrixPrest, setEditingPrixPrest] = useState<Record<string, string>>({});
+  // C1 : modifications en attente de la grille, par cellule (ligne × canal), envoyées d'un bloc par « Enregistrer ».
+  const [edits, setEdits] = useState<Record<string, Edition>>({});
+  const [saveError, setSaveError] = useState('');
   const [saving, setSaving] = useState(false);
+  // C1 : copie d'un canal vers un autre (fenêtre).
+  const [copie, setCopie] = useState<{ source: string; cible: string; pct: string; pas: number; retirer: boolean } | null>(null);
+  const [copieErr, setCopieErr] = useState('');
+  const [copieSaving, setCopieSaving] = useState(false);
 
   const [histEntries, setHistEntries] = useState<HistConfigEntry[]>([]);
   const [histLoading, setHistLoading] = useState(false);
@@ -592,14 +603,22 @@ export default function ConfigurationVentePage() {
       const prodData = pr.data as Produit[];
       setRows(prodData.map(p => ({ produit: p, vendable: avMap.get(p.id), categorieProduitName: p.categorieProduitName ?? null })));
       setValorises(val.data as ArticleValorise[]);
+      // C1 : arrivée depuis l'activation d'un prestataire (« Copier la vente directe vers lui ») — la fenêtre s'ouvre.
+      const vers = new URLSearchParams(window.location.search).get('copierVers');
+      if (vers && (ap.data as ActivitePrestataire[]).some(p => p.id === vers && p.actif)) {
+        setCopie({ source: CANAL_DIRECT, cible: vers, pct: '', pas: 0.01, retirer: false });
+        setCopieErr('');
+        setSearchParams({ activiteId: String(selectedActiviteId) }, { replace: true });
+      }
     }).catch(() => {});
-  }, [selectedActiviteId]);
+  }, [selectedActiviteId, setSearchParams]);
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
+  // Le témoin « Chargement… » est allumé par les gestes (onglet, Actualiser), pas par l'effet : pas d'état posé
+  // de façon synchrone dans un effet.
   const loadHistorique = useCallback(() => {
     if (!selectedActiviteId) return;
-    setHistLoading(true);
     api.get(`/api/articles-vendables/historique-config?activiteId=${selectedActiviteId}`)
       .then(({ data }) => setHistEntries(data as HistConfigEntry[]))
       .catch(() => {})
@@ -618,54 +637,96 @@ export default function ConfigurationVentePage() {
     categorieProduitId: v.categorie_produit_id,
     categorieProduitName: v.categorie_produit_nom,
   }));
-  const dirtyCount = Object.keys(editingPrixVente).length + Object.keys(editingPrixPrest).length;
+  // C1 — toutes les lignes de la grille (les trois onglets), et ce que le serveur a enregistré pour chaque cellule.
+  const toutesLesLignes = [...produitRows, ...supplementRows, ...valoriseRows];
+  const vendableDe = new Map(toutesLesLignes.map(r => [`${typeDe(r)}:${r.produit.id}`, r.vendable]));
+  const enregistreDe = (cle: string): EtatCellule => {
+    const { article_type, article_id, canal } = lireCle(cle);
+    return etatEnregistre(vendableDe.get(`${article_type}:${article_id}`), prixPrestataires, canal);
+  };
+  // Seules les cellules réellement changées partent au serveur (une saisie ramenée à l'enregistré ne compte pas).
+  const cellules = Object.entries(edits)
+    .map(([cle, ed]) => celluleAEnvoyer(cle, enregistreDe(cle), ed))
+    .filter((c): c is CelluleEnvoyee => c !== null);
+  const dirtyCount = cellules.length;
 
-  const toggleVendable = async (row: ProduitRow) => {
-    const isIngredient = row.produit.type === 'ingredient';
-    if (isIngredient) {
-      setValorises(prev => prev.map(v => v.id === row.produit.id ? { ...v, vendable: v.vendable ? { ...v.vendable } : v.vendable } : v));
-    } else {
-      setRows(prev => prev.map(r => r.produit.id === row.produit.id ? { ...r, saving: true, error: undefined } : r));
-    }
-    try {
-      if (row.vendable) {
-        // Le backend refuse l'activation sans prix > 0 (erreur affichée si besoin).
-        await api.put(`/api/articles-vendables/${row.vendable.id}`, { actif: !row.vendable.actif });
-      } else {
-        // 1ʳᵉ étape : ajoute au catalogue en INACTIF (prix à saisir avant d'activer).
-        await api.post('/api/articles-vendables', {
-          activite_id: selectedActiviteId,
-          article_type: isIngredient ? 'ingredient' : 'produit',
-          article_id: row.produit.id, prix_vente: 0, portion: null, actif: false,
-        });
+  const modifierPrix = (cle: string, enr: EtatCellule, texte: string) => {
+    setSaveError('');
+    setEdits(prev => ({ ...prev, [cle]: surPrix(enr, prev[cle], texte) }));
+  };
+  const modifierCase = (cle: string, coche: boolean) => {
+    setSaveError('');
+    setEdits(prev => ({ ...prev, [cle]: surCase(prev[cle], coche) }));
+  };
+  // « ✓ Tout » ne coche que les lignes qui ont un prix sur ce canal ; « ✕ Aucun » garde les prix.
+  const cocherColonne = (lignes: ProduitRow[], canal: string, coche: boolean) => {
+    setSaveError('');
+    setEdits(prev => {
+      const suite = { ...prev };
+      for (const row of lignes) {
+        const cle = cleDe(row, canal);
+        const a = etatAffiche(etatEnregistre(row.vendable, prixPrestataires, canal), suite[cle]);
+        if (coche ? (a.cochable && !a.enVente) : a.enVente) suite[cle] = surCase(suite[cle], coche);
       }
-      loadAll();
-    } catch (e: unknown) {
-      if (!isIngredient) {
-        setRows(prev => prev.map(r => r.produit.id === row.produit.id ? { ...r, saving: false, error: apiMsg(e) } : r));
-      }
-    }
+      return suite;
+    });
   };
 
+  // Un seul envoi, tout ou rien : le serveur refuse l'ensemble si une cellule est fausse, et dit laquelle.
   const handleSaveAll = async () => {
-    if (dirtyCount === 0) return;
+    if (dirtyCount === 0 || !selectedActiviteId) return;
     setSaving(true);
+    setSaveError('');
     try {
-      const proms: Promise<unknown>[] = [];
-      for (const [avId, val] of Object.entries(editingPrixVente)) {
-        proms.push(api.put(`/api/articles-vendables/${avId}`, { prix_vente: parseFloat(val) || 0 }));
-      }
-      for (const [key, val] of Object.entries(editingPrixPrest)) {
-        const [avId, apId] = key.split('__');
-        proms.push(api.post('/api/article-prix-prestataire', {
-          article_vendable_id: avId, activite_prestataire_id: apId, prix_vente: parseFloat(val),
-        }));
-      }
-      await Promise.all(proms);
-      setEditingPrixVente({});
-      setEditingPrixPrest({});
+      await api.put('/api/canaux-vente', { activite_id: selectedActiviteId, cellules });
+      setEdits({});
       loadAll();
-    } catch {} finally { setSaving(false); }
+    } catch (e: unknown) {
+      setSaveError(apiMsg(e, 'Enregistrement impossible'));
+    } finally { setSaving(false); }
+  };
+
+  // C1 — copie d'un canal vers un autre.
+  const nomCanal = (canal: string) => canal === CANAL_DIRECT
+    ? `🏪 ${voc.Nom('vente')} ${voc.acc('vente', 'direct', 'directe')}`
+    : `🛵 ${activePrests.find(ap => ap.id === canal)?.prestataire_nom ?? voc.Nom('prestataire')}`;
+  const pctCopie = copie ? (copie.pct.trim() === '' ? 0 : Number(copie.pct.replace(',', '.'))) : 0;
+  const pctValide = Number.isFinite(pctCopie) && pctCopie >= MAJORATION_MIN && pctCopie <= MAJORATION_MAX;
+  const apercu = copie && pctValide && copie.source !== copie.cible
+    ? apercuCopie(toutesLesLignes.map(r => ({
+        source: etatEnregistre(r.vendable, prixPrestataires, copie.source),
+        cible: etatEnregistre(r.vendable, prixPrestataires, copie.cible),
+      })), pctCopie, copie.pas, copie.retirer)
+    : null;
+  const ouvrirCopie = () => {
+    setCopieErr('');
+    setCopie({ source: CANAL_DIRECT, cible: activePrests[0]?.id ?? CANAL_DIRECT, pct: '', pas: 0.01, retirer: false });
+  };
+  const lancerCopie = async () => {
+    if (!copie || !selectedActiviteId) return;
+    if (copie.source === copie.cible) { setCopieErr('Choisissez deux canaux différents.'); return; }
+    if (!pctValide) { setCopieErr(`Majoration entre ${MAJORATION_MIN} % et ${MAJORATION_MAX} %.`); return; }
+    setCopieSaving(true);
+    setCopieErr('');
+    try {
+      const { data } = await api.post('/api/canaux-vente/copier', {
+        activite_id: selectedActiviteId, source: copie.source, cible: copie.cible,
+        majoration_pct: pctCopie, arrondi: copie.pas, retirer_absents: copie.retirer,
+      });
+      const bilan = data as { copies: number; prix_remplaces: number; retires: number };
+      const cible = nomCanal(copie.cible);
+      setCopie(null);
+      loadAll();
+      alerte({
+        title: 'Canal copié',
+        message: `${bilan.copies} ligne${bilan.copies > 1 ? 's' : ''} sur ${cible}`
+          + (bilan.prix_remplaces ? ` · ${bilan.prix_remplaces} prix remplacé${bilan.prix_remplaces > 1 ? 's' : ''}` : '')
+          + (bilan.retires ? ` · ${bilan.retires} retirée${bilan.retires > 1 ? 's' : ''}` : '') + '.',
+        tone: 'info',
+      });
+    } catch (e: unknown) {
+      setCopieErr(apiMsg(e, 'Copie impossible'));
+    } finally { setCopieSaving(false); }
   };
 
   const toggleSelectHist = (id: number) => {
@@ -721,19 +782,20 @@ export default function ConfigurationVentePage() {
 
   const ctxValue: CVCtxType = {
     activePrests, prixPrestataires,
-    editingPrixVente, editingPrixPrest, setEditingPrixVente, setEditingPrixPrest,
-    toggleVendable, dirtyCount, handleSaveAll, saving,
+    edits, modifierPrix, modifierCase, cocherColonne, saveError,
+    dirtyCount, handleSaveAll, saving,
     histEntries, histLoading,
     histFilterNom, histFilterType, histFilterDu, histFilterAu,
     setHistFilterNom, setHistFilterType, setHistFilterDu, setHistFilterAu,
-    loadHistorique, filteredHist,
+    loadHistorique: () => { setHistLoading(true); loadHistorique(); }, filteredHist,
     handleDeleteHistEntry, handleExportHistXls, exportingHistXls,
     selectedActiviteId,
     selectedHistIds, toggleSelectHist,
   };
 
-  const TabBtn = ({ tab, label, count }: { tab: Tab; label: string; count?: number }) => (
-    <button onClick={() => setActiveTab(tab)}
+  // Fonction de rendu (appelée, pas montée comme un composant : un composant créé pendant le rendu perd son état).
+  const tabBtn = (tab: Tab, label: string, count?: number) => (
+    <button onClick={() => { setActiveTab(tab); if (tab === 'historique') setHistLoading(true); }}
       style={{
         padding: '10px 22px', background: activeTab === tab ? C : '#fff',
         color: activeTab === tab ? '#fff' : CD,
@@ -764,7 +826,7 @@ export default function ConfigurationVentePage() {
               <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#fff', margin: 0 }}>Configuration {voc.Court('vente')} <HelpButton section="configuration-vente" variant="solid" size={18} tip="Aide" /></h1>
             </div>
             <p style={{ color: 'rgba(255,255,255,0.82)', margin: 0, fontSize: '0.85rem' }}>
-              Activez {voc.le('produit_vendable', true)} et configurez leurs prix de vente
+              Choisissez ce qui se vend sur chaque canal, et à quel prix
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8 }}>
@@ -776,7 +838,7 @@ export default function ConfigurationVentePage() {
         {activites.length > 0 && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 20, padding: '10px 14px', background: '#fff', borderRadius: 10, border: `1px solid ${CB}` }}>
             {activites.map(a => (
-              <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); }}
+              <button key={a.id} onClick={() => { setSelectedActiviteId(a.id); setSearchParams({ activiteId: String(a.id) }); setEdits({}); setSaveError(''); }}
                 style={{
                   padding: '4px 14px', borderRadius: 20, cursor: 'pointer', fontSize: '0.82rem',
                   border: selectedActiviteId === a.id ? `1.5px solid ${C}` : `1.5px solid ${CB}`,
@@ -801,10 +863,18 @@ export default function ConfigurationVentePage() {
               </div>
             )}
             <div style={{ display: 'flex', gap: 10, marginBottom: 22, flexWrap: 'wrap' }}>
-              <TabBtn tab="produits" label={`🛍️ ${voc.Nom('vente')} ${voc.Court('produit', true)}`} count={produitRows.length} />
-              <TabBtn tab="supplements" label={`🧂 ${voc.Pl('vente')} ${voc.Court('supplement', true)}`} count={supplementRows.length} />
-              <TabBtn tab="valorises" label={`💎 ${voc.Pl('vente')} ${voc.acc('vente', 'Valorisés', 'Valorisées')}`} count={valoriseRows.length} />
-              <TabBtn tab="historique" label="📋 Historique config" />
+              {tabBtn('produits', `🛍️ ${voc.Nom('vente')} ${voc.Court('produit', true)}`, produitRows.length)}
+              {tabBtn('supplements', `🧂 ${voc.Pl('vente')} ${voc.Court('supplement', true)}`, supplementRows.length)}
+              {tabBtn('valorises', `💎 ${voc.Pl('vente')} ${voc.acc('vente', 'Valorisés', 'Valorisées')}`, valoriseRows.length)}
+              {tabBtn('historique', '📋 Historique config')}
+              {/* C1 : copier un canal vers un autre (au moins deux canaux : la vente directe et un prestataire) */}
+              {activePrests.length > 0 && activeTab !== 'historique' && (
+                <button onClick={ouvrirCopie} disabled={dirtyCount > 0}
+                  title={dirtyCount > 0 ? 'Enregistrez d\'abord vos modifications' : 'Reprendre sur un canal ce qui se vend sur un autre, avec une majoration'}
+                  style={{ marginLeft: 'auto', padding: '10px 18px', borderRadius: 10, border: `1.5px solid ${CB}`, background: '#fff', color: dirtyCount > 0 ? '#9ca3af' : CD, fontWeight: 700, fontSize: '0.86rem', cursor: dirtyCount > 0 ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap' }}>
+                  📋 Copier un canal
+                </button>
+              )}
             </div>
 
             {activeTab === 'produits' && (
@@ -848,6 +918,75 @@ export default function ConfigurationVentePage() {
 
             {activeTab === 'historique' && <HistoriqueTab />}
           </>
+        )}
+
+        {/* C1 — fenêtre « Copier un canal » */}
+        {copie && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', zIndex: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div role="dialog" aria-label="Copier un canal" style={{ background: '#fff', borderRadius: 16, width: '100%', maxWidth: 520, maxHeight: '90vh', overflowY: 'auto', padding: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: CD }}>📋 Copier un canal</h2>
+                <button onClick={() => setCopie(null)} aria-label="Fermer" style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem' }}>✕</button>
+              </div>
+              <div style={{ fontSize: '0.84rem', color: '#475569', marginBottom: 14, lineHeight: 1.5 }}>
+                Tout ce qui se vend sur le canal d'origine se vendra aussi sur le canal d'arrivée, au prix majoré.
+                Les prix déjà saisis sur le canal d'arrivée sont remplacés. Les trois onglets sont concernés.
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: CD }}>
+                  Depuis
+                  <select value={copie.source} onChange={e => setCopie({ ...copie, source: e.target.value })}
+                    style={{ display: 'block', width: '100%', marginTop: 5, padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, fontSize: '0.85rem', color: CD, boxSizing: 'border-box' }}>
+                    {[CANAL_DIRECT, ...activePrests.map(ap => ap.id)].map(c => <option key={c} value={c}>{nomCanal(c)}</option>)}
+                  </select>
+                </label>
+                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: CD }}>
+                  Vers
+                  <select value={copie.cible} onChange={e => setCopie({ ...copie, cible: e.target.value })}
+                    style={{ display: 'block', width: '100%', marginTop: 5, padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, fontSize: '0.85rem', color: CD, boxSizing: 'border-box' }}>
+                    {[CANAL_DIRECT, ...activePrests.map(ap => ap.id)].map(c => <option key={c} value={c}>{nomCanal(c)}</option>)}
+                  </select>
+                </label>
+                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: CD }}>
+                  Majoration (%)
+                  <input type="number" step="1" min={MAJORATION_MIN} max={MAJORATION_MAX} value={copie.pct} placeholder="0"
+                    onChange={e => setCopie({ ...copie, pct: e.target.value })}
+                    style={{ display: 'block', width: '100%', marginTop: 5, padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, fontSize: '0.85rem', color: CD, boxSizing: 'border-box' }} />
+                </label>
+                <label style={{ fontSize: '0.74rem', fontWeight: 700, color: CD }}>
+                  Arrondi du prix
+                  <select value={copie.pas} onChange={e => setCopie({ ...copie, pas: Number(e.target.value) })}
+                    style={{ display: 'block', width: '100%', marginTop: 5, padding: '8px 10px', borderRadius: 8, border: `1.5px solid ${CB}`, fontSize: '0.85rem', color: CD, boxSizing: 'border-box' }}>
+                    {PAS_ARRONDI.map(p => <option key={p.valeur} value={p.valeur}>{p.libelle}</option>)}
+                  </select>
+                </label>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.82rem', color: '#475569', marginBottom: 14, cursor: 'pointer' }}>
+                <input type="checkbox" checked={copie.retirer} onChange={e => setCopie({ ...copie, retirer: e.target.checked })}
+                  style={{ accentColor: C, width: 16, height: 16, marginTop: 2 }} />
+                <span>Retirer du canal d'arrivée ce que le canal d'origine ne vend pas (les prix sont gardés)</span>
+              </label>
+              <div style={{ background: CL, border: `1px solid ${CB}`, borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.83rem', color: CD, fontWeight: 600 }}>
+                {copie.source === copie.cible
+                  ? 'Choisissez deux canaux différents.'
+                  : !apercu
+                    ? `Majoration entre ${MAJORATION_MIN} % et ${MAJORATION_MAX} %.`
+                    : apercu.copies === 0
+                      ? `Rien ne se vend encore sur ${nomCanal(copie.source)} : rien à copier.`
+                      : `${apercu.copies} ligne${apercu.copies > 1 ? 's' : ''} à copier`
+                        + (apercu.remplaces ? ` · ${apercu.remplaces} prix remplacé${apercu.remplaces > 1 ? 's' : ''}` : '')
+                        + (apercu.retires ? ` · ${apercu.retires} retirée${apercu.retires > 1 ? 's' : ''}` : '')}
+              </div>
+              {copieErr && <div role="alert" style={{ background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: '0.82rem', fontWeight: 600 }}>⚠️ {copieErr}</div>}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
+                <button onClick={() => setCopie(null)} style={{ padding: '9px 18px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>Fermer</button>
+                <button onClick={lancerCopie} disabled={copieSaving || !apercu || apercu.copies === 0}
+                  style={{ padding: '9px 22px', borderRadius: 10, border: 'none', background: !apercu || apercu.copies === 0 ? '#e5e7eb' : `linear-gradient(135deg, ${CD}, ${C})`, color: !apercu || apercu.copies === 0 ? '#9ca3af' : '#fff', cursor: copieSaving || !apercu || apercu.copies === 0 ? 'default' : 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
+                  {copieSaving ? '…' : '📋 Copier'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </CVCtx.Provider>

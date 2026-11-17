@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../api/client';
 import GuideButton from './GuideButton';
 import { useConfirm } from '../common/ConfirmDialog';
@@ -48,6 +48,7 @@ export default function ConfigPrestatairesPage() {
   // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
   const prestatairesOk = useAuth().user?.domaine?.prestataires !== false;
   const { confirm, alerte } = useConfirm();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activites, setActivites] = useState<Activite[]>([]);
   const [selectedActiviteId, setSelectedActiviteId] = useState<number | null>(null);
@@ -115,7 +116,7 @@ export default function ConfigPrestatairesPage() {
     const ok = await confirm({
       title: `Désactiver ${prestataire.nom} pour ${voc.ce('activite')} ?`,
       message: existing.conditions_renseignees || n > 0
-        ? `Ses conditions (commission, TVA, mode de paiement)${n > 0 ? ` et ses ${n} prix` : ''} seront ${voc.acc('prestataire', 'effacés', 'effacés')}. Vous devrez les ressaisir pour le réactiver. ${voc.Le('vente', true)} déjà ${voc.acc('vente', 'enregistrés', 'enregistrées')} ne changent pas.`
+        ? `Ses conditions (commission, TVA, mode de paiement)${n > 0 ? ` et ses ${n} prix` : ''} seront ${voc.acc('prestataire', 'effacés', 'effacés')}. Vous devrez les ressaisir pour le réactiver.${n > 0 ? ' Ce qui ne se vendait que sur ce canal ne sera plus proposé.' : ''} ${voc.Le('vente', true)} déjà ${voc.acc('vente', 'enregistrés', 'enregistrées')} ne changent pas.`
         : `${voc.Le('vente', true)} déjà ${voc.acc('vente', 'enregistrés', 'enregistrées')} ne changent pas.`,
       confirmLabel: 'Désactiver',
       tone: 'danger',
@@ -144,10 +145,26 @@ export default function ConfigPrestatairesPage() {
       mode_paiement_id: parseInt(fMode, 10),
     };
     try {
+      let nouveauLien: string | null = null;
       if (fenetre.lien) await api.put(`/api/activite-prestataires/${fenetre.lien.id}`, corps);
-      else await api.post('/api/activite-prestataires', { activite_id: selectedActiviteId, prestataire_id: fenetre.prestataire.id, ...corps });
+      else {
+        const { data } = await api.post('/api/activite-prestataires', { activite_id: selectedActiviteId, prestataire_id: fenetre.prestataire.id, ...corps });
+        nouveauLien = (data as { id?: string })?.id ?? null;
+      }
+      const nom = fenetre.prestataire.nom;
       setFenetre(null);
       loadAll();
+      // C1 : un canal vient de s'ouvrir, encore vide — proposer d'y copier ce qui se vend en direct.
+      if (nouveauLien) {
+        const copier = await confirm({
+          title: `${nom} : que vendre sur ce canal ?`,
+          message: `Rien ne s'y vend encore. Vous pouvez y copier d'un coup ce qui se vend en direct, avec une majoration des prix, puis ajuster ligne par ligne. Sinon, cochez les lignes une à une dans Configuration ${voc.Court('vente')}.`,
+          confirmLabel: '📋 Copier le canal direct',
+          cancelLabel: 'Plus tard',
+          tone: 'primary',
+        });
+        if (copier) navigate(`/client/ventes/configuration?activiteId=${selectedActiviteId}&copierVers=${nouveauLien}`);
+      }
     } catch (e: unknown) {
       setFError(apiMsg(e, 'Erreur serveur'));
     } finally {
