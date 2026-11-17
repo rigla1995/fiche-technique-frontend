@@ -5,6 +5,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   LIBELLE_DEFAUT, LIBELLE_MAX, comparerAvecVariantes, rangerVariantes, lireLibelle, canauxParDefaut, peutAvoirVariante,
+  sansLeProduit,
 } from '../src/components/client/produits/variantes.ts';
 
 const pizza = { id: 1, name: 'Pizza Margherita' };
@@ -34,6 +35,20 @@ test('rangerVariantes : l\'ordre de la liste est gardé, la variante remonte sou
   // Produit d'origine absent de la liste (autre onglet, filtre) : la variante reste à sa place.
   assert.deepEqual(ids([pizzaLiv, salade, burger]), [5, 2, 3]);
   assert.deepEqual(ids([]), []);
+});
+
+test('sansLeProduit : une variante supprimée, son produit d\'origine en compte une de moins', () => {
+  const liste = [{ ...pizza, variantesCount: 2 }, pizzaLiv, pizzaEmp, { ...salade, variantesCount: 0 }];
+  const apres = sansLeProduit(liste, pizzaLiv);
+  assert.deepEqual(apres.map((p) => p.id), [1, 6, 2]);
+  assert.equal(apres[0].variantesCount, 1);
+  assert.equal(sansLeProduit(apres, pizzaEmp)[0].variantesCount, 0);
+  // Un produit sans lien : la liste perd seulement sa ligne, les autres objets ne changent pas.
+  const sansSalade = sansLeProduit(liste, salade);
+  assert.deepEqual(sansSalade.map((p) => p.id), [1, 5, 6]);
+  assert.equal(sansSalade[0], liste[0]);
+  // Le compteur ne passe jamais sous zéro (liste périmée).
+  assert.equal(sansLeProduit([{ ...pizza }, pizzaLiv], pizzaLiv)[0].variantesCount, 0);
 });
 
 test('lireLibelle : espaces ramenés à un seul, vide ou trop long refusé', () => {
