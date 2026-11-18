@@ -95,7 +95,7 @@ function moteur(travailleur: TravailleurOcr): MoteurFacture {
 }
 
 /** Ouvre un PDF avec son worker (garde : un worker qui ne se charge pas ne bloque pas la lecture). */
-async function avecPdf<T>(octets: Uint8Array, faire: (pdf: PDFDocumentProxy) => Promise<T>): Promise<T> {
+export async function avecPdf<T>(octets: Uint8Array, faire: (pdf: PDFDocumentProxy) => Promise<T>): Promise<T> {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
   const travailleur = new PdfWorker();
   let panne = false;

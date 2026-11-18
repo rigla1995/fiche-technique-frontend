@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useContext, createContext } from 'react';
+import { useState, useEffect, useCallback, useContext, createContext, lazy, Suspense } from 'react';
 // C1 : canaux de vente — une ligne ne se saisit que sur les canaux où elle est en vente (Configuration vente).
 import { CANAL_DIRECT, etatEnregistre } from './ventes/canaux';
 import { useSearchParams, Link } from 'react-router-dom';
@@ -10,6 +10,9 @@ import { useAuth } from '../../context/AuthContext';
 import { useVocabulaire } from '../../hooks/useVocabulaire';
 import type { Vocab } from '../../vocab/vocab';
 import type { Activite } from '../../types';
+
+// V1a : import d'un fichier de caisse — la fenêtre (avec les lecteurs Excel et PDF) n'est chargée qu'à son ouverture.
+const ImporterCaisse = lazy(() => import('./ventes/caisse/ImporterCaisse'));
 
 const apiMsg = (e: unknown, fallback = 'Erreur serveur') =>
   (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? fallback;
@@ -362,6 +365,9 @@ export default function VentesPage() {
   const { user } = useAuth();
   // D1 : prestataires de livraison proposés au compte (règle du domaine × interrupteur de l'admin ; absent = oui).
   const prestatairesOk = user?.domaine?.prestataires !== false;
+  // V1a : import d'un fichier de caisse, proposé selon la règle du domaine (absente = oui).
+  const caisseOk = (user?.domaine as { regles?: { caisse?: boolean } } | null | undefined)?.regles?.caisse !== false;
+  const [importOuvert, setImportOuvert] = useState(false);
   const voc = useVocabulaire();
   const { confirm, alerte } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -616,6 +622,13 @@ export default function VentesPage() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {caisseOk && selectedActiviteId && (
+              <button type="button" onClick={() => setImportOuvert(true)}
+                title={`Créer ${voc.le('vente', true)} d'une journée depuis l'export de la caisse (Excel ou PDF)`}
+                style={{ background: '#fff', color: C, borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 800, border: '1px solid rgba(255,255,255,0.6)', cursor: 'pointer' }}>
+                📥 Importer la caisse
+              </button>
+            )}
             <Link to="/client/ventes/configuration" style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', borderRadius: 20, padding: '5px 14px', fontSize: '0.82rem', fontWeight: 600, textDecoration: 'none', border: '1px solid rgba(255,255,255,0.3)' }}>
               ⚙️ Configuration
             </Link>
@@ -626,6 +639,13 @@ export default function VentesPage() {
             )}
           </div>
         </div>
+
+        {importOuvert && selectedActiviteId && (
+          <Suspense fallback={null}>
+            <ImporterCaisse activiteId={selectedActiviteId} activiteNom={selectedActivite?.nom ?? ''} articles={allArticles} prestataires={activePrests}
+              prixPrestataires={prixPrestataires} onFermer={() => setImportOuvert(false)} onImporte={loadData} />
+          </Suspense>
+        )}
 
         {/* Activité selector */}
         {activites.length > 0 && (
