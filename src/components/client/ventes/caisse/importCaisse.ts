@@ -7,7 +7,7 @@
 //     quantité se répartit entre les prestataires seulement (le dernier laissé vide reçoit le reste).
 // Syntaxe TypeScript effaçable : testé tel quel par « node --test scripts/ventes-caisse.test.mjs ».
 import { normaliserDesignation, ressemblanceDesignations } from '../../factures/lecture/correspondre.ts';
-import type { LigneCaisse } from './lireCaisse.ts';
+import type { LigneCaisse, ModeleAppris } from './lireCaisse.ts';
 
 export const CANAL_DIRECT = 'directe';
 const EPS = 0.0005;
@@ -150,13 +150,19 @@ export function bilan(lignes: readonly LigneVerifiee[]): { aEnregistrer: number;
   return b;
 }
 
-/** Le corps de POST /api/ventes/imports. */
+/**
+ * Le corps de POST /api/ventes/imports. V1b : `remplacer` (la journée a déjà un import : ses ventes sont annulées et
+ * leur stock rendu) ; `colonnes` (le modèle du fichier à retenir, quand ses colonnes ont été désignées).
+ */
 export function corpsImport(d: {
-  activiteId: number; date: string; source: 'excel' | 'pdf'; fichierNom: string; empreinte: string; modele: string; totalLu: number | null;
+  activiteId: number; date: string; source: 'excel' | 'pdf' | 'csv'; fichierNom: string; empreinte: string; modele: string; totalLu: number | null;
   categories: readonly { nom: string; livraison: boolean }[]; lignes: readonly LigneVerifiee[];
+  remplacer?: boolean; colonnes?: ModeleAppris | null;
 }) {
   return {
     activite_id: d.activiteId, date_vente: d.date, source: d.source, fichier_nom: d.fichierNom, empreinte: d.empreinte, modele: d.modele, total_lu: d.totalLu,
+    ...(d.remplacer ? { remplacer: true } : {}),
+    ...(d.colonnes ? { colonnes: { signature: d.colonnes.signature, colonnes: d.colonnes.colonnes } } : {}),
     categories: d.categories.map((c) => ({ nom: c.nom, livraison: c.livraison })),
     lignes: d.lignes.map((l) => (l.ignoree
       ? { categorie: l.ligne.categorie, designation: l.ligne.designation, quantite: l.ligne.quantite, montant: l.ligne.montant, ignoree: true }

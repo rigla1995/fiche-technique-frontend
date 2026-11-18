@@ -5,7 +5,7 @@
 // quantité, prix, brut, remises, TVA, net). Règles mesurées sur les documents du client (essai du 18/11/2026,
 // labflow-reprise/ventes-cartes/essai/RAPPORT-ESSAI.md) ; les tests n'emploient qu'un jeu FICTIF.
 // Syntaxe TypeScript effaçable : testé tel quel par « node --test scripts/ventes-caisse.test.mjs ».
-import { lireNombre } from '../../factures/lecture/nombres.ts';
+import { datesDuTexte, lireNombre } from '../../factures/lecture/nombres.ts';
 import type { Rangee } from '../../factures/lecture/types.ts';
 
 /** Une ligne de produit du fichier. `montant` = ce que le client a payé : le brut moins les remises. */
@@ -255,4 +255,245 @@ export function jourDuFichier(lu: Pick<LectureCaisse, 'jours' | 'periode'>): { d
   if (avecChiffre.length > 1) return { date: null, etat: 'plusieurs', jours: avecChiffre };
   if (lu.periode && lu.periode.du === lu.periode.au) return { date: lu.periode.du, etat: 'trouvee', jours: [lu.periode.du] };
   return { date: null, etat: 'inconnue', jours: [] };
+}
+
+// ── V1b : TOUT fichier ───────────────────────────────────────────────────────────────────────────────────────────────
+// Décision du client (18/11/2026) : « accepter tous mes fichiers, les détecter et demander la correspondance ».
+// Quand les titres d'un tableau ne se reconnaissent pas seuls, l'utilisateur DÉSIGNE ses colonnes sur un aperçu ; le
+// choix est retenu par activité avec la ligne de titres du fichier (sa « signature ») : le fichier suivant de la même
+// caisse se lit sans question. Tout fichier (Excel, CSV, PDF) est ramené à une FEUILLE : des lignes de cellules.
+
+/** Ce qu'une colonne peut être. `montant` = ce que le client a payé pour la ligne, remises déduites. */
+export type RoleDesigne = 'designation' | 'quantite' | 'montant' | 'prixUnitaire' | 'categorie';
+export const ROLES_DESIGNES: readonly RoleDesigne[] = ['designation', 'quantite', 'montant', 'prixUnitaire', 'categorie'];
+/** Rôle → numéro de colonne de la feuille (à partir de 1). */
+export type ColonnesDesignees = Partial<Record<RoleDesigne, number>>;
+export interface ModeleAppris { signature: string; colonnes: ColonnesDesignees }
+export const MODELE_DESIGNE = 'Colonnes désignées';
+
+const nombreDe = (v: unknown): number | null => (typeof v === 'number' ? (Number.isFinite(v) ? v : null) : typeof v === 'string' && v.trim() !== '' ? lireNombre(v) : null);
+const texteDe = (v: unknown): string => (v == null ? '' : propre(typeof v === 'string' ? v : String(v)));
+const TOTAL = /^(total|totaux|sous[- ]?total|sub[- ]?total|grand total|somme)\b/;
+const TOTAL_GENERAL = /^(total|totaux|grand total)( general| ttc| net| du jour)?$/;
+const CATEGORIE_TITRE = /^(categor|famille|rayon|groupe|departement)/;
+
+/** Désignation, quantité et montant (ou prix unitaire) désignés, chacun sur sa colonne. */
+export function colonnesCompletes(c: ColonnesDesignees): boolean {
+  const prises = ROLES_DESIGNES.map((r) => c[r]).filter((n): n is number => typeof n === 'number');
+  return Boolean(c.designation && c.quantite && (c.montant || c.prixUnitaire)) && new Set(prises).size === prises.length;
+}
+
+/** Une feuille est exploitable si une de ses lignes porte au moins un texte et un nombre. */
+export function exploitable(feuille: readonly LigneFeuille[]): boolean {
+  return feuille.some((l) => {
+    const pleines = Array.from(l.cellules).filter((v) => texteDe(v) !== '');
+    return pleines.some((v) => nombreDe(v) !== null) && pleines.some((v) => nombreDe(v) === null);
+  });
+}
+
+const estDonnee = (l: LigneFeuille, c: ColonnesDesignees): boolean => {
+  const q = nombreDe(l.cellules[c.quantite as number]);
+  return q !== null && q > 0 && texteDe(l.cellules[c.designation as number]) !== '';
+};
+
+/** Date d'une cellule de date (« 05/11/2026 », « 2026-11-05 14:02 ») ; null pour tout autre texte. */
+const dateDeCellule = (v: unknown): string | null => {
+  if (typeof v !== 'string' || v.trim().length > 24) return null;
+  const d = datesDuTexte(v);
+  return d.length === 1 ? d[0].iso : null;
+};
+
+/**
+ * Lit une feuille dont les colonnes sont désignées. Une ligne de produit = une désignation et une quantité positive ;
+ * les titres et les lignes de texte sont sautés d'eux-mêmes, les lignes « Total » servent au contrôle. Les lignes du
+ * même produit (un export détaillé par ticket) sont REGROUPÉES : quantités et montants additionnés.
+ * La journée : les dates portées par les lignes (plusieurs jours : l'import est refusé, comme pour le modèle connu),
+ * sinon les dates écrites hors du tableau.
+ */
+export function lireFeuilleDesignee(feuille: readonly LigneFeuille[], colonnes: ColonnesDesignees): LectureCaisse | null {
+  if (!colonnesCompletes(colonnes)) return null;
+  const designees = new Set(ROLES_DESIGNES.map((r) => colonnes[r]).filter((n): n is number => typeof n === 'number'));
+  const lignes: LigneCaisse[] = [];
+  const parCle = new Map<string, LigneCaisse>();
+  const parJour = new Map<string, number>();
+  const horsTableau = new Set<string>();
+  let totalImprime: number | null = null;
+  for (const l of feuille) {
+    const nom = texteDe(l.cellules[colonnes.designation as number]);
+    const m = colonnes.montant ? nombreDe(l.cellules[colonnes.montant]) : null;
+    if (nom && TOTAL.test(plat(nom))) {
+      if (TOTAL_GENERAL.test(plat(nom)) && m !== null) totalImprime = m;
+      continue;
+    }
+    if (!estDonnee(l, colonnes)) {
+      for (const v of l.cellules) if (typeof v === 'string') for (const d of datesDuTexte(v)) horsTableau.add(d.iso);
+      continue;
+    }
+    const q = nombreDe(l.cellules[colonnes.quantite as number]) as number;
+    const pu = colonnes.prixUnitaire ? nombreDe(l.cellules[colonnes.prixUnitaire]) : null;
+    const montant = m ?? (pu !== null ? pu * q : null);
+    if (montant === null || montant < 0) continue;
+    const categorie = colonnes.categorie ? texteDe(l.cellules[colonnes.categorie]) || null : null;
+    let jour: string | null = null;
+    for (let col = 1; col < l.cellules.length && !jour; col++) if (!designees.has(col)) jour = dateDeCellule(l.cellules[col]);
+    if (jour) parJour.set(jour, (parJour.get(jour) ?? 0) + montant);
+    const cle = `${plat(categorie)}|${plat(nom)}`;
+    const deja = parCle.get(cle);
+    if (deja) {
+      deja.quantite = millime(deja.quantite + q);
+      deja.montant = millime(deja.montant + montant);
+      deja.brut = deja.montant;
+      deja.prixUnitaire = null;
+    } else {
+      const ligne: LigneCaisse = { rang: lignes.length + 1, categorie, sousCategorie: null, designation: nom, quantite: millime(q), prixUnitaire: pu, brut: millime(montant), remises: null, tva: null, net: null, montant: millime(montant) };
+      parCle.set(cle, ligne);
+      lignes.push(ligne);
+    }
+  }
+  if (!lignes.length) return null;
+  const categories = [...new Set(lignes.map((l) => l.categorie).filter((c): c is string => c !== null))];
+  const total = millime(lignes.reduce((s, l) => s + l.montant, 0));
+  const controles: ControleCaisse[] = totalImprime === null ? [] : [{ quoi: 'Total', lignes: lignes.length, juste: egal(total, totalImprime) }];
+  const jours = [...parJour].map(([date, montant]) => ({ date, montant: millime(montant) })).sort((a, b) => a.date.localeCompare(b.date));
+  const dates = [...horsTableau].sort();
+  const periode = !jours.length && dates.length ? { du: dates[0], au: dates[dates.length - 1] } : null;
+  return { modele: MODELE_DESIGNE, lignes, categories, controles, totalLu: totalImprime, jours, periode };
+}
+
+const signatureDeLigne = (l: LigneFeuille): string => Array.from(l.cellules, (v) => plat(texteDe(v))).join('|').replace(/\|+$/, '').slice(0, 400);
+const sansTitres = (l: LigneFeuille): string => `sans titres (${Math.max(0, l.cellules.length - 1)} colonnes)`;
+
+/**
+ * Signature d'un modèle de fichier : sa LIGNE DE TITRES — la ligne la plus proche au-dessus de la première ligne de
+ * produit qui porte un texte dans la colonne des désignations et dans celle des quantités. Sans titres : le nombre de
+ * colonnes (un tel modèle est proposé, jamais appliqué sans que l'utilisateur le confirme).
+ */
+export function signatureFeuille(feuille: readonly LigneFeuille[], colonnes: ColonnesDesignees): string {
+  const premiere = feuille.findIndex((l) => estDonnee(l, colonnes));
+  if (premiere < 0) return '';
+  for (let i = premiere - 1; i >= Math.max(0, premiere - 6); i--) {
+    const titre = feuille[i].cellules[colonnes.quantite as number];
+    if (texteDe(feuille[i].cellules[colonnes.designation as number]) && texteDe(titre) && nombreDe(titre) === null) return signatureDeLigne(feuille[i]);
+  }
+  return sansTitres(feuille[premiere]);
+}
+
+/**
+ * Le modèle retenu qui convient à une feuille. `sur` : sa ligne de titres s'y retrouve à l'identique — il s'applique
+ * sans question ; sinon (fichier sans titres, même nombre de colonnes) il est seulement proposé.
+ */
+export function trouverModele(feuille: readonly LigneFeuille[], modeles: readonly ModeleAppris[]): { modele: ModeleAppris; sur: boolean } | null {
+  const parSignature = new Map(modeles.filter((m) => colonnesCompletes(m.colonnes)).map((m) => [m.signature, m]));
+  if (!parSignature.size) return null;
+  for (const l of feuille.slice(0, 80)) {
+    const m = parSignature.get(signatureDeLigne(l));
+    if (m && !m.signature.startsWith('sans titres (')) return { modele: m, sur: true };
+  }
+  const chiffree = feuille.find((l) => Array.from(l.cellules).filter((v) => nombreDe(v) !== null).length >= 2);
+  const m = chiffree ? parSignature.get(sansTitres(chiffree)) : undefined;
+  return m ? { modele: m, sur: false } : null;
+}
+
+/** Colonnes proposées d'après les titres que la feuille porte (pré-remplit la désignation des colonnes). */
+export function devinerColonnes(feuille: readonly LigneFeuille[]): ColonnesDesignees {
+  const VERS: Partial<Record<Role, RoleDesigne>> = { designation: 'designation', quantite: 'quantite', brut: 'montant', net: 'montant', prixUnitaire: 'prixUnitaire' };
+  let meilleur: ColonnesDesignees = {};
+  for (const l of feuille.slice(0, 80)) {
+    // Une ligne de TITRES ne porte aucun nombre (« Total 12 142,500 » n'en est pas une).
+    if (Array.from(l.cellules).some((v) => nombreDe(v) !== null)) continue;
+    const c: ColonnesDesignees = {};
+    l.cellules.forEach((v, col) => {
+      if (typeof v !== 'string' || !v.trim()) return;
+      const role = roleDuTitre(v);
+      const d = role ? VERS[role] : CATEGORIE_TITRE.test(plat(v)) ? 'categorie' : undefined;
+      if (d && c[d] === undefined) c[d] = col;
+    });
+    if (Object.keys(c).length > Object.keys(meilleur).length) meilleur = c;
+  }
+  return meilleur;
+}
+
+/**
+ * Aperçu d'une feuille pour désigner ses colonnes : ses colonnes utilisées (14 au plus) et une douzaine de lignes à
+ * partir du tableau (deux lignes avant la première qui mêle texte et nombres, pour voir les titres).
+ */
+export function apercuFeuille(feuille: readonly LigneFeuille[], max = 12): { colonnes: number[]; lignes: LigneFeuille[] } {
+  const debut = Math.max(0, feuille.findIndex((l) => exploitable([l])) - 2);
+  const lignes = feuille.slice(debut, debut + max);
+  const vues = new Set<number>();
+  for (const l of feuille.slice(debut, debut + 200)) l.cellules.forEach((v, col) => { if (texteDe(v) !== '') vues.add(col); });
+  return { colonnes: [...vues].sort((a, b) => a - b).slice(0, 14), lignes };
+}
+
+/** Texte d'une cellule pour l'aperçu. */
+export const texteCellule = (v: unknown): string => (typeof v === 'number' ? String(Math.round(v * 1000) / 1000).replace('.', ',') : texteDe(v));
+
+/**
+ * Journée lue dans le NOM d'un fichier (« ventes_05-11-2026.xlsx », « caisse 2026-11-05.csv », « 20261105.pdf ») ; null
+ * si le nom n'en porte pas une seule. Elle est proposée quand le fichier n'annonce pas sa journée.
+ */
+export function jourDuNom(nom: string): string | null {
+  const base = nom.replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ');
+  const dates = new Set(datesDuTexte(base).map((d) => d.iso));
+  for (const m of base.matchAll(/(?<!\d)(20\d{2})(0[1-9]|1[0-2])(0[1-9]|[12]\d|3[01])(?!\d)/g)) dates.add(`${m[1]}-${m[2]}-${m[3]}`);
+  return dates.size === 1 ? [...dates][0] : null;
+}
+
+/**
+ * Ramène les pages d'un PDF avec texte à une feuille, par POSITIONS : les colonnes de nombres sont les positions qui
+ * reviennent (bord gauche, bord droit ou milieu des nombres, selon l'alignement qui en explique le plus) ; le texte de
+ * la ligne va dans la première colonne. Une rangée chiffrée reprend les morceaux de désignation voisins (noms coupés
+ * sur plusieurs rangées) ; les mots d'une rangée de titres sont placés au-dessus de leur colonne.
+ */
+export function feuilleDePages(pages: readonly { rangees: readonly Rangee[] }[]): LigneFeuille[] {
+  const toutes = pages.flatMap((p) => p.rangees);
+  const nombres = toutes.flatMap((r) => r.mots.filter((m) => estNombre(m.t)));
+  type Alignement = (m: { x0: number; x1: number }) => number;
+  const alignements: Alignement[] = [(m) => m.x1, (m) => m.x0, (m) => (m.x0 + m.x1) / 2];
+  const ancresDe = (position: Alignement): { x: number; n: number }[] => {
+    const g = grouper(nombres.map(position), 6).filter((c) => c.n >= 3);
+    const plus = Math.max(0, ...g.map((c) => c.n));
+    return g.filter((c) => c.n >= Math.max(3, 0.4 * plus));
+  };
+  let position = alignements[0];
+  let groupes = ancresDe(position);
+  for (const a of alignements.slice(1)) {
+    const g = ancresDe(a);
+    if (g.reduce((s, c) => s + c.n, 0) > groupes.reduce((s, c) => s + c.n, 0)) { position = a; groupes = g; }
+  }
+  const ancres = groupes.map((c) => c.x);
+  const colonneDe = (m: { t: string; x0: number; x1: number }): number => (estNombre(m.t) ? ancres.findIndex((a) => Math.abs(position(m) - a) <= 8) : -1);
+  const chiffree = (r: Rangee): boolean => ancres.length >= 2 && r.mots.filter((m) => colonneDe(m) >= 0).length >= 2;
+
+  const ancresY = toutes.filter(chiffree);
+  const pasDe = ancresY.slice(1).map((r, k) => (r.page === ancresY[k].page ? r.y0 - ancresY[k].y0 : Infinity)).filter(Number.isFinite).sort((a, b) => a - b);
+  const pas = pasDe.length ? pasDe[Math.floor(pasDe.length / 2)] : 24;
+  const blocs = new Map<Rangee, { y: number; x: number; t: string }[]>(ancresY.map((r) => [r, []]));
+  const seules: Rangee[] = [];
+  for (const r of toutes) {
+    if (blocs.has(r)) { (blocs.get(r) as { y: number; x: number; t: string }[]).push(...r.mots.filter((m) => colonneDe(m) < 0).map((m) => ({ y: r.y0, x: m.x0, t: m.t }))); continue; }
+    const proche = ancresY.filter((b) => b.page === r.page).map((b) => ({ b, d: Math.abs(b.y0 - r.y0) })).sort((u, v) => u.d - v.d)[0];
+    if (proche && proche.d <= 0.75 * pas) (blocs.get(proche.b) as { y: number; x: number; t: string }[]).push(...r.mots.map((m) => ({ y: r.y0, x: m.x0, t: m.t })));
+    else seules.push(r);
+  }
+  const feuille: LigneFeuille[] = [];
+  for (const r of toutes) {
+    const cellules: unknown[] = [];
+    if (blocs.has(r)) {
+      cellules[1] = (blocs.get(r) as { y: number; x: number; t: string }[]).sort((u, v) => u.y - v.y || u.x - v.x).map((m) => m.t).join(' ');
+      for (const m of r.mots) { const k = colonneDe(m); if (k >= 0 && cellules[k + 2] === undefined) cellules[k + 2] = m.t; }
+    } else if (seules.includes(r)) {
+      // Rangée de texte : un mot posé au-dessus d'une colonne de nombres en est le titre.
+      const texte: string[] = [];
+      for (const m of r.mots) {
+        const milieu = (m.x0 + m.x1) / 2;
+        const k = ancres.length && m.x0 > ancres[0] - 70 ? ancres.map((a, i) => ({ i, d: Math.abs(milieu - a) })).sort((u, v) => u.d - v.d)[0] : null;
+        if (k && k.d <= 45) cellules[k.i + 2] = cellules[k.i + 2] === undefined ? m.t : `${cellules[k.i + 2] as string} ${m.t}`;
+        else texte.push(m.t);
+      }
+      if (texte.length) cellules[1] = texte.join(' ');
+    } else continue;
+    feuille.push({ n: feuille.length + 1, cellules });
+  }
+  return feuille;
 }

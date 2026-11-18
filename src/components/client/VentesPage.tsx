@@ -642,7 +642,7 @@ export default function VentesPage() {
 
         {importOuvert && selectedActiviteId && (
           <Suspense fallback={null}>
-            <ImporterCaisse activiteId={selectedActiviteId} activiteNom={selectedActivite?.nom ?? ''} articles={allArticles} prestataires={activePrests}
+            <ImporterCaisse activiteId={selectedActiviteId} activiteNom={selectedActivite?.nom ?? ''} utilisateur={user} articles={allArticles} prestataires={activePrests}
               prixPrestataires={prixPrestataires} onFermer={() => setImportOuvert(false)} onImporte={loadData} />
           </Suspense>
         )}
