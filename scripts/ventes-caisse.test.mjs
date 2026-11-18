@@ -1,10 +1,15 @@
 // V1a « Importer un fichier de caisse » (labflow-reprise/ventes-cartes/PLAN-VENTES-CARTES.md §3 et §5 bis) : fonctions
 // pures des écrans — lecture d'un export de caisse (Excel, PDF), clés d'apprentissage, produit proposé, répartition par
 // canal, corps de l'envoi. Jeu FICTIF fabriqué ici (jamais les documents réels du client).
+// V1b : tout fichier — colonnes désignées, modèle retenu, CSV, PDF par positions, remplacement d'une journée.
 // Lancer : node --test scripts/ventes-caisse.test.mjs
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lireFeuilleCaisse, lirePagesCaisse, jourDuFichier, roleDuTitre } from '../src/components/client/ventes/caisse/lireCaisse.ts';
+import {
+  lireFeuilleCaisse, lirePagesCaisse, jourDuFichier, roleDuTitre, MODELE_DESIGNE, apercuFeuille, colonnesCompletes, devinerColonnes, exploitable, feuilleDePages,
+  jourDuNom, lireFeuilleDesignee, signatureFeuille, texteCellule, trouverModele,
+} from '../src/components/client/ventes/caisse/lireCaisse.ts';
+import { decoderTexte, decouperCsv, feuilleDeCsv, separateurDe } from '../src/components/client/ventes/caisse/lireCsv.ts';
 import {
   CANAL_DIRECT, cleCategorie, cleCorrespondance, livraisonProposee, proposerProduit, lireQuantite, repartir, bilan, corpsImport,
 } from '../src/components/client/ventes/caisse/importCaisse.ts';
@@ -270,4 +275,177 @@ test('repartir : livraison — le reste va au seul prestataire où le produit se
   assert.deepEqual([repartir(5, {}, true, [GLOVO, KOOL], [CANAL_DIRECT]).erreur, repartir(5, {}, true, [GLOVO, KOOL], [CANAL_DIRECT]).reste], ['PAS_CHEZ_PRESTATAIRE', 5]);
   // Sans produit choisi, on ne présume de rien : deux prestataires vides, il reste tout à répartir.
   assert.equal(repartir(5, {}, true, [GLOVO, KOOL], null).erreur, 'RESTE');
+});
+
+// ── V1b : TOUT fichier — colonnes désignées, modèle retenu, CSV, PDF par positions (jeu fictif) ──────────────────────
+// Un export d'une autre caisse : titres inconnus (« Plat », « Rayon », « Nb », « Encaissé »), un produit sur deux lignes.
+const AUTRE = (date = '05/11/2026') => [
+  { n: 1, cellules: [, `Rapport des ventes du ${date}`] },
+  { n: 3, cellules: [, 'Plat', 'Rayon', 'Nb', 'Encaissé'] },
+  { n: 4, cellules: [, 'Tajine', 'Cuisine', 3, 54] },
+  { n: 5, cellules: [, 'Brik', 'Cuisine', 10, '35,500'] },
+  { n: 6, cellules: [, 'Soda', 'Boissons', 6, 18] },
+  { n: 7, cellules: [, 'Tajine', 'Cuisine', 2, 36] },
+  { n: 8, cellules: [, 'Total', , 21, 143.5] },
+];
+const COLONNES = { designation: 1, categorie: 2, quantite: 3, montant: 4 };
+
+test('V1b — colonnes désignées : lignes regroupées, total contrôlé, journée lue hors du tableau', () => {
+  assert.equal(lireFeuilleCaisse(AUTRE()), null, 'titres inconnus : le modèle connu ne s\'y reconnaît pas');
+  assert.equal(exploitable(AUTRE()), true);
+  assert.equal(exploitable([{ n: 1, cellules: [, 'Texte seul'] }, { n: 2, cellules: [, 12, 13] }]), false);
+  const lu = lireFeuilleDesignee(AUTRE(), COLONNES);
+  assert.equal(lu.modele, MODELE_DESIGNE);
+  assert.deepEqual(lu.lignes.map((l) => [l.rang, l.categorie, l.designation, l.quantite, l.montant]),
+    [[1, 'Cuisine', 'Tajine', 5, 90], [2, 'Cuisine', 'Brik', 10, 35.5], [3, 'Boissons', 'Soda', 6, 18]]);
+  assert.deepEqual(lu.categories, ['Cuisine', 'Boissons']);
+  assert.equal(lu.totalLu, 143.5);
+  assert.deepEqual(lu.controles, [{ quoi: 'Total', lignes: 3, juste: true }]);
+  assert.deepEqual(jourDuFichier(lu), { date: '2026-11-05', etat: 'trouvee', jours: ['2026-11-05'] });
+
+  // Sans colonne de montant : prix unitaire × quantité. Sans catégorie : les lignes du même nom se regroupent.
+  const prix = lireFeuilleDesignee([{ n: 1, cellules: [, 'Tajine', 3, 18] }, { n: 2, cellules: [, 'Brik', 10, '3,550'] }, { n: 3, cellules: [, 'tajine', 2, 18] }], { designation: 1, quantite: 2, prixUnitaire: 3 });
+  assert.deepEqual(prix.lignes.map((l) => [l.designation, l.quantite, l.montant]), [['Tajine', 5, 90], ['Brik', 10, 35.5]]);
+  assert.equal(prix.totalLu, null);
+  assert.deepEqual(prix.controles, []);
+  assert.deepEqual(jourDuFichier(prix), { date: null, etat: 'inconnue', jours: [] });
+
+  // Un total imprimé faux est signalé ; des colonnes incomplètes ou en double ne lisent rien.
+  const faux = AUTRE(); faux[6] = { n: 8, cellules: [, 'TOTAL', , 21, 150] };
+  assert.deepEqual(lireFeuilleDesignee(faux, COLONNES).controles, [{ quoi: 'Total', lignes: 3, juste: false }]);
+  assert.equal(lireFeuilleDesignee(AUTRE(), { designation: 1, quantite: 3 }), null);
+  assert.equal(colonnesCompletes({ designation: 1, quantite: 3, montant: 3 }), false);
+  assert.equal(colonnesCompletes({ designation: 1, quantite: 3, prixUnitaire: 4 }), true);
+  assert.equal(lireFeuilleDesignee([{ n: 1, cellules: [, 'Rien', 'à', 'lire'] }], COLONNES), null);
+});
+
+test('V1b — un export détaillé par ticket : la journée vient des lignes ; plusieurs jours = refus', () => {
+  const ticket = (date, nom, q, total) => [, date, nom, q, total];
+  const unJour = [{ n: 1, cellules: [, 'Date', 'Plat', 'Nb', 'Encaissé'] },
+    { n: 2, cellules: ticket('05-11-2026', 'Tajine', 1, 18) }, { n: 3, cellules: ticket('05-11-2026', 'Brik', 2, 7) }, { n: 4, cellules: ticket('05-11-2026', 'Tajine', 2, 36) }];
+  const c = { designation: 2, quantite: 3, montant: 4 };
+  const lu = lireFeuilleDesignee(unJour, c);
+  assert.deepEqual(lu.lignes.map((l) => [l.designation, l.quantite, l.montant]), [['Tajine', 3, 54], ['Brik', 2, 7]]);
+  assert.deepEqual(jourDuFichier(lu), { date: '2026-11-05', etat: 'trouvee', jours: ['2026-11-05'] });
+  const deuxJours = lireFeuilleDesignee([...unJour, { n: 5, cellules: ticket('06-11-2026', 'Soda', 1, 3) }], c);
+  assert.deepEqual(jourDuFichier(deuxJours), { date: null, etat: 'plusieurs', jours: ['2026-11-05', '2026-11-06'] });
+});
+
+test('V1b — modèle retenu : la ligne de titres est sa signature ; le fichier suivant se lit sans question', () => {
+  const signature = signatureFeuille(AUTRE(), COLONNES);
+  assert.equal(signature, '|plat|rayon|nb|encaisse');
+  const modeles = [{ signature, colonnes: COLONNES }];
+  const lendemain = AUTRE('06/11/2026');
+  lendemain[3] = { n: 5, cellules: [, 'Brik', 'Cuisine', 4, '14,200'] };
+  const trouve = trouverModele(lendemain, modeles);
+  assert.equal(trouve.sur, true);
+  assert.equal(lireFeuilleDesignee(lendemain, trouve.modele.colonnes).lignes.length, 3);
+  // D'autres titres : rien ne s'applique. Un modèle incomplet est écarté.
+  const autresTitres = AUTRE(); autresTitres[1] = { n: 3, cellules: [, 'Plat', 'Rayon', 'Quantité vendue', 'Encaissé'] };
+  assert.equal(trouverModele(autresTitres, modeles), null);
+  assert.equal(trouverModele(lendemain, [{ signature, colonnes: { designation: 1 } }]), null);
+  assert.equal(trouverModele(lendemain, []), null);
+  // Fichier sans titres : la signature est le nombre de colonnes ; le modèle est PROPOSÉ, jamais appliqué seul.
+  const nu = [{ n: 1, cellules: [, 'Tajine', 3, 54] }, { n: 2, cellules: [, 'Brik', 10, 35.5] }];
+  const sansTitres = signatureFeuille(nu, { designation: 1, quantite: 2, montant: 3 });
+  assert.equal(sansTitres, 'sans titres (3 colonnes)');
+  assert.deepEqual(trouverModele(nu, [{ signature: sansTitres, colonnes: { designation: 1, quantite: 2, montant: 3 } }]).sur, false);
+  assert.equal(signatureFeuille([{ n: 1, cellules: [, 'Rien'] }], COLONNES), '');
+});
+
+test('V1b — colonnes proposées d\'après les titres, aperçu, journée lue dans le nom du fichier', () => {
+  const partiel = [{ n: 1, cellules: [, 'Rapport'] }, { n: 2, cellules: [, 'Article', 'Famille', 'Vendus', 'Montant TTC'] }, { n: 3, cellules: [, 'Tajine', 'Cuisine', 3, 54] }];
+  assert.deepEqual(devinerColonnes(partiel), { designation: 1, categorie: 2, montant: 4 });
+  assert.deepEqual(devinerColonnes(AUTRE()), { categorie: 2 }, '« Rayon » se reconnaît ; le reste est à désigner');
+  assert.deepEqual(devinerColonnes([{ n: 1, cellules: [, 'Tajine', 3, 54] }]), {});
+  assert.deepEqual(devinerColonnes([{ n: 1, cellules: [, 'Plat', 'Nb', 'Encaissé'] }, { n: 2, cellules: [, 'Total', 12, 142.5] }]), {}, 'la ligne « Total » ne compte pas pour une ligne de titres');
+  const apercu = apercuFeuille(AUTRE(), 4);
+  assert.deepEqual(apercu.colonnes, [1, 2, 3, 4]);
+  assert.deepEqual(apercu.lignes.map((l) => l.n), [1, 3, 4, 5], 'deux lignes avant la première ligne chiffrée : les titres se voient');
+  assert.equal(texteCellule(35.5), '35,5');
+  assert.equal(texteCellule('  Brik  à l\'œuf '), 'Brik à l\'œuf');
+  assert.equal(texteCellule(undefined), '');
+
+  assert.equal(jourDuNom('ventes_05-11-2026.xlsx'), '2026-11-05');
+  assert.equal(jourDuNom('caisse 2026-11-05.csv'), '2026-11-05');
+  assert.equal(jourDuNom('20261105.pdf'), '2026-11-05');
+  assert.equal(jourDuNom('export-caisse.xlsx'), null);
+  assert.equal(jourDuNom('du 04-11-2026 au 05-11-2026.pdf'), null, 'deux dates : rien n\'est proposé');
+});
+
+test('V1b — CSV : séparateur deviné, guillemets, encodage ; lu comme une feuille de classeur', () => {
+  const texte = '﻿Désignation;Quantité;Montant\r\n"Tajine; agneau";3;54,000\r\n\r\n"Brik ""maison""";10;35,500\r\nSoda;6;18\r\n';
+  assert.equal(separateurDe(texte), ';');
+  assert.deepEqual(decouperCsv(texte)[1], ['Tajine; agneau', '3', '54,000']);
+  assert.deepEqual(decouperCsv(texte)[3], ['Brik "maison"', '10', '35,500']);
+  const feuilleCsv = feuilleDeCsv(texte);
+  assert.deepEqual(feuilleCsv.map((l) => l.n), [1, 2, 4, 5], 'les lignes vides sont omises, les numéros restent ceux du fichier');
+  assert.deepEqual(feuilleCsv[1].cellules, [, 'Tajine; agneau', '3', '54,000']);
+  // Titres connus : le CSV se lit seul, jusqu'à la ligne vide (elle ferme le tableau, comme dans un classeur).
+  assert.deepEqual(lireFeuilleCaisse(feuilleCsv).lignes.map((l) => [l.designation, l.quantite, l.montant]), [['Tajine; agneau', 3, 54]]);
+  // Colonnes désignées : tout le fichier.
+  assert.deepEqual(lireFeuilleDesignee(feuilleCsv, { designation: 1, quantite: 2, montant: 3 }).lignes.map((l) => [l.designation, l.quantite, l.montant]),
+    [['Tajine; agneau', 3, 54], ['Brik "maison"', 10, 35.5], ['Soda', 6, 18]]);
+
+  assert.equal(separateurDe('Plat,Nb,Total\nTajine,3,54.000\nBrik,10,35.500\n'), ',');
+  assert.equal(separateurDe('Plat\tNb\tTotal\nTajine\t3\t54,000\n'), '\t');
+  assert.deepEqual(decouperCsv('a,"b\nc",d\ne,f,g'), [['a', 'b\nc', 'd'], ['e', 'f', 'g']]);
+  assert.deepEqual(decouperCsv('seule'), [['seule']]);
+  // Encodage : UTF-8, sinon celui de Windows (é = 0xE9).
+  assert.equal(decoderTexte(new TextEncoder().encode('Thé;1')), 'Thé;1');
+  assert.equal(decoderTexte(new Uint8Array([0x54, 0x68, 0xe9, 0x3b, 0x31])), 'Thé;1');
+  assert.equal(decoderTexte(new Uint8Array([0xff, 0xfe, 0x54, 0x00, 0x68, 0x00])), '﻿Th'.replace('﻿', '') || 'Th');
+});
+
+// Un PDF d'une autre caisse : nombres alignés à DROITE, titres inconnus, un nom coupé sur deux rangées, un chiffre dans un nom.
+const motD = (t, xDroit, y) => ({ t, x0: xDroit - 5 * t.length, x1: xDroit, y0: y, y1: y + 8 });
+const D = { nb: 330, total: 420 };
+const pdfAutre = () => [{ rangees: construireRangees([
+  mot('Ventes', 40, 30), mot('du', 80, 30), mot('05/11/2026', 96, 30),
+  mot('Plat', 40, 70), motD('Nb', D.nb, 70), motD('Encaissé', D.total, 70),
+  mot('Tajine', 40, 100), motD('3', D.nb, 100), motD('54,000', D.total, 100),
+  mot('Brik', 40, 118), mot('à', 64, 118), mot('l\'œuf', 73, 118),
+  motD('10', D.nb, 124), motD('35,500', D.total, 124),
+  mot('maison', 40, 130),
+  mot('Menu', 40, 148), mot('2', 66, 148), mot('personnes', 75, 148), motD('1', D.nb, 148), motD('120,000', D.total, 148),
+  mot('Soda', 40, 172), motD('6', D.nb, 172), motD('18,000', D.total, 172),
+  mot('Total', 40, 200), motD('20', D.nb, 200), motD('227,500', D.total, 200),
+], 1) }];
+
+test('V1b — PDF d\'une autre caisse : ramené à une feuille par positions, puis colonnes désignées', () => {
+  assert.equal(lirePagesCaisse(pdfAutre()), null, 'titres inconnus : le modèle connu ne s\'y reconnaît pas');
+  const f = feuilleDePages(pdfAutre());
+  assert.deepEqual(f.map((l) => Array.from(l.cellules, (v) => v ?? '')), [
+    ['', 'Ventes du 05/11/2026'],
+    ['', 'Plat', 'Nb', 'Encaissé'],
+    ['', 'Tajine', '3', '54,000'],
+    ['', 'Brik à l\'œuf maison', '10', '35,500'],
+    ['', 'Menu 2 personnes', '1', '120,000'],
+    ['', 'Soda', '6', '18,000'],
+    ['', 'Total', '20', '227,500'],
+  ]);
+  const c = { designation: 1, quantite: 2, montant: 3 };
+  const lu = lireFeuilleDesignee(f, c);
+  assert.deepEqual(lu.lignes.map((l) => [l.designation, l.quantite, l.montant]),
+    [['Tajine', 3, 54], ['Brik à l\'œuf maison', 10, 35.5], ['Menu 2 personnes', 1, 120], ['Soda', 6, 18]]);
+  assert.deepEqual(lu.controles, [{ quoi: 'Total', lignes: 4, juste: true }]);
+  assert.equal(jourDuFichier(lu).date, '2026-11-05');
+  assert.equal(signatureFeuille(f, c), '|plat|nb|encaisse');
+  // Le modèle connu passe toujours par son lecteur ; sa feuille par positions donne les mêmes lignes de produit.
+  assert.equal(lirePagesCaisse(pages()).lignes.length, lireFeuilleCaisse(feuille()).lignes.length);
+  assert.equal(exploitable(feuilleDePages(pages())), true);
+  assert.deepEqual(feuilleDePages([{ rangees: construireRangees([mot('Bonjour', 40, 30)], 1) }]).map((l) => l.cellules[1]), ['Bonjour']);
+});
+
+test('V1b — corps de l\'envoi : remplacement et modèle de colonnes', () => {
+  const lu = lireFeuilleDesignee(AUTRE(), COLONNES);
+  const lignes = lu.lignes.map((ligne) => ({ ligne, ignoree: false, produit: CARTE[0], repartition: repartir(ligne.quantite, {}, false, [GLOVO, KOOL], CARTE[0].canaux) }));
+  const base = { activiteId: 3, date: '2026-11-05', source: 'csv', fichierNom: 'caisse.csv', empreinte: 'b'.repeat(64), modele: lu.modele, totalLu: lu.totalLu, categories: [], lignes };
+  const simple = corpsImport(base);
+  assert.equal(simple.source, 'csv');
+  assert.ok(!('remplacer' in simple) && !('colonnes' in simple), 'rien de plus quand rien n\'est demandé');
+  const complet = corpsImport({ ...base, remplacer: true, colonnes: { signature: '|plat|rayon|nb|encaisse', colonnes: COLONNES } });
+  assert.equal(complet.remplacer, true);
+  assert.deepEqual(complet.colonnes, { signature: '|plat|rayon|nb|encaisse', colonnes: COLONNES });
+  assert.equal(complet.lignes[0].designation, 'Tajine');
 });

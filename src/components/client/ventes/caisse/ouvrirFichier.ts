@@ -1,18 +1,26 @@
-// Import d'un fichier de caisse (étape V1a) : du FICHIER déposé à sa lecture, dans le navigateur, sans service extérieur.
-// Excel : exceljs (déjà employé pour les exports). PDF avec texte : pdf.js, par le lecteur des factures (avecPdf), puis
-// les rangées des factures (rangees.ts). L'empreinte du fichier (SHA-256) sert au serveur à refuser un fichier déjà
-// importé. Les règles de lecture sont dans lireCaisse.ts (pures, testées).
+// Import d'un fichier de caisse (étapes V1a et V1b) : du FICHIER déposé à sa lecture, dans le navigateur, sans service
+// extérieur. Excel : exceljs (déjà employé pour les exports). PDF avec texte : pdf.js, par le lecteur des factures
+// (avecPdf), puis les rangées des factures (rangees.ts). CSV : lireCsv.ts. L'empreinte du fichier (SHA-256) sert au
+// serveur à refuser un fichier déjà importé et à reconnaître le document à conserver.
+// V1b — TOUT fichier : quand le modèle connu ne s'y reconnaît pas (`lecture` nulle), le fichier est rendu sous forme de
+// FEUILLES (lignes de cellules) : un modèle retenu s'y applique, ou l'utilisateur en désigne les colonnes.
+// Les règles de lecture sont dans lireCaisse.ts (pures, testées).
 import { avecPdf } from '../../factures/lecture/lireFacture.ts';
 import { construireRangees, motsDePdf } from '../../factures/lecture/rangees.ts';
 import type { MorceauPdf } from '../../factures/lecture/rangees.ts';
 import type { Rangee } from '../../factures/lecture/types.ts';
-import { lireFeuilleCaisse, lirePagesCaisse } from './lireCaisse.ts';
+import { exploitable, feuilleDePages, lireFeuilleCaisse, lirePagesCaisse } from './lireCaisse.ts';
 import type { LectureCaisse, LigneFeuille } from './lireCaisse.ts';
+import { decoderTexte, feuilleDeCsv } from './lireCsv.ts';
 
-export interface FichierCaisse { source: 'excel' | 'pdf'; nom: string; empreinte: string; lecture: LectureCaisse }
+export type SourceCaisse = 'excel' | 'pdf' | 'csv';
+/** Une feuille du fichier : un onglet d'un classeur, le contenu d'un CSV, les pages d'un PDF. */
+export interface FeuilleCaisse { nom: string; lignes: LigneFeuille[] }
+/** `lecture` : le fichier lu par ses titres (modèle connu) ; nulle : colonnes à retrouver dans `feuilles`. */
+export interface FichierCaisse { source: SourceCaisse; nom: string; empreinte: string; lecture: LectureCaisse | null; feuilles: FeuilleCaisse[] }
 
 /** Pourquoi un fichier n'a pas pu être lu ; l'écran en fait un message au vocabulaire du compte. */
-export type RaisonIllisible = 'FORMAT' | 'XLS' | 'CSV' | 'TROP_GROS' | 'PDF_IMAGE' | 'SANS_TABLEAU' | 'ILLISIBLE';
+export type RaisonIllisible = 'FORMAT' | 'XLS' | 'TROP_GROS' | 'PDF_IMAGE' | 'SANS_TABLEAU' | 'ILLISIBLE';
 export class FichierIllisible extends Error {
   raison: RaisonIllisible;
   constructor(raison: RaisonIllisible) {
@@ -43,7 +51,9 @@ function valeurDe(v: unknown): unknown {
   return v;
 }
 
-async function lireExcel(octets: ArrayBuffer): Promise<LectureCaisse | null> {
+type Lu = Pick<FichierCaisse, 'lecture' | 'feuilles'>;
+
+async function lireExcel(octets: ArrayBuffer): Promise<Lu> {
   const ExcelJS = (await import('exceljs')).default;
   const classeur = new ExcelJS.Workbook();
   try {
@@ -51,6 +61,8 @@ async function lireExcel(octets: ArrayBuffer): Promise<LectureCaisse | null> {
   } catch {
     throw new FichierIllisible('ILLISIBLE');
   }
+  let lecture: LectureCaisse | null = null;
+  const feuilles: FeuilleCaisse[] = [];
   for (const feuille of classeur.worksheets) {
     const lignes: LigneFeuille[] = [];
     feuille.eachRow({ includeEmpty: false }, (ligne, n) => {
@@ -58,13 +70,13 @@ async function lireExcel(octets: ArrayBuffer): Promise<LectureCaisse | null> {
       ligne.eachCell({ includeEmpty: false }, (c, col) => { cellules[col] = valeurDe(c.value); });
       lignes.push({ n, cellules });
     });
-    const lu = lireFeuilleCaisse(lignes);
-    if (lu) return lu;
+    lecture ??= lireFeuilleCaisse(lignes);
+    if (exploitable(lignes)) feuilles.push({ nom: feuille.name, lignes });
   }
-  return null;
+  return { lecture, feuilles };
 }
 
-async function lirePdf(octets: ArrayBuffer): Promise<LectureCaisse | null> {
+async function lirePdf(octets: ArrayBuffer): Promise<Lu> {
   let caracteres = 0;
   let pages: { rangees: Rangee[] }[];
   try {
@@ -85,7 +97,19 @@ async function lirePdf(octets: ArrayBuffer): Promise<LectureCaisse | null> {
   }
   // Un PDF sans texte est une image (ticket scanné) : sa lecture est l'étape V2.
   if (caracteres < 40) throw new FichierIllisible('PDF_IMAGE');
-  return lirePagesCaisse(pages);
+  const lecture = lirePagesCaisse(pages);
+  if (lecture) return { lecture, feuilles: [] };
+  const lignes = feuilleDePages(pages);
+  return { lecture: null, feuilles: exploitable(lignes) ? [{ nom: 'PDF', lignes }] : [] };
+}
+
+function lireCsv(octets: ArrayBuffer): Lu {
+  const debut = new Uint8Array(octets.slice(0, 4096));
+  // Des octets nuls hors UTF-16 : ce n'est pas un fichier de texte.
+  const utf16 = (debut[0] === 0xff && debut[1] === 0xfe) || (debut[0] === 0xfe && debut[1] === 0xff);
+  if (!utf16 && debut.includes(0)) throw new FichierIllisible('ILLISIBLE');
+  const lignes = feuilleDeCsv(decoderTexte(new Uint8Array(octets)));
+  return { lecture: lireFeuilleCaisse(lignes), feuilles: exploitable(lignes) ? [{ nom: 'CSV', lignes }] : [] };
 }
 
 /** Lit le fichier déposé. Lève FichierIllisible avec sa raison. */
@@ -93,12 +117,12 @@ export async function ouvrirFichierCaisse(fichier: File): Promise<FichierCaisse>
   const nom = fichier.name;
   const ext = (/\.([a-z0-9]+)$/i.exec(nom)?.[1] ?? '').toLowerCase();
   if (ext === 'xls') throw new FichierIllisible('XLS');
-  if (ext === 'csv') throw new FichierIllisible('CSV');
-  if (ext !== 'xlsx' && ext !== 'pdf') throw new FichierIllisible('FORMAT');
+  const source: SourceCaisse | null = ext === 'xlsx' ? 'excel' : ext === 'pdf' ? 'pdf' : ext === 'csv' || ext === 'txt' ? 'csv' : null;
+  if (!source) throw new FichierIllisible('FORMAT');
   if (fichier.size > TAILLE_MAX) throw new FichierIllisible('TROP_GROS');
   const octets = await fichier.arrayBuffer();
   const empreinte = await empreinteDe(octets);
-  const lecture = ext === 'xlsx' ? await lireExcel(octets) : await lirePdf(octets);
-  if (!lecture) throw new FichierIllisible('SANS_TABLEAU');
-  return { source: ext === 'xlsx' ? 'excel' : 'pdf', nom, empreinte, lecture };
+  const lu = source === 'excel' ? await lireExcel(octets) : source === 'pdf' ? await lirePdf(octets) : lireCsv(octets);
+  if (!lu.lecture && !lu.feuilles.length) throw new FichierIllisible('SANS_TABLEAU');
+  return { source, nom, empreinte, ...lu };
 }
