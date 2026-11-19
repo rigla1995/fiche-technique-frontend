@@ -11,6 +11,8 @@
 //   • une journée déjà importée se REMPLACE (ses ventes sont effacées, leur stock rendu) ; les ventes saisies à la
 //     main le même jour sont signalées ; les journées importées se consultent et s'annulent (JourneesImportees) ;
 //   • le document d'origine est conservé avec l'import.
+// V1c : une ligne peut valoir PLUSIEURS produits (menu, formule) ou plusieurs unités d'un produit (lot) — ProduitsLigne ;
+//   un lot annoncé par le nom est proposé ; une ligne ignorée peut l'être « toujours ».
 // Lecture : lireCaisse.ts, lireCsv.ts, ouvrirFichier.ts ; logique de la fenêtre : importCaisse.ts (pures, testées).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../../../api/client';
@@ -23,9 +25,11 @@ import type { ColonnesDesignees, LectureCaisse, ModeleAppris } from './lireCaiss
 import { FichierIllisible, ouvrirFichierCaisse } from './ouvrirFichier';
 import type { FichierCaisse } from './ouvrirFichier';
 import {
-  CANAL_DIRECT, bilan, cleCategorie, cleProduit, corpsImport, livraisonProposee, proposerProduit, repartir,
+  CANAL_DIRECT, bilan, cleCategorie, cleProduit, corpsImport, livraisonProposee, proposerCibles, verifierLigne,
 } from './importCaisse';
-import type { CategorieApprise, CorrespondanceApprise, EtatLigne, LigneVerifiee, ProduitCarte } from './importCaisse';
+import type { CategorieApprise, CibleChoisie, CorrespondanceApprise, EtatLigne, LigneVerifiee, ProduitCarte } from './importCaisse';
+import type { LigneCaisse } from './lireCaisse';
+import ProduitsLigne from './ProduitsLigne';
 import DesignerColonnes from './DesignerColonnes';
 import JourneesImportees from './JourneesImportees';
 import type { ImportJournee } from './JourneesImportees';
@@ -59,7 +63,8 @@ interface Props {
 }
 
 interface Contexte { correspondances: Map<string, CorrespondanceApprise>; categories: Map<string, CategorieApprise>; modeles: ModeleAppris[] }
-interface Choix { produit: string | null; etat: EtatLigne | 'choisie'; ignoree: boolean; saisies: Record<string, string> }
+/** `cibles` : ce que vaut la ligne (un produit, ou plusieurs — menu, formule, lot) ; `composee` : quantités saisies. */
+interface Choix { cibles: CibleChoisie[]; composee: boolean; etat: EtatLigne | 'choisie'; ignoree: boolean; toujours: boolean; saisies: Record<string, string> }
 /** Le fichier en cours. `lecture` nulle : ses colonnes sont à désigner. `origine` : d'où viennent ses colonnes. */
 interface Courant {
   brut: File; ouvert: FichierCaisse; lecture: LectureCaisse | null; modele: ModeleAppris | null;
@@ -94,7 +99,7 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
   const liens = useMemo(() => prets.map((p) => p.id), [prets]);
   const carte = useMemo<ProduitCarte[]>(() => articles
     .map((a) => ({
-      cle: cleProduit(a.article_type, a.article_id), articleType: a.article_type, articleId: a.article_id, nom: a.nom,
+      cle: cleProduit(a.article_type, a.article_id), articleType: a.article_type, articleId: a.article_id, nom: a.nom, prix: Number(a.prix_vente) || 0,
       canaux: [CANAL_DIRECT, ...liens].filter((canal) => ouvertALaSaisie(a, prixPrestataires, canal)),
     }))
     .sort((a, b) => a.nom.localeCompare(b.nom, 'fr')), [articles, liens, prixPrestataires]);
@@ -136,6 +141,17 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
     return 'Fichier illisible (abîmé ou protégé).';
   };
 
+  /** Ce que LabFlow propose pour une ligne : apprise (ses produits, ou ignorée toujours), sinon d'après son nom. */
+  const choixPropose = (l: LigneCaisse, ctx: Contexte, livraison: boolean): Choix => {
+    const p = proposerCibles(l, carte, ctx.correspondances, voulus(livraison));
+    const ignoree = p.etat === 'ignoree';
+    return {
+      cibles: p.cibles.length ? p.cibles.map((c) => ({ produit: c.produit, quantite: String(c.quantite).replace('.', ',') })) : [{ produit: null, quantite: '1' }],
+      composee: p.cibles.length > 1 || (p.cibles.length === 1 && p.cibles[0].quantite !== 1),
+      etat: p.etat === 'ignoree' ? 'a_choisir' : p.etat, ignoree, toujours: ignoree, saisies: {},
+    };
+  };
+
   /** Prépare la vérification d'une lecture : nature des catégories, produit de chaque ligne, journée. Rend un refus. */
   const presenter = (lecture0: LectureCaisse, nom: string, ctx: Contexte): string | null => {
     const jour = jourDuFichier(lecture0);
@@ -148,10 +164,7 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
       nature[cle] = ctx.categories.get(cle)?.livraison ?? livraisonProposee(categorie, prets.map((p) => p.prestataire_nom));
     }
     const premiers: Record<number, Choix> = {};
-    for (const l of lecture0.lignes) {
-      const p = proposerProduit(l, carte, ctx.correspondances, voulus(l.categorie ? nature[cleCategorie(l.categorie)] === true : false));
-      premiers[l.rang] = { produit: p.produit, etat: p.etat, ignoree: false, saisies: {} };
-    }
+    for (const l of lecture0.lignes) premiers[l.rang] = choixPropose(l, ctx, l.categorie ? nature[cleCategorie(l.categorie)] === true : false);
     const duNom = jour.date ? null : jourDuNom(nom);
     setDate(jour.date ?? duNom ?? '');
     setOrigineDate(jour.date ? 'fichier' : duNom ? 'nom' : '');
@@ -232,8 +245,7 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
   const estLivraison = (categorie: string | null) => (categorie ? livraisons[cleCategorie(categorie)] === true : false);
   const lignes: LigneVerifiee[] = (lu?.lignes ?? []).map((ligne) => {
     const c = choix[ligne.rang];
-    const produit = carte.find((p) => p.cle === c?.produit) ?? null;
-    return { ligne, ignoree: c?.ignoree === true, produit, repartition: repartir(ligne.quantite, c?.saisies ?? {}, estLivraison(ligne.categorie), liens, produit ? produit.canaux : null) };
+    return verifierLigne(ligne, { cibles: c?.cibles ?? [], ignoree: c?.ignoree === true, toujours: c?.toujours === true, saisies: c?.saisies ?? {} }, carte, estLivraison(ligne.categorie), liens);
   });
   const b = bilan(lignes);
   const dejaImporte = etatJour?.import ?? null;
@@ -254,8 +266,9 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
       for (const l of lu.lignes) {
         if (l.categorie !== nom) continue;
         const c = suite[l.rang];
-        const p = c.etat === 'choisie' || c.etat === 'reconnue' ? { produit: c.produit, etat: c.etat } : proposerProduit(l, carte, contexte.correspondances, voulus(livraison));
-        suite[l.rang] = { ...c, ...p, saisies: {} };
+        suite[l.rang] = c.etat === 'choisie' || c.etat === 'reconnue' || c.ignoree
+          ? { ...c, saisies: {} }
+          : { ...choixPropose(l, contexte, livraison), ignoree: c.ignoree, toujours: c.toujours };
       }
       return suite;
     });
@@ -489,7 +502,10 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
                         ...g.lignes.map((l) => {
                           const c = choix[l.ligne.rang];
                           const r = l.repartition;
-                          const message = l.ignoree ? null : !l.produit ? null : messageRepartition(l);
+                          const message = l.ignoree ? null
+                            : l.erreurCibles === 'DOUBLON' ? 'Le même élément est choisi deux fois sur cette ligne.'
+                              : l.erreurCibles === 'QUANTITE' ? 'Quantité par ligne vendue à corriger : un nombre supérieur à zéro.'
+                                : !l.produit ? null : messageRepartition(l);
                           const badge = BADGES[c.etat];
                           return (
                             <tr key={l.ligne.rang} style={{ opacity: l.ignoree ? 0.5 : 1 }}>
@@ -501,21 +517,15 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
                               <td style={{ ...cellule, textAlign: 'right', fontWeight: 700 }}>{qte(l.ligne.quantite)}</td>
                               <td style={{ ...cellule, textAlign: 'right', whiteSpace: 'nowrap' }}>{dt(l.ligne.montant)}</td>
                               <td style={cellule}>
-                                <select value={c.produit ?? ''} disabled={l.ignoree} aria-label={`Ce qui a été vendu pour « ${l.ligne.designation} »`}
-                                  onChange={(e) => modifier(l.ligne.rang, { produit: e.target.value || null, etat: e.target.value ? 'choisie' : 'a_choisir' })}
-                                  style={{ width: '100%', padding: '5px 6px', borderRadius: 8, border: `1.5px solid ${!l.ignoree && !l.produit ? ROUGE : CB}`, fontSize: '0.82rem', color: CD, background: '#fff' }}>
-                                  <option value="">— Choisir —</option>
-                                  {carte.map((p) => <option key={p.cle} value={p.cle}>{p.nom}</option>)}
-                                </select>
-                                {!l.ignoree && (
-                                  <span title={badge.aide} style={{ display: 'inline-block', marginTop: 4, fontSize: '0.66rem', fontWeight: 800, background: badge.fond, color: badge.couleur, borderRadius: 20, padding: '1px 8px' }}>{badge.texte}</span>
-                                )}
+                                <ProduitsLigne designation={l.ligne.designation} quantiteLigne={l.ligne.quantite} cibles={c.cibles} composee={c.composee} verifiees={l.cibles}
+                                  carte={carte} desactive={l.ignoree} badge={badge}
+                                  onChange={(cibles, composee) => modifier(l.ligne.rang, { cibles, composee, etat: cibles.some((x) => x.produit) ? 'choisie' : 'a_choisir' })} />
                               </td>
                               <td style={{ ...cellule, textAlign: 'center', fontWeight: 700, color: livraison || l.ignoree ? '#cbd5e1' : CD }}>
                                 {livraison || l.ignoree ? '—' : qte(r.directe)}
                               </td>
                               {prets.map((p) => {
-                                const ferme = l.ignoree || (l.produit !== null && !l.produit.canaux.includes(p.id));
+                                const ferme = l.ignoree || (l.canaux != null && !l.canaux.includes(p.id));
                                 const calcule = r.calcules.includes(p.id);
                                 return (
                                   <td key={p.id} style={{ ...cellule, textAlign: 'center' }}>
@@ -535,7 +545,14 @@ export default function ImporterCaisse({ activiteId, activiteNom, articles, pres
                               })}
                               <td style={{ ...cellule, textAlign: 'center' }}>
                                 <input type="checkbox" checked={l.ignoree} aria-label={`Ignorer « ${l.ligne.designation} »`}
-                                  onChange={(e) => modifier(l.ligne.rang, { ignoree: e.target.checked })} style={{ accentColor: C, width: 16, height: 16 }} />
+                                  onChange={(e) => modifier(l.ligne.rang, { ignoree: e.target.checked, toujours: false })} style={{ accentColor: C, width: 16, height: 16 }} />
+                                {l.ignoree && (
+                                  <label title="La ligne arrivera ignorée aux prochains imports" style={{ display: 'block', fontSize: '0.68rem', color: '#475569', marginTop: 3, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                                    <input type="checkbox" checked={c.toujours} aria-label={`Toujours ignorer « ${l.ligne.designation} »`}
+                                      onChange={(e) => modifier(l.ligne.rang, { toujours: e.target.checked })} style={{ accentColor: C, width: 12, height: 12, marginRight: 3, verticalAlign: 'middle' }} />
+                                    toujours
+                                  </label>
+                                )}
                               </td>
                             </tr>
                           );
