@@ -12,6 +12,7 @@ import {
 import { decoderTexte, decouperCsv, feuilleDeCsv, separateurDe } from '../src/components/client/ventes/caisse/lireCsv.ts';
 import {
   CANAL_DIRECT, cleCategorie, cleCorrespondance, livraisonProposee, proposerProduit, lireQuantite, repartir, bilan, corpsImport,
+  lireMultiplicateur, lotDe, partager, proposerCibles, verifierLigne,
 } from '../src/components/client/ventes/caisse/importCaisse.ts';
 import { construireRangees } from '../src/components/client/factures/lecture/rangees.ts';
 
@@ -310,6 +311,11 @@ test('V1b — colonnes désignées : lignes regroupées, total contrôlé, journ
   assert.deepEqual(prix.controles, []);
   assert.deepEqual(jourDuFichier(prix), { date: null, etat: 'inconnue', jours: [] });
 
+  // Les lignes d'une même catégorie se suivent, dans l'ordre où les catégories apparaissent ; sans catégorie à la fin.
+  const melees = lireFeuilleDesignee([{ n: 1, cellules: [, 'Tajine', 'Cuisine', 1, 18] }, { n: 2, cellules: [, 'Soda', 'Boissons', 1, 3] }, { n: 3, cellules: [, 'Pourboire', , 1, 2] },
+    { n: 4, cellules: [, 'Brik', 'Cuisine', 1, 3.5] }], COLONNES);
+  assert.deepEqual(melees.lignes.map((l) => [l.rang, l.categorie, l.designation]), [[1, 'Cuisine', 'Tajine'], [2, 'Cuisine', 'Brik'], [3, 'Boissons', 'Soda'], [4, null, 'Pourboire']]);
+
   // Un total imprimé faux est signalé ; des colonnes incomplètes ou en double ne lisent rien.
   const faux = AUTRE(); faux[6] = { n: 8, cellules: [, 'TOTAL', , 21, 150] };
   assert.deepEqual(lireFeuilleDesignee(faux, COLONNES).controles, [{ quoi: 'Total', lignes: 3, juste: false }]);
@@ -448,4 +454,110 @@ test('V1b — corps de l\'envoi : remplacement et modèle de colonnes', () => {
   assert.equal(complet.remplacer, true);
   assert.deepEqual(complet.colonnes, { signature: '|plat|rayon|nb|encaisse', colonnes: COLONNES });
   assert.equal(complet.lignes[0].designation, 'Tajine');
+});
+
+// ── V1c : menus, formules et lots (jeu fictif) ───────────────────────────────────────────────────────────────────────
+// Une carte avec ses prix : le tajine (18) et le soda (3) se vendent partout, la brik (3,5) en vente directe seulement.
+const CARTE_C = [
+  { cle: 'produit:11', articleType: 'produit', articleId: 11, nom: 'Tajine', canaux: [CANAL_DIRECT, GLOVO, KOOL], prix: 18 },
+  { cle: 'produit:12', articleType: 'produit', articleId: 12, nom: 'Brik', canaux: [CANAL_DIRECT], prix: 3.5 },
+  { cle: 'produit:13', articleType: 'produit', articleId: 13, nom: 'Soda', canaux: [CANAL_DIRECT, GLOVO, KOOL], prix: 3 },
+  { cle: 'produit:14', articleType: 'produit', articleId: 14, nom: 'Thé offert', canaux: [CANAL_DIRECT, GLOVO, KOOL], prix: 0 },
+];
+const caisse = (designation, quantite, montant, categorie = null) => ({ rang: 1, categorie, sousCategorie: null, designation, quantite, prixUnitaire: null, brut: montant, remises: null, tva: null, net: null, montant });
+const choisi = (cibles, plus = {}) => ({ cibles: cibles.map(([produit, quantite]) => ({ produit, quantite })), ignoree: false, saisies: {}, ...plus });
+
+test('V1c — lot annoncé par le nom : quantité par ligne et reste du nom', () => {
+  assert.deepEqual(lotDe('Lot de 6 Briks'), { quantite: 6, reste: 'briks' });
+  assert.deepEqual(lotDe('Brik x6'), { quantite: 6, reste: 'brik' });
+  assert.deepEqual(lotDe('Pack de 12 sodas'), { quantite: 12, reste: 'sodas' });
+  assert.deepEqual(lotDe('Sodas 4 pièces'), { quantite: 4, reste: 'sodas' });
+  for (const nom of ['Soda 33 cl', 'Menu 2 personnes', 'Tajine', 'Lot de 1 brik', 'Lot de 6']) assert.equal(lotDe(nom), null, nom);
+});
+
+test('V1c — proposerCibles : apprise (menu, lot, ignorée toujours), lot proposé d\'après le nom, sinon un produit', () => {
+  const apprises = new Map([
+    ['|menu midi', { cle: '|menu midi', ignoree: false, cibles: [{ article_type: 'produit', article_id: 11, quantite: 1 }, { article_type: 'produit', article_id: 13, quantite: '2.000' }] }],
+    ['|pourboire', { cle: '|pourboire', ignoree: true, cibles: [] }],
+    ['|ancien menu', { cle: '|ancien menu', ignoree: false, cibles: [{ article_type: 'produit', article_id: 11, quantite: 1 }, { article_type: 'produit', article_id: 99, quantite: 1 }] }],
+  ]);
+  const p = (designation) => proposerCibles({ categorie: null, designation }, CARTE_C, apprises, [CANAL_DIRECT]);
+  assert.deepEqual(p('MENU MIDI'), { etat: 'reconnue', cibles: [{ produit: 'produit:11', quantite: 1 }, { produit: 'produit:13', quantite: 2 }] });
+  assert.deepEqual(p('Pourboire'), { etat: 'ignoree', cibles: [] });
+  // Un produit appris qui n'est plus à la carte : la ligne n'est plus reconnue.
+  assert.deepEqual(p('Ancien menu'), { etat: 'a_choisir', cibles: [] });
+  assert.deepEqual(p('Lot de 6 briks'), { etat: 'proposee', cibles: [{ produit: 'produit:12', quantite: 6 }] });
+  assert.deepEqual(p('Soda x4'), { etat: 'proposee', cibles: [{ produit: 'produit:13', quantite: 4 }] });
+  assert.deepEqual(p('Tajine'), { etat: 'proposee', cibles: [{ produit: 'produit:11', quantite: 1 }] });
+  assert.deepEqual(p('Couscous royal'), { etat: 'a_choisir', cibles: [] });
+  // La carte porte le nom entier (« Soda x4 » est un produit) : ce n'est pas un lot.
+  const avecLot = [...CARTE_C, { cle: 'produit:15', articleType: 'produit', articleId: 15, nom: 'Soda x4', canaux: [CANAL_DIRECT], prix: 10 }];
+  assert.deepEqual(proposerCibles({ categorie: null, designation: 'SODA X4' }, avecLot, new Map(), [CANAL_DIRECT]).cibles, [{ produit: 'produit:15', quantite: 1 }]);
+});
+
+test('V1c — partager : la somme des parts égale toujours le montant ; quantité par ligne vendue', () => {
+  assert.deepEqual(partager(100, [80, 20]), [80, 20]);
+  assert.deepEqual(partager(10, [1, 1, 1]), [3.334, 3.333, 3.333]);
+  assert.deepEqual(partager(0.005, [1, 1]), [0.003, 0.002]);
+  assert.deepEqual(partager(50, [0, 0]), [25, 25], 'poids nuls : parts égales');
+  assert.deepEqual(partager(21, [18, 0]), [21, 0]);
+  assert.deepEqual(partager(100, []), []);
+  for (const [m, poids] of [[143.857, [18, 3.5, 3]], [0.001, [1, 2, 3]], [99999.999, [7, 11, 13, 17]]]) {
+    const parts = partager(m, poids);
+    assert.equal(Math.round(parts.reduce((s, x) => s + x, 0) * 1000), Math.round(m * 1000), `${m}`);
+    assert.ok(parts.every((x) => x >= 0));
+  }
+  assert.deepEqual(['', '6', '0,5', '0', 'x', '-1', '1,2345'].map(lireMultiplicateur), [1, 6, 0.5, null, null, null, null]);
+});
+
+test('V1c — verifierLigne : un menu partage son montant d\'après les prix de la carte et ne va que là où tout se vend', () => {
+  // 10 menus à 200 : un tajine (18) et deux sodas (2 × 3) par menu — poids 18 et 6.
+  const menu = verifierLigne(caisse('MENU MIDI', 10, 200), choisi([['produit:11', '1'], ['produit:13', '2']], { saisies: { [GLOVO]: '4' } }), CARTE_C, false, [GLOVO, KOOL]);
+  assert.deepEqual(menu.cibles.map((c) => [c.produit.nom, c.quantite, c.montant]), [['Tajine', 1, 150], ['Soda', 2, 50]]);
+  assert.deepEqual(menu.canaux, [CANAL_DIRECT, GLOVO, KOOL]);
+  assert.equal(menu.produit.nom, 'Tajine');
+  assert.equal(menu.erreurCibles, null);
+  assert.deepEqual(menu.repartition.parts, [{ canal: CANAL_DIRECT, quantite: 6 }, { canal: GLOVO, quantite: 4 }]);
+
+  // La brik ne se vend qu'en vente directe : le menu qui la contient ne part chez aucun prestataire.
+  const avecBrik = verifierLigne(caisse('MENU BRIK', 4, 86), choisi([['produit:11', '1'], ['produit:12', '1']], { saisies: { [GLOVO]: '1' } }), CARTE_C, false, [GLOVO, KOOL]);
+  assert.deepEqual(avecBrik.canaux, [CANAL_DIRECT]);
+  assert.equal(avecBrik.repartition.erreur, 'HORS_CANAL');
+  assert.deepEqual(avecBrik.cibles.map((c) => c.montant), [72, 14]);
+  assert.equal(avecBrik.cibles.reduce((s, c) => s + c.montant, 0), 86);
+
+  // Un lot : un produit, six unités, tout le montant. Sans prix à la carte : partage d'après les quantités.
+  const lot = verifierLigne(caisse('LOT DE 6 BRIKS', 2, 36), choisi([['produit:12', '6']]), CARTE_C, false, []);
+  assert.deepEqual(lot.cibles.map((c) => [c.quantite, c.montant]), [[6, 36]]);
+  const offerts = verifierLigne(caisse('PLATEAU', 1, 9), choisi([['produit:14', '2'], ['ingredient:1', '1']]), [...CARTE_C, CARTE[3]], false, []);
+  assert.deepEqual(offerts.cibles.map((c) => c.montant), [6, 3]);
+
+  // Tant qu'un produit manque, la ligne n'est pas rattachée ; doublon et quantité fausse sont signalés.
+  assert.equal(verifierLigne(caisse('MENU', 1, 10), choisi([['produit:11', '1'], [null, '1']]), CARTE_C, false, []).produit, null);
+  assert.equal(verifierLigne(caisse('MENU', 1, 10), choisi([]), CARTE_C, false, []).produit, null);
+  const doublon = verifierLigne(caisse('MENU', 1, 10), choisi([['produit:11', '1'], ['produit:11', '2']]), CARTE_C, false, []);
+  assert.deepEqual([doublon.produit, doublon.erreurCibles, doublon.cibles], [null, 'DOUBLON', undefined]);
+  assert.equal(verifierLigne(caisse('MENU', 1, 10), choisi([['produit:11', '0']]), CARTE_C, false, []).erreurCibles, 'QUANTITE');
+  assert.equal(bilan([doublon]).pret, false);
+  // Ignorée « toujours » : seulement si elle est ignorée.
+  assert.equal(verifierLigne(caisse('Pourboire', 1, 2), choisi([[null, '1']], { ignoree: true, toujours: true }), CARTE_C, false, []).toujours, true);
+  assert.equal(verifierLigne(caisse('Tajine', 1, 18), choisi([['produit:11', '1']], { toujours: true }), CARTE_C, false, []).toujours, false);
+});
+
+test('V1c — corps de l\'envoi : un menu et un lot partent en « cibles », une ligne simple garde sa forme, « toujours » suit la ligne ignorée', () => {
+  const lignes = [
+    verifierLigne(caisse('MENU MIDI', 10, 200), choisi([['produit:11', '1'], ['produit:13', '2']]), CARTE_C, false, []),
+    verifierLigne(caisse('LOT DE 6 BRIKS', 2, 36), choisi([['produit:12', '6']]), CARTE_C, false, []),
+    verifierLigne(caisse('Tajine', 3, 54), choisi([['produit:11', '1']]), CARTE_C, false, []),
+    verifierLigne(caisse('Pourboire', 1, 2), choisi([[null, '1']], { ignoree: true, toujours: true }), CARTE_C, false, []),
+    verifierLigne(caisse('Divers', 1, 1), choisi([[null, '1']], { ignoree: true }), CARTE_C, false, []),
+  ];
+  assert.deepEqual([bilan(lignes).pret, bilan(lignes).total, bilan(lignes).ignorees], [true, 290, 2]);
+  const corps = corpsImport({ activiteId: 3, date: '2026-11-05', source: 'excel', fichierNom: 'caisse.xlsx', empreinte: 'c'.repeat(64), modele: 'essai', totalLu: null, categories: [], lignes });
+  assert.deepEqual(corps.lignes[0], { categorie: null, designation: 'MENU MIDI', quantite: 10, montant: 200, ignoree: false,
+    cibles: [{ article_type: 'produit', article_id: 11, quantite: 1, montant: 150 }, { article_type: 'produit', article_id: 13, quantite: 2, montant: 50 }], repartition: [{ canal: CANAL_DIRECT, quantite: 10 }] });
+  assert.deepEqual(corps.lignes[1].cibles, [{ article_type: 'produit', article_id: 12, quantite: 6, montant: 36 }]);
+  assert.deepEqual(corps.lignes[2], { categorie: null, designation: 'Tajine', quantite: 3, montant: 54, ignoree: false, article_type: 'produit', article_id: 11, repartition: [{ canal: CANAL_DIRECT, quantite: 3 }] });
+  assert.deepEqual(corps.lignes[3], { categorie: null, designation: 'Pourboire', quantite: 1, montant: 2, ignoree: true, toujours: true });
+  assert.deepEqual(corps.lignes[4], { categorie: null, designation: 'Divers', quantite: 1, montant: 1, ignoree: true });
 });

@@ -352,6 +352,10 @@ export function lireFeuilleDesignee(feuille: readonly LigneFeuille[], colonnes: 
   }
   if (!lignes.length) return null;
   const categories = [...new Set(lignes.map((l) => l.categorie).filter((c): c is string => c !== null))];
+  // Les lignes d'une même catégorie se suivent (dans l'ordre où les catégories apparaissent), sans catégorie à la fin.
+  const ordre = (c: string | null): number => (c === null ? categories.length : categories.indexOf(c));
+  lignes.sort((a, b) => ordre(a.categorie) - ordre(b.categorie) || a.rang - b.rang);
+  lignes.forEach((l, i) => { l.rang = i + 1; });
   const total = millime(lignes.reduce((s, l) => s + l.montant, 0));
   const controles: ControleCaisse[] = totalImprime === null ? [] : [{ quoi: 'Total', lignes: lignes.length, juste: egal(total, totalImprime) }];
   const jours = [...parJour].map(([date, montant]) => ({ date, montant: millime(montant) })).sort((a, b) => a.date.localeCompare(b.date));
